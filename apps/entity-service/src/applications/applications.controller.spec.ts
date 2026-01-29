@@ -303,6 +303,7 @@ describe("ApplicationsController", () => {
       try {
         clock.setSystemTime(time.toJSDate());
         await AuditFactory.formSubmission(sub1).create({ event: "created", newValues: { status: "started" } });
+        // ignored; update too soon
         advanceHours(6);
         await AuditFactory.formSubmission(sub1).create({ event: "updated" });
         advanceHours(12);
@@ -334,93 +335,23 @@ describe("ApplicationsController", () => {
           comment: "Requires More Feedback"
         });
 
-        // Mock audit status service to return DTOs for the submissions
-        // The controller will transform these into history entries with 12-hour deduplication
-        const auditStatusDtos = [
-          new AuditStatusDto(
-            1,
-            "uuid-1",
-            "requires-more-information",
-            null,
-            null,
-            "Requires More Feedback",
-            "status",
-            time.toJSDate(),
-            []
-          ),
-          new AuditStatusDto(
-            2,
-            "uuid-2",
-            "awaiting-approval",
-            null,
-            null,
-            null,
-            "status",
-            time.minus({ hours: 1 }).toJSDate(),
-            []
-          ),
-          new AuditStatusDto(3, "uuid-3", "started", null, null, null, "updated", sub2Update, []),
-          new AuditStatusDto(
-            4,
-            "uuid-4",
-            "started",
-            null,
-            null,
-            null,
-            "status",
-            time.minus({ hours: 8 }).toJSDate(),
-            []
-          ),
-          new AuditStatusDto(
-            5,
-            "uuid-5",
-            "approved",
-            null,
-            null,
-            "Approval Feedback",
-            "status",
-            time.minus({ days: 1 }).toJSDate(),
-            []
-          ),
-          new AuditStatusDto(
-            6,
-            "uuid-6",
-            "awaiting-approval",
-            null,
-            null,
-            null,
-            "status",
-            time.minus({ days: 1, hours: 1 }).toJSDate(),
-            []
-          ),
-          new AuditStatusDto(7, "uuid-7", null, null, null, null, "updated", sub1Update, []),
-          new AuditStatusDto(
-            8,
-            "uuid-8",
-            "started",
-            null,
-            null,
-            null,
-            "status",
-            time.minus({ days: 30 }).toJSDate(),
-            []
-          )
-        ];
-
-        auditStatusService.getAuditStatusesForApplicationHistory.mockResolvedValue(
-          new Map([
-            [sub2.id, auditStatusDtos.slice(0, 4)], // First 4 for sub2
-            [sub1.id, auditStatusDtos.slice(4)] // Last 4 for sub1
-          ])
-        );
-
         const result = serialize(await controller.getHistory({ uuid: app.uuid }));
         const dto = (result.data as Resource).attributes;
-
-        expect(dto.entries).toHaveLength(8);
-        expect(auditStatusService.getAuditStatusesForApplicationHistory).toHaveBeenCalledWith(
-          expect.arrayContaining([expect.objectContaining({ id: sub1.id }), expect.objectContaining({ id: sub2.id })])
-        );
+        // result is in reverse chronological order
+        expect(dto.entries).toEqual([
+          expect.objectContaining({
+            eventType: "status",
+            status: "requires-more-information",
+            comment: "Requires More Feedback"
+          }),
+          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
+          expect.objectContaining({ eventType: "updated", status: "started", date: sub2Update }),
+          expect.objectContaining({ eventType: "status", status: "started" }),
+          expect.objectContaining({ eventType: "status", status: "approved", comment: "Approval Feedback" }),
+          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
+          expect.objectContaining({ eventType: "updated", date: sub1Update }),
+          expect.objectContaining({ eventType: "status", status: "started" })
+        ]);
       } finally {
         clock.uninstall();
       }

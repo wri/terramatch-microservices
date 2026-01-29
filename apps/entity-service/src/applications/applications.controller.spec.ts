@@ -4,7 +4,6 @@ import { FormDataService } from "../entities/form-data.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApplicationsController } from "./applications.controller";
 import { AuditStatusService } from "../entities/audit-status.service";
-import { AuditStatusDto } from "../entities/dto/audit-status.dto";
 import { Application } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
@@ -28,7 +27,6 @@ describe("ApplicationsController", () => {
   let controller: ApplicationsController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
-  let auditStatusService: DeepMocked<AuditStatusService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

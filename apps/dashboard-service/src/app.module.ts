@@ -25,6 +25,8 @@ import { DashboardProjectsController } from "./dashboard/dashboard-projects.cont
 import { DashboardProjectsService } from "./dashboard/dashboard-projects.service";
 import { DashboardSitePolygonsController } from "./dashboard/dashboard-sitepolygons.controller";
 import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons.service";
+import { DashboardFrameworksController } from "./dashboard/dashboard-frameworks.controller";
+import { DashboardFrameworksService } from "./dashboard/dashboard-frameworks.service";
 import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.service";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
@@ -53,6 +55,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     TreeRestorationGoalController,
     TotalJobsCreatedController,
     HectaresRestorationController,
+    DashboardFrameworksController,
     DashboardEntitiesController,
     DashboardProjectsController,
     DashboardSitePolygonsController
@@ -69,6 +72,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     HectaresRestorationService,
     UserContextInterceptor,
     DashboardProjectsService,
+    DashboardFrameworksService,
     DashboardSitePolygonsService,
     DashboardImpactStoryService
   ]

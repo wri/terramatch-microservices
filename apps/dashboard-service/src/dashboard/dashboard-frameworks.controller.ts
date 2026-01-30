@@ -26,7 +26,7 @@ export class DashboardFrameworksController {
         type: "object",
         properties: {
           framework_slug: { type: "string", example: "terrafund" },
-          name: { type: "string", example: "Terrafund" }
+          name: { type: "string", example: "TerraFund" }
         },
         required: ["framework_slug", "name"]
       }

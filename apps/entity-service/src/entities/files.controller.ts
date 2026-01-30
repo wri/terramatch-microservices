@@ -31,6 +31,10 @@ import { MediaUpdateBody } from "@terramatch-microservices/common/dto/media-upda
 import { SingleMediaDto } from "./dto/media-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { SiteMediaBulkUploadDto } from "./dto/site-media-bulk-upload.dto";
+import { MediaRequestBulkBody } from "./dto/media-request-bulk.dto";
+import { MediaBulkErrorDto } from "./dto/media-bulk-error.dto";
+import { Media } from "@terramatch-microservices/database/entities/media.entity";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -55,6 +59,75 @@ export class FilesController {
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("read", media);
     return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
+  }
+
+  @Post("/:entity/:uuid/media/:collection")
+  @ApiOperation({
+    operationId: "siteMediaBulkUpload",
+    summary: "Upload multiple files to a site photos collection",
+    description: "Upload multiple files to a site photos collection"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or site unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Site not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request." })
+  @JsonApiResponse([MediaDto, MediaBulkErrorDto])
+  async siteMediaBulkUpload(
+    @Param() { entity, uuid, collection }: SiteMediaBulkUploadDto,
+    @Body() payload: MediaRequestBulkBody
+  ) {
+    const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
+    const model = await mediaOwnerProcessor.getBaseEntity();
+    await this.policyService.authorize("uploadFiles", model);
+    const errors: MediaBulkErrorDto[] = [];
+    const createdMedias: Media[] = [];
+    const transaction = await Media.sql.transaction();
+    for (const [index, payloadData] of payload.data.entries()) {
+      try {
+        const file = await this.mediaService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);
+        const media = await this.mediaService.createMedia(
+          model,
+          entity,
+          this.entitiesService.userId,
+          collection,
+          file,
+          payloadData.attributes,
+          transaction
+        );
+        createdMedias.push(media);
+      } catch (error) {
+        errors.push(new MediaBulkErrorDto(index, error.message));
+      }
+    }
+    if (errors.length > 0) {
+      await transaction.rollback();
+      for (const media of createdMedias) {
+        await this.mediaService.deleteMediaFromS3(media);
+      }
+    }
+    let document;
+    if (errors.length > 0) {
+      document = buildJsonApi(MediaBulkErrorDto);
+      for (const error of errors) {
+        document.addData(error.index.toString(), new MediaBulkErrorDto(error.index, error.error));
+      }
+    } else {
+      await transaction.commit();
+      document = buildJsonApi(MediaDto);
+      for (const media of createdMedias) {
+        document.addData(
+          media.uuid,
+          new MediaDto(media, {
+            url: this.mediaService.getUrl(media),
+            thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+            entityType: entity,
+            entityUuid: model.uuid
+          })
+        );
+      }
+    }
+    return document;
   }
 
   @Post("/:entity/:uuid/:collection")

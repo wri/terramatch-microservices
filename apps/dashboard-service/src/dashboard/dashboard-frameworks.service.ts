@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Project, Framework } from "@terramatch-microservices/database/entities";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
@@ -24,7 +25,9 @@ export class DashboardFrameworksService {
     ]).queryFilters(query);
 
     const rows = await builder.select(["frameworkKey"]);
-    const keys = [...new Set(rows.map(r => r.frameworkKey).filter((k): k is string => k != null))];
+    const keys: FrameworkKey[] = [
+      ...new Set(rows.map(r => r.frameworkKey).filter((k): k is FrameworkKey => k != null))
+    ];
     if (keys.length === 0) return [];
 
     const frameworks = await Framework.findAll({

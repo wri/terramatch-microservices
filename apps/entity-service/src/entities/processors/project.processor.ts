@@ -248,12 +248,13 @@ export class ProjectProcessor extends EntityProcessor<
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
+    const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
     const plantingStatus = lastReport?.plantingStatus ?? null;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
       plantingStatus,
-      lastReportedSurvivalRate: lastReport?.pctSurvivalToDate ?? null,
+      lastReportedSurvivalRate: lastReportSurvivalRate?.pctSurvivalToDate ?? null,
       totalSites: approvedSites.length,
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
@@ -368,7 +369,15 @@ export class ProjectProcessor extends EntityProcessor<
     return await ProjectReport.approved()
       .project(projectId)
       .lastReport()
-      .findOne({ attributes: ["plantingStatus", "pctSurvivalToDate"] });
+      .findOne({ attributes: ["plantingStatus"] });
+  }
+
+  protected async getLastReportSurvivalRate(projectId: number) {
+    return await ProjectReport.approved()
+      .pctSurvivalToDate()
+      .project(projectId)
+      .lastReport()
+      .findOne({ attributes: ["pctSurvivalToDate"] });
   }
 
   /* istanbul ignore next */

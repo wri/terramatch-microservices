@@ -250,6 +250,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const lastReport = await this.getLastReport(site.id);
+    const lastReportSurvivalRate = await this.getLastReportSurvivalRate(site.id);
 
     const dto = new SiteFullDto(site, {
       ...(await this.getFeedback(site)),
@@ -265,7 +266,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,
-      lastReportedSurvivalRate: lastReport?.pctSurvivalToDate ?? null,
+      lastReportedSurvivalRate: lastReportSurvivalRate?.pctSurvivalToDate ?? null,
       treesPlantedPolygonsCount,
       hectaresRestoredPolygonsCount,
       ...(this.entitiesService.mapMediaCollection(
@@ -367,7 +368,15 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return await SiteReport.approved()
       .sites([siteId])
       .lastReport()
-      .findOne({ attributes: ["plantingStatus", "pctSurvivalToDate"] });
+      .findOne({ attributes: ["plantingStatus"] });
+  }
+
+  protected async getLastReportSurvivalRate(siteId: number) {
+    return await SiteReport.approved()
+      .pctSurvivalToDate()
+      .sites([siteId])
+      .lastReport()
+      .findOne({ attributes: ["pctSurvivalToDate"] });
   }
 
   async delete(site: Site) {

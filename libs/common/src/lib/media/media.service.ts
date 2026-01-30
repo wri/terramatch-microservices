@@ -274,7 +274,7 @@ export class MediaService {
       (media.customProperties[`${conversion}Extension`] as string | undefined) ??
       (conversion === "thumbnail" ? ".jpg" : media.fileName.slice(lastIndex));
 
-    return `${this.bucket}/${media.id}/${baseFileName}-${conversion}${extension}`;
+    return `${this.bucket}/${media.id}/conversions/${baseFileName}-${conversion}${extension}`;
   }
 
   private async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {

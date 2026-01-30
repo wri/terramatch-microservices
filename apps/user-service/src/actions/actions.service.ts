@@ -149,7 +149,7 @@ export class ActionsService {
     }
 
     const actionsByType = groupBy(actions, "targetableType");
-    const targetablesMap = new Map<number, EntityModel>();
+    const targetablesMap = new Map<string, EntityModel>();
 
     await Promise.all(
       Object.entries(actionsByType).map(async ([laravelType, typeActions]) => {
@@ -167,13 +167,14 @@ export class ActionsService {
         });
 
         for (const model of models) {
-          targetablesMap.set(model.id, model);
+          targetablesMap.set(`${laravelType}|${model.id}`, model);
         }
       })
     );
 
     return actions.map(action => {
-      const targetModel = targetablesMap.get(action.targetableId);
+      const targetKey = `${action.targetableType}|${action.targetableId}`;
+      const targetModel = targetablesMap.get(targetKey);
       const target = this.createTargetForAction(action, targetModel);
       const targetableType = this.getEntityTypeFromModel(targetModel);
       return { action, target, targetableType };

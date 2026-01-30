@@ -383,7 +383,7 @@ export class MediaService {
   }
 
   async deleteMedia(media: Media) {
-    this.deleteMediaFromS3(media);
+    await this.deleteMediaFromS3(media);
     await media.destroy();
 
     return media;

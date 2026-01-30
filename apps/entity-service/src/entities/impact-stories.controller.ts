@@ -1,20 +1,43 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
-import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
+import {
+  buildJsonApi,
+  getStableRequestQuery,
+  buildDeletedResponse,
+  getDtoType
+} from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { ImpactStoryService } from "./impact-story.service";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { ImpactStoryParamDto } from "./dto/impact-story-param.dto";
 import { ImpactStoryFullDto, ImpactStoryLightDto, ImpactStoryMedia } from "./dto/impact-story.dto";
 import { EntitiesService } from "./entities.service";
-import { ImpactStory, Media } from "@terramatch-microservices/database/entities";
+import { ImpactStory } from "@terramatch-microservices/database/entities";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { PolicyService } from "@terramatch-microservices/common";
+import { CreateImpactStoryBody } from "./dto/create-impact-story.dto";
+import { UpdateImpactStoryBody } from "./dto/update-impact-story.dto";
+import { ImpactStoryBulkDeleteBodyDto } from "./dto/bulk-delete-impact-stories.dto";
 
 @Controller("entities/v3/impactStories")
 export class ImpactStoriesController {
   constructor(
     private readonly impactStoryService: ImpactStoryService,
-    private readonly entitiesService: EntitiesService
+    private readonly entitiesService: EntitiesService,
+    private readonly policyService: PolicyService
   ) {}
 
   @Get()
@@ -77,25 +100,10 @@ export class ImpactStoriesController {
   @ExceptionResponse(BadRequestException, { description: "Param types invalid" })
   @ExceptionResponse(NotFoundException, { description: "Impact story not found" })
   async impactStoryGet(@Param() { uuid }: ImpactStoryParamDto) {
-    const impactStory = await this.impactStoryService.getImpactStory(uuid);
-
-    const mediaCollection = await Media.for(impactStory).findAll();
-
-    const organizationCountries = impactStory.organisation?.countries ?? [];
-    const countriesMap = await this.impactStoryService.getCountriesForOrganizations([organizationCountries]);
-    const orgCountries = organizationCountries.map(iso => countriesMap.get(iso)).filter(country => country != null);
-
-    const organization = {
-      uuid: impactStory.organisation?.uuid,
-      name: impactStory.organisation?.name,
-      type: impactStory.organisation?.type,
-      countries: orgCountries,
-      webUrl: impactStory.organisation?.webUrl,
-      facebookUrl: impactStory.organisation?.facebookUrl,
-      instagramUrl: impactStory.organisation?.instagramUrl,
-      linkedinUrl: impactStory.organisation?.linkedinUrl,
-      twitterUrl: impactStory.organisation?.twitterUrl
-    };
+    const { impactStory, mediaCollection, organization } = await this.impactStoryService.getImpactStoryWithMedia(
+      uuid,
+      true
+    );
 
     return buildJsonApi(ImpactStoryFullDto).addData(
       uuid,
@@ -109,5 +117,121 @@ export class ImpactStoriesController {
         ) as ImpactStoryMedia)
       })
     );
+  }
+
+  @Post()
+  @ApiOperation({
+    operationId: "impactStoryCreate",
+    summary: "Create a new impact story",
+    description: `Create a new impact story for an organization. Requires authentication and appropriate permissions.`
+  })
+  @JsonApiResponse(ImpactStoryFullDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data or organization not found." })
+  async impactStoryCreate(@Body() createRequest: CreateImpactStoryBody) {
+    await this.policyService.authorize("create", ImpactStory);
+
+    const impactStory = await this.impactStoryService.createImpactStory(createRequest.data.attributes);
+
+    const { mediaCollection, organization } = await this.impactStoryService.getImpactStoryWithMedia(
+      impactStory.uuid,
+      true
+    );
+
+    return buildJsonApi(ImpactStoryFullDto).addData(
+      impactStory.uuid,
+      new ImpactStoryFullDto(impactStory, {
+        organization,
+        ...(this.entitiesService.mapMediaCollection(
+          mediaCollection,
+          ImpactStory.MEDIA,
+          "projects",
+          impactStory.uuid
+        ) as ImpactStoryMedia)
+      })
+    );
+  }
+
+  @Patch(":uuid")
+  @ApiOperation({
+    operationId: "impactStoryUpdate",
+    summary: "Update an existing impact story",
+    description: `Update an impact story by UUID. Requires authentication and appropriate permissions.
+    
+    All fields except status are optional. Status is required.`
+  })
+  @JsonApiResponse(ImpactStoryFullDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Impact story not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
+  async impactStoryUpdate(@Param() { uuid }: ImpactStoryParamDto, @Body() updateRequest: UpdateImpactStoryBody) {
+    if (uuid !== updateRequest.data.id) {
+      throw new BadRequestException("Impact story UUID in path and payload do not match");
+    }
+
+    const impactStory = await this.impactStoryService.getImpactStory(uuid);
+    await this.policyService.authorize("update", impactStory);
+
+    const updatedImpactStory = await this.impactStoryService.updateImpactStory(uuid, updateRequest.data.attributes);
+
+    const { mediaCollection, organization } = await this.impactStoryService.getImpactStoryWithMedia(
+      updatedImpactStory.uuid,
+      true
+    );
+
+    return buildJsonApi(ImpactStoryFullDto).addData(
+      updatedImpactStory.uuid,
+      new ImpactStoryFullDto(updatedImpactStory, {
+        organization,
+        ...(this.entitiesService.mapMediaCollection(
+          mediaCollection,
+          ImpactStory.MEDIA,
+          "projects",
+          updatedImpactStory.uuid
+        ) as ImpactStoryMedia)
+      })
+    );
+  }
+
+  @Delete("bulkDelete")
+  @ApiOperation({
+    operationId: "impactStoryBulkDelete",
+    summary: "Bulk delete multiple impact stories",
+    description: `Bulk delete multiple impact stories by UUIDs. Requires admin permissions.`
+  })
+  @JsonApiDeletedResponse(getDtoType(ImpactStoryFullDto), {
+    description: "Impact stories were deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed or insufficient permissions." })
+  @ExceptionResponse(NotFoundException, { description: "One or more impact stories not found." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
+  async impactStoryBulkDelete(@Body() deletePayload: ImpactStoryBulkDeleteBodyDto) {
+    await this.policyService.authorize("bulkDelete", ImpactStory);
+
+    const uuids = deletePayload.data.map(item => item.id).filter((id): id is string => id != null && id !== "");
+
+    const deletedUuids = await this.impactStoryService.bulkDeleteImpactStories(uuids);
+
+    return buildDeletedResponse(getDtoType(ImpactStoryFullDto), deletedUuids);
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({
+    operationId: "impactStoryDelete",
+    summary: "Soft delete an impact story",
+    description: "Soft deletes an impact story by UUID. Requires authentication and appropriate permissions."
+  })
+  @JsonApiDeletedResponse(getDtoType(ImpactStoryFullDto), {
+    description: "Impact story was deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Impact story not found." })
+  async impactStoryDelete(@Param() { uuid }: ImpactStoryParamDto) {
+    const impactStory = await this.impactStoryService.getImpactStory(uuid);
+    await this.policyService.authorize("delete", impactStory);
+
+    await this.impactStoryService.deleteImpactStory(uuid);
+
+    return buildDeletedResponse(getDtoType(ImpactStoryFullDto), uuid);
   }
 }

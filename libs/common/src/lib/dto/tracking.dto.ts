@@ -1,5 +1,5 @@
 import { AssociationDto } from "./association.dto";
-import { Demographic, DemographicEntry } from "@terramatch-microservices/database/entities";
+import { Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
 import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "./json-api-attributes";
 import { JsonApiDto } from "../decorators";
@@ -55,9 +55,9 @@ export class DemographicCollections {
   BENEFICIARIES_PROJECT_TRAINING: string[];
 }
 
-export class DemographicEntryDto {
-  constructor(entry: DemographicEntry) {
-    populateDto<DemographicEntryDto>(this, entry);
+export class TrackingEntryDto {
+  constructor(entry: TrackingEntry) {
+    populateDto<TrackingEntryDto>(this, entry);
   }
 
   @ApiProperty()
@@ -73,14 +73,14 @@ export class DemographicEntryDto {
   amount: number;
 }
 
-@JsonApiDto({ type: "demographics" })
-export class DemographicDto extends AssociationDto {
-  constructor(demographic?: Demographic, additional?: AdditionalProps<DemographicDto, Demographic>) {
+@JsonApiDto({ type: "trackings" })
+export class TrackingDto extends AssociationDto {
+  constructor(demographic?: Tracking, additional?: AdditionalProps<TrackingDto, Tracking>) {
     super();
     if (demographic != null && additional != null) {
-      populateDto<DemographicDto, Omit<Demographic, "entries">>(this, demographic, {
+      populateDto<TrackingDto, Omit<Tracking, "entries">>(this, demographic, {
         ...additional,
-        entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+        entries: demographic.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
       });
     }
   }
@@ -88,21 +88,24 @@ export class DemographicDto extends AssociationDto {
   @ApiProperty()
   uuid: string;
 
-  @ApiProperty({ enum: Demographic.VALID_TYPES })
+  @ApiProperty({ enum: Tracking.DOMAINS })
+  domain: string;
+
+  @ApiProperty({ enum: Tracking.VALID_TYPES })
   type: string;
 
   @ApiProperty()
   collection: string;
 
-  @ApiProperty({ type: () => DemographicEntryDto, isArray: true })
-  entries: DemographicEntryDto[];
+  @ApiProperty({ type: () => TrackingEntryDto, isArray: true })
+  entries: TrackingEntryDto[];
 }
 
-export class EmbeddedDemographicDto extends OmitType(DemographicDto, ["entityType", "entityUuid"]) {
-  constructor(demographic: Demographic) {
+export class EmbeddedTrackingDto extends OmitType(TrackingDto, ["entityType", "entityUuid"]) {
+  constructor(tracking: Tracking) {
     super();
-    populateDto<EmbeddedDemographicDto, Demographic>(this, demographic, {
-      entries: demographic.entries?.map(entry => new DemographicEntryDto(entry)) ?? []
+    populateDto<EmbeddedTrackingDto, Tracking>(this, tracking, {
+      entries: tracking.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
     });
   }
 }

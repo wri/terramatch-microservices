@@ -14,7 +14,7 @@ import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand, S3Client } fr
 import { TMLogger } from "../util/tm-logger";
 import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import {
   abbreviatedValidationMimeTypes,
   FILE_VALIDATION,
@@ -30,6 +30,8 @@ import { EntityModel, getProjectId } from "@terramatch-microservices/database/co
 import { TranslatableException } from "../exceptions/translatable.exception";
 import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
+import { Readable } from "stream";
+import path from "path";
 
 export type MediaAttributes = {
   isPublic: boolean;
@@ -158,7 +160,8 @@ export class MediaService {
     creatorId: number,
     collection: string,
     file: Express.Multer.File,
-    data: MediaAttributes = { isPublic: true }
+    data: MediaAttributes = { isPublic: true },
+    transaction?: Transaction
   ) {
     const configuration = mediaConfiguration(entity, collection);
     if (configuration == null) {
@@ -172,23 +175,26 @@ export class MediaService {
       attributes: ["firstName", "lastName"]
     });
 
-    const media = await Media.create({
-      collectionName: collection,
-      modelType: laravelType(model),
-      modelId: model.id,
-      name: file.originalname,
-      fileName: file.originalname,
-      mimeType: file.mimetype,
-      fileType: this.getMediaType(file, configuration),
-      isPublic: data.isPublic,
-      customProperties: { custom_headers: { ACL: "public-read" } },
-      generatedConversions: {},
-      lat: data.lat ?? null,
-      lng: data.lng ?? null,
-      size: file.size,
-      createdBy: creatorId,
-      photographer: user?.fullName ?? null
-    });
+    const media = await Media.create(
+      {
+        collectionName: collection,
+        modelType: laravelType(model),
+        modelId: model.id,
+        name: file.originalname,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        fileType: this.getMediaType(file, configuration),
+        isPublic: data.isPublic,
+        customProperties: { custom_headers: { ACL: "public-read" } },
+        generatedConversions: {},
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
+        size: file.size,
+        createdBy: creatorId,
+        photographer: user?.fullName ?? null
+      },
+      { transaction }
+    );
 
     try {
       const { buffer, originalname, mimetype } = file;
@@ -210,16 +216,21 @@ export class MediaService {
         const extension = originalname.substring(extensionIdx);
         const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${extension}`;
         await this.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
-        await media.update({
-          generatedConversions: { thumbnail: true },
-          customProperties: { ...media.customProperties, thumbnailExtension: extension }
-        });
+        await media.update(
+          {
+            generatedConversions: { thumbnail: true },
+            customProperties: { ...media.customProperties, thumbnailExtension: extension }
+          },
+          { transaction }
+        );
       }
 
       return media;
     } catch (error) {
       this.logger.error(`Error uploading file to S3 [${error}]`);
-      await media.destroy({ force: true });
+      if (transaction == null) {
+        await media.destroy({ force: true });
+      }
       throw error;
     }
   }
@@ -274,7 +285,7 @@ export class MediaService {
       (media.customProperties[`${conversion}Extension`] as string | undefined) ??
       (conversion === "thumbnail" ? ".jpg" : media.fileName.slice(lastIndex));
 
-    return `${this.bucket}/${media.id}/${baseFileName}-${conversion}${extension}`;
+    return `${this.bucket}/${media.id}/conversions/${baseFileName}-${conversion}${extension}`;
   }
 
   private async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
@@ -359,7 +370,7 @@ export class MediaService {
     return media;
   }
 
-  async deleteMedia(media: Media) {
+  async deleteMediaFromS3(media: Media) {
     const key = `${media.id}/${media.fileName}`;
 
     const command = new DeleteObjectCommand({
@@ -369,6 +380,10 @@ export class MediaService {
 
     this.logger.log(`Deleting media ${media.uuid} from S3`);
     await this.s3.send(command);
+  }
+
+  async deleteMedia(media: Media) {
+    await this.deleteMediaFromS3(media);
     await media.destroy();
 
     return media;
@@ -387,5 +402,45 @@ export class MediaService {
     return Media.findAll({
       where: { uuid: { [Op.in]: uuids } }
     });
+  }
+
+  public async fetchDataFromUrlAsMulterFile(url: string): Promise<Express.Multer.File> {
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (error) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${error.message}`);
+    }
+
+    if (!res.ok) {
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${res.statusText}`);
+    }
+
+    const filename = path.basename(new URL(url).pathname);
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const allowedMimeTypes = ["image/png", "image/jpg", "image/jpeg", "image/heif", "image/heic"];
+
+    if (!allowedMimeTypes.includes(res.headers.get("content-type") ?? "")) {
+      throw new BadRequestException("Invalid file type");
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    const contentLength =
+      res.headers.get("content-length") == null ? buffer.length : Number(res.headers.get("content-length"));
+
+    return {
+      fieldname: "uploadFile",
+      originalname: url.split("/").pop() ?? "downloaded-file",
+      encoding: "7bit",
+      mimetype: contentType,
+      size: contentLength,
+      buffer,
+      stream: Readable.from(buffer),
+      destination: "",
+      filename,
+      path: ""
+    };
   }
 }

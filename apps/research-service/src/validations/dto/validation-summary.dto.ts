@@ -4,10 +4,11 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 @JsonApiDto({ type: "validationSummaries" })
 export class ValidationSummaryDto {
   @ApiProperty({
-    description: "The UUID of the site that was validated",
-    example: "7631be34-bbe0-4e1e-b4fe-592677dc4b50"
+    description: "The UUID of the site that was validated (null for project-level validation)",
+    example: "7631be34-bbe0-4e1e-b4fe-592677dc4b50",
+    nullable: true
   })
-  siteUuid: string;
+  siteUuid: string | null;
 
   @ApiProperty({
     description: "Total number of polygons in the site"

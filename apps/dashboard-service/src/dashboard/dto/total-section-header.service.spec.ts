@@ -1,8 +1,8 @@
 import { TotalSectionHeaderService } from "./total-section-header.service";
 import { DashboardProjectsQueryBuilder } from "../dashboard-query.builder";
 import {
-  DemographicEntry,
-  Demographic,
+  TrackingEntry,
+  Tracking,
   ProjectReport,
   SitePolygon,
   Site,
@@ -29,10 +29,10 @@ const baseMocks = () => {
 
   (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockBuilder);
 
-  (DemographicEntry.gender as jest.Mock).mockReturnValue({
+  (TrackingEntry.gender as jest.Mock).mockReturnValue({
     sum: jest.fn().mockResolvedValue(50)
   });
-  (Demographic.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+  (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
   (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
   (SitePolygon.active as jest.Mock).mockReturnValue({
     approved: jest.fn().mockReturnThis(),
@@ -82,10 +82,10 @@ describe("TotalSectionHeaderService - filters", () => {
 
     (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockBuilder);
 
-    (DemographicEntry.gender as jest.Mock).mockReturnValue({
+    (TrackingEntry.gender as jest.Mock).mockReturnValue({
       sum: jest.fn().mockResolvedValue(50)
     });
-    (Demographic.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+    (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
     (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
     (SitePolygon.active as jest.Mock).mockReturnValue({
       approved: jest.fn().mockReturnThis(),
@@ -128,10 +128,10 @@ describe("TotalSectionHeaderService - filters", () => {
 
     (DashboardProjectsQueryBuilder as jest.Mock).mockImplementation(() => mockBuilder);
 
-    (DemographicEntry.gender as jest.Mock).mockReturnValue({
+    (TrackingEntry.gender as jest.Mock).mockReturnValue({
       sum: jest.fn().mockResolvedValue(0)
     });
-    (Demographic.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
+    (Tracking.idsSubquery as jest.Mock).mockReturnValue("demo-subquery");
     (ProjectReport.approvedProjectsIdsSubquery as jest.Mock).mockReturnValue("project-subquery");
     (SitePolygon.active as jest.Mock).mockReturnValue({
       approved: jest.fn().mockReturnThis(),

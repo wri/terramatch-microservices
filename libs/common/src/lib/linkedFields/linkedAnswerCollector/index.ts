@@ -12,7 +12,7 @@ import { Dictionary } from "lodash";
 import { MediaService } from "../../media/media.service";
 import { fieldCollector } from "./field.collector";
 import { fileCollector } from "./file.collector";
-import { demographicsCollector } from "./demographics.collector";
+import { trackingsCollector } from "./trackings.collector";
 import { treeSpeciesCollector } from "./tree-species.collector";
 import { disturbancesCollector } from "./disturbances.collector";
 import { invasivesCollector } from "./invasives.collector";
@@ -61,6 +61,8 @@ export interface RelationResourceCollector extends ResourceCollector<LinkedRelat
   ): Promise<void>;
 }
 
+type CollectorType = Exclude<LinkedFieldResource, "demographics"> | "trackings";
+
 export class LinkedAnswerCollector {
   public fields = fieldCollector(new TMLogger("Fields Collector"));
   public files = fileCollector(new TMLogger("File Collector"), this.mediaService);
@@ -70,7 +72,7 @@ export class LinkedAnswerCollector {
   constructor(private readonly mediaService: MediaService) {}
 
   get demographics() {
-    return this.getCollector("demographics", () => demographicsCollector(new TMLogger("Demographics Collector")));
+    return this.trackings;
   }
   get treeSpecies() {
     return this.getCollector("treeSpecies", () => treeSpeciesCollector(new TMLogger("Tree Species Collector")));
@@ -109,6 +111,11 @@ export class LinkedAnswerCollector {
     );
   }
 
+  // Special case collector that manages multiple resource types.
+  protected get trackings() {
+    return this.getCollector("trackings", () => trackingsCollector(new TMLogger("Trackings Collector")));
+  }
+
   // This method gets tested in the form data service spec, which is in the entity-service app so
   // the coverage isn't getting seen in the common lib test suite.
   /* istanbul ignore next */
@@ -139,7 +146,7 @@ export class LinkedAnswerCollector {
     );
   }
 
-  protected getCollector(resource: LinkedFieldResource, factory: () => RelationResourceCollector) {
+  protected getCollector(resource: CollectorType, factory: () => RelationResourceCollector) {
     return this.relationCollectors[resource] ?? (this.relationCollectors[resource] = factory());
   }
 }

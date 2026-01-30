@@ -119,11 +119,15 @@ describe("MediaService", () => {
     it("returns a thumbnail download URL", async () => {
       const media = await MediaFactory.nursery().create({ generatedConversions: { thumbnail: true } });
       let url = service.getUrl(media, "thumbnail");
-      expect(url).toBe(`https://aws.endpoint/test-bucket/${media.id}/${media.fileName.split(".")[0]}-thumbnail.jpg`);
+      expect(url).toBe(
+        `https://aws.endpoint/test-bucket/${media.id}/conversions/${media.fileName.split(".")[0]}-thumbnail.jpg`
+      );
 
       media.customProperties = { thumbnailExtension: ".xyz" };
       url = service.getUrl(media, "thumbnail");
-      expect(url).toBe(`https://aws.endpoint/test-bucket/${media.id}/${media.fileName.split(".")[0]}-thumbnail.xyz`);
+      expect(url).toBe(
+        `https://aws.endpoint/test-bucket/${media.id}/conversions/${media.fileName.split(".")[0]}-thumbnail.xyz`
+      );
     });
   });
 

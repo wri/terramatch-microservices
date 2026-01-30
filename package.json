@@ -10,7 +10,7 @@
     "all": "nx run-many --parallel=100 -t serve --no-cloud",
     "prepare": "husky",
     "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests",
-    "lint-build": "nx run-many -t lint build --no-cloud --verbose"
+    "lint-build": "nx run-many -t lint build --exclude tm-v3-cli --no-cloud --verbose"
   },
   "private": true,
   "dependencies": {
@@ -44,6 +44,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "commander": "^13.1.0",
+    "csv-stringify": "^6.6.0",
     "d3-delaunay": "^6.0.4",
     "debug": "^4.4.0",
     "geojson": "^0.5.0",

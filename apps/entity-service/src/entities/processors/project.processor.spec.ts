@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Project,
   ProjectReport,
   ProjectUser,
@@ -14,8 +14,8 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { EntitiesService } from "../entities.service";
 import {
   ApplicationFactory,
-  DemographicEntryFactory,
-  DemographicFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   EntityFormFactory,
   FormSubmissionFactory,
   MediaFactory,
@@ -426,7 +426,7 @@ describe("ProjectProcessor", () => {
         await ProjectReportFactory.create({
           projectId,
           status: "approved",
-          dueAt: DateTime.fromJSDate(new Date(Demographic.DEMOGRAPHIC_COUNT_CUTOFF)).minus({ months: 1 }).toJSDate()
+          dueAt: DateTime.fromJSDate(new Date(Tracking.DEMOGRAPHIC_COUNT_CUTOFF)).minus({ months: 1 }).toJSDate()
         })
       );
       const approvedSiteReports = [
@@ -439,7 +439,7 @@ describe("ProjectProcessor", () => {
         await SiteReportFactory.create({
           siteId: approvedSites[1].id,
           status: "approved",
-          dueAt: DateTime.fromJSDate(new Date(Demographic.DEMOGRAPHIC_COUNT_CUTOFF)).minus({ months: 1 }).toJSDate()
+          dueAt: DateTime.fromJSDate(new Date(Tracking.DEMOGRAPHIC_COUNT_CUTOFF)).minus({ months: 1 }).toJSDate()
         })
       );
 
@@ -481,32 +481,30 @@ describe("ProjectProcessor", () => {
       // Because of the "demographics cutoff" logic, we have to carefully construct a set of
       // workdays that are on site and project reports, with some that are from before the cutoff,
       // and some that are after.
-      const siteDemographicAfterCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[0]).create();
-      const siteDemographicBeforeCutoff = await DemographicFactory.siteReportWorkday(approvedSiteReports[2]).create();
-      const projectDemographicAfterCutoff = await DemographicFactory.projectReportWorkday(
+      const siteDemographicAfterCutoff = await TrackingFactory.siteReportWorkday(approvedSiteReports[0]).create();
+      const siteDemographicBeforeCutoff = await TrackingFactory.siteReportWorkday(approvedSiteReports[2]).create();
+      const projectDemographicAfterCutoff = await TrackingFactory.projectReportWorkday(
         approvedProjectReports[0]
       ).create();
-      const projectDemographicBeforeCutoff = await DemographicFactory.projectReportWorkday(
+      const projectDemographicBeforeCutoff = await TrackingFactory.projectReportWorkday(
         approvedProjectReports[1]
       ).create();
-      let workdayCountAfterCutoff = (await DemographicEntryFactory.gender(siteDemographicAfterCutoff).create()).amount;
-      workdayCountAfterCutoff += (await DemographicEntryFactory.gender(projectDemographicAfterCutoff).create()).amount;
-      let workdayCountBeforeCutoff = (await DemographicEntryFactory.gender(siteDemographicBeforeCutoff).create())
-        .amount;
-      workdayCountBeforeCutoff += (await DemographicEntryFactory.gender(projectDemographicBeforeCutoff).create())
-        .amount;
-      await DemographicEntryFactory.age(siteDemographicAfterCutoff).create();
-      await DemographicEntryFactory.age(projectDemographicBeforeCutoff).create();
+      let workdayCountAfterCutoff = (await TrackingEntryFactory.gender(siteDemographicAfterCutoff).create()).amount;
+      workdayCountAfterCutoff += (await TrackingEntryFactory.gender(projectDemographicAfterCutoff).create()).amount;
+      let workdayCountBeforeCutoff = (await TrackingEntryFactory.gender(siteDemographicBeforeCutoff).create()).amount;
+      workdayCountBeforeCutoff += (await TrackingEntryFactory.gender(projectDemographicBeforeCutoff).create()).amount;
+      await TrackingEntryFactory.age(siteDemographicAfterCutoff).create();
+      await TrackingEntryFactory.age(projectDemographicBeforeCutoff).create();
       const selfReportedWorkdayCount = (reports: (SiteReport | ProjectReport)[]) =>
         sumBy(reports, "workdaysPaid") + sumBy(reports, "workdaysVolunteer");
 
       const totalJobsCreated = sum(
         await Promise.all(
           approvedProjectReports.map(async report => {
-            const fullTime = await DemographicFactory.projectReportJobs(report).create({ collection: FULL_TIME });
-            const partTime = await DemographicFactory.projectReportJobs(report).create({ collection: PART_TIME });
-            const { amount: fullTimeAmount } = await DemographicEntryFactory.gender(fullTime).create();
-            const { amount: partTimeAmount } = await DemographicEntryFactory.gender(partTime).create();
+            const fullTime = await TrackingFactory.projectReportJobs(report).create({ collection: FULL_TIME });
+            const partTime = await TrackingFactory.projectReportJobs(report).create({ collection: PART_TIME });
+            const { amount: fullTimeAmount } = await TrackingEntryFactory.gender(fullTime).create();
+            const { amount: partTimeAmount } = await TrackingEntryFactory.gender(partTime).create();
             return fullTimeAmount + partTimeAmount;
           })
         )
@@ -677,10 +675,10 @@ describe("ProjectProcessor", () => {
       // hidden trees should be ignored
       await TreeSpeciesFactory.projectPitchTreePlanted(pitch).create({ hidden: true });
 
-      const pitchDemographic = await DemographicFactory.projectPitch(pitch).create();
+      const pitchDemographic = await TrackingFactory.projectPitch(pitch).create();
       const pitchEntries = await Promise.all([
-        DemographicEntryFactory.gender(pitchDemographic).create({ amount: 10 }),
-        DemographicEntryFactory.age(pitchDemographic).create({ amount: 10 })
+        TrackingEntryFactory.gender(pitchDemographic).create({ amount: 10 }),
+        TrackingEntryFactory.age(pitchDemographic).create({ amount: 10 })
       ]);
 
       const pitchMedia = await MediaFactory.projectPitch(pitch).create({ collectionName: "detailed_project_budget" });
@@ -700,11 +698,11 @@ describe("ProjectProcessor", () => {
         );
       }
 
-      const projectDemographics = await Demographic.for(project).findAll();
+      const projectDemographics = await Tracking.for(project).findAll();
       expect(projectDemographics.length).toBe(1);
       expect(projectDemographics[0].type).toBe(pitchDemographic.type);
       expect(projectDemographics[0].collection).toBe(pitchDemographic.collection);
-      const projectEntries = await DemographicEntry.demographic(projectDemographics[0].id).findAll();
+      const projectEntries = await TrackingEntry.tracking(projectDemographics[0].id).findAll();
       expect(projectEntries.length).toBe(pitchEntries.length);
       for (const { type, subtype, amount } of pitchEntries) {
         expect(projectEntries).toContainEqual(

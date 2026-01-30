@@ -1,8 +1,8 @@
 import { FieldsApprovalProcessor } from "./fields.approval-processor";
 import { Disturbance, FinancialIndicator, Form, FundingType } from "@terramatch-microservices/database/entities";
 import {
-  DemographicEntryFactory,
-  DemographicFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   DisturbanceFactory,
   DisturbanceReportEntryFactory,
   DisturbanceReportFactory,
@@ -81,8 +81,8 @@ describe("EntityApprovalProcessor", () => {
 
     it("removes hidden relations", async () => {
       const site = await SiteFactory.create({ status: APPROVED });
-      const demographic = await DemographicFactory.siteWorkday(site).create({ hidden: true });
-      const entry = await DemographicEntryFactory.any(demographic).create();
+      const demographic = await TrackingFactory.siteWorkday(site).create({ hidden: true });
+      const entry = await TrackingEntryFactory.any(demographic).create();
       const tree = await TreeSpeciesFactory.siteTreePlanted(site).create({ hidden: true });
       // Spot check one model to make sure visible records are unaffected
       const visibleTree = await TreeSpeciesFactory.siteTreePlanted(site).create();

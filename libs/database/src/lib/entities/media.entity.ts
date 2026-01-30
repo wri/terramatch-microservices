@@ -30,6 +30,7 @@ import { User } from "./user.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
 import { Dictionary } from "factory-girl-ts";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -57,6 +58,13 @@ import { Dictionary } from "factory-girl-ts";
   ]
 })
 export class Media extends Model<InferAttributes<Media>, InferCreationAttributes<Media>> {
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("Project model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
   static collection(collections: string | string[]) {
     return chainScope(this, "collection", collections) as typeof Media;
   }

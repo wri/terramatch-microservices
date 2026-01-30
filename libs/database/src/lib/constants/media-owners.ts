@@ -99,11 +99,11 @@ export const FILE_VALIDATION: {
   VALIDATION_RULES: {
     "logo-image": "mimes:jpg,png",
     "cover-image": "mimes:jpg,png",
-    "cover-image-with-svg": "mimes:jpg,png,svg",
-    photos: "mimes:jpg,png,mp4",
+    "cover-image-with-svg": "mimes:jpg,png,svg,heic,heif",
+    photos: "mimes:jpg,png,mp4,heic,heif",
     pdf: "mimes:pdf",
     documents: "mimes:pdf,xls,xlsx,csv,txt,doc,docx,bin",
-    "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin|size:5MB",
+    "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin,heic,heif|size:5MB",
     spreadsheet: "mimes:pdf,xls,xlsx,csv,txt|size:5MB",
     thumbnail: "mimes:jpg,png"
   },

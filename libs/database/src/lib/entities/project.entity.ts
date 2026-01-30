@@ -122,7 +122,7 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 
@@ -426,6 +426,49 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(STRING)
   shortName: string | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_1_project" })
+  level1Project: string[] | null;
+
+  @AllowNull
+  @JsonColumn({ field: "level_2_project" })
+  level2Project: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  landTenureApproach: string | null;
+
+  @AllowNull
+  @Column(STRING(255))
+  seedlingsProcurement: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  jobsGoalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  volunteersGoalDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  communityEngagementPlan: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  directBeneficiariesGoalDescription: string | null;
+
+  @Column({ type: TINYINT, defaultValue: 0 })
+  elpProject: CreationOptional<number>;
+
+  @AllowNull
+  @Column(TEXT)
+  consortium: string | null;
+
+  @AllowNull
+  @Column(STRING(255))
+  landownerAgreement: string | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

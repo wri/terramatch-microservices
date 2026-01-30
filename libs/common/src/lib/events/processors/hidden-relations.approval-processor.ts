@@ -1,7 +1,7 @@
 import { EntityApprovalProcessor } from "./types";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Disturbance,
   Invasive,
   Seeding,
@@ -33,9 +33,9 @@ const hiddenIds = <M extends PolymorphicModel & { hidden: boolean | null }>(
 // at the time of approval
 export const HiddenRelationsApprovalProcessor: EntityApprovalProcessor = {
   async processEntityApproval(entity) {
-    const demographicIds = hiddenIds(Demographic, entity);
-    await DemographicEntry.destroy({ where: { demographicId: { [Op.in]: demographicIds } } });
-    await Demographic.destroy({ where: { id: { [Op.in]: demographicIds } } });
+    const trackingIds = hiddenIds(Tracking, entity);
+    await TrackingEntry.destroy({ where: { trackingId: { [Op.in]: trackingIds } } });
+    await Tracking.destroy({ where: { id: { [Op.in]: trackingIds } } });
     await TreeSpecies.destroy({ where: { id: { [Op.in]: hiddenIds(TreeSpecies, entity) } } });
     await Disturbance.destroy({ where: { id: { [Op.in]: hiddenIds(Disturbance, entity) } } });
     await Invasive.destroy({ where: { id: { [Op.in]: hiddenIds(Invasive, entity) } } });

@@ -69,6 +69,7 @@ type ProjectReportMedia =
 @Scopes(() => ({
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
+  pctSurvivalToDate: { where: { pctSurvivalToDate: { [Op.ne]: null } } },
   project: (id: number) => ({ where: { projectId: id } }),
   projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
@@ -174,6 +175,10 @@ export class ProjectReport extends Model<ProjectReport> {
     return chainScope(this, "approved") as typeof ProjectReport;
   }
 
+  static pctSurvivalToDate() {
+    return chainScope(this, "pctSurvivalToDate") as typeof ProjectReport;
+  }
+
   static project(id: number) {
     return chainScope(this, "project", id) as typeof ProjectReport;
   }
@@ -230,7 +235,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 

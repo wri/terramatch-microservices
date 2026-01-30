@@ -1,11 +1,37 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { ImpactStory, Project, Media, WorldCountryGeneralized } from "@terramatch-microservices/database/entities";
-import { Includeable, Op } from "sequelize";
+import {
+  ImpactStory,
+  Organisation,
+  Project,
+  Media,
+  WorldCountryGeneralized
+} from "@terramatch-microservices/database/entities";
+import { CreationAttributes, Includeable, Op } from "sequelize";
 import { Sequelize } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ImpactStoryQueryDto } from "./dto/impact-story-query.dto";
 import { groupBy, uniq } from "lodash";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { CreateImpactStoryAttributes } from "./dto/create-impact-story.dto";
+import { StoreImpactStoryAttributes } from "./dto/update-impact-story.dto";
+
+interface OrganizationData {
+  uuid: string | null;
+  name: string | null;
+  type: string | null;
+  countries: Array<{ label: string | null; icon: string | null }>;
+  webUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  linkedinUrl?: string | null;
+  twitterUrl?: string | null;
+}
+
+interface ImpactStoryWithMedia {
+  impactStory: ImpactStory;
+  mediaCollection: Media[];
+  organization: OrganizationData;
+}
 
 const ORGANISATION_FIELDS_BASE = ["uuid", "name", "type", "countries"];
 
@@ -170,5 +196,197 @@ export class ImpactStoryService {
       paginationTotal: await builder.paginationTotal(),
       pageNumber: query.page?.number ?? 1
     };
+  }
+
+  async buildOrganizationData(impactStory: ImpactStory, includeFullDetails = false): Promise<OrganizationData> {
+    const organisation = impactStory.organisation;
+    if (organisation == null) {
+      return {
+        uuid: null,
+        name: null,
+        type: null,
+        countries: []
+      };
+    }
+
+    const organizationCountries = organisation.countries ?? [];
+    const countriesMap = await this.getCountriesForOrganizations([organizationCountries]);
+    const orgCountries = organizationCountries
+      .map(iso => {
+        if (iso == null || iso === "") return null;
+        return countriesMap.get(iso);
+      })
+      .filter((country): country is { label: string | null; icon: string | null } => country != null);
+
+    const organization: OrganizationData = {
+      uuid: organisation.uuid ?? null,
+      name: organisation.name ?? null,
+      type: organisation.type ?? null,
+      countries: orgCountries
+    };
+
+    if (includeFullDetails) {
+      organization.webUrl = organisation.webUrl ?? null;
+      organization.facebookUrl = organisation.facebookUrl ?? null;
+      organization.instagramUrl = organisation.instagramUrl ?? null;
+      organization.linkedinUrl = organisation.linkedinUrl ?? null;
+      organization.twitterUrl = organisation.twitterUrl ?? null;
+    }
+
+    return organization;
+  }
+
+  async getImpactStoryWithMedia(uuid: string, includeFullOrganizationDetails = false): Promise<ImpactStoryWithMedia> {
+    const impactStory = await this.getImpactStory(uuid);
+    if (impactStory == null) {
+      throw new NotFoundException(`Impact story with UUID ${uuid} not found`);
+    }
+
+    const mediaCollection = await Media.for(impactStory).findAll();
+    const organization = await this.buildOrganizationData(impactStory, includeFullOrganizationDetails);
+
+    return {
+      impactStory,
+      mediaCollection,
+      organization
+    };
+  }
+
+  async createImpactStory(attributes: CreateImpactStoryAttributes): Promise<ImpactStory> {
+    const organisation = await Organisation.findOne({
+      where: { uuid: attributes.organizationUuid },
+      attributes: ["id"]
+    });
+
+    if (organisation == null) {
+      throw new BadRequestException(`Organization with UUID ${attributes.organizationUuid} not found`);
+    }
+
+    const createData: Partial<CreationAttributes<ImpactStory>> = {
+      title: attributes.title,
+      status: attributes.status,
+      organizationId: organisation.id,
+      category: attributes.category ?? [],
+      thumbnail: attributes.thumbnail ?? ""
+    };
+
+    if (attributes.date != null) {
+      createData.date = attributes.date;
+    }
+
+    if (attributes.content != null) {
+      createData.content = attributes.content;
+    }
+
+    const impactStory = await ImpactStory.create(createData as CreationAttributes<ImpactStory>);
+
+    const reloadedStory = await ImpactStory.findOne({
+      where: { uuid: impactStory.uuid },
+      include: ORGANISATION_ASSOCIATION_FULL
+    });
+
+    if (reloadedStory == null) {
+      throw new NotFoundException("Failed to reload created impact story");
+    }
+
+    return reloadedStory;
+  }
+
+  async updateImpactStory(uuid: string, attributes: StoreImpactStoryAttributes): Promise<ImpactStory> {
+    const impactStory = await ImpactStory.findOne({ where: { uuid }, include: ORGANISATION_ASSOCIATION_FULL });
+
+    if (impactStory == null) {
+      throw new NotFoundException(`Impact story with UUID ${uuid} not found`);
+    }
+
+    impactStory.status = attributes.status;
+
+    if (attributes.title != null) {
+      impactStory.title = attributes.title;
+    }
+
+    if (attributes.date != null) {
+      impactStory.date = attributes.date;
+    }
+
+    if (attributes.category != null) {
+      impactStory.category = attributes.category ?? [];
+    }
+
+    if (attributes.content != null) {
+      impactStory.content = attributes.content;
+    }
+
+    if (attributes.thumbnail != null) {
+      impactStory.thumbnail = attributes.thumbnail ?? "";
+    }
+
+    if (attributes.organizationUuid != null) {
+      const organisation = await Organisation.findOne({
+        where: { uuid: attributes.organizationUuid },
+        attributes: ["id"]
+      });
+
+      if (organisation == null) {
+        throw new BadRequestException(`Organization with UUID ${attributes.organizationUuid} not found`);
+      }
+
+      impactStory.organizationId = organisation.id;
+    }
+
+    await impactStory.save();
+
+    const reloadedStory = await ImpactStory.findOne({
+      where: { uuid: impactStory.uuid },
+      include: ORGANISATION_ASSOCIATION_FULL
+    });
+
+    if (reloadedStory == null) {
+      throw new NotFoundException("Failed to reload updated impact story");
+    }
+
+    return reloadedStory;
+  }
+
+  async deleteImpactStory(uuid: string): Promise<void> {
+    const impactStory = await ImpactStory.findOne({ where: { uuid } });
+
+    if (impactStory == null) {
+      throw new NotFoundException(`Impact story with UUID ${uuid} not found`);
+    }
+
+    await impactStory.destroy();
+  }
+
+  async bulkDeleteImpactStories(uuids: string[]): Promise<string[]> {
+    if (uuids.length === 0) {
+      throw new BadRequestException("At least one impact story UUID must be provided");
+    }
+
+    const impactStories = await ImpactStory.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid"]
+    });
+
+    if (impactStories.length === 0) {
+      throw new NotFoundException("No impact stories found with the provided UUIDs");
+    }
+
+    const foundUuids = impactStories.map(story => story.uuid).filter((uuid): uuid is string => uuid != null);
+    const notFoundUuids = uuids.filter(uuid => !foundUuids.includes(uuid));
+
+    if (notFoundUuids.length > 0) {
+      throw new NotFoundException(`Impact stories not found with UUIDs: ${notFoundUuids.join(", ")}`);
+    }
+
+    const idsToDelete = impactStories.map(story => story.id).filter((id): id is number => id != null);
+
+    if (idsToDelete.length > 0) {
+      await ImpactStory.destroy({
+        where: { id: { [Op.in]: idsToDelete } }
+      });
+    }
+
+    return foundUuids;
   }
 }

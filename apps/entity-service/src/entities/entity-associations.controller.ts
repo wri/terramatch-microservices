@@ -6,9 +6,9 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import {
   DemographicCollections,
-  DemographicDto,
-  DemographicEntryDto
-} from "@terramatch-microservices/common/dto/demographic.dto";
+  TrackingDto,
+  TrackingEntryDto
+} from "@terramatch-microservices/common/dto/tracking.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
@@ -19,7 +19,7 @@ import { InvasiveDto } from "@terramatch-microservices/common/dto/invasive.dto";
 import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 
 @Controller("entities/v3/:entity/:uuid")
-@ApiExtraModels(DemographicEntryDto, DemographicCollections)
+@ApiExtraModels(TrackingEntryDto, DemographicCollections)
 export class EntityAssociationsController {
   constructor(private readonly entitiesService: EntitiesService, private readonly policyService: PolicyService) {}
 
@@ -29,7 +29,7 @@ export class EntityAssociationsController {
     summary: "Get all of a single type of association that are related to a given entity."
   })
   @JsonApiResponse([
-    { data: DemographicDto, hasMany: true },
+    { data: TrackingDto, hasMany: true },
     { data: SeedingDto, hasMany: true },
     { data: TreeSpeciesDto, hasMany: true },
     { data: MediaDto, hasMany: true },

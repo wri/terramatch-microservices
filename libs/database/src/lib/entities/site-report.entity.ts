@@ -72,6 +72,7 @@ type SiteReportMedia =
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   sites: (ids: number[] | Literal) => ({ where: { siteId: { [Op.in]: ids } } }),
   approved: { where: { status: { [Op.in]: SiteReport.APPROVED_STATUSES } } },
+  pctSurvivalToDate: { where: { pctSurvivalToDate: { [Op.ne]: null } } },
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
   task: (taskId: number) => ({ where: { taskId } }),
   lastReport: { order: [["dueAt", "DESC"]], limit: 1 }
@@ -126,6 +127,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
 
   static approved() {
     return chainScope(this, "approved") as typeof SiteReport;
+  }
+
+  static pctSurvivalToDate() {
+    return chainScope(this, "pctSurvivalToDate") as typeof SiteReport;
   }
 
   static dueBefore(date: Date | string) {

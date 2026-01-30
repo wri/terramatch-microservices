@@ -12,7 +12,7 @@ import {
   ProjectReportFactory,
   ProjectUserFactory,
   UserFactory,
-  DemographicFactory
+  TrackingFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { ProjectReportProcessor } from "./project-report.processor";
@@ -440,18 +440,18 @@ describe("ProjectReportProcessor", () => {
   describe("processSideload", () => {
     it("should include sideloaded demographics", async () => {
       const projectReport = await ProjectReportFactory.create();
-      await DemographicFactory.projectReportWorkday(projectReport).create();
-      await DemographicFactory.projectReportJobs(projectReport).create();
+      await TrackingFactory.projectReportWorkday(projectReport).create();
+      await TrackingFactory.projectReportJobs(projectReport).create();
 
       policyService.getPermissions.mockResolvedValue(["projects-read"]);
       const document = buildJsonApi(ProjectReportLightDto);
       await processor.addIndex(document, {
-        sideloads: [{ entity: "demographics", pageSize: 5 }]
+        sideloads: [{ entity: "trackings", pageSize: 5 }]
       });
 
       const result = document.serialize();
       expect(result.included?.length).toBe(2);
-      expect(result.included!.filter(({ type }) => type === "demographics").length).toBe(2);
+      expect(result.included!.filter(({ type }) => type === "trackings").length).toBe(2);
     });
   });
 });

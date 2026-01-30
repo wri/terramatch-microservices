@@ -4,7 +4,8 @@ import {
   CriteriaSiteHistoric,
   PolygonGeometry,
   SitePolygon,
-  Site
+  Site,
+  Project
 } from "@terramatch-microservices/database/entities";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
@@ -200,6 +201,39 @@ export class ValidationService {
     });
 
     return sitePolygons.map(sp => sp.polygonUuid).filter(uuid => uuid != null && uuid !== "") as string[];
+  }
+
+  async getProjectPolygonUuidsForValidation(projectId: number): Promise<string[]> {
+    const project = await Project.findByPk(projectId, {
+      attributes: ["id"]
+    });
+
+    if (project === null) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    const sites = await Site.findAll({
+      where: { projectId },
+      attributes: ["uuid"]
+    });
+
+    if (sites.length === 0) {
+      return [];
+    }
+
+    const siteUuids = sites.map(s => s.uuid);
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        siteUuid: { [Op.in]: siteUuids },
+        polygonUuid: { [Op.ne]: "" },
+        isActive: true,
+        deletedAt: null,
+        validationStatus: { [Op.ne]: null }
+      },
+      attributes: ["polygonUuid"]
+    });
+
+    return sitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null && uuid !== "");
   }
 
   async validatePolygonsBatch(polygonUuids: string[], validationTypes: ValidationType[]): Promise<void> {

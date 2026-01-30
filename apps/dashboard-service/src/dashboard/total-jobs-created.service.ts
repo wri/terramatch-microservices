@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
-import { Demographic, DemographicEntry, Project, ProjectReport } from "@terramatch-microservices/database/entities";
+import { Tracking, TrackingEntry, Project, ProjectReport } from "@terramatch-microservices/database/entities";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 
@@ -22,25 +22,27 @@ export class TotalJobsCreatedService {
     });
 
     // demographics for jobs
-    const jobDemographics = await Demographic.findAll({
+    const jobDemographics = await Tracking.findAll({
       attributes: ["id", "collection"],
       where: {
-        demographicalId: { [Op.in]: projectReports.map(r => r.id) },
+        trackableType: ProjectReport.LARAVEL_TYPE,
+        trackableId: { [Op.in]: projectReports.map(r => r.id) },
         hidden: false,
-        type: "jobs",
-        demographicalType: ProjectReport.LARAVEL_TYPE
+        domain: "demographics",
+        type: "jobs"
       },
       include: [{ association: "entries" }]
     });
 
     // demographics for volunteers
-    const volunteerDemographics = await Demographic.findAll({
+    const volunteerDemographics = await Tracking.findAll({
       attributes: ["id", "collection"],
       where: {
-        demographicalId: { [Op.in]: projectReports.map(r => r.id) },
+        trackableId: { [Op.in]: projectReports.map(r => r.id) },
+        trackableType: ProjectReport.LARAVEL_TYPE,
         hidden: false,
-        type: "volunteers",
-        demographicalType: ProjectReport.LARAVEL_TYPE
+        domain: "demographics",
+        type: "volunteers"
       },
       include: [{ association: "entries" }]
     });
@@ -98,23 +100,23 @@ export class TotalJobsCreatedService {
     };
   }
 
-  private getEntries(demographics: Demographic[]) {
+  private getEntries(demographics: Tracking[]) {
     return demographics.map(d => d.entries).flat();
   }
 
-  private getCollection(demographics: Demographic[], collection: string) {
+  private getCollection(demographics: Tracking[], collection: string) {
     return demographics.filter(d => d.collection === collection);
   }
 
-  private getType(entries: (DemographicEntry | null)[], type: string, subType?: string) {
+  private getType(entries: (TrackingEntry | null)[], type: string, subType?: string) {
     return entries.filter(d => d?.type === type && (subType === undefined || d?.subtype === subType));
   }
 
-  private getOthers(entries: (DemographicEntry | null)[], type: string, knownSubtypes: string[]) {
+  private getOthers(entries: (TrackingEntry | null)[], type: string, knownSubtypes: string[]) {
     return entries.filter(d => d?.type === type && d?.subtype !== null && !knownSubtypes.includes(d.subtype));
   }
 
-  private getSum(entries: (DemographicEntry | null)[]) {
+  private getSum(entries: (TrackingEntry | null)[]) {
     return entries.reduce((sum, entry) => sum + (entry?.amount ?? 0), 0);
   }
 }

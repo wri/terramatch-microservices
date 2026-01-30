@@ -2,8 +2,8 @@ import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-en
 import { faker } from "@faker-js/faker";
 import {
   Application,
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   FinancialIndicator,
   Framework,
   FundingProgramme,
@@ -19,8 +19,8 @@ import {
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
-  DemographicEntryFactory,
-  DemographicFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   FinancialIndicatorFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
@@ -39,8 +39,8 @@ import {
 import Airtable from "airtable";
 import {
   ApplicationEntity,
-  DemographicEntity,
-  DemographicEntryEntity,
+  TrackingEntity,
+  TrackingEntryEntity,
   FinancialIndicatorEntity,
   FundingProgrammeEntity,
   NurseryEntity,
@@ -293,10 +293,10 @@ describe("AirtableEntity", () => {
 
   describe("DemographicEntity", () => {
     let associationUuids: Record<string, string>;
-    let demographics: Demographic[];
+    let demographics: Tracking[];
 
     beforeAll(async () => {
-      await Demographic.truncate();
+      await Tracking.truncate();
 
       associationUuids = {};
       const projectReport = await ProjectReportFactory.create();
@@ -311,15 +311,15 @@ describe("AirtableEntity", () => {
       associationUuids[Project.LARAVEL_TYPE] = project.uuid;
 
       const factories = [
-        () => DemographicFactory.projectReportWorkday(projectReport).create(),
-        () => DemographicFactory.siteReportWorkday(siteReport).create(),
-        () => DemographicFactory.projectReportRestorationPartner(projectReport).create(),
-        () => DemographicFactory.organisationBeneficiaries(organisation).create(),
-        () => DemographicFactory.projectPitchAllEmployees(projectPitch).create(),
-        () => DemographicFactory.projectAllEmployees(project).create()
+        () => TrackingFactory.projectReportWorkday(projectReport).create(),
+        () => TrackingFactory.siteReportWorkday(siteReport).create(),
+        () => TrackingFactory.projectReportRestorationPartner(projectReport).create(),
+        () => TrackingFactory.organisationBeneficiaries(organisation).create(),
+        () => TrackingFactory.projectPitchAllEmployees(projectPitch).create(),
+        () => TrackingFactory.projectAllEmployees(project).create()
       ];
 
-      const allDemographics: Demographic[] = [];
+      const allDemographics: Tracking[] = [];
       for (const factory of factories) {
         // make sure we have at least one of each type
         allDemographics.push(await factory());
@@ -341,27 +341,25 @@ describe("AirtableEntity", () => {
 
       // create one with a bogus association type for testing
       allDemographics.push(
-        await DemographicFactory.projectReportWorkday().create({ demographicalType: "foo", demographicalId: 1 })
+        await TrackingFactory.projectReportWorkday().create({ trackableType: "foo", trackableId: 1 })
       );
-      allDemographics.push(await DemographicFactory.siteReportWorkday().create({ demographicalId: 0 }));
+      allDemographics.push(await TrackingFactory.siteReportWorkday().create({ trackableId: 0 }));
 
       demographics = allDemographics.filter(workday => !workday.isSoftDeleted() && !workday.hidden);
     });
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new DemographicEntity(dataApi),
+        new TrackingEntity(dataApi),
         demographics,
-        ({ uuid, collection, demographicalType, demographicalId }) => ({
+        ({ uuid, collection, trackableType, trackableId }) => ({
           fields: {
             uuid,
             collection,
             projectReportUuid:
-              demographicalType === ProjectReport.LARAVEL_TYPE ? associationUuids[demographicalType] : undefined,
+              trackableType === ProjectReport.LARAVEL_TYPE ? associationUuids[trackableType] : undefined,
             siteReportUuid:
-              demographicalType === SiteReport.LARAVEL_TYPE && demographicalId > 0
-                ? associationUuids[demographicalType]
-                : undefined
+              trackableType === SiteReport.LARAVEL_TYPE && trackableId > 0 ? associationUuids[trackableType] : undefined
           }
         })
       );
@@ -370,14 +368,14 @@ describe("AirtableEntity", () => {
 
   describe("DemographicEntryEntity", () => {
     let demographicUuids: Record<number, string>;
-    let entries: DemographicEntry[];
+    let entries: TrackingEntry[];
 
     beforeAll(async () => {
-      await DemographicEntry.truncate();
+      await TrackingEntry.truncate();
 
-      const projectWorkday = await DemographicFactory.projectReportWorkday().create();
-      const siteWorkday = await DemographicFactory.siteReportWorkday().create();
-      const projectPartner = await DemographicFactory.projectReportRestorationPartner().create();
+      const projectWorkday = await TrackingFactory.projectReportWorkday().create();
+      const siteWorkday = await TrackingFactory.siteReportWorkday().create();
+      const projectPartner = await TrackingFactory.projectReportRestorationPartner().create();
       demographicUuids = {
         [projectWorkday.id]: projectWorkday.uuid,
         [siteWorkday.id]: siteWorkday.uuid,
@@ -385,12 +383,12 @@ describe("AirtableEntity", () => {
       };
 
       const factories = [
-        () => DemographicEntryFactory.any(projectWorkday).create(),
-        () => DemographicEntryFactory.any(siteWorkday).create(),
-        () => DemographicEntryFactory.any(projectPartner).create()
+        () => TrackingEntryFactory.any(projectWorkday).create(),
+        () => TrackingEntryFactory.any(siteWorkday).create(),
+        () => TrackingEntryFactory.any(projectPartner).create()
       ];
 
-      const allDemographics: DemographicEntry[] = [];
+      const allDemographics: TrackingEntry[] = [];
       for (const factory of factories) {
         allDemographics.push(await factory());
       }
@@ -408,16 +406,16 @@ describe("AirtableEntity", () => {
 
     it("sends all records to airtable", async () => {
       await testAirtableUpdates(
-        new DemographicEntryEntity(dataApi),
+        new TrackingEntryEntity(dataApi),
         entries,
-        ({ id, type, subtype, name, amount, demographicId }) => ({
+        ({ id, type, subtype, name, amount, trackingId }) => ({
           fields: {
             id,
             type,
             subtype,
             name,
             amount,
-            demographicUuid: demographicUuids[demographicId]
+            trackingUuid: demographicUuids[trackingId]
           }
         })
       );

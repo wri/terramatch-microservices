@@ -228,7 +228,7 @@ export class MediaService {
       return media;
     } catch (error) {
       this.logger.error(`Error uploading file to S3 [${error}]`);
-      if (transaction != null) {
+      if (transaction == null) {
         await media.destroy({ force: true });
       }
       throw error;

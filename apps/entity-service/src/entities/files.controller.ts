@@ -82,8 +82,7 @@ export class FilesController {
     await this.policyService.authorize("uploadFiles", model);
     const errors: MediaBulkErrorDto[] = [];
     const createdMedias: Media[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const transaction = await Media.sequelize!.transaction();
+    const transaction = await Media.sql.transaction();
     for (const [index, payloadData] of payload.data.entries()) {
       try {
         const file = await this.mediaService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);

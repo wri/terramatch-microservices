@@ -374,7 +374,7 @@ export class ProjectProcessor extends EntityProcessor<
 
   protected async getLastReportSurvivalRate(projectId: number) {
     return await ProjectReport.approved()
-      .pctSurvivalToDate()
+      .pctSurvivalToDatePositive()
       .project(projectId)
       .lastReport()
       .findOne({ attributes: ["pctSurvivalToDate"] });

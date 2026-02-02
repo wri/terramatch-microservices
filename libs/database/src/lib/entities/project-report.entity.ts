@@ -70,6 +70,8 @@ type ProjectReportMedia =
   incomplete: { where: { status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } } },
   approved: { where: { status: { [Op.in]: ProjectReport.APPROVED_STATUSES } } },
   pctSurvivalToDate: { where: { pctSurvivalToDate: { [Op.ne]: null } } },
+  /** Approved reports with pctSurvivalToDate > 0 only (avoids showing 0 when meaning "no data"). */
+  pctSurvivalToDatePositive: { where: { pctSurvivalToDate: { [Op.gt]: 0 } } },
   project: (id: number) => ({ where: { projectId: id } }),
   projectsIds: (ids: number[]) => ({ where: { projectId: { [Op.in]: ids } } }),
   dueBefore: (date: Date | string) => ({ where: { dueAt: { [Op.lt]: date } } }),
@@ -177,6 +179,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   static pctSurvivalToDate() {
     return chainScope(this, "pctSurvivalToDate") as typeof ProjectReport;
+  }
+
+  static pctSurvivalToDatePositive() {
+    return chainScope(this, "pctSurvivalToDatePositive") as typeof ProjectReport;
   }
 
   static project(id: number) {

@@ -188,7 +188,7 @@ export function JsonApiBulkBodyDto<T>(
     @Type(() => DataDto)
     @ApiProperty({
       description: options?.description ?? "Array of resource identifiers",
-      type: [DataDto],
+      type: () => DataDto,
       isArray: true,
       ...(options?.example != null ? { example: options.example } : {})
     })

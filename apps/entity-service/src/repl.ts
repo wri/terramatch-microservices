@@ -100,6 +100,11 @@ bootstrapRepl("Entity Service", AppModule, {
             })
           ).map(({ uuid }) => uuid);
 
+          if (uuids.length === 0) {
+            console.log(`No questions found for for ${label} answers.\n`);
+            return;
+          }
+
           const builder = new PaginatedQueryBuilder(UpdateRequest, 100).where(
             fn("JSON_CONTAINS_PATH", col("content"), literal("'one'"), ...uuids.map(uuid => literal(`'$.${uuid}'`)))
           );

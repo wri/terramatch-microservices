@@ -373,7 +373,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
   protected async getLastReportSurvivalRate(siteId: number) {
     return await SiteReport.approved()
-      .pctSurvivalToDate()
+      .pctSurvivalToDatePositive()
       .sites([siteId])
       .lastReport()
       .findOne({ attributes: ["pctSurvivalToDate"] });

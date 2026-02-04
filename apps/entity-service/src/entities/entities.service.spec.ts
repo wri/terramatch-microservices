@@ -62,7 +62,7 @@ describe("EntitiesService", () => {
     });
 
     it("throws with an unknown entity type", async () => {
-      expect(() => service.createAssociationProcessor("foo" as EntityType, "", "demographics")).toThrow(
+      expect(() => service.createAssociationProcessor("foo" as EntityType, "", "trackings")).toThrow(
         BadRequestException
       );
     });

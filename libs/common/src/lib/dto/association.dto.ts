@@ -4,7 +4,7 @@ import { MEDIA_OWNER_TYPES, MediaOwnerType } from "@terramatch-microservices/dat
 import {
   DEMOGRAPHIC_ASSOCIATION_TYPES,
   DemographicAssociationType
-} from "@terramatch-microservices/database/types/demographic";
+} from "@terramatch-microservices/database/types/tracking";
 import { uniq } from "lodash";
 
 const ASSOCIATION_TYPES = uniq([...ENTITY_TYPES, ...MEDIA_OWNER_TYPES, DEMOGRAPHIC_ASSOCIATION_TYPES]);

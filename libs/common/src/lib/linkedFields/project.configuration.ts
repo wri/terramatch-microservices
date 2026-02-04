@@ -329,6 +329,69 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       },
       label: "Aggregate associates",
       inputType: "number"
+    },
+    "pro-level-1-project": {
+      property: "level1Project",
+      label: "GADM level 1 administrative areas where project will be restoring land",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gadm-level-1"
+    },
+    "pro-level-2-project": {
+      property: "level2Project",
+      label: "GADM level 2 administrative areas where project will be restoring land",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gadm-level-2"
+    },
+    "pro-land-tenure-approach": {
+      property: "landTenureApproach",
+      label: "Land tenure approach",
+      inputType: "long-text"
+    },
+    "pro-seedlings-procurement": {
+      property: "seedlingsProcurement",
+      label: "Seedlings procurement",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "seedlings-procurement"
+    },
+    "pro-jobs-goal-description": {
+      property: "jobsGoalDescription",
+      label: "Jobs goal description",
+      inputType: "long-text"
+    },
+    "pro-volunteers-goal-description": {
+      property: "volunteersGoalDescription",
+      label: "Volunteers goal description",
+      inputType: "long-text"
+    },
+    "pro-community-engagement-plan": {
+      property: "communityEngagementPlan",
+      label: "Community engagement plan",
+      inputType: "long-text"
+    },
+    "pro-direct-beneficiaries-goal-description": {
+      property: "directBeneficiariesGoalDescription",
+      label: "Direct beneficiaries goal description",
+      inputType: "long-text"
+    },
+    "pro-elp-project": {
+      property: "elpProject",
+      label: "Early Learning Program project",
+      inputType: "boolean"
+    },
+    "pro-consortium": {
+      property: "consortium",
+      label: "Consortium",
+      inputType: "long-text"
+    },
+    "pro-landowner-agreement": {
+      property: "landownerAgreement",
+      label: "Landowner agreement",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "landowner-collection"
     }
   },
   fileCollections: {

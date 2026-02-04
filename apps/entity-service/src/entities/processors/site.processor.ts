@@ -1,7 +1,7 @@
 import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   Media,
   Project,
   ProjectUser,
@@ -250,6 +250,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const lastReport = await this.getLastReport(site.id);
+    const lastReportSurvivalRate = await this.getLastReportSurvivalRate(site.id);
 
     const dto = new SiteFullDto(site, {
       ...(await this.getFeedback(site)),
@@ -265,6 +266,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       regeneratedTreesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,
+      lastReportedSurvivalRate: lastReportSurvivalRate?.pctSurvivalToDate ?? null,
       treesPlantedPolygonsCount,
       hectaresRestoredPolygonsCount,
       ...(this.entitiesService.mapMediaCollection(
@@ -322,19 +324,18 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
-    const dueAfter = useDemographicsCutoff ? Demographic.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
+    const dueAfter = useDemographicsCutoff ? Tracking.DEMOGRAPHIC_COUNT_CUTOFF : undefined;
 
     const siteReportIds = SiteReport.approvedIdsSubquery([siteId], { dueAfter });
-    const siteReportWorkdays = Demographic.idsSubquery(
-      siteReportIds,
-      SiteReport.LARAVEL_TYPE,
-      Demographic.WORKDAYS_TYPE
-    );
+    const siteReportWorkdays = Tracking.idsSubquery(siteReportIds, SiteReport.LARAVEL_TYPE, {
+      domain: "demographics",
+      type: Tracking.WORKDAYS_TYPE
+    });
 
     return (
-      (await DemographicEntry.gender().sum("amount", {
+      (await TrackingEntry.gender().sum("amount", {
         where: {
-          demographicId: { [Op.in]: siteReportWorkdays }
+          trackingId: { [Op.in]: siteReportWorkdays }
         }
       })) ?? 0
     );
@@ -343,7 +344,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   protected async getSelfReportedWorkdayCount(siteId: number, useDemographicsCutoff = false) {
     let SR = SiteReport.approved().sites([siteId]);
     if (useDemographicsCutoff) {
-      SR = SR.dueBefore(Demographic.DEMOGRAPHIC_COUNT_CUTOFF);
+      SR = SR.dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF);
     }
 
     const aggregates = [
@@ -368,6 +369,14 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       .sites([siteId])
       .lastReport()
       .findOne({ attributes: ["plantingStatus"] });
+  }
+
+  protected async getLastReportSurvivalRate(siteId: number) {
+    return await SiteReport.approved()
+      .pctSurvivalToDatePositive()
+      .sites([siteId])
+      .lastReport()
+      .findOne({ attributes: ["pctSurvivalToDate"] });
   }
 
   async delete(site: Site) {

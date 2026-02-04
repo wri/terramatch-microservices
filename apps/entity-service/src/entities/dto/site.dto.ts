@@ -150,6 +150,9 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ nullable: true, type: String })
   landscapeCommunityContribution: string | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  lastReportedSurvivalRate: number | null;
+
   @ApiProperty({ nullable: true, type: String })
   technicalNarrative: string | null;
 

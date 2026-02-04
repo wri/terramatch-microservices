@@ -5,12 +5,7 @@ import {
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { Dictionary, difference, isEmpty, isInteger, isString, uniq } from "lodash";
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
-import {
-  Demographic,
-  DemographicEntry,
-  FormQuestion,
-  ProjectPolygon
-} from "@terramatch-microservices/database/entities";
+import { Tracking, TrackingEntry, FormQuestion, ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { FieldResourceCollector } from "./index";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
@@ -18,6 +13,7 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { mapLaravelTypes } from "./utils";
 import { WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { TrackingDomain } from "@terramatch-microservices/database/types/tracking";
 
 export function fieldCollector(logger: LoggerService): FieldResourceCollector {
   const propertyQuestions: Dictionary<string> = {};
@@ -48,34 +44,29 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
       const virtualQuestionModels = uniq(Object.values(virtualQuestions).map(({ modelType }) => modelType))
         .map(type => models[type])
         .filter(isNotNull);
-      const demographics =
-        virtualQuestionModels.length === 0 ? [] : await Demographic.for(virtualQuestionModels).findAll();
+      const trackings = virtualQuestionModels.length === 0 ? [] : await Tracking.for(virtualQuestionModels).findAll();
 
       for (const [questionUuid, { props, modelType }] of Object.entries(virtualQuestions)) {
         if (props.type == "demographicsAggregate") {
           // Find the first visible demographic that matches our config
-          const demographic = demographics.find(({ hidden, demographicalType, demographicalId, type, collection }) => {
+          const tracking = trackings.find(({ hidden, trackableType, trackableId, type, collection }) => {
             if (hidden) return false;
-            if (demographicalType !== laravelTypes[modelType] || demographicalId !== models[modelType]?.id)
-              return false;
+            if (trackableType !== laravelTypes[modelType] || trackableId !== models[modelType]?.id) return false;
             if (type !== props.demographicsType) return false;
             return props.collection === collection;
           });
 
           answers[questionUuid] =
-            demographic == null ? 0 : (await DemographicEntry.demographic(demographic.id).gender().sum("amount")) ?? 0;
+            tracking == null ? 0 : (await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0;
         } else if (props.type == "demographicsDescription") {
           // Pull the description from the first matching demographic that has a non-null description.
           // For this one we ignore the "visible" flag.
-          answers[questionUuid] = demographics.find(
-            ({ demographicalType, demographicalId, type, collection, description }) => {
-              if (description == null || collection == null) return false;
-              if (demographicalType !== laravelTypes[modelType] || demographicalId !== models[modelType]?.id)
-                return false;
-              if (type !== props.demographicsType) return false;
-              return props.collections.includes(collection);
-            }
-          )?.description;
+          answers[questionUuid] = trackings.find(({ trackableType, trackableId, type, collection, description }) => {
+            if (description == null || collection == null) return false;
+            if (trackableType !== laravelTypes[modelType] || trackableId !== models[modelType]?.id) return false;
+            if (type !== props.demographicsType) return false;
+            return props.collections.includes(collection);
+          })?.description;
         } else if (props.type === "projectBoundary") {
           const model = models[modelType];
           if (model == null) {
@@ -113,35 +104,36 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           );
         }
 
-        let demographic = await Demographic.for(model)
+        let tracking = await Tracking.for(model)
           .type(virtual.demographicsType)
           .collection(virtual.collection)
           .findOne();
         if (value == null) {
           // We only get null as a value when the entity is being approved and the field was hidden.
-          if (demographic != null) {
-            await DemographicEntry.destroy({ where: { demographicId: demographic.id } });
-            await demographic.destroy();
+          if (tracking != null) {
+            await TrackingEntry.destroy({ where: { trackingId: tracking.id } });
+            await tracking.destroy();
           }
           return;
         }
 
-        if (demographic == null) {
-          demographic = await Demographic.create({
-            demographicalType: laravelType(model),
-            demographicalId: model.id,
+        if (tracking == null) {
+          tracking = await Tracking.create({
+            trackableType: laravelType(model),
+            trackableId: model.id,
+            domain: "demographics",
             type: virtual.demographicsType,
             collection: virtual.collection
           });
 
-          await DemographicEntry.bulkCreate([
-            { demographicId: demographic.id, type: "gender", subtype: "unknown", amount: value },
-            { demographicId: demographic.id, type: "age", subtype: "unknown", amount: value }
+          await TrackingEntry.bulkCreate([
+            { trackingId: tracking.id, type: "gender", subtype: "unknown", amount: value },
+            { trackingId: tracking.id, type: "age", subtype: "unknown", amount: value }
           ]);
         } else {
           // make sure it hasn't been used for a typical demographics entry, as in that case we
           // don't want to handle trying to balance with this single integer value.
-          const entries = await DemographicEntry.demographic(demographic.id).findAll();
+          const entries = await TrackingEntry.tracking(tracking.id).findAll();
           if (entries.length !== 2 || entries.find(({ subtype }) => subtype !== "unknown") != null) {
             throw new BadRequestException(
               `Illegal attempt to update complicated demographics through aggregate accessor. [${question.linkedFieldKey}]`
@@ -149,33 +141,35 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           }
 
           // Make sure this demographic isn't hidden
-          if (demographic.hidden) await demographic.update({ hidden: false });
+          if (tracking.hidden) await tracking.update({ hidden: false });
 
-          await DemographicEntry.update({ amount: value }, { where: { id: entries.map(({ id }) => id) } });
+          await TrackingEntry.update({ amount: value }, { where: { id: entries.map(({ id }) => id) } });
         }
       } else if (virtual.type === "demographicsDescription") {
         if (answer != null && !isString(answer)) {
           throw new BadRequestException(`Invalid demographics description: [${question.linkedFieldKey}, ${answer}]`);
         }
 
-        const demographicWhere: WhereOptions<Demographic> = {
-          demographicalType: laravelType(model),
-          demographicalId: model.id,
+        const demographicWhere: WhereOptions<Tracking> = {
+          trackableType: laravelType(model),
+          trackableId: model.id,
+          domain: "demographics",
           type: virtual.demographicsType,
           collection: virtual.collections
         };
 
         // If we're setting a non-empty value, make sure that each collection / type combination exists
         if (!isEmpty(answer)) {
-          const collections = (await Demographic.findAll({ where: demographicWhere, attributes: ["collection"] }))
+          const collections = (await Tracking.findAll({ where: demographicWhere, attributes: ["collection"] }))
             .map(({ collection }) => collection)
             .filter(isNotNull);
           const missing = difference(virtual.collections, collections);
           if (missing.length > 0) {
-            await Demographic.bulkCreate(
+            await Tracking.bulkCreate(
               missing.map(collection => ({
-                demographicalType: laravelType(model),
-                demographicalId: model.id as number,
+                trackableType: laravelType(model),
+                trackableId: model.id as number,
+                domain: "demographics" as TrackingDomain,
                 type: virtual.demographicsType,
                 collection
               }))
@@ -183,7 +177,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           }
         }
 
-        await Demographic.update({ description: answer }, { where: demographicWhere });
+        await Tracking.update({ description: answer }, { where: demographicWhere });
       } else if (virtual.type === "projectBoundary") {
         // NOOP, the data saving happened in the FE.
       } else {

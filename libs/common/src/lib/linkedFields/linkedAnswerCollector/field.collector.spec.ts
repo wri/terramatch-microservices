@@ -1,6 +1,6 @@
 import {
-  DemographicEntryFactory,
-  DemographicFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   FormQuestionFactory,
   NurseryFactory,
   ProjectPitchFactory,
@@ -10,8 +10,8 @@ import {
 import { faker } from "@faker-js/faker";
 import { VirtualDemographicsAggregate } from "@terramatch-microservices/database/constants/linked-fields";
 import {
-  Demographic,
-  DemographicEntry,
+  Tracking,
+  TrackingEntry,
   FormQuestion,
   ProjectPitch,
   ProjectReport
@@ -52,17 +52,17 @@ describe("FieldCollector", () => {
 
     const projectReport = await ProjectReportFactory.create();
     // Unrelated demos (one wrong type, one wrong collection)
-    await DemographicFactory.projectReport(projectReport).create({
+    await TrackingFactory.projectReport(projectReport).create({
       type: "workdays",
       collection: "volunteer-project-management",
       description: faker.lorem.paragraph()
     });
-    await DemographicFactory.projectReport(projectReport).create({
+    await TrackingFactory.projectReport(projectReport).create({
       type: "jobs",
       collection: "paid-other-activities",
       description: faker.lorem.paragraph()
     });
-    const demo = await DemographicFactory.projectReport(projectReport).create({
+    const demo = await TrackingFactory.projectReport(projectReport).create({
       type: "workdays",
       collection: "paid-other-activities",
       description: faker.lorem.paragraph()
@@ -76,17 +76,17 @@ describe("FieldCollector", () => {
     collector.addField(getField("pro-pit-indirect-beneficiaries-count"), "projectPitches", "two");
 
     const pitch = await ProjectPitchFactory.create();
-    const volDemo = await DemographicFactory.projectPitch(pitch).create({
+    const volDemo = await TrackingFactory.projectPitch(pitch).create({
       type: "volunteers",
       collection: "volunteer"
     });
     // for collection, only gender counts
-    await DemographicEntryFactory.gender(volDemo, "unknown").create({ amount: 10 });
-    const beneDemo = await DemographicFactory.projectPitch(pitch).create({
+    await TrackingEntryFactory.gender(volDemo, "unknown").create({ amount: 10 });
+    const beneDemo = await TrackingFactory.projectPitch(pitch).create({
       type: "indirect-beneficiaries",
       collection: "indirect"
     });
-    await DemographicEntryFactory.gender(beneDemo, "unknown").create({ amount: 20 });
+    await TrackingEntryFactory.gender(beneDemo, "unknown").create({ amount: 20 });
 
     await harness.expectAnswers({ projectPitches: pitch }, { one: 10, two: 20 });
   });
@@ -143,13 +143,13 @@ describe("FieldCollector", () => {
     });
 
     it("throws if the demographic already has entries from another input", async () => {
-      const demo = await DemographicFactory.projectPitch(pitch).create({
+      const demo = await TrackingFactory.projectPitch(pitch).create({
         type: "volunteers",
         collection: "volunteer"
       });
-      await DemographicEntryFactory.gender(demo, "male").create({ amount: 10 });
-      await DemographicEntryFactory.gender(demo, "female").create({ amount: 10 });
-      await DemographicEntryFactory.age(demo, "youth").create({ amount: 5 });
+      await TrackingEntryFactory.gender(demo, "male").create({ amount: 10 });
+      await TrackingEntryFactory.gender(demo, "female").create({ amount: 10 });
+      await TrackingEntryFactory.age(demo, "youth").create({ amount: 5 });
       await expect(
         collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
           [question.uuid]: 15
@@ -160,13 +160,13 @@ describe("FieldCollector", () => {
     });
 
     it("unhides a hidden demographic", async () => {
-      const demo = await DemographicFactory.projectPitch(pitch).create({
+      const demo = await TrackingFactory.projectPitch(pitch).create({
         type: "volunteers",
         collection: "volunteer",
         hidden: true
       });
-      await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
-      await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
+      await TrackingEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      await TrackingEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: 15
       });
@@ -174,12 +174,12 @@ describe("FieldCollector", () => {
     });
 
     it("updates an existing demographic's entries", async () => {
-      const demo = await DemographicFactory.projectPitch(pitch).create({
+      const demo = await TrackingFactory.projectPitch(pitch).create({
         type: "volunteers",
         collection: "volunteer"
       });
-      const gender = await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
-      const age = await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
+      const gender = await TrackingEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      const age = await TrackingEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: 15
       });
@@ -191,20 +191,20 @@ describe("FieldCollector", () => {
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: 15
       });
-      const demo = await Demographic.for(pitch).type("volunteers").collection("volunteer").findOne();
-      const entries = demo == null ? [] : await DemographicEntry.demographic(demo.id).findAll();
+      const demo = await Tracking.for(pitch).type("volunteers").collection("volunteer").findOne();
+      const entries = demo == null ? [] : await TrackingEntry.tracking(demo.id).findAll();
       expect(entries.length).toBe(2);
       expect(entries).toContainEqual(expect.objectContaining({ type: "gender", subtype: "unknown", amount: 15 }));
       expect(entries).toContainEqual(expect.objectContaining({ type: "age", subtype: "unknown", amount: 15 }));
     });
 
     it("destroys demographics if the value is null", async () => {
-      const demo = await DemographicFactory.projectPitch(pitch).create({
+      const demo = await TrackingFactory.projectPitch(pitch).create({
         type: "volunteers",
         collection: "volunteer"
       });
-      const gender = await DemographicEntryFactory.gender(demo, "unknown").create({ amount: 10 });
-      const age = await DemographicEntryFactory.age(demo, "unknown").create({ amount: 10 });
+      const gender = await TrackingEntryFactory.gender(demo, "unknown").create({ amount: 10 });
+      const age = await TrackingEntryFactory.age(demo, "unknown").create({ amount: 10 });
       await collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
         [question.uuid]: null
       });
@@ -238,7 +238,7 @@ describe("FieldCollector", () => {
       await collector.syncField(report, question, getField("pro-rep-other-workdays-description"), {
         [question.uuid]: "description"
       });
-      const demographics = await Demographic.for(report).type("workdays").findAll();
+      const demographics = await Tracking.for(report).type("workdays").findAll();
       expect(demographics.length).toBe(2);
       expect(demographics).toContainEqual(
         expect.objectContaining({ collection: "paid-other-activities", description: "description" })
@@ -249,14 +249,14 @@ describe("FieldCollector", () => {
     });
 
     it("updates existing demographics", async () => {
-      const paid = await DemographicFactory.projectReportWorkday(report).create({
+      const paid = await TrackingFactory.projectReportWorkday(report).create({
         collection: "paid-other-activities",
         description: "old description"
       });
       await collector.syncField(report, question, getField("pro-rep-other-workdays-description"), {
         [question.uuid]: "new description"
       });
-      const demographics = await Demographic.for(report).type("workdays").findAll();
+      const demographics = await Tracking.for(report).type("workdays").findAll();
       expect(demographics.length).toBe(2);
       expect(demographics).toContainEqual(
         expect.objectContaining({ id: paid.id, collection: "paid-other-activities", description: "new description" })
@@ -267,14 +267,14 @@ describe("FieldCollector", () => {
     });
 
     it("handles a null value", async () => {
-      const paid = await DemographicFactory.projectReportWorkday(report).create({
+      const paid = await TrackingFactory.projectReportWorkday(report).create({
         collection: "paid-other-activities",
         description: "old description"
       });
       await collector.syncField(report, question, getField("pro-rep-other-workdays-description"), {
         [question.uuid]: null
       });
-      const demographics = await Demographic.for(report).type("workdays").findAll();
+      const demographics = await Tracking.for(report).type("workdays").findAll();
       expect(demographics.length).toBe(1);
       expect(demographics).toContainEqual(
         expect.objectContaining({ id: paid.id, collection: "paid-other-activities", description: null })

@@ -152,7 +152,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   framework: Framework | null;
 
-  get frameworkUuid() {
+  get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
   }
 

@@ -204,4 +204,23 @@ export class AuditStatusService {
 
     return auditStatus;
   }
+
+  async deleteAuditStatus(entity: LaravelModel, auditUuid: string): Promise<void> {
+    const auditableType = laravelType(entity);
+    const auditableId = entity.id;
+
+    const auditStatus = await AuditStatus.findOne({
+      where: {
+        uuid: auditUuid,
+        auditableType,
+        auditableId
+      }
+    });
+
+    if (auditStatus == null) {
+      throw new NotFoundException(`Audit status not found or does not belong to this entity`);
+    }
+
+    await auditStatus.destroy();
+  }
 }

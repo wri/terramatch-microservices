@@ -261,7 +261,7 @@ describe("AuditStatusController", () => {
 
       expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
       expect(service.deleteAuditStatus).toHaveBeenCalledWith(mockEntity, auditStatus.uuid);
-      expect(policyService.authorize).toHaveBeenCalledWith("read", mockEntity);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", mockEntity);
       expect(result.meta).toBeDefined();
       expect(result.meta.resourceType).toBe("auditStatuses");
       expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
@@ -316,7 +316,7 @@ describe("AuditStatusController", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw UnauthorizedException when user cannot read entity", async () => {
+    it("should throw UnauthorizedException when user cannot delete entity", async () => {
       const project = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(project).create();
       const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;

@@ -108,7 +108,7 @@ export class AuditStatusController {
   })
   async deleteAuditStatus(@Param() { entity, uuid, auditUuid }: AuditStatusDeleteParamsDto) {
     const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
-    await this.policyService.authorize("read", baseEntity);
+    await this.policyService.authorize("delete", baseEntity);
 
     await this.auditStatusService.deleteAuditStatus(baseEntity, auditUuid);
 

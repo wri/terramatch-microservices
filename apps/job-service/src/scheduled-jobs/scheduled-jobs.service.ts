@@ -70,6 +70,7 @@ export class ScheduledJobsService {
         this.logger.error(`Unrecognized job type: ${job.type}`, job);
     }
   }
+
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async ensureSixMonthTaskDueJobs() {
     const now = DateTime.utc();
@@ -80,8 +81,8 @@ export class ScheduledJobsService {
       [7, 31]
     ];
 
-    const existing = await ScheduledJob.unscoped().findAll({
-      where: { type: TASK_DUE, executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
+    const existing = await ScheduledJob.taskDue(FRAMEWORK_KEYS_TF).findAll({
+      where: { executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
       attributes: ["taskDefinition"]
     });
     const existingKeys = new Set(

@@ -86,7 +86,7 @@ export class ScheduledJobsService {
     });
     const existingKeys = new Set(
       (existing as { taskDefinition: TaskDue }[])
-        .filter(j => j.taskDefinition && "dueAt" in j.taskDefinition)
+        .filter(j => j.taskDefinition != null && "dueAt" in j.taskDefinition)
         .map(j => `${(j.taskDefinition as TaskDue).frameworkKey}|${(j.taskDefinition as TaskDue).dueAt}`)
     );
 

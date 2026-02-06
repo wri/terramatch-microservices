@@ -80,4 +80,15 @@ describe("ScheduledJobsService", () => {
       );
     });
   });
+
+  describe("ensureSixMonthTaskDueJobs", () => {
+    it("should schedule TaskDue jobs for future semesters when none exist", async () => {
+      const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
+
+      await service.ensureSixMonthTaskDueJobs();
+
+      expect(scheduleSpy).toHaveBeenCalled();
+      scheduleSpy.mockRestore();
+    });
+  });
 });

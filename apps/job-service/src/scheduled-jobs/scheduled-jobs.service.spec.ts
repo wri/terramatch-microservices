@@ -90,5 +90,22 @@ describe("ScheduledJobsService", () => {
       expect(scheduleSpy).toHaveBeenCalled();
       scheduleSpy.mockRestore();
     });
+
+    it("should not create duplicate TaskDue when one already exists for same framework and dueAt", async () => {
+      const dueAtISO = "2027-01-31T00:00:00.000Z";
+      await ScheduledJobFactory.forTaskDue.create({
+        executionTime: new Date("2027-01-01"),
+        taskDefinition: { frameworkKey: "enterprises", dueAt: dueAtISO }
+      });
+      const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
+
+      await service.ensureSixMonthTaskDueJobs();
+
+      const enterprisesJan2027Calls = scheduleSpy.mock.calls.filter(
+        ([, fw, due]) => fw === "enterprises" && due.toISOString().startsWith("2027-01-31")
+      );
+      expect(enterprisesJan2027Calls).toHaveLength(0);
+      scheduleSpy.mockRestore();
+    });
   });
 });

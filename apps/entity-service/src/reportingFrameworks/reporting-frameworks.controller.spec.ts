@@ -169,7 +169,10 @@ describe("ReportingFrameworksController", () => {
       expect(policyService.getPermissions).toHaveBeenCalled();
       expect(reportingFrameworksService.findAll).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("read", []);
-      expect(reportingFrameworksService.addDtos).toHaveBeenCalledWith(mockDocument, []);
+      expect(reportingFrameworksService.addDtos).toHaveBeenCalledWith(expect.any(Object), []);
+      const callArgs = reportingFrameworksService.addDtos.mock.calls[0];
+      expect(callArgs[0]).toHaveProperty("resourceType", "reportingFrameworks");
+      expect(callArgs[0]).toHaveProperty("options.forceDataArray", true);
     });
   });
 

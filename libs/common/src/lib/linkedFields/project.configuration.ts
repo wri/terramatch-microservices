@@ -477,6 +477,24 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       resource: "demographics",
       inputType: "indirectBeneficiaries",
       collection: "indirect"
+    },
+    "pro-hectares-restored": {
+      label: "Hectares Restored",
+      resource: "restoration",
+      inputType: "hectares",
+      collection: "restored"
+    },
+    "pro-trees-planted": {
+      label: "Trees Planted",
+      resource: "restoration",
+      inputType: "trees",
+      collection: "planted"
+    },
+    "pro-trees-regenerated": {
+      label: "Trees Regenerated",
+      resource: "restoration",
+      inputType: "trees",
+      collection: "regenerated"
     }
   }
 };

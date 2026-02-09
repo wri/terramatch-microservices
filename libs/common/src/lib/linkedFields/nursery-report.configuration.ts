@@ -38,6 +38,12 @@ export const NurseryReportConfiguration: LinkedFieldConfiguration<NurseryReport>
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "nursery-seedling"
+    },
+    "nur-rep-rel-trees-planted": {
+      label: "Trees Planted",
+      resource: "restoration",
+      inputType: "trees",
+      collection: "planted"
     }
   }
 };

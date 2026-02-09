@@ -10,7 +10,7 @@ describe("ReportingFrameworksService", () => {
   let service: ReportingFrameworksService;
 
   beforeEach(async () => {
-    await Project.destroy({ where: {}, force: true });
+    await Project.truncate();
     await Framework.truncate();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -126,6 +126,15 @@ describe("ReportingFrameworksService", () => {
       expect(attributes.siteFormUuid).toBeNull();
       expect(attributes.nurseryFormUuid).toBeNull();
     });
+
+    it("should use uuid as id when slug is null", async () => {
+      const framework = await FrameworkFactory.create({ slug: null });
+      const document = buildJsonApi(ReportingFrameworkDto);
+
+      const result = await service.addDto(document, framework);
+
+      expect(result.data[0].id).toBe(framework.uuid);
+    });
   });
 
   describe("addDtos", () => {
@@ -157,6 +166,19 @@ describe("ReportingFrameworksService", () => {
 
       expect(result).toBe(document);
       expect(result.data).toHaveLength(0);
+    });
+
+    it("should use uuid as id when slug is null", async () => {
+      const frameworks = await Promise.all([
+        FrameworkFactory.create({ slug: null }),
+        FrameworkFactory.create({ slug: "terrafund" })
+      ]);
+      const document = buildJsonApi(ReportingFrameworkDto, { forceDataArray: true });
+
+      const result = await service.addDtos(document, frameworks);
+
+      expect(result.data[0].id).toBe(frameworks[0].uuid);
+      expect(result.data[1].id).toBe(frameworks[1].slug);
     });
   });
 });

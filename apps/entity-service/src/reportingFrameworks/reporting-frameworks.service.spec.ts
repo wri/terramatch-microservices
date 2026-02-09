@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
-import { Framework } from "@terramatch-microservices/database/entities";
+import { Framework, Project } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -10,6 +10,7 @@ describe("ReportingFrameworksService", () => {
   let service: ReportingFrameworksService;
 
   beforeEach(async () => {
+    await Project.destroy({ where: {}, force: true });
     await Framework.truncate();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -37,6 +38,11 @@ describe("ReportingFrameworksService", () => {
     it("should throw NotFoundException for invalid slug", async () => {
       await expect(service.findBySlug("non-existent")).rejects.toThrow(NotFoundException);
       await expect(service.findBySlug("non-existent")).rejects.toThrow("Reporting framework not found");
+    });
+
+    it("should throw NotFoundException for empty string slug", async () => {
+      await expect(service.findBySlug("")).rejects.toThrow(NotFoundException);
+      await expect(service.findBySlug("")).rejects.toThrow("Reporting framework not found");
     });
   });
 
@@ -78,6 +84,12 @@ describe("ReportingFrameworksService", () => {
 
     it("should return 0 for null slug", async () => {
       const result = await service.calculateProjectsCount(null);
+
+      expect(result).toBe(0);
+    });
+
+    it("should return 0 for empty string slug", async () => {
+      const result = await service.calculateProjectsCount("");
 
       expect(result).toBe(0);
     });

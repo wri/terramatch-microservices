@@ -119,6 +119,58 @@ describe("ReportingFrameworksController", () => {
       expect(dataArray[0]?.attributes.nurseryFormUuid).toBe("nursery-form-uuid");
       expect(dataArray[0]?.attributes.nurseryReportFormUuid).toBe("nursery-report-form-uuid");
     });
+
+    it("should throw UnauthorizedException when authorize fails", async () => {
+      const frameworks = await Promise.all([
+        FrameworkFactory.create({ slug: "terrafund" }),
+        FrameworkFactory.create({ slug: "ppc" })
+      ]);
+
+      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      reportingFrameworksService.findAll.mockResolvedValue(frameworks);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
+
+      await expect(controller.index({})).rejects.toThrow(UnauthorizedException);
+      expect(policyService.getPermissions).toHaveBeenCalled();
+      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("read", frameworks);
+      expect(reportingFrameworksService.addDtos).not.toHaveBeenCalled();
+    });
+
+    it("should handle query parameters correctly", async () => {
+      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+
+      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      reportingFrameworksService.findAll.mockResolvedValue(frameworks);
+      policyService.authorize.mockResolvedValue(undefined);
+      const mockDocument = createMock<DocumentBuilder>();
+      mockDocument.serialize.mockReturnValue({ data: [], meta: { resourceType: "reportingFrameworks" } } as never);
+      reportingFrameworksService.addDtos.mockResolvedValue(mockDocument);
+
+      const query = { translated: true };
+      await controller.index(query);
+
+      expect(policyService.getPermissions).toHaveBeenCalled();
+      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("read", frameworks);
+      expect(reportingFrameworksService.addDtos).toHaveBeenCalled();
+    });
+
+    it("should handle empty frameworks array", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      reportingFrameworksService.findAll.mockResolvedValue([]);
+      policyService.authorize.mockResolvedValue(undefined);
+      const mockDocument = createMock<DocumentBuilder>();
+      mockDocument.serialize.mockReturnValue({ data: [], meta: { resourceType: "reportingFrameworks" } } as never);
+      reportingFrameworksService.addDtos.mockResolvedValue(mockDocument);
+
+      await controller.index({});
+
+      expect(policyService.getPermissions).toHaveBeenCalled();
+      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("read", []);
+      expect(reportingFrameworksService.addDtos).toHaveBeenCalledWith(mockDocument, []);
+    });
   });
 
   describe("get", () => {
@@ -258,6 +310,18 @@ describe("ReportingFrameworksController", () => {
       expect(data.attributes.siteReportFormUuid).toBeNull();
       expect(data.attributes.nurseryFormUuid).toBeNull();
       expect(data.attributes.nurseryReportFormUuid).toBeNull();
+    });
+
+    it("should throw UnauthorizedException when authorize fails", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+
+      reportingFrameworksService.findBySlug.mockResolvedValue(framework);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
+
+      await expect(controller.get("terrafund")).rejects.toThrow(UnauthorizedException);
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund");
+      expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
+      expect(reportingFrameworksService.addDto).not.toHaveBeenCalled();
     });
   });
 });

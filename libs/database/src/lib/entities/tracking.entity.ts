@@ -24,13 +24,18 @@ import {
 import { TrackingEntry } from "./tracking-entry.entity";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "../util/subquery.builder";
-import { TrackingType } from "../types/tracking";
+import { TrackingDomain, TrackingType } from "../types/tracking";
 import { LaravelModel, laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
-import { TrackingDomain } from "../types/tracking";
 
 @Scopes(() => ({
-  forModels: (models: LaravelModel[]) => ({
+  forModel: (model: LaravelModel) => ({
+    where: {
+      trackableType: laravelType(model),
+      trackableId: model.id
+    }
+  }),
+  forAll: (models: LaravelModel[]) => ({
     where: {
       [Op.or]: models.map(model => ({
         trackableType: laravelType(model),
@@ -83,8 +88,19 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   // All values that are valid for the `type` field across domains.
   static readonly VALID_TYPES = [...Tracking.DEMOGRAPHICS_TYPES] as const;
 
-  static for(models: LaravelModel | LaravelModel[]) {
-    return chainScope(this, "forModels", Array.isArray(models) ? models : [models]) as typeof Tracking;
+  static for(model: LaravelModel) {
+    return chainScope(this, "forModel", model) as typeof Tracking;
+  }
+
+  /**
+   * Will pull trackings for all associated models.
+   *
+   * NOTE: This scope adds a [Op.or] clause to the final WHERE clause, and due to how sequelize
+   * combines clauses, any ORs added to the final findAll() call will overwrite this one. Use
+   * with caution!
+   */
+  static forAll(models: LaravelModel[]) {
+    return chainScope(this, "forAll", models) as typeof Tracking;
   }
 
   static domain(domain: TrackingDomain) {

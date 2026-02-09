@@ -15,15 +15,18 @@ import { FrameworkKey } from "../constants";
 import { chainScope } from "../util/chain-scope";
 
 @Scopes(() => ({
-  taskDue: (framework: FrameworkKey) => ({
-    where: { "taskDefinition.frameworkKey": framework, type: TASK_DUE },
+  taskDue: (frameworks: FrameworkKey | readonly FrameworkKey[]) => ({
+    where: {
+      "taskDefinition.frameworkKey": frameworks,
+      type: TASK_DUE
+    },
     order: [["executionTime", "ASC"]]
   })
 }))
 @Table({ tableName: "scheduled_jobs", underscored: true, paranoid: true })
 export class ScheduledJob extends Model<ScheduledJob> {
-  static taskDue(framework: FrameworkKey) {
-    return chainScope(this, "taskDue", framework) as typeof ScheduledJob;
+  static taskDue(frameworks: FrameworkKey | readonly FrameworkKey[]) {
+    return chainScope(this, "taskDue", frameworks) as typeof ScheduledJob;
   }
 
   static async scheduleTaskDue(executionTime: Date, frameworkKey: FrameworkKey, dueAt: Date) {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
-import { Framework, Project } from "@terramatch-microservices/database/entities";
+import { Framework } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -10,7 +10,6 @@ describe("ReportingFrameworksService", () => {
   let service: ReportingFrameworksService;
 
   beforeEach(async () => {
-    await Project.truncate();
     await Framework.truncate();
 
     const module: TestingModule = await Test.createTestingModule({

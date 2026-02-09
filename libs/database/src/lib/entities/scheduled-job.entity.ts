@@ -1,6 +1,5 @@
 import { AutoIncrement, Column, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
 import { BIGINT, DATE, STRING } from "sequelize";
-import { Op } from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import {
   REPORT_REMINDER,
@@ -18,7 +17,7 @@ import { chainScope } from "../util/chain-scope";
 @Scopes(() => ({
   taskDue: (frameworks: FrameworkKey | readonly FrameworkKey[]) => ({
     where: {
-      "taskDefinition.frameworkKey": Array.isArray(frameworks) ? { [Op.in]: frameworks } : frameworks,
+      "taskDefinition.frameworkKey": frameworks,
       type: TASK_DUE
     },
     order: [["executionTime", "ASC"]]

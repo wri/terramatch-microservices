@@ -32,6 +32,8 @@ import { BullModule } from "@nestjs/bullmq";
 import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
 import { AuditStatusController } from "./entities/audit-status.controller";
 import { AuditStatusService } from "./entities/audit-status.service";
+import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
+import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 
 @Module({
   imports: [
@@ -61,7 +63,8 @@ import { AuditStatusService } from "./entities/audit-status.service";
     SubmissionsController, // must be before forms controller
     FormsController,
     ApplicationsController,
-    FundingProgrammesController
+    FundingProgrammesController,
+    ReportingFrameworksController
   ],
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
@@ -74,7 +77,8 @@ import { AuditStatusService } from "./entities/audit-status.service";
     AuditStatusService,
     FormsService,
     FormDataService,
-    EntitiesQueueProcessor
+    EntitiesQueueProcessor,
+    ReportingFrameworksService
   ]
 })
 export class AppModule {}

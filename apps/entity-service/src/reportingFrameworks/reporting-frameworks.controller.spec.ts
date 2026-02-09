@@ -40,7 +40,7 @@ describe("ReportingFrameworksController", () => {
       const result = document.serialize();
 
       expect(result.data as unknown as Array<{ id: string }>).toHaveLength(3);
-      expect((result.data as unknown as Array<{ id: string }>)[0].id).toBe(frameworks[0].uuid);
+      expect((result.data as unknown as Array<{ id: string }>)[0].id).toBe(frameworks[0].slug);
       expect(
         (result.data as unknown as Array<{ attributes: { totalProjectsCount: number } }>)[0].attributes
           .totalProjectsCount
@@ -107,7 +107,7 @@ describe("ReportingFrameworksController", () => {
       const document = await controller.get("terrafund");
       const result = document.serialize();
 
-      expect((result.data as unknown as { id: string }).id).toBe(framework.uuid);
+      expect((result.data as unknown as { id: string }).id).toBe("terrafund");
       expect((result.data as unknown as { attributes: { slug: string } }).attributes.slug).toBe("terrafund");
       expect(
         (result.data as unknown as { attributes: { totalProjectsCount: number } }).attributes.totalProjectsCount
@@ -130,6 +130,8 @@ describe("ReportingFrameworksController", () => {
       const document = await controller.get("enterprises");
       const result = document.serialize();
 
+      // Verify ID is slug (not UUID) for frontend cache compatibility
+      expect((result.data as unknown as { id: string }).id).toBe("enterprises");
       expect((result.data as unknown as { attributes: { slug: string } }).attributes.slug).toBe("enterprises");
       expect((result.data as unknown as { attributes: { accessCode: string } }).attributes.accessCode).toBe(
         "enterprises"

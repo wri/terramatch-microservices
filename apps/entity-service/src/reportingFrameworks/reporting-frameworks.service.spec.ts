@@ -92,7 +92,7 @@ describe("ReportingFrameworksService", () => {
 
       expect(result).toBe(document);
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].id).toBe(framework.uuid);
+      expect(result.data[0].id).toBe(framework.slug);
       expect(
         (serialized.data as unknown as { attributes: { totalProjectsCount: number } }).attributes.totalProjectsCount
       ).toBe(5);

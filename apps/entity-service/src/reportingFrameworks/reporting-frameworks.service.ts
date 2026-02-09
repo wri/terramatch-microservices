@@ -24,14 +24,16 @@ export class ReportingFrameworksService {
 
   async addDto(document: DocumentBuilder, framework: Framework): Promise<DocumentBuilder> {
     const totalProjectsCount = await this.calculateProjectsCount(framework.slug);
-    document.addData(framework.uuid, new ReportingFrameworkDto(framework, { totalProjectsCount }));
+    const resourceId = framework.slug ?? framework.uuid;
+    document.addData(resourceId, new ReportingFrameworkDto(framework, { totalProjectsCount }));
     return document;
   }
 
   async addDtos(document: DocumentBuilder, frameworks: Framework[]): Promise<DocumentBuilder> {
     for (const framework of frameworks) {
       const totalProjectsCount = await this.calculateProjectsCount(framework.slug);
-      document.addData(framework.uuid, new ReportingFrameworkDto(framework, { totalProjectsCount }));
+      const resourceId = framework.slug ?? framework.uuid;
+      document.addData(resourceId, new ReportingFrameworkDto(framework, { totalProjectsCount }));
     }
     return document;
   }

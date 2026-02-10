@@ -7,6 +7,7 @@ import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { Project } from "@terramatch-microservices/database/entities";
 
 describe("ReportingFrameworksController", () => {
   let controller: ReportingFrameworksController;
@@ -14,6 +15,12 @@ describe("ReportingFrameworksController", () => {
   let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
+    try {
+      await Project.truncate({ cascade: true });
+    } catch {
+      await Project.destroy({ where: {}, force: true });
+    }
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReportingFrameworksController],
       providers: [

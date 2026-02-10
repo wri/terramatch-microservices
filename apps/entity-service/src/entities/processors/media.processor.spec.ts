@@ -226,6 +226,7 @@ describe("MediaProcessor", () => {
       const data = result.data as Resource[];
 
       expect(data).toHaveLength(1);
+      expect(data[0].id).toBe(siteMedia.uuid);
       expect((data[0].attributes as unknown as MediaDto).entityType).toBe("sites");
       expect((data[0].attributes as unknown as MediaDto).entityUuid).toBe(site.uuid);
     });

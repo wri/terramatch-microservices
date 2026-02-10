@@ -62,7 +62,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
 
   static readonly DEMOGRAPHIC_COUNT_CUTOFF = "2024-07-05";
 
-  static readonly DOMAINS = ["demographics"] as const;
+  static readonly DOMAINS = ["demographics", "restoration"] as const;
 
   static readonly WORKDAYS_TYPE = "workdays";
   static readonly RESTORATION_PARTNERS_TYPE = "restoration-partners";
@@ -85,8 +85,12 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     Tracking.ASSOCIATES_TYPES
   ] as const;
 
+  static readonly TREES_TYPE = "trees";
+  static readonly HECTARES_TYPE = "hectares";
+  static readonly RESTORATION_TYPES = [Tracking.TREES_TYPE, Tracking.HECTARES_TYPE] as const;
+
   // All values that are valid for the `type` field across domains.
-  static readonly VALID_TYPES = [...Tracking.DEMOGRAPHICS_TYPES] as const;
+  static readonly VALID_TYPES = [...Tracking.DEMOGRAPHICS_TYPES, ...Tracking.RESTORATION_TYPES] as const;
 
   static for(model: LaravelModel) {
     return chainScope(this, "forModel", model) as typeof Tracking;

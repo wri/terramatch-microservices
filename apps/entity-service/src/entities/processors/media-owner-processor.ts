@@ -8,7 +8,16 @@ import {
 import { intersection } from "lodash";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 
-const BASE_MODEL_ATTRIBUTES = ["id", "frameworkKey", "projectId", "siteId", "nurseryId", "organisationId", "createdBy"];
+const BASE_MODEL_ATTRIBUTES = [
+  "id",
+  "uuid",
+  "frameworkKey",
+  "projectId",
+  "siteId",
+  "nurseryId",
+  "organisationId",
+  "createdBy"
+];
 
 export class MediaOwnerProcessor {
   constructor(
@@ -39,7 +48,12 @@ export const getBaseEntityByLaravelTypeAndId = async (laravelType: string, media
   if (mediaOwnerModel == null) {
     throw new BadRequestException(`Media owner type invalid: ${laravelType}`);
   }
-  const attributes = intersection(BASE_MODEL_ATTRIBUTES, Object.keys(mediaOwnerModel.getAttributes()));
+  const modelKeys = Object.keys(mediaOwnerModel.getAttributes());
+  let attributes = intersection(BASE_MODEL_ATTRIBUTES, modelKeys);
+  // Ensure uuid is loaded when present (needed for DTO entityUuid in media index)
+  if (!attributes.includes("uuid") && modelKeys.includes("uuid")) {
+    attributes = [...attributes, "uuid"];
+  }
   const model = await mediaOwnerModel.findOne({ where: { id: mediaOwnerId }, attributes });
   if (model == null) {
     throw new NotFoundException(`Base entity not found: [${mediaOwnerModel.name}, ${mediaOwnerId}]`);

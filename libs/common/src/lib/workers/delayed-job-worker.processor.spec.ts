@@ -9,7 +9,7 @@ import {
 import { DelayedJobFactory, OrganisationFactory } from "@terramatch-microservices/database/factories";
 import { FAILED, SUCCEEDED } from "@terramatch-microservices/database/constants/status";
 import { buildJsonApi, JsonApiDocument } from "../util";
-import { OrganisationDto } from "../dto";
+import { OrganisationLightDto } from "../dto";
 
 class MockWorker extends DelayedJobWorker<DelayedJobData> {
   constructor(public readonly processResponse: Error | DelayedJobResult) {
@@ -55,7 +55,7 @@ describe("DelayedJobWorker", () => {
 
     it("Succeeds the delayed job if there is a payload returned", async () => {
       const org = await OrganisationFactory.create();
-      const document = buildJsonApi(OrganisationDto).addData(org.uuid, new OrganisationDto(org));
+      const document = buildJsonApi(OrganisationLightDto).addData(org.uuid, new OrganisationLightDto(org));
       const processor = new MockWorker({ payload: document });
       const job = await DelayedJobFactory.pending.create();
       await processor.process({ data: { delayedJobId: job.id } } as Job<DelayedJobData>);
@@ -69,7 +69,7 @@ describe("DelayedJobWorker", () => {
   describe("updateJobProgress", () => {
     it("sets update properties on the delayed job", async () => {
       const org = await OrganisationFactory.create();
-      const document = buildJsonApi(OrganisationDto).addData(org.uuid, new OrganisationDto(org));
+      const document = buildJsonApi(OrganisationLightDto).addData(org.uuid, new OrganisationLightDto(org));
       const delayedJob = await DelayedJobFactory.pending.create();
       const processor = new (class ProgressWorker extends DelayedJobWorker<DelayedJobData> {
         async processDelayedJob(job: Job<DelayedJobData>) {

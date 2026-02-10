@@ -2,8 +2,10 @@ import { OrganisationsController } from "./organisations.controller";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { OrganisationCreationService } from "./organisation-creation.service";
+import { OrganisationsService } from "./organisations.service";
 import { UnauthorizedException } from "@nestjs/common";
+import { getQueueToken } from "@nestjs/bullmq";
+import { REQUEST } from "@nestjs/core";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import {
   ApplicationFactory,
@@ -20,7 +22,7 @@ const createRequest = (attributes: OrganisationCreateAttributes = new Organisati
 describe("OrganisationsController", () => {
   let controller: OrganisationsController;
   let policyService: DeepMocked<PolicyService>;
-  let creationService: DeepMocked<OrganisationCreationService>;
+  let organisationsService: DeepMocked<OrganisationsService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -28,9 +30,11 @@ describe("OrganisationsController", () => {
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         {
-          provide: OrganisationCreationService,
-          useValue: (creationService = createMock<OrganisationCreationService>())
-        }
+          provide: OrganisationsService,
+          useValue: (organisationsService = createMock<OrganisationsService>())
+        },
+        { provide: getQueueToken("email"), useValue: createMock() },
+        { provide: REQUEST, useValue: {} }
       ]
     }).compile();
 
@@ -74,10 +78,10 @@ describe("OrganisationsController", () => {
       await expect(controller.create(createRequest())).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should call the creation service", async () => {
+    it("should call the organisations service create method", async () => {
       const attrs = new OrganisationCreateAttributes();
       await controller.create(createRequest(attrs));
-      expect(creationService.createOrganisation).toHaveBeenCalledWith(attrs);
+      expect(organisationsService.create).toHaveBeenCalledWith(attrs);
     });
   });
 });

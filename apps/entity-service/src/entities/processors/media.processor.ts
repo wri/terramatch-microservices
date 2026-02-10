@@ -10,7 +10,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
-import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
+import {
+  entityTypeFromLaravel,
+  MEDIA_OWNER_MODELS,
+  MediaOwnerType
+} from "@terramatch-microservices/database/constants/media-owners";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
@@ -231,14 +235,6 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return builder.paginationTotal();
   }
 
-  /** Resolves media owner's short type (e.g. "sites") from Laravel modelType for DTO. */
-  private entityTypeFromLaravel(laravelType: string): MediaOwnerType | EntityType | undefined {
-    const entry = Object.entries(MEDIA_OWNER_MODELS).find(
-      ([, modelClass]) => (modelClass as { LARAVEL_TYPE: string }).LARAVEL_TYPE === laravelType
-    );
-    return entry?.[0] as MediaOwnerType | undefined;
-  }
-
   public async addDtos(document: DocumentBuilder): Promise<void> {
     const associations = await this.getAssociations();
     const indexIds: string[] = [];
@@ -247,7 +243,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       const media = association as unknown as Media;
       const owner = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
       const entityTypeForDto =
-        (this.entityTypeFromLaravel(media.modelType) as AssociationDtoAdditionalProps["entityType"]) ?? this.entityType;
+        (entityTypeFromLaravel(media.modelType) as AssociationDtoAdditionalProps["entityType"]) ?? this.entityType;
 
       document.addData(
         association.uuid,

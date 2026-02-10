@@ -110,7 +110,7 @@ export class AuditStatusController {
     const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
     await this.policyService.authorize("delete", baseEntity);
 
-    await this.auditStatusService.deleteAuditStatus(baseEntity, auditUuid);
+    await this.auditStatusService.deleteAuditStatus(auditUuid);
 
     return buildDeletedResponse(getDtoType(AuditStatusDto), auditUuid);
   }

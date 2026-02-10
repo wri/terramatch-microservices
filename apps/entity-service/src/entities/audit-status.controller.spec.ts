@@ -260,7 +260,7 @@ describe("AuditStatusController", () => {
       );
 
       expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
-      expect(service.deleteAuditStatus).toHaveBeenCalledWith(mockEntity, auditStatus.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", mockEntity);
       expect(result.meta).toBeDefined();
       expect(result.meta.resourceType).toBe("auditStatuses");
@@ -295,25 +295,29 @@ describe("AuditStatusController", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw NotFoundException when audit status does not belong to entity", async () => {
+    it("should delete audit status even when it belongs to a different entity (UUID uniqueness)", async () => {
       const project = await ProjectFactory.create();
       const otherProject = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(otherProject).create();
       const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
 
       service.resolveEntity.mockResolvedValue(mockEntity);
-      service.deleteAuditStatus.mockRejectedValue(
-        new NotFoundException("Audit status not found or does not belong to this entity")
-      );
+      service.deleteAuditStatus.mockResolvedValue();
       policyService.authorize.mockResolvedValue();
 
-      await expect(
-        controller.deleteAuditStatus({
+      const result = serialize(
+        await controller.deleteAuditStatus({
           entity: "projects",
           uuid: project.uuid,
           auditUuid: auditStatus.uuid
         })
-      ).rejects.toThrow(NotFoundException);
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", mockEntity);
+      expect(result.meta.resourceType).toBe("auditStatuses");
+      expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
     });
 
     it("should throw UnauthorizedException when user cannot delete entity", async () => {
@@ -357,7 +361,7 @@ describe("AuditStatusController", () => {
       );
 
       expect(service.resolveEntity).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
-      expect(service.deleteAuditStatus).toHaveBeenCalledWith(mockEntity, auditStatus.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
       expect(result.meta.resourceType).toBe("auditStatuses");
       expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
     });

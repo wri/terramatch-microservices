@@ -205,7 +205,7 @@ export class AuditStatusService {
     return auditStatus;
   }
 
-  async deleteAuditStatus(entity: LaravelModel, auditUuid: string): Promise<void> {
+  async deleteAuditStatus(auditUuid: string): Promise<void> {
     const auditStatus = await AuditStatus.findOne({
       where: {
         uuid: auditUuid

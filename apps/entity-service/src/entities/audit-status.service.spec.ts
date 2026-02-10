@@ -366,8 +366,7 @@ describe("AuditStatusService", () => {
       const project = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(project).create();
 
-      const entity = await service.resolveEntity("projects", project.uuid);
-      await service.deleteAuditStatus(entity, auditStatus.uuid);
+      await service.deleteAuditStatus(auditStatus.uuid);
 
       const deletedStatus = await AuditStatus.findByPk(auditStatus.id);
       expect(deletedStatus).toBeNull();
@@ -378,10 +377,7 @@ describe("AuditStatusService", () => {
     });
 
     it("should throw NotFoundException when audit status does not exist", async () => {
-      const project = await ProjectFactory.create();
-      const entity = await service.resolveEntity("projects", project.uuid);
-
-      await expect(service.deleteAuditStatus(entity, "non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(service.deleteAuditStatus("non-existent-uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should delete audit status for sitePolygons entity", async () => {
@@ -395,8 +391,7 @@ describe("AuditStatusService", () => {
         type: "status"
       });
 
-      const entity = await service.resolveEntity("sitePolygons", sitePolygon.uuid);
-      await service.deleteAuditStatus(entity, auditStatus.uuid);
+      await service.deleteAuditStatus(auditStatus.uuid);
 
       const deletedStatus = await AuditStatus.findByPk(auditStatus.id);
       expect(deletedStatus).toBeNull();

@@ -67,6 +67,29 @@ describe("MediaProcessor", () => {
   });
 
   describe("addDtos", () => {
+    it("returns entityType/entityUuid per media owner (not base entity) when index has mixed owners", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const projectMedia = await MediaFactory.project(project).create();
+      const siteMedia = await MediaFactory.site(site).create();
+
+      processor = module
+        .get(EntitiesService)
+        .createAssociationProcessor("projects", project.uuid, "media", {}) as MediaProcessor;
+
+      const document = buildJsonApi(MediaDto, { forceDataArray: true });
+      await processor.addDtos(document);
+      const result = document.serialize();
+      const data = result.data as Resource[];
+
+      const projectDto = data.find(d => d.id === projectMedia.uuid)?.attributes as unknown as MediaDto;
+      const siteDto = data.find(d => d.id === siteMedia.uuid)?.attributes as unknown as MediaDto;
+      expect(projectDto.entityType).toBe("projects");
+      expect(projectDto.entityUuid).toBe(project.uuid);
+      expect(siteDto.entityType).toBe("sites");
+      expect(siteDto.entityUuid).toBe(site.uuid);
+    });
+
     it("should include media entries for the project associated to the processor at creation", async () => {
       const project = await ProjectFactory.create();
       const media = await MediaFactory.project(project).create();
@@ -183,6 +206,28 @@ describe("MediaProcessor", () => {
         .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
+    });
+
+    it("should filter by modelType (e.g. Project Gallery: modelType=sites returns only site media)", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await MediaFactory.project(project).create();
+      const siteMedia = await MediaFactory.site(site).create();
+
+      const query: MediaQueryDto = { modelType: "sites" };
+
+      processor = module
+        .get(EntitiesService)
+        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+
+      const document = buildJsonApi(MediaDto, { forceDataArray: true });
+      await processor.addDtos(document);
+      const result = document.serialize();
+      const data = result.data as Resource[];
+
+      expect(data).toHaveLength(1);
+      expect((data[0].attributes as unknown as MediaDto).entityType).toBe("sites");
+      expect((data[0].attributes as unknown as MediaDto).entityUuid).toBe(site.uuid);
     });
   });
 

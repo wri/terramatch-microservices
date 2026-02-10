@@ -10,6 +10,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
+import { MEDIA_OWNER_MODELS, MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
@@ -18,6 +19,8 @@ import { col, fn, Includeable, Op, Sequelize } from "sequelize";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { getBaseEntityByLaravelTypeAndId } from "./media-owner-processor";
+import type { AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
 
 type QueryModelType = {
   modelType: string;
@@ -151,16 +154,24 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       models = this.getBaseEntityModels(baseEntity);
     }
 
-    this._queryBuilder.where({
-      [Op.or]: models.map(model => {
-        return {
+    // Restrict to requested modelType when provided (e.g. Project Gallery filter: modelType=sites)
+    if (this.query.modelType != null && this.query.modelType in MEDIA_OWNER_MODELS) {
+      const requestedLaravelType = (
+        MEDIA_OWNER_MODELS[this.query.modelType as MediaOwnerType] as { LARAVEL_TYPE: string }
+      ).LARAVEL_TYPE;
+      models = models.filter(m => m.modelType === requestedLaravelType);
+    }
+
+    if (models.length === 0) {
+      this._queryBuilder.where(Sequelize.literal("1 = 0"));
+    } else {
+      this._queryBuilder.where({
+        [Op.or]: models.map(model => ({
           modelType: model.modelType,
-          modelId: {
-            [Op.in]: model.subquery
-          }
-        };
-      })
-    });
+          modelId: { [Op.in]: model.subquery }
+        }))
+      });
+    }
 
     if (this.query.isGeotagged != null) {
       this._queryBuilder.where({
@@ -220,16 +231,30 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return builder.paginationTotal();
   }
 
+  /** Resolves media owner's short type (e.g. "sites") from Laravel modelType for DTO. */
+  private entityTypeFromLaravel(laravelType: string): MediaOwnerType | EntityType | undefined {
+    const entry = Object.entries(MEDIA_OWNER_MODELS).find(
+      ([, modelClass]) => (modelClass as { LARAVEL_TYPE: string }).LARAVEL_TYPE === laravelType
+    );
+    return entry?.[0] as MediaOwnerType | undefined;
+  }
+
   public async addDtos(document: DocumentBuilder): Promise<void> {
     const associations = await this.getAssociations();
     const indexIds: string[] = [];
     for (const association of associations) {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
+      const owner = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+      const entityTypeForDto =
+        (this.entityTypeFromLaravel(media.modelType) as AssociationDtoAdditionalProps["entityType"]) ?? this.entityType;
 
       document.addData(
         association.uuid,
-        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid })
+        this.entitiesService.mediaDto(media, {
+          entityType: entityTypeForDto,
+          entityUuid: owner.uuid
+        })
       );
     }
 

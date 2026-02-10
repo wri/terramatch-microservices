@@ -384,33 +384,6 @@ describe("AuditStatusService", () => {
       await expect(service.deleteAuditStatus(entity, "non-existent-uuid")).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw NotFoundException when audit status belongs to different entity", async () => {
-      const project1 = await ProjectFactory.create();
-      const project2 = await ProjectFactory.create();
-      const auditStatus = await AuditStatusFactory.project(project1).create();
-
-      const entity2 = await service.resolveEntity("projects", project2.uuid);
-
-      await expect(service.deleteAuditStatus(entity2, auditStatus.uuid)).rejects.toThrow(NotFoundException);
-    });
-
-    it("should throw NotFoundException when audit status has different auditableType", async () => {
-      const project = await ProjectFactory.create();
-      const site = await SiteFactory.create();
-      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
-      const auditStatus = await AuditStatus.create({
-        auditableType: SitePolygon.LARAVEL_TYPE,
-        auditableId: sitePolygon.id,
-        status: "approved",
-        comment: "Test",
-        type: "status"
-      });
-
-      const projectEntity = await service.resolveEntity("projects", project.uuid);
-
-      await expect(service.deleteAuditStatus(projectEntity, auditStatus.uuid)).rejects.toThrow(NotFoundException);
-    });
-
     it("should delete audit status for sitePolygons entity", async () => {
       const site = await SiteFactory.create();
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });

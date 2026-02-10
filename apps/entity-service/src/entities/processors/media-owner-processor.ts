@@ -8,7 +8,16 @@ import {
 import { intersection } from "lodash";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 
-const BASE_MODEL_ATTRIBUTES = ["id", "frameworkKey", "projectId", "siteId", "nurseryId", "organisationId", "createdBy"];
+const BASE_MODEL_ATTRIBUTES = [
+  "id",
+  "uuid",
+  "frameworkKey",
+  "projectId",
+  "siteId",
+  "nurseryId",
+  "organisationId",
+  "createdBy"
+];
 
 export class MediaOwnerProcessor {
   constructor(

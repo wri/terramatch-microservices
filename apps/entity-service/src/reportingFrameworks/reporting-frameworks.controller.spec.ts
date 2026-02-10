@@ -7,12 +7,13 @@ import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Project, Framework, FrameworkUser } from "@terramatch-microservices/database/entities";
 
 describe("ReportingFrameworksController", () => {
   let controller: ReportingFrameworksController;
   let reportingFrameworksService: DeepMocked<ReportingFrameworksService>;
   let policyService: DeepMocked<PolicyService>;
+  const createdFrameworkIds: number[] = [];
 
   beforeEach(async () => {
     try {
@@ -35,9 +36,19 @@ describe("ReportingFrameworksController", () => {
     controller = module.get<ReportingFrameworksController>(ReportingFrameworksController);
 
     mockUserId(1);
+    createdFrameworkIds.length = 0;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (createdFrameworkIds.length > 0) {
+      await FrameworkUser.destroy({ where: { frameworkId: createdFrameworkIds }, force: true });
+      await Framework.destroy({ where: { id: createdFrameworkIds }, force: true });
+    }
+    try {
+      await Project.truncate({ cascade: true });
+    } catch {
+      await Project.destroy({ where: {}, force: true });
+    }
     jest.restoreAllMocks();
   });
 
@@ -48,6 +59,7 @@ describe("ReportingFrameworksController", () => {
         FrameworkFactory.create({ slug: "ppc" }),
         FrameworkFactory.create({ slug: "hbf" })
       ]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
       await ProjectFactory.create({ frameworkKey: frameworks[0].slug });
       await ProjectFactory.create({ frameworkKey: frameworks[0].slug });
       await ProjectFactory.create({ frameworkKey: frameworks[1].slug });
@@ -70,6 +82,7 @@ describe("ReportingFrameworksController", () => {
         FrameworkFactory.create({ slug: "terrafund" }),
         FrameworkFactory.create({ slug: "ppc" })
       ]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
@@ -90,6 +103,7 @@ describe("ReportingFrameworksController", () => {
         nurseryFormUuid: "nursery-form-uuid",
         nurseryReportFormUuid: "nursery-report-form-uuid"
       });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findAll.mockResolvedValue([framework]);
       policyService.authorize.mockResolvedValue(undefined);
@@ -136,6 +150,7 @@ describe("ReportingFrameworksController", () => {
         FrameworkFactory.create({ slug: "terrafund" }),
         FrameworkFactory.create({ slug: "ppc" })
       ]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
@@ -148,6 +163,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should handle query parameters correctly", async () => {
       const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
       policyService.authorize.mockResolvedValue(undefined);
@@ -184,6 +200,7 @@ describe("ReportingFrameworksController", () => {
   describe("get", () => {
     it("should return a framework by slug for authenticated users", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
       await ProjectFactory.createMany(5, { frameworkKey: framework.slug });
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -223,6 +240,7 @@ describe("ReportingFrameworksController", () => {
       const framework = await FrameworkFactory.create({
         slug: "enterprises"
       });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
@@ -247,6 +265,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should work for admin users", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
@@ -277,6 +296,7 @@ describe("ReportingFrameworksController", () => {
         nurseryFormUuid: null,
         nurseryReportFormUuid: null
       });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
@@ -318,6 +338,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should throw UnauthorizedException when authorize fails", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
@@ -330,6 +351,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should handle framework with zero projects count", async () => {
       const framework = await FrameworkFactory.create({ slug: "fundo-flora" });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
@@ -365,6 +387,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should handle error when addDtos throws", async () => {
       const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
       policyService.authorize.mockResolvedValue(undefined);
@@ -379,6 +402,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should handle error when addDto throws", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);

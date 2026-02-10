@@ -2,6 +2,7 @@ import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.
 import { IsOptional, IsString, ValidateNested } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
 class OrganisationFilterDto {
   @ApiProperty({ required: false })
@@ -35,4 +36,13 @@ export class OrganisationIndexQueryDto extends IndexQueryDto {
   @ValidateNested()
   @Type(() => OrganisationFilterDto)
   filter?: OrganisationFilterDto;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description: "Return light resource instead of full resource"
+  })
+  @TransformBooleanString()
+  lightResource?: boolean;
 }

@@ -38,7 +38,10 @@ export class OrganisationsController {
 
   @Get()
   @ApiOperation({ operationId: "organisationIndex" })
-  @JsonApiResponse({ data: OrganisationLightDto, hasMany: true })
+  @JsonApiResponse([
+    { data: OrganisationLightDto, pagination: "number" },
+    { data: OrganisationFullDto, pagination: "number" }
+  ])
   @ExceptionResponse(UnauthorizedException, { description: "Organisation listing not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
   async index(@Query() query: OrganisationIndexQueryDto) {
@@ -49,9 +52,14 @@ export class OrganisationsController {
 
     await this.policyService.authorize("read", organisations);
 
+    const dtoType = query.lightResource === true ? OrganisationLightDto : OrganisationFullDto;
+
     return organisations.reduce(
-      (document, org) => document.addData(org.uuid, new OrganisationLightDto(org)).document,
-      buildJsonApi(OrganisationLightDto, { forceDataArray: true }).addIndex({
+      (document, org) => {
+        const dto = query.lightResource === true ? new OrganisationLightDto(org) : new OrganisationFullDto(org);
+        return document.addData(org.uuid, dto).document;
+      },
+      buildJsonApi(dtoType, { forceDataArray: true }).addIndex({
         requestPath: `/organisations/v3/organisations${getStableRequestQuery(query)}`,
         total: paginationTotal,
         pageNumber: query.page?.number ?? 1

@@ -11,6 +11,7 @@ import {
   Form,
   FormQuestionOption,
   FormSubmission,
+  Framework,
   FundingProgramme,
   ImpactStory,
   Media,
@@ -50,6 +51,7 @@ import { FinancialIndicatorPolicy } from "./financial-indicator.policy";
 import { FinancialReportPolicy } from "./financial-report.policy";
 import { FormPolicy } from "./form.policy";
 import { FormQuestionOptionPolicy } from "./form-question-option.policy";
+import { FrameworkPolicy } from "./framework.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
@@ -83,6 +85,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Form, FormPolicy],
   [FormSubmission, FormSubmissionPolicy],
   [FormQuestionOption, FormQuestionOptionPolicy],
+  [Framework, FrameworkPolicy],
   [FundingProgramme, FundingProgrammePolicy],
   [Media, MediaPolicy],
   [Nursery, NurseryPolicy],

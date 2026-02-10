@@ -27,9 +27,6 @@ export class ReportingFrameworkDto {
   slug: string | null;
 
   @ApiProperty({ nullable: true, type: String })
-  accessCode: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
   projectFormUuid: string | null;
 
   @ApiProperty({ nullable: true, type: String })

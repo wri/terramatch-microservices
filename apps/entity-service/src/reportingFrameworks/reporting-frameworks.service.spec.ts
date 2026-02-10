@@ -165,6 +165,42 @@ describe("ReportingFrameworksService", () => {
 
       expect(result.data[0].id).toBe(framework.uuid);
     });
+
+    it("should add framework dto with all form UUIDs populated", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund",
+        projectFormUuid: "project-form-uuid",
+        projectReportFormUuid: "project-report-form-uuid",
+        siteFormUuid: "site-form-uuid",
+        siteReportFormUuid: "site-report-form-uuid",
+        nurseryFormUuid: "nursery-form-uuid",
+        nurseryReportFormUuid: "nursery-report-form-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const document = buildJsonApi(ReportingFrameworkDto);
+
+      const result = await service.addDto(document, framework);
+      const serialized = result.serialize();
+
+      const attributes = (
+        serialized.data as unknown as {
+          attributes: {
+            projectFormUuid: string | null;
+            projectReportFormUuid: string | null;
+            siteFormUuid: string | null;
+            siteReportFormUuid: string | null;
+            nurseryFormUuid: string | null;
+            nurseryReportFormUuid: string | null;
+          };
+        }
+      ).attributes;
+      expect(attributes.projectFormUuid).toBe("project-form-uuid");
+      expect(attributes.projectReportFormUuid).toBe("project-report-form-uuid");
+      expect(attributes.siteFormUuid).toBe("site-form-uuid");
+      expect(attributes.siteReportFormUuid).toBe("site-report-form-uuid");
+      expect(attributes.nurseryFormUuid).toBe("nursery-form-uuid");
+      expect(attributes.nurseryReportFormUuid).toBe("nursery-report-form-uuid");
+    });
   });
 
   describe("addDtos", () => {
@@ -211,6 +247,49 @@ describe("ReportingFrameworksService", () => {
 
       expect(result.data[0].id).toBe(frameworks[0].uuid);
       expect(result.data[1].id).toBe(frameworks[1].slug);
+    });
+
+    it("should handle frameworks with mixed form UUIDs", async () => {
+      const frameworks = await Promise.all([
+        FrameworkFactory.create({
+          slug: "terrafund",
+          projectFormUuid: "project-form-1",
+          projectReportFormUuid: null,
+          siteFormUuid: null,
+          siteReportFormUuid: "site-report-1",
+          nurseryFormUuid: null,
+          nurseryReportFormUuid: null
+        }),
+        FrameworkFactory.create({
+          slug: "ppc",
+          projectFormUuid: null,
+          projectReportFormUuid: null,
+          siteFormUuid: null,
+          siteReportFormUuid: null,
+          nurseryFormUuid: null,
+          nurseryReportFormUuid: null
+        })
+      ]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
+      const document = buildJsonApi(ReportingFrameworkDto, { forceDataArray: true });
+
+      const result = await service.addDtos(document, frameworks);
+      const serialized = result.serialize();
+
+      expect(result.data).toHaveLength(2);
+      const dataArray = serialized.data as unknown as Array<{
+        attributes: {
+          projectFormUuid: string | null;
+          projectReportFormUuid: string | null;
+          siteFormUuid: string | null;
+          siteReportFormUuid: string | null;
+        };
+      }>;
+      expect(dataArray[0].attributes.projectFormUuid).toBe("project-form-1");
+      expect(dataArray[0].attributes.projectReportFormUuid).toBeNull();
+      expect(dataArray[0].attributes.siteFormUuid).toBeNull();
+      expect(dataArray[0].attributes.siteReportFormUuid).toBe("site-report-1");
+      expect(dataArray[1].attributes.projectFormUuid).toBeNull();
     });
   });
 });

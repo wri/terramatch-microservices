@@ -24,12 +24,6 @@ export class ReportingFrameworksController {
     description: "User is not authorized to access reporting frameworks"
   })
   async index(@Query() query: ReportingFrameworkQueryDto) {
-    // Check for admin permissions (framework-* permissions)
-    const permissions = await this.policyService.getPermissions();
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
-      throw new UnauthorizedException("Admin access required");
-    }
-
     const frameworks = await this.reportingFrameworksService.findAll();
     await this.policyService.authorize("read", frameworks);
 

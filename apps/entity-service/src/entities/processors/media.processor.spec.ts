@@ -230,6 +230,31 @@ describe("MediaProcessor", () => {
       expect((data[0].attributes as unknown as MediaDto).entityType).toBe("sites");
       expect((data[0].attributes as unknown as MediaDto).entityUuid).toBe(site.uuid);
     });
+
+    it('should include projectReports and siteReports when modelType="projectReports" in project gallery', async () => {
+      const project = await ProjectFactory.create();
+      const projectReport = await ProjectReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const siteReport = await SiteReportFactory.create({ siteId: site.id, dueAt: projectReport.dueAt });
+
+      const projectReportMedia = await MediaFactory.projectReport(projectReport).create();
+      const siteReportMedia = await MediaFactory.siteReport(siteReport).create();
+
+      const query: MediaQueryDto = { modelType: "projectReports" };
+
+      processor = module
+        .get(EntitiesService)
+        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+
+      const document = buildJsonApi(MediaDto, { forceDataArray: true });
+      await processor.addDtos(document);
+      const result = document.serialize();
+      const data = result.data as Resource[];
+
+      const ids = data.map(d => d.id);
+      expect(ids).toContain(projectReportMedia.uuid);
+      expect(ids).toContain(siteReportMedia.uuid);
+    });
   });
 
   describe("it sorts", () => {

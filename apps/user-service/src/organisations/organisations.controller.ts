@@ -26,12 +26,20 @@ import {
   getStableRequestQuery,
   getDtoType
 } from "@terramatch-microservices/common/util";
-import { Organisation, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
+import {
+  Organisation,
+  FinancialIndicator,
+  FinancialReport,
+  Media,
+  FundingType
+} from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { OrganisationsService } from "./organisations.service";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
-import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
+import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -76,7 +84,7 @@ export class OrganisationsController {
   @ApiOperation({ operationId: "organisationShow", summary: "Get a single organisation by UUID" })
   @JsonApiResponse({
     data: OrganisationFullDto,
-    included: [FinancialIndicatorDto]
+    included: [FinancialIndicatorDto, FinancialReportLightDto, MediaDto, FundingTypeDto]
   })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
@@ -126,6 +134,59 @@ export class OrganisationsController {
               entityType: "financialIndicators" as const,
               entityUuid: indicator.uuid,
               documentation: mediaDtos
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("financialReport")) {
+      const financialReports = await FinancialReport.organisation(organisation.id).findAll();
+
+      if (financialReports.length > 0) {
+        for (const report of financialReports) {
+          document.addData(
+            report.uuid,
+            new FinancialReportLightDto(report, {
+              entityType: "financialReports" as const,
+              entityUuid: report.uuid
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("cover")) {
+      const coverMedia = await Media.for(organisation).findAll({
+        where: { collectionName: "cover" }
+      });
+
+      if (coverMedia.length > 0) {
+        for (const media of coverMedia) {
+          document.addData(
+            media.uuid,
+            new MediaDto(media, {
+              entityType: "organisations" as const,
+              entityUuid: organisation.uuid,
+              url: this.mediaService.getUrl(media),
+              thumbUrl: this.mediaService.getUrl(media, "thumbnail")
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("fundingTypes")) {
+      const fundingTypes = await FundingType.organisation(organisation.uuid).findAll();
+
+      if (fundingTypes.length > 0) {
+        for (const fundingType of fundingTypes) {
+          document.addData(
+            fundingType.uuid,
+            new FundingTypeDto(fundingType, {
+              // @ts-expect-error - fundingTypes is not in AssociationEntityType but is valid for JSON:API
+              entityType: "fundingTypes" as const,
+              entityUuid: fundingType.uuid
             })
           );
         }

@@ -720,23 +720,17 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       resource: "financialIndicators",
       inputType: "financialIndicators"
     },
-    "org-hectares-restored": {
+    "org-hectares-historical": {
       label: "Hectares Restored",
       resource: "restoration",
-      inputType: "hectares",
-      collection: "restored"
+      inputType: "hectares-historical",
+      collection: "all"
     },
-    "org-trees-planted": {
+    "org-trees-historical": {
       label: "Trees Planted",
       resource: "restoration",
-      inputType: "trees",
-      collection: "planted"
-    },
-    "org-trees-regenerated": {
-      label: "Trees Regenerated",
-      resource: "restoration",
-      inputType: "trees",
-      collection: "regenerated"
+      inputType: "trees-historical",
+      collection: "all"
     }
   }
 };

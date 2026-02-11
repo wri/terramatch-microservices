@@ -262,12 +262,6 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       resource: "demographics",
       inputType: "workdays",
       collection: "convergence"
-    },
-    "site-rep-trees-regenerated": {
-      label: "Trees Regenerated",
-      resource: "restoration",
-      inputType: "trees",
-      collection: "regenerated"
     }
   }
 };

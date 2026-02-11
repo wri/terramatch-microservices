@@ -85,9 +85,16 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     Tracking.ASSOCIATES_TYPES
   ] as const;
 
-  static readonly TREES_TYPE = "trees";
-  static readonly HECTARES_TYPE = "hectares";
-  static readonly RESTORATION_TYPES = [Tracking.TREES_TYPE, Tracking.HECTARES_TYPE] as const;
+  static readonly HECTARES_GOAL_TYPE = "hectares-goal";
+  static readonly HECTARES_HISTORICAL_TYPE = "hectares-historical";
+  static readonly TREES_GOAL_TYPE = "trees-goal";
+  static readonly TREES_HISTORICAL_TYPE = "trees-historical";
+  static readonly RESTORATION_TYPES = [
+    Tracking.HECTARES_GOAL_TYPE,
+    Tracking.HECTARES_HISTORICAL_TYPE,
+    Tracking.TREES_GOAL_TYPE,
+    Tracking.TREES_HISTORICAL_TYPE
+  ] as const;
 
   // All values that are valid for the `type` field across domains.
   static readonly VALID_TYPES = [...Tracking.DEMOGRAPHICS_TYPES, ...Tracking.RESTORATION_TYPES] as const;

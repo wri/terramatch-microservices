@@ -1,69 +1,43 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { OrganisationsService } from "./organisations.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import { faker } from "@faker-js/faker";
-import {
-  FormFactory,
-  FundingProgrammeFactory,
-  OrganisationFactory,
-  RoleFactory,
-  StageFactory,
-  UserFactory
-} from "@terramatch-microservices/database/factories";
-import {
-  Application,
-  FormSubmission,
-  ModelHasRole,
-  Organisation,
-  ProjectPitch,
-  Role,
-  User
-} from "@terramatch-microservices/database/entities";
+import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { ConflictException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { pick } from "lodash";
 
-const createAttributes = (fundingProgrammeUuid = faker.string.uuid()): OrganisationCreateAttributes => ({
+const createAttributes = (): OrganisationCreateAttributes => ({
   name: faker.company.name(),
   type: "non-profit-organization",
   hqStreet1: faker.location.streetAddress(),
   hqCity: faker.location.city(),
   hqState: faker.location.state(),
-  hqCountry: faker.location.country(),
+  hqCountry: faker.location.countryCode("alpha-3"),
   phone: faker.phone.number(),
   countries: [faker.location.countryCode("alpha-3")],
-  fundingProgrammeUuid: fundingProgrammeUuid,
-  userFirstName: faker.person.firstName(),
-  userLastName: faker.person.lastName(),
-  userEmailAddress: faker.internet.email(),
-  userRole: "project-developer",
-  userLocale: "en-US"
+  currency: "EUR",
+  level0PastRestoration: [faker.location.countryCode("alpha-3")],
+  level1PastRestoration: [faker.location.countryCode("alpha-3")]
 });
 
-const validFundingProgramme = async () => {
-  const fundingProgramme = await FundingProgrammeFactory.create();
-  const stage = await StageFactory.create({ fundingProgrammeId: fundingProgramme.uuid });
-  const form = await FormFactory.create({ stageId: stage.uuid });
-  return { fundingProgramme, stage, form };
-};
-
-describe("OrganisationsService - create", () => {
+describe("OrganisationsService - create (organisation-creation)", () => {
   let service: OrganisationsService;
-  let emailQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         OrganisationsService,
-        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();
 
-    service = module.get(OrganisationsService);
+    service = await module.resolve(OrganisationsService);
   });
 
   afterEach(() => {
@@ -71,63 +45,39 @@ describe("OrganisationsService - create", () => {
   });
 
   describe("validation", () => {
-    it("should throw an error if the org name is already taken", async () => {
+    it("should throw an error if user is not authenticated", async () => {
+      mockUserId(undefined);
       const attributes = createAttributes();
-      await OrganisationFactory.create({ name: attributes.name });
-      await expect(service.create(attributes)).rejects.toThrow("Organisation already exists");
-      await Organisation.truncate();
+      await expect(service.create(attributes)).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should throw an error if the funding programme does not exist", async () => {
+    it("should throw an error if authenticated user is not found", async () => {
+      const userId = 99999;
+      mockUserId(userId);
       const attributes = createAttributes();
-      await expect(service.create(attributes)).rejects.toThrow("Funding programme not found");
+      await expect(service.create(attributes)).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw an error if the funding programme has no stages", async () => {
-      const attributes = createAttributes((await FundingProgrammeFactory.create()).uuid);
-      await expect(service.create(attributes)).rejects.toThrow("Funding programme has no stages");
-    });
-
-    it("should throw an error if the funding programme does not have a form", async () => {
-      const { uuid } = await FundingProgrammeFactory.create();
-      await StageFactory.create({ fundingProgrammeId: uuid });
-      const attributes = createAttributes(uuid);
-      await expect(service.create(attributes)).rejects.toThrow("Funding programme first stage has no form");
-    });
-
-    it("should throw an error if the user already exists", async () => {
+    it("should throw an error if user already has an organisation", async () => {
       const user = await UserFactory.create();
-      const { fundingProgramme } = await validFundingProgramme();
-      const attributes = createAttributes(fundingProgramme.uuid);
-      attributes.userEmailAddress = user.emailAddress;
-      await expect(service.create(attributes)).rejects.toThrow("User already exists");
+      const existingOrg = await OrganisationFactory.create();
+      await user.update({ organisationId: existingOrg.id });
+      mockUserId(user.id);
+      const attributes = createAttributes();
+      await expect(service.create(attributes)).rejects.toThrow(ConflictException);
     });
 
-    it("should throw an error if the user role is invalid", async () => {
-      const { fundingProgramme } = await validFundingProgramme();
-      const attributes = createAttributes(fundingProgramme.uuid);
-      attributes.userRole = "invalid-role";
-      await expect(service.create(attributes)).rejects.toThrow("User role not found");
-    });
-
-    it("should use the attributes to create a valid org, user and send an email", async () => {
-      let role = await Role.findOne({ where: { name: "project-developer" } });
-      if (role == null) role = await RoleFactory.create({ name: "project-developer" });
-      const { fundingProgramme, stage, form } = await validFundingProgramme();
-      const attributes = createAttributes(fundingProgramme.uuid);
-      // fill in all the optional attributes
+    it("should create an organisation and associate it with the authenticated user", async () => {
+      const user = await UserFactory.create({ organisationId: null });
+      mockUserId(user.id);
+      const attributes = createAttributes();
       attributes.hqStreet2 = faker.location.streetAddress();
       attributes.hqZipcode = faker.location.zipCode();
-      attributes.currency = "EUR";
-      attributes.level0Proposed = [faker.location.countryCode("alpha-3"), faker.location.countryCode("alpha-3")];
-      attributes.level1Proposed = [faker.location.countryCode("alpha-3")];
-      attributes.level0PastRestoration = [faker.location.countryCode("alpha-3")];
-      attributes.level1PastRestoration = [faker.location.countryCode("alpha-3"), faker.location.countryCode("alpha-3")];
 
-      // org creation
-      const { user, organisation } = await service.create(attributes);
+      const { organisation } = await service.create(attributes);
+
       expect(organisation).toMatchObject({
-        status: "pending",
+        status: "draft",
         private: false,
         isTest: false,
         ...pick(attributes, [
@@ -147,45 +97,27 @@ describe("OrganisationsService - create", () => {
         ])
       });
 
-      // user creation
-      expect(user).toMatchObject({
-        organisationId: organisation.id,
-        emailAddress: attributes.userEmailAddress,
-        firstName: attributes.userFirstName,
-        lastName: attributes.userLastName,
-        locale: attributes.userLocale
-      });
-      expect(user.emailAddressVerifiedAt).not.toBeNull();
-      const modelRole = await ModelHasRole.findOne({ where: { modelType: User.LARAVEL_TYPE, modelId: user.id } });
-      expect(modelRole?.roleId).toBe(role.id);
+      await user.reload();
+      expect(user.organisationId).toBe(organisation.id);
+    });
 
-      // pitch, application, form submission creation
-      const pitch = await ProjectPitch.findOne({ where: { organisationId: organisation.uuid } });
-      expect(pitch).toMatchObject({
-        fundingProgrammeId: attributes.fundingProgrammeUuid,
-        level0Proposed: attributes.level0Proposed,
-        level1Proposed: attributes.level1Proposed
-      });
-      const application = await Application.findOne({ where: { organisationUuid: organisation.uuid } });
-      expect(application).toMatchObject({
-        fundingProgrammeUuid: attributes.fundingProgrammeUuid,
-        updatedBy: user.id
-      });
-      const submission = await FormSubmission.findOne({ where: { organisationUuid: organisation.uuid } });
-      expect(submission).toMatchObject({
-        formId: form.uuid,
-        stageUuid: stage.uuid,
-        projectPitchUuid: pitch!.uuid,
-        applicationId: application!.id,
-        status: "started",
-        answers: {}
-      });
+    it("should create an organisation with minimal attributes", async () => {
+      const user = await UserFactory.create({ organisationId: null });
+      mockUserId(user.id);
+      const attributes: OrganisationCreateAttributes = {
+        name: faker.company.name()
+      };
 
-      // email queue
-      expect(emailQueue.add).toHaveBeenCalledWith("adminUserCreation", {
-        userId: user.id,
-        fundingProgrammeName: fundingProgramme.name
-      });
+      const { organisation } = await service.create(attributes);
+
+      expect(organisation.name).toBe(attributes.name);
+      expect(organisation.status).toBe("draft");
+      expect(organisation.private).toBe(false);
+      expect(organisation.isTest).toBe(false);
+      expect(organisation.currency).toBe("USD");
+
+      await user.reload();
+      expect(user.organisationId).toBe(organisation.id);
     });
   });
 });

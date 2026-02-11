@@ -30,7 +30,9 @@ bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
 
   // One off scripts for running in the REPL. Should be cleared out occasionally once they've been
-  // run in all relevant environments.
+  // run in all relevant environments. Note: it's a good idea to put the newest scripts at the top
+  // so that the scripts are ordered from newest to oldest and it's easier to identify which
+  // scripts are old enough to be removed.
   oneOff: {
     // Sets the additionalProps.accept field on all file form questions to the mime types accepted for
     // that linked field. Matches the behavior in FormsService.getAdditionalProps()
@@ -380,3 +382,218 @@ bootstrapRepl("Entity Service", AppModule, {
     })
   }
 });
+
+const RESTORATION_MAPPING = {
+  organisations: {
+    haRestored3Year: {
+      type: "hectares",
+      collection: "restored",
+      entryType: "years",
+      entrySubtype: "past-3-year"
+    },
+    haRestoredTotal: {
+      type: "hectares",
+      collection: "restored",
+      entryType: "years",
+      entrySubtype: "other" // calculation
+    },
+    treesGrown3Year: {
+      type: "trees",
+      collection: "planted",
+      entryType: "years",
+      entrySubtype: "past-3-year"
+    },
+    treesGrownTotal: {
+      type: "trees",
+      collection: "planted",
+      entryType: "years",
+      entrySubtype: "other" // calculation
+    },
+    treesNaturallyRegenerated3Year: {
+      type: "trees",
+      collection: "regenerated",
+      entryType: "years",
+      entrySubtype: "past-3-year"
+    },
+    treesNaturallyRegeneratedTotal: {
+      type: "trees",
+      collection: "regenerated",
+      entryType: "years",
+      entrySubtype: "other" // calculation
+    }
+  },
+  projectPitches: {
+    goalTreesRestoredAnr: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "anr"
+    },
+    goalTreesRestoredDirectSeeding: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "direct-seeding"
+    },
+    goalTreesRestoredPlanting: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "planting"
+    },
+    totalTreesFirstYr: {
+      type: "trees",
+      collection: "planted",
+      entryType: "years",
+      entrySubtype: "1-year"
+    },
+    totalTreeSecondYr: {
+      type: "trees",
+      collection: "planted",
+      entryType: "years",
+      entrySubtype: "2-year"
+    },
+    totalTrees: {
+      type: "trees",
+      collection: "planted",
+      entryType: "years",
+      entrySubtype: "other" // calculation
+    },
+    hectaresFirstYr: {
+      type: "hectares",
+      collection: "restored",
+      entryType: "years",
+      entrySubtype: "1-year"
+    },
+    totalHectares: {
+      type: "hectares",
+      collection: "restored",
+      entryType: "years",
+      entrySubtype: "other" // calculation
+    }
+  },
+  projects: {
+    goalTreesRestoredAnr: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "anr"
+    },
+    goalTreesRestoredDirectSeeding: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "direct-seeding"
+    },
+    goalTreesRestoredPlanting: {
+      type: "trees",
+      collection: "planted",
+      entryType: "strategy",
+      entrySubtype: "planting"
+    },
+    treesGrownGoal: [
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ],
+    totalHectaresRestoredGoal: [
+      {
+        type: "hectares",
+        collection: "restored",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "hectares",
+        collection: "restored",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ]
+  },
+  sites: {
+    aNatRegeneration: {
+      type: "trees",
+      collection: "regenerated",
+      entryType: "years",
+      entrySubtype: "unknown"
+    },
+    aimNumberOfMatureTrees: [
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ],
+    hectaresToRestoreGoal: [
+      {
+        type: "hectares",
+        collection: "restored",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "hectares",
+        collection: "restored",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ]
+  },
+  siteReports: {
+    numTreesRegenerating: {
+      type: "trees",
+      collection: "regenerated",
+      entryType: "years",
+      entrySubtype: "unknown"
+    }
+  },
+  nurseries: {
+    seedlingGrown: [
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ]
+  },
+  nurseryReports: {
+    seedlingsYoungTrees: [
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "years",
+        entrySubtype: "unknown"
+      },
+      {
+        type: "trees",
+        collection: "planted",
+        entryType: "strategy",
+        entrySubtype: "unknown"
+      }
+    ]
+  }
+};

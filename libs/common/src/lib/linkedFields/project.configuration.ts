@@ -481,13 +481,13 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     "pro-hectares-goal": {
       label: "Hectares Goal",
       resource: "restoration",
-      inputType: "hectares-goal",
+      inputType: "hectaresGoal",
       collection: "all"
     },
     "pro-trees-goal": {
       label: "Trees Goal",
       resource: "restoration",
-      inputType: "trees-goal",
+      inputType: "treesGoal",
       collection: "all"
     }
   }

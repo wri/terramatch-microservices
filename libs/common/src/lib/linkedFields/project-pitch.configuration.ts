@@ -655,13 +655,13 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
     "pro-pit-hectares-goal": {
       label: "Hectares Goal",
       resource: "restoration",
-      inputType: "hectares-goal",
+      inputType: "hectaresGoal",
       collection: "all"
     },
     "pro-pit-trees-goal": {
       label: "Trees Goal",
       resource: "restoration",
-      inputType: "trees-goal",
+      inputType: "treesGoal",
       collection: "all"
     }
   }

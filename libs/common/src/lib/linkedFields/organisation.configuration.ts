@@ -723,20 +723,20 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
     "org-hectares-restored": {
       label: "Hectares Restored",
       resource: "restoration",
-      inputType: "historical",
-      collection: "hectares-restored"
+      inputType: "hectaresHistorical",
+      collection: "all"
     },
     "org-trees-regenerated": {
       label: "Trees Regenerated",
       resource: "restoration",
-      inputType: "historical",
-      collection: "trees-regenerated"
+      inputType: "treesHistorical",
+      collection: "regenerated"
     },
     "org-trees-grown": {
       label: "Trees Grown",
       resource: "restoration",
-      inputType: "historical",
-      collection: "trees-grown"
+      inputType: "treesHistorical",
+      collection: "grown"
     }
   }
 };

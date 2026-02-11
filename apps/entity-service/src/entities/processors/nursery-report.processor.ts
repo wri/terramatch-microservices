@@ -72,7 +72,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     const builder = await this.entitiesService.buildQuery(NurseryReport, query, [nurseryAssociation]);
     if (query.sort?.field != null) {
       const direction = query.sort.direction ?? "ASC";
-      if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
+      if (["dueAt", "updatedAt", "status", "updateRequestStatus", "submittedAt"].includes(query.sort.field)) {
         if (query.sort.field === "submittedAt") {
           if (direction === "ASC") {
             builder.order(literal("submitted_at IS NULL, submitted_at ASC"));

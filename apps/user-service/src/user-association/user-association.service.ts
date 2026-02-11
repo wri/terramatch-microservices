@@ -4,8 +4,6 @@ import { Op } from "sequelize";
 
 @Injectable()
 export class UserAssociationService {
-  constructor() {}
-
   async getUserAssociation(projectId: number) {
     const users = await User.findAll({
       where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },

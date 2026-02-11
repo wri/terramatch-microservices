@@ -22,7 +22,7 @@ export class UserAssociationController {
       where: { uuid },
       attributes: ["id"]
     });
-    if (!project) {
+    if (project == null) {
       throw new NotFoundException("Project not found");
     }
     const users = await this.userAssociationService.getUserAssociation(project.id);

@@ -12,6 +12,7 @@ import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
 import {
   entityTypeFromLaravel,
+  isProjectGalleryMediaOwner,
   MEDIA_OWNER_MODELS,
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
@@ -160,10 +161,28 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     // Restrict to requested modelType when provided (e.g. Project Gallery filter: modelType=sites)
     if (this.query.modelType != null && this.query.modelType in MEDIA_OWNER_MODELS) {
-      const requestedLaravelType = (
-        MEDIA_OWNER_MODELS[this.query.modelType as MediaOwnerType] as { LARAVEL_TYPE: string }
-      ).LARAVEL_TYPE;
-      models = models.filter(m => m.modelType === requestedLaravelType);
+      // Special case: in the Project gallery, the "Reports" source (modelType=projectReports)
+      // is expected to include both project-level and site-level reports for that project.
+      if (this.entityType === "projects" && this.query.modelType === "projectReports") {
+        const laravelTypes = [
+          (MEDIA_OWNER_MODELS.projectReports as { LARAVEL_TYPE: string }).LARAVEL_TYPE,
+          (MEDIA_OWNER_MODELS.siteReports as { LARAVEL_TYPE: string }).LARAVEL_TYPE
+        ];
+
+        models = models.filter(model => laravelTypes.includes(model.modelType));
+      } else {
+        const requestedLaravelType = (
+          MEDIA_OWNER_MODELS[this.query.modelType as MediaOwnerType] as { LARAVEL_TYPE: string }
+        ).LARAVEL_TYPE;
+        models = models.filter(model => model.modelType === requestedLaravelType);
+      }
+    } else if (this.entityType === "projects") {
+      // For Project Gallery "All Images" view, only count media from the same owner
+      // types that the UI exposes as Sources (Project/Site/Nursery/Reports).
+      models = models.filter(model => {
+        const ownerType = entityTypeFromLaravel(model.modelType);
+        return isProjectGalleryMediaOwner(ownerType);
+      });
     }
 
     if (models.length === 0) {

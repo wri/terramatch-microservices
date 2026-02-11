@@ -92,6 +92,21 @@ export const MIME_TYPES = Object.entries(MIME_TYPE_ABBREVIATIONS).reduce(
 );
 export type MimeType = keyof typeof MIME_TYPE_ABBREVIATIONS;
 
+// Media owners que deben contarse en la Project Gallery (All Images / Sources)
+export const PROJECT_GALLERY_MEDIA_OWNER_TYPES = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+] as const satisfies readonly MediaOwnerType[];
+
+export type ProjectGalleryMediaOwnerType = (typeof PROJECT_GALLERY_MEDIA_OWNER_TYPES)[number];
+
+export const isProjectGalleryMediaOwner = (type: MediaOwnerType | undefined): type is ProjectGalleryMediaOwnerType =>
+  type != null && PROJECT_GALLERY_MEDIA_OWNER_TYPES.includes(type as ProjectGalleryMediaOwnerType);
+
 export const FILE_VALIDATION: {
   VALIDATION_RULES: Record<ValidationKey, string>;
   VALIDATION_FILE_TYPES: Record<ValidationKey, "media" | "documents">;

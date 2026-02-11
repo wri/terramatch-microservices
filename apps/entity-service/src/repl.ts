@@ -35,320 +35,305 @@ bootstrapRepl("Entity Service", AppModule, {
     // Sets the additionalProps.accept field on all file form questions to the mime types accepted for
     // that linked field. Matches the behavior in FormsService.getAdditionalProps()
     // https://gfw.atlassian.net/browse/TM-2411. May be removed after the RR release in November 2025
-    syncFileAdditionalProps: async () => {
-      await withoutSqlLogs(async () => {
-        const builder = new PaginatedQueryBuilder(FormQuestion, 100).where({
-          inputType: "file",
-          linkedFieldKey: { [Op.not]: null }
-        });
-        const bar = new ProgressBar("Processing file FormQuestions [:bar] :percent :etas", {
+    syncFileAdditionalProps: withoutSqlLogs(async () => {
+      const builder = new PaginatedQueryBuilder(FormQuestion, 100).where({
+        inputType: "file",
+        linkedFieldKey: { [Op.not]: null }
+      });
+      const bar = new ProgressBar("Processing file FormQuestions [:bar] :percent :etas", {
+        width: 40,
+        total: await builder.paginationTotal()
+      });
+      for await (const page of batchFindAll(builder)) {
+        for (const question of page) {
+          const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
+          if (config != null) {
+            question.additionalProps = {
+              ...question.additionalProps,
+              accept: acceptMimeTypes(config.model as MediaOwnerType, (config.field as LinkedFile).collection)
+            };
+            await question.save();
+          }
+
+          bar.tick();
+        }
+      }
+
+      console.log("Finished synchronizing file form questions with the model media types.");
+    }),
+
+    updateFormFrameworkKeys: withoutSqlLogs(async () => {
+      console.log("Updating Funding Programmes...");
+      await FundingProgramme.update(
+        { frameworkKey: "terrafund-landscapes" },
+        { where: { frameworkKey: "landscapes" } }
+      );
+
+      console.log("Updating Forms...");
+      await Form.update({ frameworkKey: "terrafund-landscapes" }, { where: { frameworkKey: "landscapes" } });
+      await Form.update({ frameworkKey: null }, { where: { frameworkKey: { [Op.in]: ["test", "tfBusiness"] } } });
+
+      console.log("Updating Reporting Frameworks...");
+      for (const framework of await Framework.findAll()) {
+        if (framework.slug !== framework.accessCode) await framework.update({ accessCode: framework.slug });
+      }
+    }),
+
+    // In moving the "view entity with schema" pattern to v3, the embedded answer DTOs in
+    // relation fields has become camel case. Update requests contain embedded data for these
+    // field types and need a migration to adapt.
+    updateCamelCaseAnswers: withoutSqlLogs(async () => {
+      const processInputs = async (
+        inputTypes: RelationInputType[],
+        label: string,
+        update: (questionUuids: string[], content: object) => void
+      ) => {
+        const uuids = (
+          await FormQuestion.findAll({
+            where: { inputType: { [Op.in]: inputTypes } },
+            attributes: ["uuid"]
+          })
+        ).map(({ uuid }) => uuid);
+
+        if (uuids.length === 0) {
+          console.log(`No questions found for for ${label} answers.\n`);
+          return;
+        }
+
+        const builder = new PaginatedQueryBuilder(UpdateRequest, 100).where(
+          fn("JSON_CONTAINS_PATH", col("content"), literal("'one'"), ...uuids.map(uuid => literal(`'$.${uuid}'`)))
+        );
+        const bar = new ProgressBar(`Processing :total UpdateRequests for ${label} answers [:bar] :percent :etas`, {
           width: 40,
           total: await builder.paginationTotal()
         });
+        let updated = 0;
         for await (const page of batchFindAll(builder)) {
-          for (const question of page) {
-            const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
-            if (config != null) {
-              question.additionalProps = {
-                ...question.additionalProps,
-                accept: acceptMimeTypes(config.model as MediaOwnerType, (config.field as LinkedFile).collection)
-              };
-              await question.save();
+          for (const updateRequest of page) {
+            const content = cloneDeep(updateRequest.content) ?? {};
+            update(uuids, content);
+            if (!isEqual(content, updateRequest.content)) {
+              updated++;
+              await updateRequest.update({ content }, { silent: true });
             }
 
             bar.tick();
           }
         }
+        console.log(`Updated ${updated} UpdateRequests for ${label} answers.\n`);
+      };
 
-        console.log("Finished synchronizing file form questions with the model media types.");
-      });
-    },
-
-    updateFormFrameworkKeys: async () => {
-      await withoutSqlLogs(async () => {
-        console.log("Updating Funding Programmes...");
-        await FundingProgramme.update(
-          { frameworkKey: "terrafund-landscapes" },
-          { where: { frameworkKey: "landscapes" } }
-        );
-
-        console.log("Updating Forms...");
-        await Form.update({ frameworkKey: "terrafund-landscapes" }, { where: { frameworkKey: "landscapes" } });
-        await Form.update({ frameworkKey: null }, { where: { frameworkKey: { [Op.in]: ["test", "tfBusiness"] } } });
-
-        console.log("Updating Reporting Frameworks...");
-        for (const framework of await Framework.findAll()) {
-          if (framework.slug !== framework.accessCode) await framework.update({ accessCode: framework.slug });
+      const demographicsInputTypes: RelationInputType[] = [
+        "workdays",
+        "restorationPartners",
+        "jobs",
+        "employees",
+        "volunteers",
+        "allBeneficiaries",
+        "trainingBeneficiaries",
+        "indirectBeneficiaries",
+        "associates"
+      ];
+      await processInputs(demographicsInputTypes, "demographics", (questionUuids, content) => {
+        for (const uuid of questionUuids) {
+          if (content[uuid]?.[0]?.demographics != null) {
+            // move the "demographics" member to "entries"
+            const { demographics, ...rest } = content[uuid][0];
+            content[uuid][0] = { entries: demographics, ...rest };
+          }
         }
       });
-    },
 
-    updateCamelCaseAnswers: async () => {
-      // In moving the "view entity with schema" pattern to v3, the embedded answer DTOs in
-      // relation fields has become camel case. Update requests contain embedded data for these
-      // field types and need a migration to adapt.
-      await withoutSqlLogs(async () => {
-        const processInputs = async (
-          inputTypes: RelationInputType[],
-          label: string,
-          update: (questionUuids: string[], content: object) => void
-        ) => {
-          const uuids = (
-            await FormQuestion.findAll({
-              where: { inputType: { [Op.in]: inputTypes } },
-              attributes: ["uuid"]
-            })
-          ).map(({ uuid }) => uuid);
-
-          if (uuids.length === 0) {
-            console.log(`No questions found for for ${label} answers.\n`);
-            return;
+      await processInputs(["disturbanceReportEntries"], "disturbance report entries", (questionUuids, content) => {
+        for (const uuid of questionUuids) {
+          if (content[uuid] != null) {
+            content[uuid] = content[uuid].map(
+              // remove the timestamps and camelCase input_type
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              ({ input_type: inputType, created_at, updated_at, ...rest }) =>
+                // omitting undefined keys is important for the isEqual check above
+                omitBy(
+                  {
+                    inputType,
+                    // On all of these, ...rest has to come last to keep the script idempotent.
+                    ...rest
+                  },
+                  isUndefined
+                )
+            );
           }
+        }
+      });
 
-          const builder = new PaginatedQueryBuilder(UpdateRequest, 100).where(
-            fn("JSON_CONTAINS_PATH", col("content"), literal("'one'"), ...uuids.map(uuid => literal(`'$.${uuid}'`)))
-          );
-          const bar = new ProgressBar(`Processing :total UpdateRequests for ${label} answers [:bar] :percent :etas`, {
-            width: 40,
-            total: await builder.paginationTotal()
-          });
-          let updated = 0;
-          for await (const page of batchFindAll(builder)) {
-            for (const updateRequest of page) {
-              const content = cloneDeep(updateRequest.content) ?? {};
-              update(uuids, content);
-              if (!isEqual(content, updateRequest.content)) {
-                updated++;
-                await updateRequest.update({ content }, { silent: true });
-              }
-
-              bar.tick();
-            }
-          }
-          console.log(`Updated ${updated} UpdateRequests for ${label} answers.\n`);
-        };
-
-        const demographicsInputTypes: RelationInputType[] = [
-          "workdays",
-          "restorationPartners",
-          "jobs",
-          "employees",
-          "volunteers",
-          "allBeneficiaries",
-          "trainingBeneficiaries",
-          "indirectBeneficiaries",
-          "associates"
-        ];
-        await processInputs(demographicsInputTypes, "demographics", (questionUuids, content) => {
-          for (const uuid of questionUuids) {
-            if (content[uuid]?.[0]?.demographics != null) {
-              // move the "demographics" member to "entries"
-              const { demographics, ...rest } = content[uuid][0];
-              content[uuid][0] = { entries: demographics, ...rest };
-            }
-          }
-        });
-
-        await processInputs(["disturbanceReportEntries"], "disturbance report entries", (questionUuids, content) => {
-          for (const uuid of questionUuids) {
-            if (content[uuid] != null) {
-              content[uuid] = content[uuid].map(
-                // remove the timestamps and camelCase input_type
+      await processInputs(["financialIndicators"], "financial indicators", (questionUuids, content) => {
+        for (const uuid of questionUuids) {
+          if (content[uuid] != null) {
+            content[uuid] = content[uuid].map(
+              // remove org id and move financial_report_id, exchange_rate, start_month to the top level
+              ({
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                ({ input_type: inputType, created_at, updated_at, ...rest }) =>
-                  // omitting undefined keys is important for the isEqual check above
-                  omitBy(
-                    {
-                      inputType,
-                      // On all of these, ...rest has to come last to keep the script idempotent.
-                      ...rest
-                    },
-                    isUndefined
-                  )
-              );
-            }
+                organisation_id,
+                financial_report_id: financialReportId,
+                exchange_rate: exchangeRate,
+                start_month: startMonth,
+                ...rest
+              }) =>
+                omitBy(
+                  {
+                    financialReportId,
+                    exchangeRate,
+                    startMonth,
+                    ...rest
+                  },
+                  isUndefined
+                )
+            );
           }
-        });
-
-        await processInputs(["financialIndicators"], "financial indicators", (questionUuids, content) => {
-          for (const uuid of questionUuids) {
-            if (content[uuid] != null) {
-              content[uuid] = content[uuid].map(
-                // remove org id and move financial_report_id, exchange_rate, start_month to the top level
-                ({
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                  organisation_id,
-                  financial_report_id: financialReportId,
-                  exchange_rate: exchangeRate,
-                  start_month: startMonth,
-                  ...rest
-                }) =>
-                  omitBy(
-                    {
-                      financialReportId,
-                      exchangeRate,
-                      startMonth,
-                      ...rest
-                    },
-                    isUndefined
-                  )
-              );
-            }
-          }
-        });
-
-        await processInputs(["seedings"], "seedings", (questionUuids, content) => {
-          for (const uuid of questionUuids) {
-            if (content[uuid] != null) {
-              // move weight of sample and seeds in sample to camel case
-              content[uuid] = content[uuid].map(
-                ({ weight_of_sample: weightOfSample, seeds_in_sample: seedsInSample, ...rest }) =>
-                  omitBy(
-                    {
-                      weightOfSample,
-                      seedsInSample,
-                      ...rest
-                    },
-                    isUndefined
-                  )
-              );
-            }
-          }
-        });
-
-        await processInputs(["treeSpecies"], "treeSpecies", (questionUuids, content) => {
-          for (const uuid of questionUuids) {
-            if (content[uuid] != null) {
-              content[uuid] = content[uuid].map(
-                ({ taxon_id: taxonId, report_amount: reportAmount, is_new_species: isNewSpecies, ...rest }) =>
-                  omitBy(
-                    {
-                      taxonId,
-                      reportAmount,
-                      isNewSpecies,
-                      ...rest
-                    },
-                    isUndefined
-                  )
-              );
-            }
-          }
-        });
+        }
       });
-    },
 
-    updateConditionalLinkedFields: async () => {
-      await withoutSqlLogs(async () => {
-        // There was one case of a conditional incorrectly used as a linked field in the configs.
-        // Due to a quirk in the PHP logic, it wasn't actually trying to save as a field on the model,
-        // but we explicitly disallow this in the FE code, so we need to remove the linked field key
-        // from those question rows in the DB.
-        console.log("Updating form questions for org-carbon-credits...");
-        const [updated] = await FormQuestion.update(
-          { linkedFieldKey: null },
-          { where: { linkedFieldKey: "org-carbon-credits" } }
-        );
-        console.log(`Updated rows: ${updated}`);
-
-        // There was a whole set of linked fields in project report that were attempting to write
-        // to properties that don't exist on the model. Thankfully, the only questions that hadn't
-        // already been deleted and were referencing these fields were children of parent questions
-        // that _have_ been deleted, so this is not an active problem in the production forms.
-        console.log("Updating form questions for ethnic project report fields...");
-        const deleted = await FormQuestion.destroy({
-          where: {
-            linkedFieldKey: [
-              "pro-rep-ind-1",
-              "pro-rep-ind-2",
-              "pro-rep-ind-3",
-              "pro-rep-ind-4",
-              "pro-rep-ind-5",
-              "pro-rep-other-1",
-              "pro-rep-other-2",
-              "pro-rep-other-3",
-              "pro-rep-other-4",
-              "pro-rep-other-5"
-            ]
+      await processInputs(["seedings"], "seedings", (questionUuids, content) => {
+        for (const uuid of questionUuids) {
+          if (content[uuid] != null) {
+            // move weight of sample and seeds in sample to camel case
+            content[uuid] = content[uuid].map(
+              ({ weight_of_sample: weightOfSample, seeds_in_sample: seedsInSample, ...rest }) =>
+                omitBy(
+                  {
+                    weightOfSample,
+                    seedsInSample,
+                    ...rest
+                  },
+                  isUndefined
+                )
+            );
           }
-        });
-        console.log(`Deleted rows: ${deleted}`);
+        }
       });
-    },
+
+      await processInputs(["treeSpecies"], "treeSpecies", (questionUuids, content) => {
+        for (const uuid of questionUuids) {
+          if (content[uuid] != null) {
+            content[uuid] = content[uuid].map(
+              ({ taxon_id: taxonId, report_amount: reportAmount, is_new_species: isNewSpecies, ...rest }) =>
+                omitBy(
+                  {
+                    taxonId,
+                    reportAmount,
+                    isNewSpecies,
+                    ...rest
+                  },
+                  isUndefined
+                )
+            );
+          }
+        }
+      });
+    }),
+
+    updateConditionalLinkedFields: withoutSqlLogs(async () => {
+      // There was one case of a conditional incorrectly used as a linked field in the configs.
+      // Due to a quirk in the PHP logic, it wasn't actually trying to save as a field on the model,
+      // but we explicitly disallow this in the FE code, so we need to remove the linked field key
+      // from those question rows in the DB.
+      console.log("Updating form questions for org-carbon-credits...");
+      const [updated] = await FormQuestion.update(
+        { linkedFieldKey: null },
+        { where: { linkedFieldKey: "org-carbon-credits" } }
+      );
+      console.log(`Updated rows: ${updated}`);
+
+      // There was a whole set of linked fields in project report that were attempting to write
+      // to properties that don't exist on the model. Thankfully, the only questions that hadn't
+      // already been deleted and were referencing these fields were children of parent questions
+      // that _have_ been deleted, so this is not an active problem in the production forms.
+      console.log("Updating form questions for ethnic project report fields...");
+      const deleted = await FormQuestion.destroy({
+        where: {
+          linkedFieldKey: [
+            "pro-rep-ind-1",
+            "pro-rep-ind-2",
+            "pro-rep-ind-3",
+            "pro-rep-ind-4",
+            "pro-rep-ind-5",
+            "pro-rep-other-1",
+            "pro-rep-other-2",
+            "pro-rep-other-3",
+            "pro-rep-other-4",
+            "pro-rep-other-5"
+          ]
+        }
+      });
+      console.log(`Deleted rows: ${deleted}`);
+    }),
 
     // The PHP BE was storing the answer to _every_ question on the form_submissions `answers`
     // column even though most conditional answers sync to the associated project pitch or
     // organisation, and are pulled from the associated table when the submission DTO is rendered.
     // In order to clear out a bunch of unnecessary data, let's update those records now.
-    updateFormSubmissionAnswers: async () => {
-      await withoutSqlLogs(async () => {
-        const builder = new PaginatedQueryBuilder(FormSubmission, 100);
-        const bar = new ProgressBar(`Processing :total FormSubmissions [:bar] :percent :etas`, {
-          width: 40,
-          total: await builder.paginationTotal()
-        });
-        for await (const page of batchFindAll(builder)) {
-          const formUuids = uniq(page.map(submission => submission.formId)).filter(isNotNull);
-          const sections = await FormSection.findAll({ where: { formId: formUuids } });
-          const questions = await FormQuestion.findAll({ where: { formSectionId: sections.map(({ id }) => id) } });
-          const answerQuestionUuidsByFormUuid = questions.reduce(
-            (questions, { uuid, linkedFieldKey, formSectionId }) => {
-              if (linkedFieldKey != null) return questions;
-
-              const formId = sections.find(({ id }) => id === formSectionId)?.formId;
-              if (formId == null) return questions;
-
-              questions[formId] ??= [];
-              questions[formId].push(uuid);
-              return questions;
-            },
-            {} as Dictionary<string[]>
-          );
-
-          for (const submission of page) {
-            if (submission.formId == null) {
-              bar.tick();
-              continue;
-            }
-
-            const questionUuids = answerQuestionUuidsByFormUuid[submission.formId] ?? [];
-            const answers = questionUuids.reduce((answers, uuid) => {
-              const answer = submission.answers?.[uuid];
-              if (answer == null) return answers;
-
-              return { ...answers, [uuid]: answer };
-            }, {} as Dictionary<unknown>);
-
-            // silent to avoid setting the updatedAt timestamp
-            await submission.update({ answers }, { silent: true });
-            bar.tick();
-          }
-        }
-
-        console.log("Finished updating FormSubmissions...");
+    updateFormSubmissionAnswers: withoutSqlLogs(async () => {
+      const builder = new PaginatedQueryBuilder(FormSubmission, 100);
+      const bar = new ProgressBar(`Processing :total FormSubmissions [:bar] :percent :etas`, {
+        width: 40,
+        total: await builder.paginationTotal()
       });
-    },
+      for await (const page of batchFindAll(builder)) {
+        const formUuids = uniq(page.map(submission => submission.formId)).filter(isNotNull);
+        const sections = await FormSection.findAll({ where: { formId: formUuids } });
+        const questions = await FormQuestion.findAll({ where: { formSectionId: sections.map(({ id }) => id) } });
+        const answerQuestionUuidsByFormUuid = questions.reduce((questions, { uuid, linkedFieldKey, formSectionId }) => {
+          if (linkedFieldKey != null) return questions;
 
-    updateHashOni18nItems: async () => {
-      await withoutSqlLogs(async () => {
-        const builder = new PaginatedQueryBuilder(I18nItem, 100).where({ hash: null });
-        const bar = new ProgressBar("Processing I18nItems [:bar] :percent :etas", {
-          width: 40,
-          total: await builder.paginationTotal()
-        });
-        for await (const page of batchFindAll(builder)) {
-          for (const i18nItem of page) {
-            if (i18nItem.shortValue == null && i18nItem.longValue == null) continue;
-            i18nItem.hash = generateHashedKey(i18nItem.shortValue ?? i18nItem.longValue ?? "");
-            i18nItem.status = "draft";
-            await i18nItem.save();
+          const formId = sections.find(({ id }) => id === formSectionId)?.formId;
+          if (formId == null) return questions;
+
+          questions[formId] ??= [];
+          questions[formId].push(uuid);
+          return questions;
+        }, {} as Dictionary<string[]>);
+
+        for (const submission of page) {
+          if (submission.formId == null) {
             bar.tick();
+            continue;
           }
-        }
 
-        console.log("Finished updating hashes on I18nItems.");
-        console.log(`Updated ${bar.total} I18nItems.`);
+          const questionUuids = answerQuestionUuidsByFormUuid[submission.formId] ?? [];
+          const answers = questionUuids.reduce((answers, uuid) => {
+            const answer = submission.answers?.[uuid];
+            if (answer == null) return answers;
+
+            return { ...answers, [uuid]: answer };
+          }, {} as Dictionary<unknown>);
+
+          // silent to avoid setting the updatedAt timestamp
+          await submission.update({ answers }, { silent: true });
+          bar.tick();
+        }
+      }
+
+      console.log("Finished updating FormSubmissions...");
+    }),
+
+    updateHashOni18nItems: withoutSqlLogs(async () => {
+      const builder = new PaginatedQueryBuilder(I18nItem, 100).where({ hash: null });
+      const bar = new ProgressBar("Processing I18nItems [:bar] :percent :etas", {
+        width: 40,
+        total: await builder.paginationTotal()
       });
-    },
+      for await (const page of batchFindAll(builder)) {
+        for (const i18nItem of page) {
+          if (i18nItem.shortValue == null && i18nItem.longValue == null) continue;
+          i18nItem.hash = generateHashedKey(i18nItem.shortValue ?? i18nItem.longValue ?? "");
+          i18nItem.status = "draft";
+          await i18nItem.save();
+          bar.tick();
+        }
+      }
+
+      console.log("Finished updating hashes on I18nItems.");
+      console.log(`Updated ${bar.total} I18nItems.`);
+    }),
 
     cleanAudits: async () => {
       const deletedAuditCount = await Audit.destroy({
@@ -363,37 +348,35 @@ bootstrapRepl("Entity Service", AppModule, {
       console.log(`Deleted ${deletedAuditCount} audits`);
     },
 
-    fixFundingProgrammeOrgTypes: async () => {
-      await withoutSqlLogs(async () => {
-        const fundingProgrammes = await FundingProgramme.findAll();
-        for (const programme of fundingProgrammes) {
-          const orgTypes = [...(programme.organisationTypes ?? [])];
-          for (let ii = 0; ii < orgTypes.length; ii++) {
-            const orgType = orgTypes[ii];
-            if (!ORGANISATION_TYPES.includes(orgType)) {
-              let replacement: OrganisationType | null = null;
-              if (orgType.includes("non-profit")) {
-                replacement = "non-profit-organization";
-              } else if (orgType.includes("for-profit")) {
-                replacement = "for-profit-organization";
-              }
+    fixFundingProgrammeOrgTypes: withoutSqlLogs(async () => {
+      const fundingProgrammes = await FundingProgramme.findAll();
+      for (const programme of fundingProgrammes) {
+        const orgTypes = [...(programme.organisationTypes ?? [])];
+        for (let ii = 0; ii < orgTypes.length; ii++) {
+          const orgType = orgTypes[ii];
+          if (!ORGANISATION_TYPES.includes(orgType)) {
+            let replacement: OrganisationType | null = null;
+            if (orgType.includes("non-profit")) {
+              replacement = "non-profit-organization";
+            } else if (orgType.includes("for-profit")) {
+              replacement = "for-profit-organization";
+            }
 
-              if (replacement != null) {
-                console.log(`Replacing ${orgType} with ${replacement} in funding programme ${programme.id}...`);
-                orgTypes[ii] = replacement;
-              } else {
-                console.error(`Unknown funding programme organisation type ${orgType} in ${programme.id}...`);
-                orgTypes.splice(ii, 1);
-                ii--;
-              }
+            if (replacement != null) {
+              console.log(`Replacing ${orgType} with ${replacement} in funding programme ${programme.id}...`);
+              orgTypes[ii] = replacement;
+            } else {
+              console.error(`Unknown funding programme organisation type ${orgType} in ${programme.id}...`);
+              orgTypes.splice(ii, 1);
+              ii--;
             }
           }
-
-          if (!isEqual(orgTypes, programme.organisationTypes)) {
-            await programme.update({ organisationTypes: orgTypes });
-          }
         }
-      });
-    }
+
+        if (!isEqual(orgTypes, programme.organisationTypes)) {
+          await programme.update({ organisationTypes: orgTypes });
+        }
+      }
+    })
   }
 });

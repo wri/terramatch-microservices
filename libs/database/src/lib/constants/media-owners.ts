@@ -179,6 +179,14 @@ export const sizeValidation = (validation: ValidationKey) => {
 export const isMediaOwner = (type: string): type is MediaOwnerType =>
   MEDIA_OWNER_TYPES.includes(type as MediaOwnerType);
 
+/** Resolves media owner's short type (e.g. "sites") from Laravel modelType for DTO. */
+export const entityTypeFromLaravel = (laravelType: string): MediaOwnerType | undefined => {
+  const entry = Object.entries(MEDIA_OWNER_MODELS).find(
+    ([, modelClass]) => (modelClass as { LARAVEL_TYPE: string }).LARAVEL_TYPE === laravelType
+  );
+  return entry?.[0] as MediaOwnerType | undefined;
+};
+
 export const mediaConfiguration = (mediaOwner: MediaOwnerType, collection: string) =>
   Object.values(MEDIA_OWNER_MODELS[mediaOwner]?.MEDIA ?? {}).find(({ dbCollection }) => dbCollection === collection);
 

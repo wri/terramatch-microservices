@@ -18,6 +18,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { OrganisationFullDto, OrganisationLightDto } from "@terramatch-microservices/common/dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { ApiOperation } from "@nestjs/swagger";
 import {
   buildDeletedResponse,
@@ -25,15 +26,19 @@ import {
   getStableRequestQuery,
   getDtoType
 } from "@terramatch-microservices/common/util";
-import { Organisation } from "@terramatch-microservices/database/entities";
+import { Organisation, FinancialIndicator, Media } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
+import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { OrganisationsService } from "./organisations.service";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
   constructor(
     private readonly policyService: PolicyService,
-    private readonly organisationsService: OrganisationsService
+    private readonly organisationsService: OrganisationsService,
+    private readonly mediaService: MediaService
   ) {}
 
   @Get()
@@ -69,15 +74,65 @@ export class OrganisationsController {
 
   @Get(":uuid")
   @ApiOperation({ operationId: "organisationShow", summary: "Get a single organisation by UUID" })
-  @JsonApiResponse({ data: OrganisationFullDto })
+  @JsonApiResponse({
+    data: OrganisationFullDto,
+    included: [FinancialIndicatorDto]
+  })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Resource not found." })
-  async show(@Param("uuid") uuid: string) {
+  async show(@Param("uuid") uuid: string, @Query() query: OrganisationShowQueryDto) {
     const organisation = await this.organisationsService.findOne(uuid);
     await this.policyService.authorize("read", organisation);
-    return buildJsonApi(OrganisationFullDto).addData(organisation.uuid, new OrganisationFullDto(organisation));
+
+    const document = buildJsonApi(OrganisationFullDto).addData(
+      organisation.uuid,
+      new OrganisationFullDto(organisation)
+    ).document;
+
+    if (query.sideloads?.includes("financialCollection")) {
+      const financialIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
+
+      if (financialIndicators.length > 0) {
+        const mediaCollection = await Media.for(financialIndicators).findAll({
+          where: { collectionName: "documentation" }
+        });
+
+        const mediaByIndicatorId = mediaCollection.reduce((acc, media) => {
+          if (acc[media.modelId] == null) {
+            acc[media.modelId] = [];
+          }
+          acc[media.modelId].push(media);
+          return acc;
+        }, {} as Record<number, Media[]>);
+
+        for (const indicator of financialIndicators) {
+          const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];
+          const mediaDtos =
+            indicatorMedia.length > 0
+              ? indicatorMedia.map(
+                  media =>
+                    new EmbeddedMediaDto(media, {
+                      url: this.mediaService.getUrl(media),
+                      thumbUrl: this.mediaService.getUrl(media, "thumbnail")
+                    })
+                )
+              : null;
+
+          document.addData(
+            indicator.uuid,
+            new FinancialIndicatorDto(indicator, {
+              entityType: "financialIndicators" as const,
+              entityUuid: indicator.uuid,
+              documentation: mediaDtos
+            })
+          );
+        }
+      }
+    }
+
+    return document;
   }
 
   @Patch(":uuid")

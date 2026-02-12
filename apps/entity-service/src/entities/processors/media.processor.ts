@@ -13,8 +13,7 @@ import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/
 import {
   entityTypeFromLaravel,
   isProjectGalleryMediaOwner,
-  MEDIA_OWNER_MODELS,
-  MediaOwnerType
+  MEDIA_OWNER_MODELS
 } from "@terramatch-microservices/database/constants/media-owners";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
@@ -165,15 +164,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       // is expected to include both project-level and site-level reports for that project.
       if (this.entityType === "projects" && this.query.modelType === "projectReports") {
         const laravelTypes = [
-          (MEDIA_OWNER_MODELS.projectReports as { LARAVEL_TYPE: string }).LARAVEL_TYPE,
-          (MEDIA_OWNER_MODELS.siteReports as { LARAVEL_TYPE: string }).LARAVEL_TYPE
+          MEDIA_OWNER_MODELS.projectReports.LARAVEL_TYPE,
+          MEDIA_OWNER_MODELS.siteReports.LARAVEL_TYPE
         ];
 
         models = models.filter(model => laravelTypes.includes(model.modelType));
       } else {
-        const requestedLaravelType = (
-          MEDIA_OWNER_MODELS[this.query.modelType as MediaOwnerType] as { LARAVEL_TYPE: string }
-        ).LARAVEL_TYPE;
+        const requestedLaravelType = MEDIA_OWNER_MODELS[this.query.modelType].LARAVEL_TYPE;
         models = models.filter(model => model.modelType === requestedLaravelType);
       }
     } else if (this.entityType === "projects") {

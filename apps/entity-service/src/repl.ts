@@ -10,9 +10,14 @@ import {
   Framework,
   FundingProgramme,
   I18nItem,
+  Organisation,
+  Project,
+  ProjectPitch,
+  Tracking,
+  TrackingEntry,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
-import { col, fn, literal, Op, where } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, literal, Op, where } from "sequelize";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
@@ -22,9 +27,12 @@ import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/datab
 import { generateHashedKey } from "@transifex/native";
 import { DateTime } from "luxon";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
-import { cloneDeep, Dictionary, isEqual, isUndefined, omitBy, uniq } from "lodash";
+import { cloneDeep, Dictionary, flattenDeep, isEqual, isUndefined, omitBy, sumBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
+import { Model, ModelCtor } from "sequelize-typescript";
+import { TrackingType } from "@terramatch-microservices/database/types/tracking";
+import { laravelType } from "@terramatch-microservices/database/types/util";
 
 bootstrapRepl("Entity Service", AppModule, {
   EntityQueryDto,
@@ -34,6 +42,55 @@ bootstrapRepl("Entity Service", AppModule, {
   // so that the scripts are ordered from newest to oldest and it's easier to identify which
   // scripts are old enough to be removed.
   oneOff: {
+    migrateRestorationData: withoutSqlLogs(async () => {
+      const processMapping = async <M extends Model>(model: M, mappings: RestorationMapping<M>[]) => {
+        for (const mapping of mappings) {
+          const entries: CreationAttributes<TrackingEntry>[] = [];
+          for (const map of mapping.entries) {
+            const amount = map.amount(model, entries);
+            if (amount != null) {
+              entries.push({ trackingId: -1, type: map.type, subtype: map.subtype, amount });
+            }
+          }
+          if (entries.length > 0) {
+            const tracking = await Tracking.create({
+              domain: "restoration",
+              type: mapping.type,
+              collection: mapping.collection,
+              trackableType: laravelType(model),
+              trackableId: model.id
+            });
+            for (const entry of entries) entry.trackingId = tracking.id;
+            await TrackingEntry.bulkCreate(entries);
+          }
+        }
+      };
+
+      const processModel = async <M extends Model>(
+        label: string,
+        ctor: ModelCtor<M>,
+        mappings: RestorationMapping<M>[]
+      ) => {
+        const builder = new PaginatedQueryBuilder(ctor, 100);
+        builder.attributes(uniq(flattenDeep(["id", mappings.map(({ attributes }) => attributes)])));
+        const bar = new ProgressBar(`Processing ${label} [:bar] :percent :etas`, {
+          width: 40,
+          total: await builder.paginationTotal()
+        });
+        for await (const page of batchFindAll(builder)) {
+          for (const instance of page) {
+            await processMapping(instance, mappings);
+            bar.tick();
+          }
+        }
+        console.log(`Finished ${label}...\n\n`);
+      };
+
+      await processModel("Organisations", Organisation, ORGS_RESTORATION);
+      await processModel("Project Pitches", ProjectPitch, PITCHES_RESTORATION);
+      await processModel("Projects", Project, PROJECTS_RESTORATION);
+    }),
+
     // Sets the additionalProps.accept field on all file form questions to the mime types accepted for
     // that linked field. Matches the behavior in FormsService.getAdditionalProps()
     // https://gfw.atlassian.net/browse/TM-2411. May be removed after the RR release in November 2025
@@ -383,217 +440,243 @@ bootstrapRepl("Entity Service", AppModule, {
   }
 });
 
-const RESTORATION_MAPPING = {
-  organisations: {
-    haRestored3Year: {
-      type: "hectares",
-      collection: "restored",
-      entryType: "years",
-      entrySubtype: "past-3-year"
-    },
-    haRestoredTotal: {
-      type: "hectares",
-      collection: "restored",
-      entryType: "years",
-      entrySubtype: "other" // calculation
-    },
-    treesGrown3Year: {
-      type: "trees",
-      collection: "planted",
-      entryType: "years",
-      entrySubtype: "past-3-year"
-    },
-    treesGrownTotal: {
-      type: "trees",
-      collection: "planted",
-      entryType: "years",
-      entrySubtype: "other" // calculation
-    },
-    treesNaturallyRegenerated3Year: {
-      type: "trees",
-      collection: "regenerated",
-      entryType: "years",
-      entrySubtype: "past-3-year"
-    },
-    treesNaturallyRegeneratedTotal: {
-      type: "trees",
-      collection: "regenerated",
-      entryType: "years",
-      entrySubtype: "other" // calculation
-    }
-  },
-  projectPitches: {
-    goalTreesRestoredAnr: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "anr"
-    },
-    goalTreesRestoredDirectSeeding: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "direct-seeding"
-    },
-    goalTreesRestoredPlanting: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "planting"
-    },
-    totalTreesFirstYr: {
-      type: "trees",
-      collection: "planted",
-      entryType: "years",
-      entrySubtype: "1-year"
-    },
-    totalTreeSecondYr: {
-      type: "trees",
-      collection: "planted",
-      entryType: "years",
-      entrySubtype: "2-year"
-    },
-    totalTrees: {
-      type: "trees",
-      collection: "planted",
-      entryType: "years",
-      entrySubtype: "other" // calculation
-    },
-    hectaresFirstYr: {
-      type: "hectares",
-      collection: "restored",
-      entryType: "years",
-      entrySubtype: "1-year"
-    },
-    totalHectares: {
-      type: "hectares",
-      collection: "restored",
-      entryType: "years",
-      entrySubtype: "other" // calculation
-    }
-  },
-  projects: {
-    goalTreesRestoredAnr: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "anr"
-    },
-    goalTreesRestoredDirectSeeding: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "direct-seeding"
-    },
-    goalTreesRestoredPlanting: {
-      type: "trees",
-      collection: "planted",
-      entryType: "strategy",
-      entrySubtype: "planting"
-    },
-    treesGrownGoal: [
+type RestorationMapping<M extends Model> = {
+  attributes: (keyof Attributes<M>)[];
+  type: TrackingType;
+  collection: string;
+  entries: {
+    type: string;
+    subtype: string;
+    // If undefined is returned, the entry is not created.
+    amount: (model: M, entries: CreationAttributes<TrackingEntry>[]) => number | undefined;
+  }[];
+};
+
+const entryTypeTotal = (type: string, entries: CreationAttributes<TrackingEntry>[]) => {
+  const filtered = entries.filter(entry => entry.type === type);
+  return filtered.length === 0 ? undefined : sumBy(filtered, "amount");
+};
+
+const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
+  {
+    attributes: ["haRestored3Year", "haRestoredTotal"],
+    type: "hectares-historical",
+    collection: "all",
+    entries: [
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "years",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "3-year",
+        amount: ({ haRestored3Year }) => haRestored3Year ?? undefined
       },
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "strategy",
-        entrySubtype: "unknown"
-      }
-    ],
-    totalHectaresRestoredGoal: [
-      {
-        type: "hectares",
-        collection: "restored",
-        entryType: "years",
-        entrySubtype: "unknown"
-      },
-      {
-        type: "hectares",
-        collection: "restored",
-        entryType: "strategy",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "older",
+        amount: ({ haRestoredTotal, haRestored3Year }) => {
+          if (haRestoredTotal == null && haRestored3Year == null) return undefined;
+          const amount = (haRestoredTotal ?? 0) - (haRestored3Year ?? 0);
+          return amount <= 0 ? undefined : amount;
+        }
       }
     ]
   },
-  sites: {
-    aNatRegeneration: {
-      type: "trees",
-      collection: "regenerated",
-      entryType: "years",
-      entrySubtype: "unknown"
-    },
-    aimNumberOfMatureTrees: [
+  {
+    attributes: ["treesNaturallyRegenerated3Year", "treesNaturallyRegeneratedTotal"],
+    type: "trees-historical",
+    collection: "regenerated",
+    entries: [
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "years",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "3-year",
+        amount: ({ treesNaturallyRegenerated3Year }) => treesNaturallyRegenerated3Year ?? undefined
       },
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "strategy",
-        entrySubtype: "unknown"
-      }
-    ],
-    hectaresToRestoreGoal: [
-      {
-        type: "hectares",
-        collection: "restored",
-        entryType: "years",
-        entrySubtype: "unknown"
-      },
-      {
-        type: "hectares",
-        collection: "restored",
-        entryType: "strategy",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "older",
+        amount: ({ treesNaturallyRegeneratedTotal, treesNaturallyRegenerated3Year }) => {
+          if (treesNaturallyRegeneratedTotal == null && treesNaturallyRegenerated3Year == null) return undefined;
+          const amount = (treesNaturallyRegeneratedTotal ?? 0) - (treesNaturallyRegenerated3Year ?? 0);
+          return amount <= 0 ? undefined : amount;
+        }
       }
     ]
   },
-  siteReports: {
-    numTreesRegenerating: {
-      type: "trees",
-      collection: "regenerated",
-      entryType: "years",
-      entrySubtype: "unknown"
-    }
-  },
-  nurseries: {
-    seedlingGrown: [
+  {
+    attributes: ["treesGrown3Year", "treesGrownTotal"],
+    type: "trees-historical",
+    collection: "grown",
+    entries: [
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "years",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "3-year",
+        amount: ({ treesGrown3Year }) => treesGrown3Year ?? undefined
       },
       {
-        type: "trees",
-        collection: "planted",
-        entryType: "strategy",
-        entrySubtype: "unknown"
-      }
-    ]
-  },
-  nurseryReports: {
-    seedlingsYoungTrees: [
-      {
-        type: "trees",
-        collection: "planted",
-        entryType: "years",
-        entrySubtype: "unknown"
-      },
-      {
-        type: "trees",
-        collection: "planted",
-        entryType: "strategy",
-        entrySubtype: "unknown"
+        type: "years",
+        subtype: "older",
+        amount: ({ treesGrownTotal, treesGrown3Year }) => {
+          if (treesGrownTotal == null && treesGrown3Year == null) return undefined;
+          const amount = (treesGrownTotal ?? 0) - (treesGrown3Year ?? 0);
+          return amount <= 0 ? undefined : amount;
+        }
       }
     ]
   }
-};
+];
+
+const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
+  {
+    attributes: [
+      "totalTreesFirstYr",
+      "totalTreeSecondYr",
+      "goalTreesRestoredAnr",
+      "goalTreesRestoredDirectSeeding",
+      "goalTreesRestoredPlanting",
+      "totalTrees"
+    ],
+    type: "trees-goal",
+    collection: "all",
+    entries: [
+      {
+        type: "years",
+        subtype: "1-year",
+        amount: ({ totalTreesFirstYr }) => totalTreesFirstYr ?? undefined
+      },
+      {
+        type: "years",
+        subtype: "2-year",
+        amount: ({ totalTreeSecondYr }) => totalTreeSecondYr ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "anr",
+        amount: ({ goalTreesRestoredAnr }) => goalTreesRestoredAnr ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "direct-seeding",
+        amount: ({ goalTreesRestoredDirectSeeding }) => goalTreesRestoredDirectSeeding ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "planting",
+        amount: ({ goalTreesRestoredPlanting }) => goalTreesRestoredPlanting ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "unknown",
+        amount: ({ totalTrees }, entries) => {
+          // unknown years haven't been calculated yet, so make sure we at least reach the totalTrees value.
+          const years = Math.max(totalTrees ?? 0, entryTypeTotal("years", entries) ?? 0);
+          const strategy = entryTypeTotal("strategy", entries) ?? 0;
+          return strategy >= years ? undefined : years - strategy;
+        }
+      },
+      {
+        type: "years",
+        subtype: "unknown",
+        amount: (_, entries) => {
+          const years = entryTypeTotal("years", entries) ?? 0;
+          const strategy = entryTypeTotal("strategy", entries) ?? 0;
+          // the total trees column was taken into account for the strategy total, so we can use
+          // it as the canonical balanced sum.
+          return strategy > years ? strategy - years : undefined;
+        }
+      }
+    ]
+  },
+  {
+    attributes: ["hectaresFirstYr", "totalHectares"],
+    type: "hectares-goal",
+    collection: "all",
+    entries: [
+      {
+        type: "years",
+        subtype: "1-year",
+        amount: ({ hectaresFirstYr }) => hectaresFirstYr ?? undefined
+      },
+      {
+        type: "years",
+        subtype: "unknown",
+        amount: ({ totalHectares }, entries) => {
+          const years = entryTypeTotal("years", entries) ?? 0;
+          return totalHectares == null || totalHectares <= years ? undefined : totalHectares - years;
+        }
+      },
+      {
+        type: "strategy",
+        subtype: "unknown",
+        amount: (_, entries) => entryTypeTotal("years", entries)
+      },
+      {
+        type: "land-use",
+        subtype: "unknown",
+        amount: (_, entries) => entryTypeTotal("years", entries)
+      }
+    ]
+  }
+];
+
+const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
+  {
+    attributes: [
+      "goalTreesRestoredAnr",
+      "goalTreesRestoredDirectSeeding",
+      "goalTreesRestoredPlanting",
+      "treesGrownGoal"
+    ],
+    type: "trees-goal",
+    collection: "all",
+    entries: [
+      {
+        type: "strategy",
+        subtype: "anr",
+        amount: ({ goalTreesRestoredAnr }) => goalTreesRestoredAnr ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "direct-seeding",
+        amount: ({ goalTreesRestoredDirectSeeding }) => goalTreesRestoredDirectSeeding ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "planting",
+        amount: ({ goalTreesRestoredPlanting }) => goalTreesRestoredPlanting ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "unknown",
+        amount: ({ treesGrownGoal }, entries) => {
+          const strategy = entryTypeTotal("strategy", entries) ?? 0;
+          return treesGrownGoal == null || treesGrownGoal <= strategy ? undefined : treesGrownGoal - strategy;
+        }
+      },
+      {
+        type: "years",
+        subtype: "unknown",
+        amount: (_, entries) => entryTypeTotal("strategy", entries)
+      }
+    ]
+  },
+  {
+    attributes: ["totalHectaresRestoredGoal"],
+    type: "hectares-goal",
+    collection: "all",
+    entries: [
+      {
+        type: "years",
+        subtype: "unknown",
+        amount: ({ totalHectaresRestoredGoal }) => totalHectaresRestoredGoal ?? undefined
+      },
+      {
+        type: "strategy",
+        subtype: "unknown",
+        amount: (_, entries) => entryTypeTotal("years", entries)
+      },
+      {
+        type: "land-use",
+        subtype: "unknown",
+        amount: (_, entries) => entryTypeTotal("years", entries)
+      }
+    ]
+  }
+];

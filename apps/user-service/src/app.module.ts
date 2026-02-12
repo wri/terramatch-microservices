@@ -13,6 +13,7 @@ import { UserCreationService } from "./users/user-creation.service";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { OrganisationsController } from "./organisations/organisations.controller";
 import { OrganisationsService } from "./organisations/organisations.service";
+import { OrganisationCreationService } from "./organisations/organisation-creation.service";
 import { ActionsController } from "./actions/actions.controller";
 import { ActionsService } from "./actions/actions.service";
 import { BullModule } from "@nestjs/bullmq";
@@ -41,6 +42,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     VerificationUserService,
     UserCreationService,
     OrganisationsService,
+    OrganisationCreationService,
     ActionsService
   ]
 })

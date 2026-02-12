@@ -1,18 +1,10 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  Scope,
-  UnauthorizedException
-} from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Scope } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Organisation, User } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Op } from "sequelize";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
-import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Injectable({ scope: Scope.REQUEST })
@@ -121,45 +113,5 @@ export class OrganisationsService {
 
   async delete(organisation: Organisation): Promise<void> {
     await organisation.destroy();
-  }
-
-  async create(attributes: OrganisationCreateAttributes) {
-    const userId = authenticatedUserId();
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
-
-    const user = await User.findByPk(userId);
-    if (user == null) {
-      throw new NotFoundException("Authenticated user not found");
-    }
-
-    if (user.organisationId != null) {
-      throw new ConflictException("Organisation already exists.");
-    }
-
-    const orgData: Partial<Organisation> = {
-      status: "draft",
-      private: false,
-      isTest: false,
-      name: attributes.name ?? null,
-      type: attributes.type ?? null,
-      hqStreet1: attributes.hqStreet1 ?? null,
-      hqStreet2: attributes.hqStreet2 ?? null,
-      hqCity: attributes.hqCity ?? null,
-      hqZipcode: attributes.hqZipcode ?? null,
-      hqState: attributes.hqState ?? null,
-      hqCountry: attributes.hqCountry ?? null,
-      phone: attributes.phone ?? null,
-      countries: attributes.countries ?? null,
-      currency: attributes.currency ?? "USD",
-      level0PastRestoration: attributes.level0PastRestoration ?? null,
-      level1PastRestoration: attributes.level1PastRestoration ?? null
-    };
-    const organisation = await Organisation.create(orgData as Organisation);
-
-    await user.update({ organisationId: organisation.id });
-
-    return { organisation };
   }
 }

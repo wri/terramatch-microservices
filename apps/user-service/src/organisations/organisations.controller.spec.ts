@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { OrganisationsService } from "./organisations.service";
+import { OrganisationCreationService } from "./organisation-creation.service";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
 import { REQUEST } from "@nestjs/core";
@@ -12,7 +13,8 @@ import {
   OrganisationFactory,
   FinancialIndicatorFactory,
   FinancialReportFactory,
-  MediaFactory
+  MediaFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import { Organisation, FinancialIndicator, FinancialReport, Media } from "@terramatch-microservices/database/entities";
 import { serialize } from "@terramatch-microservices/common/util/testing";
@@ -27,6 +29,7 @@ describe("OrganisationsController", () => {
   let controller: OrganisationsController;
   let policyService: DeepMocked<PolicyService>;
   let organisationsService: DeepMocked<OrganisationsService>;
+  let organisationCreationService: DeepMocked<OrganisationCreationService>;
   let mediaService: DeepMocked<MediaService>;
 
   beforeEach(async () => {
@@ -37,6 +40,10 @@ describe("OrganisationsController", () => {
         {
           provide: OrganisationsService,
           useValue: (organisationsService = createMock<OrganisationsService>())
+        },
+        {
+          provide: OrganisationCreationService,
+          useValue: (organisationCreationService = createMock<OrganisationCreationService>())
         },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: getQueueToken("email"), useValue: createMock() },
@@ -109,19 +116,39 @@ describe("OrganisationsController", () => {
       await expect(controller.create(createRequest())).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should call the organisations service create method and return the organisation", async () => {
+    it("should call the organisation creation service and return the organisation and user", async () => {
       const attrs = new OrganisationCreateAttributes();
       attrs.name = "Test Organisation";
+      attrs.type = "non-profit-organization";
+      attrs.hqStreet1 = "123 Main St";
+      attrs.hqCity = "City";
+      attrs.hqState = "State";
+      attrs.hqCountry = "USA";
+      attrs.phone = "1234567890";
+      attrs.countries = ["USA"];
+      attrs.fundingProgrammeUuid = "test-uuid";
+      attrs.userFirstName = "John";
+      attrs.userLastName = "Doe";
+      attrs.userEmailAddress = "john@example.com";
+      attrs.userRole = "project-developer";
+      attrs.userLocale = "en-US";
+
       const org = await OrganisationFactory.create({ name: attrs.name });
-      organisationsService.create.mockResolvedValue({ organisation: org });
+      const user = await UserFactory.create({ organisationId: org.id });
+      user.myFrameworks = jest.fn().mockResolvedValue([]);
+      organisationCreationService.createOrganisation.mockResolvedValue({ user, organisation: org });
       policyService.authorize.mockResolvedValue(undefined);
 
       const result = serialize(await controller.create(createRequest(attrs)));
 
       expect(policyService.authorize).toHaveBeenCalledWith("create", Organisation);
-      expect(organisationsService.create).toHaveBeenCalledWith(attrs);
+      expect(organisationCreationService.createOrganisation).toHaveBeenCalledWith(attrs);
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe(org.uuid);
+      expect(result.included).toBeDefined();
+      const userResource = (result.included as Resource[])?.find(r => r.type === "users");
+      expect(userResource).toBeDefined();
+      expect(userResource?.id).toBe(user.uuid);
     });
   });
 

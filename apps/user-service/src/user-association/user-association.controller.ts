@@ -2,10 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
   Post,
+  Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { UserAssociationService } from "./user-association.service";
@@ -13,7 +15,7 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 
@@ -82,5 +84,28 @@ export class UserAssociationController {
       document.addData(userAssociation.uuid as string, new UserAssociationDto(userAssociation));
     }
     return document;
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({
+    operationId: "deleteUserAssociation",
+    summary: "Delete a user association for a project"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Project not found" })
+  async deleteBulkUserAssociations(@Param("uuid") uuid: string, @Query() { uuids }: { uuids: string[] }) {
+    const project = await Project.findOne({
+      where: { uuid },
+      attributes: ["id"]
+    });
+    if (project == null) {
+      throw new NotFoundException("Project not found");
+    }
+    await this.policyService.authorize("update", project);
+    await this.userAssociationService.deleteBulkUserAssociations(project.id, uuids);
+    return buildDeletedResponse("userAssociations", uuids);
   }
 }

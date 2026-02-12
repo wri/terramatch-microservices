@@ -54,6 +54,19 @@ export class UserAssociationService {
     }
   }
 
+  async deleteBulkUserAssociations(projectId: number, uuids: string[]) {
+    const users = await User.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["uuid"] });
+    if (users.length === 0) {
+      throw new NotFoundException("Users not found");
+    }
+    const userIds = users.map(user => user.id);
+    await ProjectUser.destroy({ where: { projectId, userId: { [Op.in]: userIds } } });
+    await ProjectInvite.destroy({
+      where: { projectId, emailAddress: { [Op.in]: users.map(user => user.emailAddress) } }
+    });
+    return users.map(user => user.uuid);
+  }
+
   private async handleUserNotFound(project: Project, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
       throw new NotFoundException("User not found");

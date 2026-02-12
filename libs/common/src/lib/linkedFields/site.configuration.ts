@@ -173,24 +173,6 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
       label: "Stratas",
       resource: "stratas",
       inputType: "stratas"
-    },
-    "site-hectares-restored": {
-      label: "Hectares Restored",
-      resource: "restoration",
-      inputType: "hectares",
-      collection: "restored"
-    },
-    "site-trees-planted": {
-      label: "Trees Planted",
-      resource: "restoration",
-      inputType: "trees",
-      collection: "planted"
-    },
-    "site-trees-regenerated": {
-      label: "Trees Regenerated",
-      resource: "restoration",
-      inputType: "trees",
-      collection: "regenerated"
     }
   }
 };

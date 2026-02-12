@@ -65,12 +65,11 @@ describe("OrganisationsController", () => {
         organisations: orgs,
         paginationTotal: 2
       });
-      policyService.getPermissions.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue(undefined);
 
       const result = serialize(await controller.index({}));
 
-      expect(organisationsService.findMany).toHaveBeenCalledWith({}, false);
+      expect(organisationsService.findMany).toHaveBeenCalledWith({});
       expect(policyService.authorize).toHaveBeenCalledWith("read", orgs);
       expect(result.data).toHaveLength(2);
     });
@@ -82,12 +81,11 @@ describe("OrganisationsController", () => {
         organisations: orgs,
         paginationTotal: 2
       });
-      policyService.getPermissions.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue(undefined);
 
       const result = serialize(await controller.index({ fundingProgrammeUuid: programmeUuid }));
 
-      expect(organisationsService.findMany).toHaveBeenCalledWith({ fundingProgrammeUuid: programmeUuid }, false);
+      expect(organisationsService.findMany).toHaveBeenCalledWith({ fundingProgrammeUuid: programmeUuid });
       expect(policyService.authorize).toHaveBeenCalledWith("read", orgs);
       expect(result.data).toHaveLength(2);
       const uuids = (result.data as Resource[]).map(({ id }) => id);
@@ -95,18 +93,17 @@ describe("OrganisationsController", () => {
       expect(uuids).toContain(orgs[1].uuid);
     });
 
-    it("uses admin permissions when user has framework permissions", async () => {
+    it("calls service with query when user has framework permissions", async () => {
       const orgs = await OrganisationFactory.createMany(2);
       organisationsService.findMany.mockResolvedValue({
         organisations: orgs,
         paginationTotal: 2
       });
-      policyService.getPermissions.mockResolvedValue(["framework-test"]);
       policyService.authorize.mockResolvedValue(undefined);
 
       await controller.index({});
 
-      expect(organisationsService.findMany).toHaveBeenCalledWith({}, true);
+      expect(organisationsService.findMany).toHaveBeenCalledWith({});
     });
   });
 
@@ -553,26 +550,11 @@ describe("OrganisationsController", () => {
         organisations: orgs,
         paginationTotal: 2
       });
-      policyService.getPermissions.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue(undefined);
 
       const result = serialize(await controller.index({ lightResource: true }));
 
       expect(result.data).toHaveLength(2);
-    });
-
-    it("should use users-manage permission for admin check", async () => {
-      const orgs = await OrganisationFactory.createMany(2);
-      organisationsService.findMany.mockResolvedValue({
-        organisations: orgs,
-        paginationTotal: 2
-      });
-      policyService.getPermissions.mockResolvedValue(["users-manage"]);
-      policyService.authorize.mockResolvedValue(undefined);
-
-      await controller.index({});
-
-      expect(organisationsService.findMany).toHaveBeenCalledWith({}, true);
     });
   });
 });

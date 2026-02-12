@@ -8,14 +8,18 @@ import { OrganisationFactory, UserFactory, ProjectFactory } from "@terramatch-mi
 import { Organisation } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { PolicyService } from "@terramatch-microservices/common";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 
 describe("OrganisationsService", () => {
   let service: OrganisationsService;
+  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         OrganisationsService,
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: getQueueToken("email"), useValue: {} },
         { provide: REQUEST, useValue: {} }
       ]
@@ -31,7 +35,9 @@ describe("OrganisationsService", () => {
   describe("findMany", () => {
     it("should return organisations for admin user", async () => {
       await OrganisationFactory.createMany(2);
-      const result = await service.findMany({}, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+
+      const result = await service.findMany({});
 
       expect(result.organisations.length).toBeGreaterThanOrEqual(2);
       expect(result.paginationTotal).toBeGreaterThanOrEqual(2);
@@ -39,7 +45,8 @@ describe("OrganisationsService", () => {
 
     it("should throw error if non-admin user is not authenticated", async () => {
       mockUserId(undefined);
-      await expect(service.findMany({}, false)).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue([]);
+      await expect(service.findMany({})).rejects.toThrow(BadRequestException);
     });
 
     it("should filter organisations by user's orgs and projects for non-admin", async () => {
@@ -51,59 +58,70 @@ describe("OrganisationsService", () => {
       await user.$add("projects", project);
 
       mockUserId(user.id);
-      const result = await service.findMany({}, false);
+      policyService.getPermissions.mockResolvedValue([]);
+      const result = await service.findMany({});
 
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by funding programme UUID", async () => {
       const programmeUuid = faker.string.uuid();
-      await service.findMany({ fundingProgrammeUuid: programmeUuid }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await service.findMany({ fundingProgrammeUuid: programmeUuid });
     });
 
     it("should filter by search query", async () => {
       await OrganisationFactory.create({ name: "Test Organisation" });
-      const result = await service.findMany({ search: "Test" }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      const result = await service.findMany({ search: "Test" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by status", async () => {
       await OrganisationFactory.create({ status: "pending" });
-      const result = await service.findMany({ filter: { status: "pending" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      const result = await service.findMany({ filter: { status: "pending" } });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by type", async () => {
       await OrganisationFactory.create({ type: "non-profit-organization" });
-      const result = await service.findMany({ filter: { type: "non-profit-organization" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      const result = await service.findMany({ filter: { type: "non-profit-organization" } });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by hqCountry", async () => {
       const country = faker.location.countryCode("alpha-3");
       await OrganisationFactory.create({ hqCountry: country });
-      const result = await service.findMany({ filter: { hqCountry: country } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      const result = await service.findMany({ filter: { hqCountry: country } });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should sort by valid field", async () => {
-      await service.findMany({ sort: { field: "name", direction: "ASC" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await service.findMany({ sort: { field: "name", direction: "ASC" } });
     });
 
     it("should sort by mapped field", async () => {
-      await service.findMany({ sort: { field: "created_at", direction: "ASC" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await service.findMany({ sort: { field: "created_at", direction: "ASC" } });
     });
 
     it("should handle descending sort", async () => {
-      await service.findMany({ sort: { field: "-name" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await service.findMany({ sort: { field: "-name" } });
     });
 
     it("should throw error for invalid sort field", async () => {
-      await expect(service.findMany({ sort: { field: "invalidField" } }, true)).rejects.toThrow(BadRequestException);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await expect(service.findMany({ sort: { field: "invalidField" } })).rejects.toThrow(BadRequestException);
     });
 
     it("should allow sorting by id field", async () => {
-      await service.findMany({ sort: { field: "id" } }, true);
+      policyService.getPermissions.mockResolvedValue(["framework-test"]);
+      await service.findMany({ sort: { field: "id" } });
     });
   });
 

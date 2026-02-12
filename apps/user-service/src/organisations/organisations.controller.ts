@@ -60,10 +60,7 @@ export class OrganisationsController {
   @ExceptionResponse(UnauthorizedException, { description: "Organisation listing not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
   async index(@Query() query: OrganisationIndexQueryDto) {
-    const permissions = await this.policyService.getPermissions();
-    const isAdmin = permissions.some(p => p.startsWith("framework-")) || permissions.includes("users-manage");
-
-    const { organisations, paginationTotal } = await this.organisationsService.findMany(query, isAdmin);
+    const { organisations, paginationTotal } = await this.organisationsService.findMany(query);
 
     await this.policyService.authorize("read", organisations);
 

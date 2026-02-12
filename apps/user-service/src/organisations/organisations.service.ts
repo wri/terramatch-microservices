@@ -6,15 +6,19 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Op } from "sequelize";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { PolicyService } from "@terramatch-microservices/common";
 
 @Injectable({ scope: Scope.REQUEST })
 export class OrganisationsService {
   private readonly logger = new TMLogger(OrganisationsService.name);
 
-  async findMany(query: OrganisationIndexQueryDto, isAdmin: boolean) {
+  constructor(private readonly policyService: PolicyService) {}
+
+  async findMany(query: OrganisationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Organisation, query.page);
 
-    if (!isAdmin) {
+    const permissions = await this.policyService.getPermissions();
+    if (permissions.find(p => p.startsWith("framework-")) == null) {
       const userId = authenticatedUserId();
       if (userId == null) {
         throw new BadRequestException("User ID is required");

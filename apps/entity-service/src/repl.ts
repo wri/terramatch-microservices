@@ -27,7 +27,7 @@ import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/datab
 import { generateHashedKey } from "@transifex/native";
 import { DateTime } from "luxon";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
-import { cloneDeep, Dictionary, flattenDeep, isEqual, isUndefined, omitBy, sumBy, uniq } from "lodash";
+import { cloneDeep, Dictionary, flattenDeep, isEqual, isNumber, isUndefined, omitBy, sumBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 import { Model, ModelCtor } from "sequelize-typescript";
@@ -413,8 +413,8 @@ type RestorationMapping<M extends Model> = {
 const columnValue =
   <M extends Model>(column: keyof Attributes<M>) =>
   (model: M) => {
-    if (model[column] == null) return undefined;
-    const value = model[column] as number;
+    if (!isNumber(model[column])) return undefined;
+    const value = Math.round(model[column] as number);
     return value <= 0 ? undefined : value;
   };
 
@@ -438,8 +438,7 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
         type: "years",
         subtype: "older",
         amount: ({ haRestoredTotal, haRestored3Year }) => {
-          if (haRestoredTotal == null && haRestored3Year == null) return undefined;
-          const amount = Math.max(0, haRestoredTotal ?? 0) - Math.max(0, haRestored3Year ?? 0);
+          const amount = Math.max(0, Math.round(haRestoredTotal ?? 0)) - Math.max(0, Math.round(haRestored3Year ?? 0));
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -459,9 +458,9 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
         type: "years",
         subtype: "older",
         amount: ({ treesNaturallyRegeneratedTotal, treesNaturallyRegenerated3Year }) => {
-          if (treesNaturallyRegeneratedTotal == null && treesNaturallyRegenerated3Year == null) return undefined;
           const amount =
-            Math.max(0, treesNaturallyRegeneratedTotal ?? 0) - Math.max(0, treesNaturallyRegenerated3Year ?? 0);
+            Math.max(0, Math.round(treesNaturallyRegeneratedTotal ?? 0)) -
+            Math.max(0, Math.round(treesNaturallyRegenerated3Year ?? 0));
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -481,8 +480,7 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
         type: "years",
         subtype: "older",
         amount: ({ treesGrownTotal, treesGrown3Year }) => {
-          if (treesGrownTotal == null && treesGrown3Year == null) return undefined;
-          const amount = Math.max(0, treesGrownTotal ?? 0) - Math.max(0, treesGrown3Year ?? 0);
+          const amount = Math.max(0, Math.round(treesGrownTotal ?? 0)) - Math.max(0, Math.round(treesGrown3Year ?? 0));
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -533,7 +531,7 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
         subtype: "unknown",
         amount: ({ totalTrees }, entries) => {
           // unknown years haven't been calculated yet, so make sure we at least reach the totalTrees value.
-          const years = Math.max(totalTrees ?? 0, entryTypeTotal("years", entries) ?? 0);
+          const years = Math.max(Math.round(totalTrees ?? 0), entryTypeTotal("years", entries) ?? 0);
           const strategy = entryTypeTotal("strategy", entries) ?? 0;
           return strategy >= years ? undefined : years - strategy;
         }
@@ -566,7 +564,9 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
         subtype: "unknown",
         amount: ({ totalHectares }, entries) => {
           const years = entryTypeTotal("years", entries) ?? 0;
-          return totalHectares == null || totalHectares <= years ? undefined : totalHectares - years;
+          if (totalHectares == null) return undefined;
+          const total = Math.round(totalHectares);
+          return total <= years ? undefined : total - years;
         }
       },
       {
@@ -614,7 +614,9 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
         subtype: "unknown",
         amount: ({ treesGrownGoal }, entries) => {
           const strategy = entryTypeTotal("strategy", entries) ?? 0;
-          return treesGrownGoal == null || treesGrownGoal <= strategy ? undefined : treesGrownGoal - strategy;
+          if (treesGrownGoal == null) return undefined;
+          const goal = Math.round(treesGrownGoal);
+          return goal <= strategy ? undefined : goal - strategy;
         }
       },
       {

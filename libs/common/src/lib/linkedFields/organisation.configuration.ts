@@ -719,6 +719,24 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       label: "Financial collection",
       resource: "financialIndicators",
       inputType: "financialIndicators"
+    },
+    "org-hectares-restored": {
+      label: "Hectares Restored",
+      resource: "restoration",
+      inputType: "hectaresHistorical",
+      collection: "all"
+    },
+    "org-trees-regenerated": {
+      label: "Trees Regenerated",
+      resource: "restoration",
+      inputType: "treesHistorical",
+      collection: "regenerated"
+    },
+    "org-trees-grown": {
+      label: "Trees Grown",
+      resource: "restoration",
+      inputType: "treesHistorical",
+      collection: "grown"
     }
   }
 };

@@ -314,19 +314,22 @@ describe("OrganisationsController", () => {
       organisationSpy.mockRestore();
     });
 
-    it("should include cover media when sideloads includes cover", async () => {
+    it("should include all media when sideloads includes media", async () => {
       const org = await OrganisationFactory.create();
-      const coverMedia1 = await MediaFactory.org(org).create({
+      const coverMedia = await MediaFactory.org(org).create({
         collectionName: "cover"
       });
-      const coverMedia2 = await MediaFactory.org(org).create({
-        collectionName: "cover"
+      const logoMedia = await MediaFactory.org(org).create({
+        collectionName: "logo"
+      });
+      const additionalMedia = await MediaFactory.org(org).create({
+        collectionName: "additional"
       });
 
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
-      const mockMediaFindAll = jest.fn().mockResolvedValue([coverMedia1, coverMedia2]);
+      const mockMediaFindAll = jest.fn().mockResolvedValue([coverMedia, logoMedia, additionalMedia]);
       const mediaForSpy = jest.spyOn(Media, "for").mockReturnValue({
         findAll: mockMediaFindAll
       } as unknown as ReturnType<typeof Media.for>);
@@ -336,24 +339,23 @@ describe("OrganisationsController", () => {
         return `https://example.com/media/${media.id}${variantSuffix}`;
       });
 
-      const result = serialize(await controller.show(org.uuid, { sideloads: ["cover"] }));
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["media"] }));
 
       expect(Media.for).toHaveBeenCalledWith(org);
-      expect(mockMediaFindAll).toHaveBeenCalledWith({
-        where: { collectionName: "cover" }
-      });
-      expect(mediaService.getUrl).toHaveBeenCalledTimes(4);
+      expect(mockMediaFindAll).toHaveBeenCalledWith();
+      expect(mediaService.getUrl).toHaveBeenCalledTimes(6); // 3 media × 2 calls (url + thumbUrl)
 
       const included = result.included ?? [];
       const mediaResources = included.filter((resource: Resource) => resource.type === "media");
-      expect(mediaResources).toHaveLength(2);
-      expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia1.uuid);
-      expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia2.uuid);
+      expect(mediaResources).toHaveLength(3);
+      expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia.uuid);
+      expect(mediaResources.map((r: Resource) => r.id)).toContain(logoMedia.uuid);
+      expect(mediaResources.map((r: Resource) => r.id)).toContain(additionalMedia.uuid);
 
       mediaForSpy.mockRestore();
     });
 
-    it("should handle empty cover media gracefully", async () => {
+    it("should handle empty media gracefully", async () => {
       const org = await OrganisationFactory.create();
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
@@ -363,12 +365,10 @@ describe("OrganisationsController", () => {
         findAll: mockMediaFindAll
       } as unknown as ReturnType<typeof Media.for>);
 
-      const result = serialize(await controller.show(org.uuid, { sideloads: ["cover"] }));
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["media"] }));
 
       expect(Media.for).toHaveBeenCalledWith(org);
-      expect(mockMediaFindAll).toHaveBeenCalledWith({
-        where: { collectionName: "cover" }
-      });
+      expect(mockMediaFindAll).toHaveBeenCalledWith();
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe(org.uuid);
       const included = result.included ?? [];
@@ -384,6 +384,9 @@ describe("OrganisationsController", () => {
       const coverMedia = await MediaFactory.org(org).create({
         collectionName: "cover"
       });
+      const logoMedia = await MediaFactory.org(org).create({
+        collectionName: "logo"
+      });
 
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
@@ -398,7 +401,7 @@ describe("OrganisationsController", () => {
         findAll: mockReportFindAll
       } as unknown as typeof FinancialReport);
 
-      const mockMediaFindAll = jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([coverMedia]);
+      const mockMediaFindAll = jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([coverMedia, logoMedia]);
       const mediaForSpy = jest.spyOn(Media, "for").mockReturnValue({
         findAll: mockMediaFindAll
       } as unknown as ReturnType<typeof Media.for>);
@@ -410,7 +413,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(
         await controller.show(org.uuid, {
-          sideloads: ["financialCollection", "financialReport", "cover"]
+          sideloads: ["financialCollection", "financialReport", "media"]
         })
       );
 
@@ -427,7 +430,9 @@ describe("OrganisationsController", () => {
 
       expect(financialIndicatorResources).toHaveLength(1);
       expect(financialReportResources).toHaveLength(1);
-      expect(mediaResources).toHaveLength(1);
+      expect(mediaResources).toHaveLength(2);
+      expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia.uuid);
+      expect(mediaResources.map((r: Resource) => r.id)).toContain(logoMedia.uuid);
 
       indicatorSpy.mockRestore();
       reportSpy.mockRestore();

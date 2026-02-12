@@ -153,13 +153,11 @@ export class OrganisationsController {
       }
     }
 
-    if (query.sideloads?.includes("cover")) {
-      const coverMedia = await Media.for(organisation).findAll({
-        where: { collectionName: "cover" }
-      });
+    if (query.sideloads?.includes("media")) {
+      const allMedia = await Media.for(organisation).findAll();
 
-      if (coverMedia.length > 0) {
-        for (const media of coverMedia) {
+      if (allMedia.length > 0) {
+        for (const media of allMedia) {
           document.addData(
             media.uuid,
             new MediaDto(media, {

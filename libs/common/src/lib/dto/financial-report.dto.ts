@@ -48,6 +48,9 @@ export class FinancialReportLightDto extends AssociationDto {
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
+  @ApiProperty({ nullable: true, type: Date })
+  dueAt: Date | null;
+
   @ApiProperty()
   createdAt: Date;
 

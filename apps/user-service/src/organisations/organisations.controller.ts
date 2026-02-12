@@ -147,13 +147,11 @@ export class OrganisationsController {
 
       if (financialReports.length > 0) {
         for (const report of financialReports) {
-          document.addData(
-            report.uuid,
-            new FinancialReportLightDto(report, {
-              entityType: "financialReports" as const,
-              entityUuid: report.uuid
-            })
-          );
+          const dto = new FinancialReportLightDto(report, {
+            entityType: "financialReports" as const,
+            entityUuid: report.uuid
+          });
+          document.addData(report.uuid, dto);
         }
       }
     }

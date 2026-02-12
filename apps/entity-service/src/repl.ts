@@ -43,52 +43,9 @@ bootstrapRepl("Entity Service", AppModule, {
   // scripts are old enough to be removed.
   oneOff: {
     migrateRestorationData: withoutSqlLogs(async () => {
-      const processMapping = async <M extends Model>(model: M, mappings: RestorationMapping<M>[]) => {
-        for (const mapping of mappings) {
-          const entries: CreationAttributes<TrackingEntry>[] = [];
-          for (const map of mapping.entries) {
-            const amount = map.amount(model, entries);
-            if (amount != null) {
-              entries.push({ trackingId: -1, type: map.type, subtype: map.subtype, amount });
-            }
-          }
-          if (entries.length > 0) {
-            const tracking = await Tracking.create({
-              domain: "restoration",
-              type: mapping.type,
-              collection: mapping.collection,
-              trackableType: laravelType(model),
-              trackableId: model.id
-            });
-            for (const entry of entries) entry.trackingId = tracking.id;
-            await TrackingEntry.bulkCreate(entries);
-          }
-        }
-      };
-
-      const processModel = async <M extends Model>(
-        label: string,
-        ctor: ModelCtor<M>,
-        mappings: RestorationMapping<M>[]
-      ) => {
-        const builder = new PaginatedQueryBuilder(ctor, 100);
-        builder.attributes(uniq(flattenDeep(["id", mappings.map(({ attributes }) => attributes)])));
-        const bar = new ProgressBar(`Processing ${label} [:bar] :percent :etas`, {
-          width: 40,
-          total: await builder.paginationTotal()
-        });
-        for await (const page of batchFindAll(builder)) {
-          for (const instance of page) {
-            await processMapping(instance, mappings);
-            bar.tick();
-          }
-        }
-        console.log(`Finished ${label}...\n\n`);
-      };
-
-      await processModel("Organisations", Organisation, ORGS_RESTORATION);
-      await processModel("Project Pitches", ProjectPitch, PITCHES_RESTORATION);
-      await processModel("Projects", Project, PROJECTS_RESTORATION);
+      await processRestorationModel("Organisations", Organisation, ORGS_RESTORATION);
+      await processRestorationModel("Project Pitches", ProjectPitch, PITCHES_RESTORATION);
+      await processRestorationModel("Projects", Project, PROJECTS_RESTORATION);
     }),
 
     // Sets the additionalProps.accept field on all file form questions to the mime types accepted for
@@ -447,7 +404,8 @@ type RestorationMapping<M extends Model> = {
   entries: {
     type: string;
     subtype: string;
-    // If undefined is returned, the entry is not created.
+    // If undefined is returned, the entry is not created. If no entries are created for a given
+    // tracking, the tracking itself is not created.
     amount: (model: M, entries: CreationAttributes<TrackingEntry>[]) => number | undefined;
   }[];
 };
@@ -577,7 +535,7 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
         amount: (_, entries) => {
           const years = entryTypeTotal("years", entries) ?? 0;
           const strategy = entryTypeTotal("strategy", entries) ?? 0;
-          // the total trees column was taken into account for the strategy total, so we can use
+          // the totalTrees column was taken into account for the strategy total, so we can use
           // it as the canonical balanced sum.
           return strategy > years ? strategy - years : undefined;
         }
@@ -680,3 +638,47 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
     ]
   }
 ];
+
+// maximum value of an int(11) signed column. Any value larger than this is clearly bogus testing
+// data and may be ignored.
+const MAX_AMOUNT = 2147483647;
+const processRestorationMapping = async <M extends Model>(model: M, mappings: RestorationMapping<M>[]) => {
+  for (const mapping of mappings) {
+    const entries: CreationAttributes<TrackingEntry>[] = [];
+    for (const entry of mapping.entries) {
+      const amount = entry.amount(model, entries);
+      if (amount != null && amount < MAX_AMOUNT) {
+        // the real tracking ID will be filled in below before the entries are created.
+        entries.push({ trackingId: -1, type: entry.type, subtype: entry.subtype, amount });
+      }
+    }
+    if (entries.length > 0) {
+      const tracking = await Tracking.create({
+        domain: "restoration",
+        type: mapping.type,
+        collection: mapping.collection,
+        trackableType: laravelType(model),
+        trackableId: model.id
+      });
+      for (const entry of entries) entry.trackingId = tracking.id;
+      await TrackingEntry.bulkCreate(entries);
+    }
+  }
+};
+
+const processRestorationModel = async <M extends Model>(
+  label: string,
+  ctor: ModelCtor<M>,
+  mappings: RestorationMapping<M>[]
+) => {
+  const builder = new PaginatedQueryBuilder(ctor, 100);
+  builder.attributes(uniq(flattenDeep(["id", mappings.map(({ attributes }) => attributes)])));
+  const total = await builder.paginationTotal();
+  const bar = new ProgressBar(`Processing ${total} ${label} [:bar] :percent :etas`, { width: 40, total });
+  for await (const page of batchFindAll(builder)) {
+    for (const instance of page) {
+      await processRestorationMapping(instance, mappings);
+      bar.tick();
+    }
+  }
+};

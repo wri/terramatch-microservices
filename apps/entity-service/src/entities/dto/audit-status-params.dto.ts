@@ -1,4 +1,4 @@
-import { IsIn } from "class-validator";
+import { IsIn, IsUUID } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { PROCESSABLE_ENTITIES, ProcessableEntity } from "../entities.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
@@ -11,4 +11,10 @@ export class AuditStatusParamsDto extends SingleResourceDto {
   @IsIn(AUDITABLE_ENTITY_TYPES)
   @ApiProperty({ enum: AUDITABLE_ENTITY_TYPES, description: "Entity type to retrieve audit statuses for" })
   entity: AuditableEntityType;
+}
+
+export class AuditStatusDeleteParamsDto extends AuditStatusParamsDto {
+  @IsUUID()
+  @ApiProperty({ description: "UUID of the audit status to delete" })
+  auditUuid: string;
 }

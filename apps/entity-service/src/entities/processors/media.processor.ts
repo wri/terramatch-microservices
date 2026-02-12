@@ -10,6 +10,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityModel, EntityType, EntityClass } from "@terramatch-microservices/database/constants/entities";
+import {
+  entityTypeFromLaravel,
+  isProjectGalleryMediaOwner,
+  MEDIA_OWNER_MODELS
+} from "@terramatch-microservices/database/constants/media-owners";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
 import { EntitiesService } from "../entities.service";
@@ -18,6 +23,8 @@ import { col, fn, Includeable, Op, Sequelize } from "sequelize";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { getBaseEntityByLaravelTypeAndId } from "./media-owner-processor";
+import type { AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
 
 type QueryModelType = {
   modelType: string;
@@ -151,16 +158,40 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       models = this.getBaseEntityModels(baseEntity);
     }
 
-    this._queryBuilder.where({
-      [Op.or]: models.map(model => {
-        return {
+    // Restrict to requested modelType when provided (e.g. Project Gallery filter: modelType=sites)
+    if (this.query.modelType != null && this.query.modelType in MEDIA_OWNER_MODELS) {
+      // Special case: in the Project gallery, the "Reports" source (modelType=projectReports)
+      // is expected to include both project-level and site-level reports for that project.
+      if (this.entityType === "projects" && this.query.modelType === "projectReports") {
+        const laravelTypes = [
+          MEDIA_OWNER_MODELS.projectReports.LARAVEL_TYPE,
+          MEDIA_OWNER_MODELS.siteReports.LARAVEL_TYPE
+        ];
+
+        models = models.filter(model => laravelTypes.includes(model.modelType));
+      } else {
+        const requestedLaravelType = MEDIA_OWNER_MODELS[this.query.modelType].LARAVEL_TYPE;
+        models = models.filter(model => model.modelType === requestedLaravelType);
+      }
+    } else if (this.entityType === "projects") {
+      // For Project Gallery "All Images" view, only count media from the same owner
+      // types that the UI exposes as Sources (Project/Site/Nursery/Reports).
+      models = models.filter(model => {
+        const ownerType = entityTypeFromLaravel(model.modelType);
+        return isProjectGalleryMediaOwner(ownerType);
+      });
+    }
+
+    if (models.length === 0) {
+      this._queryBuilder.where(Sequelize.literal("1 = 0"));
+    } else {
+      this._queryBuilder.where({
+        [Op.or]: models.map(model => ({
           modelType: model.modelType,
-          modelId: {
-            [Op.in]: model.subquery
-          }
-        };
-      })
-    });
+          modelId: { [Op.in]: model.subquery }
+        }))
+      });
+    }
 
     if (this.query.isGeotagged != null) {
       this._queryBuilder.where({
@@ -226,10 +257,16 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     for (const association of associations) {
       indexIds.push(association.uuid);
       const media = association as unknown as Media;
+      const owner = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+      const entityTypeForDto =
+        (entityTypeFromLaravel(media.modelType) as AssociationDtoAdditionalProps["entityType"]) ?? this.entityType;
 
       document.addData(
         association.uuid,
-        this.entitiesService.mediaDto(media, { entityType: this.entityType, entityUuid: this.entityUuid })
+        this.entitiesService.mediaDto(media, {
+          entityType: entityTypeForDto,
+          entityUuid: owner.uuid
+        })
       );
     }
 

@@ -74,6 +74,9 @@ export class LinkedAnswerCollector {
   get demographics() {
     return this.trackings;
   }
+  get restoration() {
+    return this.trackings;
+  }
   get treeSpecies() {
     return this.getCollector("treeSpecies", () => treeSpeciesCollector(new TMLogger("Tree Species Collector")));
   }

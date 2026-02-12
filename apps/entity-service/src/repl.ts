@@ -410,6 +410,14 @@ type RestorationMapping<M extends Model> = {
   }[];
 };
 
+const columnValue =
+  <M extends Model>(column: keyof Attributes<M>) =>
+  (model: M) => {
+    if (model[column] == null) return undefined;
+    const value = model[column] as number;
+    return value <= 0 ? undefined : value;
+  };
+
 const entryTypeTotal = (type: string, entries: CreationAttributes<TrackingEntry>[]) => {
   const filtered = entries.filter(entry => entry.type === type);
   return filtered.length === 0 ? undefined : sumBy(filtered, "amount");
@@ -424,14 +432,14 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
       {
         type: "years",
         subtype: "3-year",
-        amount: ({ haRestored3Year }) => haRestored3Year ?? undefined
+        amount: columnValue("haRestored3Year")
       },
       {
         type: "years",
         subtype: "older",
         amount: ({ haRestoredTotal, haRestored3Year }) => {
           if (haRestoredTotal == null && haRestored3Year == null) return undefined;
-          const amount = (haRestoredTotal ?? 0) - (haRestored3Year ?? 0);
+          const amount = Math.max(0, haRestoredTotal ?? 0) - Math.max(0, haRestored3Year ?? 0);
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -445,14 +453,15 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
       {
         type: "years",
         subtype: "3-year",
-        amount: ({ treesNaturallyRegenerated3Year }) => treesNaturallyRegenerated3Year ?? undefined
+        amount: columnValue("treesNaturallyRegenerated3Year")
       },
       {
         type: "years",
         subtype: "older",
         amount: ({ treesNaturallyRegeneratedTotal, treesNaturallyRegenerated3Year }) => {
           if (treesNaturallyRegeneratedTotal == null && treesNaturallyRegenerated3Year == null) return undefined;
-          const amount = (treesNaturallyRegeneratedTotal ?? 0) - (treesNaturallyRegenerated3Year ?? 0);
+          const amount =
+            Math.max(0, treesNaturallyRegeneratedTotal ?? 0) - Math.max(0, treesNaturallyRegenerated3Year ?? 0);
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -466,14 +475,14 @@ const ORGS_RESTORATION: RestorationMapping<Organisation>[] = [
       {
         type: "years",
         subtype: "3-year",
-        amount: ({ treesGrown3Year }) => treesGrown3Year ?? undefined
+        amount: columnValue("treesGrown3Year")
       },
       {
         type: "years",
         subtype: "older",
         amount: ({ treesGrownTotal, treesGrown3Year }) => {
           if (treesGrownTotal == null && treesGrown3Year == null) return undefined;
-          const amount = (treesGrownTotal ?? 0) - (treesGrown3Year ?? 0);
+          const amount = Math.max(0, treesGrownTotal ?? 0) - Math.max(0, treesGrown3Year ?? 0);
           return amount <= 0 ? undefined : amount;
         }
       }
@@ -497,27 +506,27 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
       {
         type: "years",
         subtype: "1-year",
-        amount: ({ totalTreesFirstYr }) => totalTreesFirstYr ?? undefined
+        amount: columnValue("totalTreesFirstYr")
       },
       {
         type: "years",
         subtype: "2-year",
-        amount: ({ totalTreeSecondYr }) => totalTreeSecondYr ?? undefined
+        amount: columnValue("totalTreeSecondYr")
       },
       {
         type: "strategy",
         subtype: "anr",
-        amount: ({ goalTreesRestoredAnr }) => goalTreesRestoredAnr ?? undefined
+        amount: columnValue("goalTreesRestoredAnr")
       },
       {
         type: "strategy",
         subtype: "direct-seeding",
-        amount: ({ goalTreesRestoredDirectSeeding }) => goalTreesRestoredDirectSeeding ?? undefined
+        amount: columnValue("goalTreesRestoredDirectSeeding")
       },
       {
         type: "strategy",
         subtype: "planting",
-        amount: ({ goalTreesRestoredPlanting }) => goalTreesRestoredPlanting ?? undefined
+        amount: columnValue("goalTreesRestoredPlanting")
       },
       {
         type: "strategy",
@@ -550,7 +559,7 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
       {
         type: "years",
         subtype: "1-year",
-        amount: ({ hectaresFirstYr }) => hectaresFirstYr ?? undefined
+        amount: columnValue("hectaresFirstYr")
       },
       {
         type: "years",
@@ -588,17 +597,17 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
       {
         type: "strategy",
         subtype: "anr",
-        amount: ({ goalTreesRestoredAnr }) => goalTreesRestoredAnr ?? undefined
+        amount: columnValue("goalTreesRestoredAnr")
       },
       {
         type: "strategy",
         subtype: "direct-seeding",
-        amount: ({ goalTreesRestoredDirectSeeding }) => goalTreesRestoredDirectSeeding ?? undefined
+        amount: columnValue("goalTreesRestoredDirectSeeding")
       },
       {
         type: "strategy",
         subtype: "planting",
-        amount: ({ goalTreesRestoredPlanting }) => goalTreesRestoredPlanting ?? undefined
+        amount: columnValue("goalTreesRestoredPlanting")
       },
       {
         type: "strategy",
@@ -623,7 +632,7 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
       {
         type: "years",
         subtype: "unknown",
-        amount: ({ totalHectaresRestoredGoal }) => totalHectaresRestoredGoal ?? undefined
+        amount: columnValue("totalHectaresRestoredGoal")
       },
       {
         type: "strategy",

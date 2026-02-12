@@ -22,7 +22,10 @@ import {
   Form,
   FormQuestion,
   FormSubmission,
+  NurseryReport,
+  ProjectReport,
   ProjectPitch,
+  SiteReport,
   Task,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -54,6 +57,9 @@ import { ProjectManagerEmail } from "../email/project-manager.email";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
+
+/** Report statuses that require user action (pending reports). */
+const PENDING_REPORT_STATUSES = [DUE, STARTED, NEEDS_MORE_INFORMATION] as const;
 
 const getEntityType = (model: Model) =>
   Object.entries(ENTITY_MODELS).find(([, entityClass]) => model instanceof entityClass)?.[0] as EntityType | undefined;
@@ -284,6 +290,58 @@ export class EntityStatusUpdate extends EventProcessor {
         action.text = STATUS_DISPLAY_STRINGS[entity.status as AnyStatus];
       }
 
+      await action.save();
+    }
+
+    // When project report is submitted or approved, create actions for pending site/nursery reports in the same task
+    if (entity instanceof ProjectReport && (entity.status === AWAITING_APPROVAL || entity.status === APPROVED)) {
+      await this.createActionsForPendingTaskReports(entity);
+    }
+  }
+
+  /**
+   * Creates actions for site and nursery reports in the same task that are still pending.
+   * Called when project report is submitted so the frontend can show individual report cards.
+   */
+  private async createActionsForPendingTaskReports(projectReport: ProjectReport) {
+    const { taskId } = projectReport;
+    if (taskId == null) return;
+
+    const task = await Task.findOne({
+      where: { id: taskId },
+      include: [
+        { association: "siteReports", attributes: ["id", "status", "siteId"] },
+        { association: "nurseryReports", attributes: ["id", "status", "nurseryId"] }
+      ]
+    });
+    if (task == null) return;
+
+    const pendingReports = [...(task.siteReports ?? []), ...(task.nurseryReports ?? [])].filter(
+      report =>
+        report != null && PENDING_REPORT_STATUSES.includes(report.status as (typeof PENDING_REPORT_STATUSES)[number])
+    );
+
+    for (const report of pendingReports) {
+      const existingAction = await Action.findOne({
+        where: {
+          targetableType: laravelType(report),
+          targetableId: report.id,
+          type: "notification",
+          status: "pending"
+        }
+      });
+      if (existingAction != null) continue;
+
+      const projectId = task.projectId ?? (await getProjectId(report)) ?? null;
+      const organisationId = task.organisationId ?? (await getOrganisationId(report)) ?? null;
+
+      const action = new Action();
+      action.status = "pending";
+      action.targetableType = laravelType(report);
+      action.targetableId = report.id;
+      action.type = "notification";
+      action.projectId = projectId;
+      action.organisationId = organisationId;
       await action.save();
     }
   }

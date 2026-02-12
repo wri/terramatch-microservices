@@ -11,10 +11,12 @@ import {
   FormSectionFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
+  NurseryFactory,
   NurseryReportFactory,
   ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
+  SiteFactory,
   SiteReportFactory,
   StageFactory,
   TaskFactory,
@@ -23,7 +25,15 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
-import { Action, AuditStatus, FinancialReport, Organisation, Task } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  AuditStatus,
+  FinancialReport,
+  NurseryReport,
+  Organisation,
+  SiteReport,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
@@ -93,6 +103,120 @@ describe("EntityStatusUpdate EventProcessor", () => {
       organisationId: project.organisationId,
       title: project.name,
       text: "Approved"
+    });
+  });
+
+  it("should create actions for pending site and nursery reports when project report is submitted", async () => {
+    mockUserId();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const nursery = await NurseryFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({ projectId: project.id });
+    const projectReport = await ProjectReportFactory.create({
+      taskId: task.id,
+      projectId: project.id,
+      status: AWAITING_APPROVAL
+    });
+    const siteReport = await SiteReportFactory.create({
+      taskId: task.id,
+      siteId: site.id,
+      status: DUE,
+      submittedAt: null
+    });
+    const nurseryReport = await NurseryReportFactory.create({
+      taskId: task.id,
+      nurseryId: nursery.id,
+      status: STARTED,
+      submittedAt: null
+    });
+
+    await new EntityStatusUpdate(eventService, projectReport).handle();
+
+    const siteReportActions = await Action.findAll({
+      where: { targetableType: SiteReport.LARAVEL_TYPE, targetableId: siteReport.id }
+    });
+    const nurseryReportActions = await Action.findAll({
+      where: { targetableType: NurseryReport.LARAVEL_TYPE, targetableId: nurseryReport.id }
+    });
+
+    expect(siteReportActions.length).toBe(1);
+    expect(siteReportActions[0]).toMatchObject({
+      status: "pending",
+      type: "notification",
+      projectId: project.id,
+      organisationId: project.organisationId
+    });
+    expect(nurseryReportActions.length).toBe(1);
+    expect(nurseryReportActions[0]).toMatchObject({
+      status: "pending",
+      type: "notification",
+      projectId: project.id,
+      organisationId: project.organisationId
+    });
+  });
+
+  it("should not create duplicate actions when site/nursery report already has an action", async () => {
+    mockUserId();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({ projectId: project.id });
+    const projectReport = await ProjectReportFactory.create({
+      taskId: task.id,
+      projectId: project.id,
+      status: AWAITING_APPROVAL
+    });
+    const siteReport = await SiteReportFactory.create({
+      taskId: task.id,
+      siteId: site.id,
+      status: DUE,
+      submittedAt: null
+    });
+
+    const existingAction = await Action.build({
+      status: "pending",
+      targetableType: SiteReport.LARAVEL_TYPE,
+      targetableId: siteReport.id,
+      type: "notification",
+      projectId: project.id,
+      organisationId: project.organisationId
+    } as unknown as Action).save();
+
+    await new EntityStatusUpdate(eventService, projectReport).handle();
+
+    const siteReportActions = await Action.findAll({
+      where: { targetableType: SiteReport.LARAVEL_TYPE, targetableId: siteReport.id }
+    });
+    expect(siteReportActions.length).toBe(1);
+    expect(siteReportActions[0].id).toBe(existingAction.id);
+  });
+
+  it("should create actions for reports with needs-more-information status when project report is submitted", async () => {
+    mockUserId();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({ projectId: project.id });
+    const projectReport = await ProjectReportFactory.create({
+      taskId: task.id,
+      projectId: project.id,
+      status: AWAITING_APPROVAL
+    });
+    const siteReport = await SiteReportFactory.create({
+      taskId: task.id,
+      siteId: site.id,
+      status: NEEDS_MORE_INFORMATION,
+      submittedAt: null
+    });
+
+    await new EntityStatusUpdate(eventService, projectReport).handle();
+
+    const siteReportActions = await Action.findAll({
+      where: { targetableType: SiteReport.LARAVEL_TYPE, targetableId: siteReport.id }
+    });
+    expect(siteReportActions.length).toBe(1);
+    expect(siteReportActions[0]).toMatchObject({
+      status: "pending",
+      type: "notification",
+      projectId: project.id
     });
   });
 

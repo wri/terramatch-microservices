@@ -99,14 +99,14 @@ export class ActionsService {
     const [reportActions, entityActions] = await Promise.all([
       Action.withTargetableStatus(
         [ProjectReport, SiteReport, NurseryReport],
-        ["needs-more-information", "due"]
+        ["needs-more-information", "due", "started"]
       ).findAll({
         where: {
           status: "pending",
           projectId: { [Op.in]: projectIds }
         },
         order: [["updatedAt", "DESC"]],
-        limit: 10
+        limit: 5
       }),
       Action.withTargetableStatus([Project, Site, Nursery], ["needs-more-information", "started"]).findAll({
         where: {

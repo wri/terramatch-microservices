@@ -89,7 +89,8 @@ export class SiteReportProcessor extends ReportProcessor<
           if (direction === "ASC") {
             builder.order(literal("submitted_at IS NULL, submitted_at ASC"));
           } else {
-            builder.order(literal("submitted_at IS NULL DESC, submitted_at DESC"));
+            // NULLs last, newest first
+            builder.order(literal("submitted_at IS NULL ASC, submitted_at DESC"));
           }
         } else {
           builder.order([query.sort.field, direction]);

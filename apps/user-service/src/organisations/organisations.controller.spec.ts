@@ -16,8 +16,7 @@ import {
   MediaFactory,
   UserFactory,
   LeadershipFactory,
-  OwnershipStakeFactory,
-  TreeSpeciesFactory
+  OwnershipStakeFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Organisation,

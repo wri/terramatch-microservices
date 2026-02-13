@@ -176,6 +176,32 @@ describe("ActionsService", () => {
       expect(result.every(d => d.action.status === "pending")).toBe(true);
     });
 
+    it("should return actions for site reports with started status", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
+
+      const site = await SiteFactory.create({ projectId: project.id });
+      const siteReport = await SiteReportFactory.create({
+        siteId: site.id,
+        status: "started"
+      });
+
+      const action = await (
+        Action.build({
+          projectId: project.id,
+          targetableType: SiteReport.LARAVEL_TYPE,
+          targetableId: siteReport.id,
+          status: "pending"
+        } as unknown as Action) as Action
+      ).save();
+
+      const result = await service.getActions(user.id);
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.some(d => d.action.id === action.id)).toBe(true);
+    });
+
     it("should not return actions for reports with non-matching status", async () => {
       const user = await UserFactory.create();
       const project = await ProjectFactory.create();

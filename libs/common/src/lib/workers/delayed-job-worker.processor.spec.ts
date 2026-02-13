@@ -62,7 +62,8 @@ describe("DelayedJobWorker", () => {
       await job.reload();
       expect(job.status).toBe(SUCCEEDED);
       expect(job.statusCode).toBe(200);
-      expect(job.payload as JsonApiDocument).toMatchObject(document.document.serialize());
+      const expectedPayload = JSON.parse(JSON.stringify(document.document.serialize()));
+      expect(job.payload as JsonApiDocument).toMatchObject(expectedPayload);
     });
   });
 
@@ -99,7 +100,8 @@ describe("DelayedJobWorker", () => {
       expect(delayedJob.totalContent).toBe(100);
       expect(delayedJob.progressMessage).toBe("process complete");
       expect(delayedJob.processedContent).toBe(100);
-      expect(delayedJob.payload as JsonApiDocument).toMatchObject(document.document.serialize());
+      const expectedPayload = JSON.parse(JSON.stringify(document.document.serialize()));
+      expect(delayedJob.payload as JsonApiDocument).toMatchObject(expectedPayload);
     });
   });
 });

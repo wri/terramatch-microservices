@@ -32,7 +32,8 @@ import {
   FinancialIndicator,
   FinancialReport,
   Media,
-  FundingType
+  FundingType,
+  Leadership
 } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
@@ -41,6 +42,7 @@ import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/fina
 import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
+import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -83,7 +85,7 @@ export class OrganisationsController {
   @ApiOperation({ operationId: "organisationShow", summary: "Get a single organisation by UUID" })
   @JsonApiResponse({
     data: OrganisationFullDto,
-    included: [FinancialIndicatorDto, FinancialReportLightDto, MediaDto, FundingTypeDto]
+    included: [FinancialIndicatorDto, FinancialReportLightDto, MediaDto, FundingTypeDto, LeadershipDto]
   })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
@@ -182,6 +184,22 @@ export class OrganisationsController {
               // @ts-expect-error - fundingTypes is not in AssociationEntityType but is valid for JSON:API
               entityType: "fundingTypes" as const,
               entityUuid: fundingType.uuid
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("leadership")) {
+      const leaderships = await Leadership.organisation(organisation.id).findAll();
+
+      if (leaderships.length > 0) {
+        for (const leadership of leaderships) {
+          document.addData(
+            leadership.uuid,
+            new LeadershipDto(leadership, {
+              entityType: "organisations" as const,
+              entityUuid: organisation.uuid
             })
           );
         }

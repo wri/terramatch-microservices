@@ -14,9 +14,16 @@ import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
   MediaFactory,
-  UserFactory
+  UserFactory,
+  LeadershipFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, FinancialIndicator, FinancialReport, Media } from "@terramatch-microservices/database/entities";
+import {
+  Organisation,
+  FinancialIndicator,
+  FinancialReport,
+  Media,
+  Leadership
+} from "@terramatch-microservices/database/entities";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -377,6 +384,59 @@ describe("OrganisationsController", () => {
       mediaForSpy.mockRestore();
     });
 
+    it("should include leadership when sideloads includes leadership", async () => {
+      const org = await OrganisationFactory.create();
+      const leadership1 = await LeadershipFactory.org(org).create({
+        collection: "leadership-team"
+      });
+      const leadership2 = await LeadershipFactory.org(org).create({
+        collection: "core-team-leaders"
+      });
+
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFindAll = jest.fn().mockResolvedValue([leadership1, leadership2]);
+      const organisationSpy = jest.spyOn(Leadership, "organisation").mockReturnValue({
+        findAll: mockFindAll
+      } as unknown as typeof Leadership);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["leadership"] }));
+
+      expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
+      expect(mockFindAll).toHaveBeenCalled();
+
+      const included = result.included ?? [];
+      const leadershipResources = included.filter((resource: Resource) => resource.type === "leaderships");
+      expect(leadershipResources).toHaveLength(2);
+      expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership1.uuid);
+      expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership2.uuid);
+
+      organisationSpy.mockRestore();
+    });
+
+    it("should handle empty leadership gracefully", async () => {
+      const org = await OrganisationFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFindAll = jest.fn().mockResolvedValue([]);
+      const organisationSpy = jest.spyOn(Leadership, "organisation").mockReturnValue({
+        findAll: mockFindAll
+      } as unknown as typeof Leadership);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["leadership"] }));
+
+      expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
+      expect(mockFindAll).toHaveBeenCalled();
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(org.uuid);
+      const included = result.included ?? [];
+      expect(included).toHaveLength(0);
+
+      organisationSpy.mockRestore();
+    });
+
     it("should support multiple sideloads together", async () => {
       const org = await OrganisationFactory.create();
       const financialIndicator = await FinancialIndicatorFactory.org(org).create();
@@ -386,6 +446,12 @@ describe("OrganisationsController", () => {
       });
       const logoMedia = await MediaFactory.org(org).create({
         collectionName: "logo"
+      });
+      const leadership1 = await LeadershipFactory.org(org).create({
+        collection: "leadership-team"
+      });
+      const leadership2 = await LeadershipFactory.org(org).create({
+        collection: "core-team-leaders"
       });
 
       organisationsService.findOne.mockResolvedValue(org);
@@ -406,6 +472,11 @@ describe("OrganisationsController", () => {
         findAll: mockMediaFindAll
       } as unknown as ReturnType<typeof Media.for>);
 
+      const mockLeadershipFindAll = jest.fn().mockResolvedValue([leadership1, leadership2]);
+      const leadershipSpy = jest.spyOn(Leadership, "organisation").mockReturnValue({
+        findAll: mockLeadershipFindAll
+      } as unknown as typeof Leadership);
+
       mediaService.getUrl.mockImplementation((media: Media, variant?: string) => {
         const variantSuffix = variant != null && variant !== "" ? `-${variant}` : "";
         return `https://example.com/media/${media.id}${variantSuffix}`;
@@ -413,13 +484,14 @@ describe("OrganisationsController", () => {
 
       const result = serialize(
         await controller.show(org.uuid, {
-          sideloads: ["financialCollection", "financialReport", "media"]
+          sideloads: ["financialCollection", "financialReport", "media", "leadership"]
         })
       );
 
       expect(FinancialIndicator.organisation).toHaveBeenCalledWith(org.id);
       expect(FinancialReport.organisation).toHaveBeenCalledWith(org.id);
       expect(Media.for).toHaveBeenCalledTimes(2);
+      expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
 
       const included = result.included ?? [];
       const financialIndicatorResources = included.filter(
@@ -427,16 +499,21 @@ describe("OrganisationsController", () => {
       );
       const financialReportResources = included.filter((resource: Resource) => resource.type === "financialReports");
       const mediaResources = included.filter((resource: Resource) => resource.type === "media");
+      const leadershipResources = included.filter((resource: Resource) => resource.type === "leaderships");
 
       expect(financialIndicatorResources).toHaveLength(1);
       expect(financialReportResources).toHaveLength(1);
       expect(mediaResources).toHaveLength(2);
+      expect(leadershipResources).toHaveLength(2);
       expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia.uuid);
       expect(mediaResources.map((r: Resource) => r.id)).toContain(logoMedia.uuid);
+      expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership1.uuid);
+      expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership2.uuid);
 
       indicatorSpy.mockRestore();
       reportSpy.mockRestore();
       mediaForSpy.mockRestore();
+      leadershipSpy.mockRestore();
     });
   });
 

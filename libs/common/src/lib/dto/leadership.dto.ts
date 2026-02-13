@@ -1,11 +1,18 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { Leadership } from "@terramatch-microservices/database/entities";
 import { populateDto } from "./json-api-attributes";
+import { AssociationDto } from "./association.dto";
+import { JsonApiDto } from "../decorators";
+import { HybridSupportProps } from "./hybrid-support.dto";
 
 // TODO most of these fields will migrate to a full response DTO when we need one.
-export class EmbeddedLeadershipDto {
-  constructor(leadership: Leadership) {
-    populateDto<EmbeddedLeadershipDto>(this, leadership);
+@JsonApiDto({ type: "leaderships" })
+export class LeadershipDto extends AssociationDto {
+  constructor(leadership?: Leadership, props?: HybridSupportProps<LeadershipDto, Leadership>) {
+    super();
+    if (leadership != null && props != null) {
+      populateDto<LeadershipDto, Leadership>(this, leadership, props);
+    }
   }
 
   @ApiProperty()
@@ -31,4 +38,11 @@ export class EmbeddedLeadershipDto {
 
   @ApiProperty({ nullable: true, type: Number })
   age: number | null;
+}
+
+export class EmbeddedLeadershipDto extends OmitType(LeadershipDto, ["entityType", "entityUuid"]) {
+  constructor(leadership: Leadership) {
+    super();
+    populateDto<EmbeddedLeadershipDto>(this, leadership);
+  }
 }

@@ -1,7 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsIn, IsOptional } from "class-validator";
 
-const ORGANISATION_SIDELOADS = ["financialCollection", "financialReport", "media", "fundingTypes"] as const;
+const ORGANISATION_SIDELOADS = [
+  "financialCollection",
+  "financialReport",
+  "media",
+  "fundingTypes",
+  "leadership"
+] as const;
 type OrganisationSideload = (typeof ORGANISATION_SIDELOADS)[number];
 
 export class OrganisationShowQueryDto {

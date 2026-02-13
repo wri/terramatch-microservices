@@ -32,7 +32,7 @@ export class UserAssociationController {
     operationId: "getUserAssociation",
     summary: "Get the users associated with a project"
   })
-  @JsonApiResponse([{ data: UserAssociationDto, pagination: "number" }])
+  @JsonApiResponse([{ data: UserAssociationDto, hasMany: true }])
   @ExceptionResponse(NotFoundException, { description: "Project not found" })
   async getUserAssociation(@Param("uuid") uuid: string, @Query() query: UserAssociationQueryDto) {
     const project = await Project.findOne({
@@ -44,7 +44,7 @@ export class UserAssociationController {
     }
     await this.policyService.authorize("read", project);
     const projectUsers = await this.userAssociationService.query(project, query);
-    const document = buildJsonApi(UserAssociationDto, { pagination: "number" });
+    const document = buildJsonApi(UserAssociationDto, { forceDataArray: true });
     await this.userAssociationService.addIndex(document, project, projectUsers);
     return document;
   }

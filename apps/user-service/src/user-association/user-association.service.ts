@@ -8,14 +8,13 @@ import {
   Role,
   User
 } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 
 const EMAIL_PROJECT_INVITE_KEYS = {
@@ -36,16 +35,18 @@ export class UserAssociationService {
   constructor(private readonly emailService: EmailService) {}
 
   query(project: Project, query: UserAssociationQueryDto) {
-    const builder = PaginatedQueryBuilder.forNumberPage(ProjectUser, query.page);
-    builder.where({ projectId: project.id });
+    const findOptions: FindOptions<ProjectUser> = {
+      where: { projectId: project.id },
+      attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+    };
     if (query.isManager != null) {
       if (query.isManager === true) {
-        builder.where({ isManaging: true });
+        (findOptions.where as WhereOptions<ProjectUser>)["isManaging"] = true;
       } else {
-        builder.where({ isMonitoring: true });
+        (findOptions.where as WhereOptions<ProjectUser>)["isMonitoring"] = true;
       }
     }
-    return builder.execute();
+    return ProjectUser.findAll(findOptions);
   }
 
   async addIndex(document: DocumentBuilder, project: Project, projectUsers: ProjectUser[]) {
@@ -69,7 +70,6 @@ export class UserAssociationService {
       resource: "userAssociations",
       requestPath: `/userAssociations/v3/projects/${project.uuid}`,
       total: users.length,
-      pageNumber: 1,
       ids: indexIds
     });
   }

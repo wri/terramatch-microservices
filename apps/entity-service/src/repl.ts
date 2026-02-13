@@ -512,6 +512,15 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
         amount: columnValue("totalTreeSecondYr")
       },
       {
+        type: "years",
+        subtype: "unknown",
+        amount: ({ totalTrees }, entries) => {
+          const total = Math.max(0, Math.round(totalTrees ?? 0));
+          const years = entryTypeTotal("years", entries) ?? 0;
+          return total > years ? total - years : undefined;
+        }
+      },
+      {
         type: "strategy",
         subtype: "anr",
         amount: columnValue("goalTreesRestoredAnr")
@@ -525,27 +534,6 @@ const PITCHES_RESTORATION: RestorationMapping<ProjectPitch>[] = [
         type: "strategy",
         subtype: "planting",
         amount: columnValue("goalTreesRestoredPlanting")
-      },
-      {
-        type: "strategy",
-        subtype: "unknown",
-        amount: ({ totalTrees }, entries) => {
-          // unknown years haven't been calculated yet, so make sure we at least reach the totalTrees value.
-          const years = Math.max(Math.round(totalTrees ?? 0), entryTypeTotal("years", entries) ?? 0);
-          const strategy = entryTypeTotal("strategy", entries) ?? 0;
-          return strategy >= years ? undefined : years - strategy;
-        }
-      },
-      {
-        type: "years",
-        subtype: "unknown",
-        amount: (_, entries) => {
-          const years = entryTypeTotal("years", entries) ?? 0;
-          const strategy = entryTypeTotal("strategy", entries) ?? 0;
-          // the totalTrees column was taken into account for the strategy total, so we can use
-          // it as the canonical balanced sum.
-          return strategy > years ? strategy - years : undefined;
-        }
       }
     ]
   },
@@ -595,6 +583,11 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
     collection: "all",
     entries: [
       {
+        type: "years",
+        subtype: "unknown",
+        amount: columnValue("treesGrownGoal")
+      },
+      {
         type: "strategy",
         subtype: "anr",
         amount: columnValue("goalTreesRestoredAnr")
@@ -608,21 +601,6 @@ const PROJECTS_RESTORATION: RestorationMapping<Project>[] = [
         type: "strategy",
         subtype: "planting",
         amount: columnValue("goalTreesRestoredPlanting")
-      },
-      {
-        type: "strategy",
-        subtype: "unknown",
-        amount: ({ treesGrownGoal }, entries) => {
-          const strategy = entryTypeTotal("strategy", entries) ?? 0;
-          if (treesGrownGoal == null) return undefined;
-          const goal = Math.round(treesGrownGoal);
-          return goal <= strategy ? undefined : goal - strategy;
-        }
-      },
-      {
-        type: "years",
-        subtype: "unknown",
-        amount: (_, entries) => entryTypeTotal("strategy", entries)
       }
     ]
   },

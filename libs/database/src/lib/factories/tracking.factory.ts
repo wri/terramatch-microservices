@@ -118,5 +118,25 @@ export const TrackingFactory = {
       domain: "demographics",
       type: Tracking.EMPLOYEES_TYPE,
       collection: ALL
+    })),
+
+  projectHectaresGoal: (project?: Project) =>
+    FactoryGirl.define(Tracking, async () => ({
+      ...(await defaultAttributesFactory()),
+      trackableType: Project.LARAVEL_TYPE,
+      trackableId: (project?.id as number) ?? ProjectFactory.associate("id"),
+      domain: "restoration",
+      type: Tracking.HECTARES_GOAL_TYPE,
+      collection: ALL
+    })),
+
+  projectTreesGoal: (project?: Project) =>
+    FactoryGirl.define(Tracking, async () => ({
+      ...(await defaultAttributesFactory()),
+      trackableType: Project.LARAVEL_TYPE,
+      trackableId: (project?.id as number) ?? ProjectFactory.associate("id"),
+      domain: "restoration",
+      type: Tracking.TREES_GOAL_TYPE,
+      collection: ALL
     }))
 };

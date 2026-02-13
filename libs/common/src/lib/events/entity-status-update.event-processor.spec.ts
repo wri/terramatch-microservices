@@ -111,7 +111,10 @@ describe("EntityStatusUpdate EventProcessor", () => {
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
     const nursery = await NurseryFactory.create({ projectId: project.id });
-    const task = await TaskFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({
+      projectId: project.id,
+      organisationId: project.organisationId
+    });
     const projectReport = await ProjectReportFactory.create({
       taskId: task.id,
       projectId: project.id,
@@ -132,6 +135,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     await new EntityStatusUpdate(eventService, projectReport).handle();
 
+    await task.reload();
     const siteReportActions = await Action.findAll({
       where: { targetableType: SiteReport.LARAVEL_TYPE, targetableId: siteReport.id }
     });
@@ -144,14 +148,14 @@ describe("EntityStatusUpdate EventProcessor", () => {
       status: "pending",
       type: "notification",
       projectId: project.id,
-      organisationId: project.organisationId
+      organisationId: task.organisationId
     });
     expect(nurseryReportActions.length).toBe(1);
     expect(nurseryReportActions[0]).toMatchObject({
       status: "pending",
       type: "notification",
       projectId: project.id,
-      organisationId: project.organisationId
+      organisationId: task.organisationId
     });
   });
 
@@ -159,7 +163,10 @@ describe("EntityStatusUpdate EventProcessor", () => {
     mockUserId();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
-    const task = await TaskFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({
+      projectId: project.id,
+      organisationId: project.organisationId
+    });
     const projectReport = await ProjectReportFactory.create({
       taskId: task.id,
       projectId: project.id,
@@ -194,7 +201,10 @@ describe("EntityStatusUpdate EventProcessor", () => {
     mockUserId();
     const project = await ProjectFactory.create();
     const site = await SiteFactory.create({ projectId: project.id });
-    const task = await TaskFactory.create({ projectId: project.id });
+    const task = await TaskFactory.create({
+      projectId: project.id,
+      organisationId: project.organisationId
+    });
     const projectReport = await ProjectReportFactory.create({
       taskId: task.id,
       projectId: project.id,

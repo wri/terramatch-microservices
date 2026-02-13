@@ -39,6 +39,11 @@ export class OrganisationUpdateAttributes {
   private?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ description: "Update the isTest flag.", required: false })
+  isTest?: boolean;
+
+  @IsOptional()
   @IsString()
   @ApiProperty({ required: false, nullable: true })
   name?: string | null;

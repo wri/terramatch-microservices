@@ -127,14 +127,13 @@ export class OrganisationsController {
                 )
               : null;
 
-          document.addData(
-            indicator.uuid,
-            new FinancialIndicatorDto(indicator, {
-              entityType: "financialIndicators" as const,
-              entityUuid: indicator.uuid,
-              documentation: mediaDtos
-            })
-          );
+          const indicatorDto = new FinancialIndicatorDto(indicator, {
+            entityType: "financialIndicators" as const,
+            entityUuid: indicator.uuid,
+            documentation: mediaDtos
+          });
+          Object.assign(indicatorDto, { organisationUuid: organisation.uuid });
+          document.addData(indicator.uuid, indicatorDto);
         }
       }
     }
@@ -148,6 +147,7 @@ export class OrganisationsController {
             entityType: "financialReports" as const,
             entityUuid: report.uuid
           });
+          dto.organisationUuid = organisation.uuid;
           document.addData(report.uuid, dto);
         }
       }

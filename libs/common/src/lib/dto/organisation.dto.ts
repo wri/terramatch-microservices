@@ -25,6 +25,12 @@ export class OrganisationLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   name: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  type: string | null;
+
+  @ApiProperty()
+  createdAt: Date;
 }
 
 @JsonApiDto({ type: "organisations" })
@@ -34,9 +40,6 @@ export class OrganisationFullDto extends OrganisationLightDto {
     const mergedProps = props != null ? { lightResource: false, ...props } : { lightResource: false };
     populateDto<OrganisationFullDto, Organisation>(this, org, mergedProps);
   }
-
-  @ApiProperty({ nullable: true, type: String })
-  type: string | null;
 
   @ApiProperty()
   private: boolean;
@@ -376,9 +379,6 @@ export class OrganisationFullDto extends OrganisationLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   bioeconomyBuyers: string | null;
-
-  @ApiProperty()
-  createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;

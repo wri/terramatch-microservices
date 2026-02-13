@@ -80,14 +80,14 @@ describe("OrganisationsService", () => {
     it("should filter by status", async () => {
       await OrganisationFactory.create({ status: "pending" });
       policyService.getPermissions.mockResolvedValue(["framework-test"]);
-      const result = await service.findMany({ filter: { status: "pending" } });
+      const result = await service.findMany({ status: "pending" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by type", async () => {
       await OrganisationFactory.create({ type: "non-profit-organization" });
       policyService.getPermissions.mockResolvedValue(["framework-test"]);
-      const result = await service.findMany({ filter: { type: "non-profit-organization" } });
+      const result = await service.findMany({ type: "non-profit-organization" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -95,7 +95,7 @@ describe("OrganisationsService", () => {
       const country = faker.location.countryCode("alpha-3");
       await OrganisationFactory.create({ hqCountry: country });
       policyService.getPermissions.mockResolvedValue(["framework-test"]);
-      const result = await service.findMany({ filter: { hqCountry: country } });
+      const result = await service.findMany({ hqCountry: country });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 

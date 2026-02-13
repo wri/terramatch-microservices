@@ -59,16 +59,16 @@ export class OrganisationsService {
       builder.where({ name: { [Op.like]: `%${query.search}%` } });
     }
 
-    if (query.filter != null) {
-      if (query.filter.status != null) {
-        builder.where({ status: query.filter.status });
-      }
-      if (query.filter.type != null) {
-        builder.where({ type: query.filter.type });
-      }
-      if (query.filter.hqCountry != null) {
-        builder.where({ hqCountry: query.filter.hqCountry });
-      }
+    if (query.status != null) {
+      builder.where({ status: query.status });
+    }
+
+    if (query.type != null) {
+      builder.where({ type: query.type });
+    }
+
+    if (query.hqCountry != null) {
+      builder.where({ hqCountry: query.hqCountry });
     }
 
     if (query.sort?.field != null) {
@@ -88,6 +88,8 @@ export class OrganisationsService {
       } else if (entityField !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
+    } else {
+      builder.order(["createdAt", "DESC"]);
     }
 
     return {

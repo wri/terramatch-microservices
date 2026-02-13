@@ -6,7 +6,6 @@ export class NurseryPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
       this.builder.can("read", Nursery);
-      return;
     }
 
     if (this.frameworks.length > 0) {

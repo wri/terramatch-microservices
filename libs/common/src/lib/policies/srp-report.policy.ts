@@ -6,7 +6,6 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("view-dashboard")) {
       this.builder.can("read", SrpReport);
-      return;
     }
 
     if (this.frameworks.length > 0) {

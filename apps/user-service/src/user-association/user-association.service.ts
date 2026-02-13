@@ -13,6 +13,10 @@ import { UserAssociationCreateAttributes } from "./dto/user-association-create.d
 import crypto from "node:crypto";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { UserAssociationDto } from "./dto/user-association.dto";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 
 const EMAIL_PROJECT_INVITE_KEYS = {
   body: "v2-project-invite-received-create.body",
@@ -31,13 +35,43 @@ const EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS = {
 export class UserAssociationService {
   constructor(private readonly emailService: EmailService) {}
 
-  async getUserAssociation(projectId: number) {
+  query(project: Project, query: UserAssociationQueryDto) {
+    const builder = PaginatedQueryBuilder.forNumberPage(ProjectUser, query.page);
+    builder.where({ projectId: project.id });
+    if (query.isManager != null) {
+      if (query.isManager === true) {
+        builder.where({ isManaging: true });
+      } else {
+        builder.where({ isMonitoring: true });
+      }
+    }
+    return builder.execute();
+  }
+
+  async addIndex(document: DocumentBuilder, project: Project, projectUsers: ProjectUser[]) {
+    const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
-      where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },
+      where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
       attributes: ["id", "uuid", "emailAddress"]
     });
-
-    return users;
+    users.forEach(user => {
+      const projectUser = projectUsers.find(projectUser => projectUser.userId === user.id);
+      document.addData(
+        user.uuid as string,
+        new UserAssociationDto(user, {
+          status: projectUser?.status as string,
+          isManager: projectUser?.isManaging as boolean
+        })
+      );
+    });
+    const indexIds = users.map(user => user.uuid as string);
+    document.addIndex({
+      resource: "userAssociations",
+      requestPath: `/userAssociations/v3/projects/${project.uuid}`,
+      total: users.length,
+      pageNumber: 1,
+      ids: indexIds
+    });
   }
 
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {

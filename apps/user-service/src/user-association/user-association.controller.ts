@@ -18,6 +18,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 
 @Controller("userAssociations/v3/projects")
 export class UserAssociationController {
@@ -33,28 +34,18 @@ export class UserAssociationController {
   })
   @JsonApiResponse([{ data: UserAssociationDto, pagination: "number" }])
   @ExceptionResponse(NotFoundException, { description: "Project not found" })
-  async getUserAssociation(@Param("uuid") uuid: string) {
+  async getUserAssociation(@Param("uuid") uuid: string, @Query() query: UserAssociationQueryDto) {
     const project = await Project.findOne({
       where: { uuid },
-      attributes: ["id"]
+      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
     });
     if (project == null) {
       throw new NotFoundException("Project not found");
     }
     await this.policyService.authorize("read", project);
-    const users = await this.userAssociationService.getUserAssociation(project.id);
+    const projectUsers = await this.userAssociationService.query(project, query);
     const document = buildJsonApi(UserAssociationDto, { pagination: "number" });
-    const indexIds = users.map(user => user.uuid as string);
-    document.addIndex({
-      resource: "userAssociations",
-      requestPath: `/userAssociations/v3/projects/${uuid}/userAssociations`,
-      total: users.length,
-      pageNumber: 1,
-      ids: indexIds
-    });
-    for (const user of users) {
-      document.addData(user.uuid as string, new UserAssociationDto(user));
-    }
+    await this.userAssociationService.addIndex(document, project, projectUsers);
     return document;
   }
 
@@ -72,7 +63,7 @@ export class UserAssociationController {
   async createUserAssociation(@Param("uuid") uuid: string, @Body() body: UserAssociationCreateBody) {
     const project = await Project.findOne({
       where: { uuid },
-      attributes: ["id", "organisationId"]
+      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
     });
     if (project == null) {
       throw new NotFoundException("Project not found");
@@ -99,7 +90,7 @@ export class UserAssociationController {
   async deleteBulkUserAssociations(@Param("uuid") uuid: string, @Query() { uuids }: { uuids: string[] }) {
     const project = await Project.findOne({
       where: { uuid },
-      attributes: ["id"]
+      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
     });
     if (project == null) {
       throw new NotFoundException("Project not found");

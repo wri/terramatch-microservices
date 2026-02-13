@@ -7,7 +7,6 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
       this.builder.can("read", SiteReport);
-      return;
     }
 
     if (this.frameworks.length > 0) {

@@ -514,9 +514,7 @@ describe("OrganisationsController", () => {
 
       const mockFor = jest.fn().mockReturnValue({
         collection: jest.fn().mockReturnValue({
-          visible: jest.fn().mockReturnValue({
-            findAll: jest.fn().mockResolvedValue([species1, species2])
-          })
+          findAll: jest.fn().mockResolvedValue([species1, species2])
         })
       });
       const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);
@@ -544,9 +542,7 @@ describe("OrganisationsController", () => {
 
       const mockFor = jest.fn().mockReturnValue({
         collection: jest.fn().mockReturnValue({
-          visible: jest.fn().mockReturnValue({
-            findAll: jest.fn().mockResolvedValue([])
-          })
+          findAll: jest.fn().mockResolvedValue([])
         })
       });
       const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);
@@ -617,9 +613,7 @@ describe("OrganisationsController", () => {
 
       const mockFor = jest.fn().mockReturnValue({
         collection: jest.fn().mockReturnValue({
-          visible: jest.fn().mockReturnValue({
-            findAll: jest.fn().mockResolvedValue([treeSpecies])
-          })
+          findAll: jest.fn().mockResolvedValue([treeSpecies])
         })
       });
       const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);

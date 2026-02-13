@@ -12,6 +12,7 @@ export class ProjectPolygonPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can(["read", "create", "update", "delete"], ProjectPolygon);
+      return;
     }
 
     if (this.frameworks.length > 0) {

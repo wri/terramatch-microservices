@@ -5,6 +5,7 @@ export class DisturbancePolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
       this.builder.can("read", Disturbance);
+      return;
     }
   }
 }

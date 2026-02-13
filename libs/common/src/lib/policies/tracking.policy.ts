@@ -5,6 +5,7 @@ export class TrackingPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
       this.builder.can("read", Tracking);
+      return;
     }
   }
 }

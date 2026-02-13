@@ -9,10 +9,12 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("polygons-manage")) {
       this.builder.can(["read", "create"], SitePolygon);
       this.builder.can(["update", "delete"], SitePolygon, { createdBy: this.userId });
+      return;
     }
 
     if (this.permissions.includes("view-dashboard") || this.permissions.includes("projects-read")) {
       this.builder.can("read", SitePolygon);
+      return;
     }
 
     if (this.frameworks.length > 0) {

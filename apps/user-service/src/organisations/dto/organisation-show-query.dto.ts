@@ -6,7 +6,9 @@ const ORGANISATION_SIDELOADS = [
   "financialReport",
   "media",
   "fundingTypes",
-  "leadership"
+  "leadership",
+  "ownershipStakes",
+  "treeSpeciesHistorical"
 ] as const;
 type OrganisationSideload = (typeof ORGANISATION_SIDELOADS)[number];
 

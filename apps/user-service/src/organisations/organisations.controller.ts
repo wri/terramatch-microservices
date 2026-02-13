@@ -33,7 +33,9 @@ import {
   FinancialReport,
   Media,
   FundingType,
-  Leadership
+  Leadership,
+  OwnershipStake,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
@@ -43,6 +45,8 @@ import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
+import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -85,7 +89,15 @@ export class OrganisationsController {
   @ApiOperation({ operationId: "organisationShow", summary: "Get a single organisation by UUID" })
   @JsonApiResponse({
     data: OrganisationFullDto,
-    included: [FinancialIndicatorDto, FinancialReportLightDto, MediaDto, FundingTypeDto, LeadershipDto]
+    included: [
+      FinancialIndicatorDto,
+      FinancialReportLightDto,
+      MediaDto,
+      FundingTypeDto,
+      LeadershipDto,
+      OwnershipStakeDto,
+      TreeSpeciesDto
+    ]
   })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
@@ -198,6 +210,38 @@ export class OrganisationsController {
           document.addData(
             leadership.uuid,
             new LeadershipDto(leadership, {
+              entityType: "organisations" as const,
+              entityUuid: organisation.uuid
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("ownershipStakes")) {
+      const ownershipStakes = await OwnershipStake.organisation(organisation.uuid).findAll();
+
+      if (ownershipStakes.length > 0) {
+        for (const ownershipStake of ownershipStakes) {
+          document.addData(
+            ownershipStake.uuid,
+            new OwnershipStakeDto(ownershipStake, {
+              entityType: "organisations" as const,
+              entityUuid: organisation.uuid
+            })
+          );
+        }
+      }
+    }
+
+    if (query.sideloads?.includes("treeSpeciesHistorical")) {
+      const treeSpecies = await TreeSpecies.for(organisation).collection("historical-tree-species").findAll();
+
+      if (treeSpecies.length > 0) {
+        for (const species of treeSpecies) {
+          document.addData(
+            species.uuid,
+            new TreeSpeciesDto(species, {
               entityType: "organisations" as const,
               entityUuid: organisation.uuid
             })

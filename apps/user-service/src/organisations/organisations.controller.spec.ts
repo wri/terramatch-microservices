@@ -15,14 +15,18 @@ import {
   FinancialReportFactory,
   MediaFactory,
   UserFactory,
-  LeadershipFactory
+  LeadershipFactory,
+  OwnershipStakeFactory,
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Organisation,
   FinancialIndicator,
   FinancialReport,
   Media,
-  Leadership
+  Leadership,
+  OwnershipStake,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -437,6 +441,128 @@ describe("OrganisationsController", () => {
       organisationSpy.mockRestore();
     });
 
+    it("should include ownership stakes when sideloads includes ownershipStakes", async () => {
+      const org = await OrganisationFactory.create();
+      const stake1 = await OwnershipStakeFactory.org(org).create();
+      const stake2 = await OwnershipStakeFactory.org(org).create();
+
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFindAll = jest.fn().mockResolvedValue([stake1, stake2]);
+      const organisationSpy = jest.spyOn(OwnershipStake, "organisation").mockReturnValue({
+        findAll: mockFindAll
+      } as unknown as typeof OwnershipStake);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["ownershipStakes"] }));
+
+      expect(OwnershipStake.organisation).toHaveBeenCalledWith(org.uuid);
+      expect(mockFindAll).toHaveBeenCalled();
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(org.uuid);
+      const included = result.included ?? [];
+      expect(included).toHaveLength(2);
+
+      const stakeResources = included.filter((resource: Resource) => resource.type === "ownershipStakes");
+      expect(stakeResources).toHaveLength(2);
+      expect(stakeResources.map((r: Resource) => r.id)).toContain(stake1.uuid);
+      expect(stakeResources.map((r: Resource) => r.id)).toContain(stake2.uuid);
+
+      organisationSpy.mockRestore();
+    });
+
+    it("should handle empty ownership stakes gracefully", async () => {
+      const org = await OrganisationFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFindAll = jest.fn().mockResolvedValue([]);
+      const organisationSpy = jest.spyOn(OwnershipStake, "organisation").mockReturnValue({
+        findAll: mockFindAll
+      } as unknown as typeof OwnershipStake);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["ownershipStakes"] }));
+
+      expect(OwnershipStake.organisation).toHaveBeenCalledWith(org.uuid);
+      expect(mockFindAll).toHaveBeenCalled();
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(org.uuid);
+      const included = result.included ?? [];
+      expect(included).toHaveLength(0);
+
+      organisationSpy.mockRestore();
+    });
+
+    it("should include tree species historical when sideloads includes treeSpeciesHistorical", async () => {
+      const org = await OrganisationFactory.create();
+      const species1 = await TreeSpecies.create({
+        speciesableType: Organisation.LARAVEL_TYPE,
+        speciesableId: org.id,
+        collection: "historical-tree-species",
+        name: "Oak",
+        hidden: false
+      });
+      const species2 = await TreeSpecies.create({
+        speciesableType: Organisation.LARAVEL_TYPE,
+        speciesableId: org.id,
+        collection: "historical-tree-species",
+        name: "Pine",
+        hidden: false
+      });
+
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFor = jest.fn().mockReturnValue({
+        collection: jest.fn().mockReturnValue({
+          visible: jest.fn().mockReturnValue({
+            findAll: jest.fn().mockResolvedValue([species1, species2])
+          })
+        })
+      });
+      const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["treeSpeciesHistorical"] }));
+
+      expect(TreeSpecies.for).toHaveBeenCalledWith(org);
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(org.uuid);
+      const included = result.included ?? [];
+      expect(included).toHaveLength(2);
+
+      const speciesResources = included.filter((resource: Resource) => resource.type === "treeSpecies");
+      expect(speciesResources).toHaveLength(2);
+      expect(speciesResources.map((r: Resource) => r.id)).toContain(species1.uuid);
+      expect(speciesResources.map((r: Resource) => r.id)).toContain(species2.uuid);
+
+      forSpy.mockRestore();
+    });
+
+    it("should handle empty tree species historical gracefully", async () => {
+      const org = await OrganisationFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const mockFor = jest.fn().mockReturnValue({
+        collection: jest.fn().mockReturnValue({
+          visible: jest.fn().mockReturnValue({
+            findAll: jest.fn().mockResolvedValue([])
+          })
+        })
+      });
+      const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);
+
+      const result = serialize(await controller.show(org.uuid, { sideloads: ["treeSpeciesHistorical"] }));
+
+      expect(TreeSpecies.for).toHaveBeenCalledWith(org);
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(org.uuid);
+      const included = result.included ?? [];
+      expect(included).toHaveLength(0);
+
+      forSpy.mockRestore();
+    });
+
     it("should support multiple sideloads together", async () => {
       const org = await OrganisationFactory.create();
       const financialIndicator = await FinancialIndicatorFactory.org(org).create();
@@ -452,6 +578,14 @@ describe("OrganisationsController", () => {
       });
       const leadership2 = await LeadershipFactory.org(org).create({
         collection: "core-team-leaders"
+      });
+      const ownershipStake = await OwnershipStakeFactory.org(org).create();
+      const treeSpecies = await TreeSpecies.create({
+        speciesableType: Organisation.LARAVEL_TYPE,
+        speciesableId: org.id,
+        collection: "historical-tree-species",
+        name: "Oak",
+        hidden: false
       });
 
       organisationsService.findOne.mockResolvedValue(org);
@@ -477,6 +611,20 @@ describe("OrganisationsController", () => {
         findAll: mockLeadershipFindAll
       } as unknown as typeof Leadership);
 
+      const mockOwnershipStakeFindAll = jest.fn().mockResolvedValue([ownershipStake]);
+      const ownershipStakeSpy = jest.spyOn(OwnershipStake, "organisation").mockReturnValue({
+        findAll: mockOwnershipStakeFindAll
+      } as unknown as typeof OwnershipStake);
+
+      const mockFor = jest.fn().mockReturnValue({
+        collection: jest.fn().mockReturnValue({
+          visible: jest.fn().mockReturnValue({
+            findAll: jest.fn().mockResolvedValue([treeSpecies])
+          })
+        })
+      });
+      const forSpy = jest.spyOn(TreeSpecies, "for").mockImplementation(mockFor);
+
       mediaService.getUrl.mockImplementation((media: Media, variant?: string) => {
         const variantSuffix = variant != null && variant !== "" ? `-${variant}` : "";
         return `https://example.com/media/${media.id}${variantSuffix}`;
@@ -484,7 +632,14 @@ describe("OrganisationsController", () => {
 
       const result = serialize(
         await controller.show(org.uuid, {
-          sideloads: ["financialCollection", "financialReport", "media", "leadership"]
+          sideloads: [
+            "financialCollection",
+            "financialReport",
+            "media",
+            "leadership",
+            "ownershipStakes",
+            "treeSpeciesHistorical"
+          ]
         })
       );
 
@@ -492,6 +647,8 @@ describe("OrganisationsController", () => {
       expect(FinancialReport.organisation).toHaveBeenCalledWith(org.id);
       expect(Media.for).toHaveBeenCalledTimes(2);
       expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
+      expect(OwnershipStake.organisation).toHaveBeenCalledWith(org.uuid);
+      expect(TreeSpecies.for).toHaveBeenCalledWith(org);
 
       const included = result.included ?? [];
       const financialIndicatorResources = included.filter(
@@ -500,20 +657,28 @@ describe("OrganisationsController", () => {
       const financialReportResources = included.filter((resource: Resource) => resource.type === "financialReports");
       const mediaResources = included.filter((resource: Resource) => resource.type === "media");
       const leadershipResources = included.filter((resource: Resource) => resource.type === "leaderships");
+      const ownershipStakeResources = included.filter((resource: Resource) => resource.type === "ownershipStakes");
+      const treeSpeciesResources = included.filter((resource: Resource) => resource.type === "treeSpecies");
 
       expect(financialIndicatorResources).toHaveLength(1);
       expect(financialReportResources).toHaveLength(1);
       expect(mediaResources).toHaveLength(2);
       expect(leadershipResources).toHaveLength(2);
+      expect(ownershipStakeResources).toHaveLength(1);
+      expect(treeSpeciesResources).toHaveLength(1);
       expect(mediaResources.map((r: Resource) => r.id)).toContain(coverMedia.uuid);
       expect(mediaResources.map((r: Resource) => r.id)).toContain(logoMedia.uuid);
       expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership1.uuid);
       expect(leadershipResources.map((r: Resource) => r.id)).toContain(leadership2.uuid);
+      expect(ownershipStakeResources.map((r: Resource) => r.id)).toContain(ownershipStake.uuid);
+      expect(treeSpeciesResources.map((r: Resource) => r.id)).toContain(treeSpecies.uuid);
 
       indicatorSpy.mockRestore();
       reportSpy.mockRestore();
       mediaForSpy.mockRestore();
       leadershipSpy.mockRestore();
+      ownershipStakeSpy.mockRestore();
+      forSpy.mockRestore();
     });
   });
 

@@ -68,7 +68,9 @@ export class OrganisationsController {
   async index(@Query() query: OrganisationIndexQueryDto) {
     const { organisations, paginationTotal } = await this.organisationsService.findMany(query);
 
-    await this.policyService.authorize("read", organisations);
+    if (organisations.length > 0) {
+      await this.policyService.authorize("read", organisations);
+    }
 
     const dtoType = query.lightResource === true ? OrganisationLightDto : OrganisationFullDto;
 

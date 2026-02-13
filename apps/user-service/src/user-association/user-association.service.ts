@@ -11,28 +11,17 @@ import {
 import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
-import { EmailService } from "@terramatch-microservices/common/email/email.service";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
-
-const EMAIL_PROJECT_INVITE_KEYS = {
-  body: "v2-project-invite-received-create.body",
-  subjectKey: "v2-project-invite-received-create.subject",
-  titleKey: "v2-project-invite-received-create.title",
-  ctaKey: "v2-project-invite-received-create.cta"
-} as const;
-
-const EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS = {
-  body: "v2-project-monitoring-notification.body",
-  subjectKey: "v2-project-monitoring-notification.subject",
-  titleKey: "v2-project-monitoring-notification.title"
-} as const;
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
+import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
 
 @Injectable()
 export class UserAssociationService {
-  constructor(private readonly emailService: EmailService) {}
+  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
@@ -130,19 +119,11 @@ export class UserAssociationService {
     if (organisation == null) {
       throw new NotFoundException("Organisation not found");
     }
-    this.emailService.sendI18nTemplateEmail(
-      newUser.emailAddress,
-      newUser.locale as ValidLocale,
-      EMAIL_PROJECT_INVITE_KEYS,
-      {
-        i18nReplacements: {
-          "{organisationName}": organisation.name as string,
-          "{projectName}": project.name as string,
-          "{to}": newUser.emailAddress
-        },
-        additionalValues: { link: `/reset-password/${token}`, transactional: "transactional" }
-      }
-    );
+    await new ProjectInviteEmail({
+      projectId: project.id,
+      emailAddress: newUser.emailAddress,
+      token
+    }).sendLater(this.emailQueue);
     return newUser;
   }
 
@@ -173,16 +154,10 @@ export class UserAssociationService {
       token,
       acceptedAt: new Date()
     } as ProjectInvite);
-    this.emailService.sendI18nTemplateEmail(
-      user.emailAddress,
-      user.locale as ValidLocale,
-      EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS,
-      {
-        i18nReplacements: {
-          "{name}": project.name as string,
-          "{callbackUrl}": `/reset-password/${token}`
-        }
-      }
-    );
+    await new ProjectMonitoringNotificationEmail({
+      projectId: project.id,
+      userId: user.id,
+      token
+    }).sendLater(this.emailQueue);
   }
 }

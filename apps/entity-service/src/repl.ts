@@ -44,7 +44,7 @@ bootstrapRepl("Entity Service", AppModule, {
   // so that the scripts are ordered from newest to oldest and it's easier to identify which
   // scripts are old enough to be removed.
   oneOff: {
-    addMissingAuditStatuses: /*withoutSqlLogs*/ async () => {
+    addMissingAuditStatuses: async () => {
       const auditStatuses = (
         await AuditStatus.findAll({
           where: {
@@ -90,6 +90,7 @@ bootstrapRepl("Entity Service", AppModule, {
       console.log("Finished adding missing audit statuses.");
       console.log(`Created ${createdCount} audit statuses.`);
     },
+
     migrateRestorationData: withoutSqlLogs(async () => {
       await processRestorationModel("Organisations", Organisation, ORGS_RESTORATION);
       await processRestorationModel("Project Pitches", ProjectPitch, PITCHES_RESTORATION);

@@ -20,6 +20,12 @@ import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
+import {
+  DIRECT_OTHER,
+  INDIRECT_OTHER,
+  PAID_OTHER,
+  VOLUNTEER_OTHER
+} from "@terramatch-microservices/database/constants/demographic-collections";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -149,6 +155,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     const dto = new ProjectReportFullDto(projectReport, {
       ...(await this.getFeedback(projectReport)),
       ...(await this.getTaskDependentAggregates(projectReport.id, projectReport.taskId)),
+      ...(await this.getDemographicDescriptions(projectReport)),
       reportTitle,
       seedlingsGrown: await this.getSeedlingsGrown(projectReport),
       ...(this.entitiesService.mapMediaCollection(
@@ -241,5 +248,25 @@ export class ProjectReportProcessor extends ReportProcessor<
         }
       })) ?? 0
     );
+  }
+
+  protected async getDemographicDescriptions(projectReport: ProjectReport) {
+    const demographics = await Tracking.for(projectReport)
+      .domain("demographics")
+      .findAll({
+        where: {
+          description: { [Op.not]: null },
+          [Op.or]: [
+            { type: Tracking.WORKDAYS_TYPE, collection: [PAID_OTHER, VOLUNTEER_OTHER] },
+            { type: Tracking.RESTORATION_PARTNERS_TYPE, collection: [DIRECT_OTHER, INDIRECT_OTHER] }
+          ]
+        },
+        attributes: ["type", "description"]
+      });
+    const paidOtherActivityDescription =
+      demographics.find(({ type }) => type === Tracking.WORKDAYS_TYPE)?.description ?? null;
+    const otherRestorationPartnersDescription =
+      demographics.find(({ type }) => type === Tracking.RESTORATION_PARTNERS_TYPE)?.description ?? null;
+    return { paidOtherActivityDescription, otherRestorationPartnersDescription };
   }
 }

@@ -651,6 +651,18 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       resource: "demographics",
       inputType: "indirectBeneficiaries",
       collection: "indirect"
+    },
+    "pro-pit-hectares-goal": {
+      label: "Hectares Goal",
+      resource: "restoration",
+      inputType: "hectaresGoal",
+      collection: "all"
+    },
+    "pro-pit-trees-goal": {
+      label: "Trees Goal",
+      resource: "restoration",
+      inputType: "treesGoal",
+      collection: "all"
     }
   }
 };

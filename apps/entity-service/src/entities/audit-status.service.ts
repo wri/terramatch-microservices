@@ -204,4 +204,18 @@ export class AuditStatusService {
 
     return auditStatus;
   }
+
+  async deleteAuditStatus(auditUuid: string): Promise<void> {
+    const auditStatus = await AuditStatus.findOne({
+      where: {
+        uuid: auditUuid
+      }
+    });
+
+    if (auditStatus == null) {
+      throw new NotFoundException(`Audit status not found`);
+    }
+
+    await auditStatus.destroy();
+  }
 }

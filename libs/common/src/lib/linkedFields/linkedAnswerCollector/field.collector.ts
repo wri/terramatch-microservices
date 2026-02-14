@@ -44,7 +44,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
       const virtualQuestionModels = uniq(Object.values(virtualQuestions).map(({ modelType }) => modelType))
         .map(type => models[type])
         .filter(isNotNull);
-      const trackings = virtualQuestionModels.length === 0 ? [] : await Tracking.for(virtualQuestionModels).findAll();
+      const trackings =
+        virtualQuestionModels.length === 0 ? [] : await Tracking.forAll(virtualQuestionModels).findAll();
 
       for (const [questionUuid, { props, modelType }] of Object.entries(virtualQuestions)) {
         if (props.type == "demographicsAggregate") {

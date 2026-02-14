@@ -360,4 +360,41 @@ describe("AuditStatusService", () => {
       expect(reloadedProject.status).toBe("draft");
     });
   });
+
+  describe("deleteAuditStatus", () => {
+    it("should soft delete audit status that belongs to entity", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+
+      await service.deleteAuditStatus(auditStatus.uuid);
+
+      const deletedStatus = await AuditStatus.findByPk(auditStatus.id);
+      expect(deletedStatus).toBeNull();
+
+      const deletedStatusWithParanoid = await AuditStatus.findByPk(auditStatus.id, { paranoid: false });
+      expect(deletedStatusWithParanoid).not.toBeNull();
+      expect(deletedStatusWithParanoid?.deletedAt).not.toBeNull();
+    });
+
+    it("should throw NotFoundException when audit status does not exist", async () => {
+      await expect(service.deleteAuditStatus("non-existent-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should delete audit status for sitePolygons entity", async () => {
+      const site = await SiteFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const auditStatus = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: sitePolygon.id,
+        status: "approved",
+        comment: "Test",
+        type: "status"
+      });
+
+      await service.deleteAuditStatus(auditStatus.uuid);
+
+      const deletedStatus = await AuditStatus.findByPk(auditStatus.id);
+      expect(deletedStatus).toBeNull();
+    });
+  });
 });

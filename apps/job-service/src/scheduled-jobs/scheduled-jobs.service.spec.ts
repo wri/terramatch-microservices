@@ -80,4 +80,38 @@ describe("ScheduledJobsService", () => {
       );
     });
   });
+
+  describe("ensureSixMonthTaskDueJobs", () => {
+    it("should schedule TaskDue jobs for future semesters when none exist", async () => {
+      const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
+      const taskDueSpy = jest.spyOn(ScheduledJob, "taskDue").mockReturnValue({
+        // simulate no existing jobs
+        findAll: jest.fn().mockResolvedValue([])
+      } as unknown as typeof ScheduledJob);
+
+      await service.ensureSixMonthTaskDueJobs();
+
+      expect(scheduleSpy).toHaveBeenCalled();
+      scheduleSpy.mockRestore();
+      taskDueSpy.mockRestore();
+    });
+
+    it("should not create duplicate TaskDue when one already exists for same framework and dueAt", async () => {
+      const dueAtISO = "2027-01-31T00:00:00.000Z";
+      const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
+      const taskDueSpy = jest.spyOn(ScheduledJob, "taskDue").mockReturnValue({
+        // simulate an existing TaskDue for enterprises 2027-01-31 so it should be skipped
+        findAll: jest.fn().mockResolvedValue([{ taskDefinition: { frameworkKey: "enterprises", dueAt: dueAtISO } }])
+      } as unknown as typeof ScheduledJob);
+
+      await service.ensureSixMonthTaskDueJobs();
+
+      const enterprisesJan2027Calls = scheduleSpy.mock.calls.filter(
+        ([, fw, due]) => fw === "enterprises" && due.toISOString().startsWith("2027-01-31")
+      );
+      expect(enterprisesJan2027Calls).toHaveLength(0);
+      scheduleSpy.mockRestore();
+      taskDueSpy.mockRestore();
+    });
+  });
 });

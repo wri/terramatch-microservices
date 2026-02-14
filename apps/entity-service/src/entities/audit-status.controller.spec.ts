@@ -19,6 +19,8 @@ import { Media } from "@terramatch-microservices/database/entities/media.entity"
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { CollectionModelCtor } from "@terramatch-microservices/database/types/util";
 import { CreateAuditStatusBody } from "./dto/audit-status.dto";
+import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
+import { SitePolygon } from "@terramatch-microservices/database/entities/site-polygon.entity";
 
 describe("AuditStatusController", () => {
   let controller: AuditStatusController;
@@ -236,6 +238,132 @@ describe("AuditStatusController", () => {
       await expect(controller.createAuditStatus({ entity: "projects", uuid: project.uuid }, payload)).rejects.toThrow(
         UnauthorizedException
       );
+    });
+  });
+
+  describe("deleteAuditStatus", () => {
+    it("should delete audit status and return deleted response", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.deleteAuditStatus.mockResolvedValue();
+      policyService.authorize.mockResolvedValue();
+
+      const result = serialize(
+        await controller.deleteAuditStatus({
+          entity: "projects",
+          uuid: project.uuid,
+          auditUuid: auditStatus.uuid
+        })
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", mockEntity);
+      expect(result.meta).toBeDefined();
+      expect(result.meta.resourceType).toBe("auditStatuses");
+      expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
+    });
+
+    it("should throw NotFoundException for non-existent entity", async () => {
+      service.resolveEntity.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        controller.deleteAuditStatus({
+          entity: "projects",
+          uuid: "non-existent-uuid",
+          auditUuid: "audit-uuid"
+        })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when audit status does not exist", async () => {
+      const project = await ProjectFactory.create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.deleteAuditStatus.mockRejectedValue(new NotFoundException("Audit status not found"));
+      policyService.authorize.mockResolvedValue();
+
+      await expect(
+        controller.deleteAuditStatus({
+          entity: "projects",
+          uuid: project.uuid,
+          auditUuid: "non-existent-audit-uuid"
+        })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should delete audit status even when it belongs to a different entity (UUID uniqueness)", async () => {
+      const project = await ProjectFactory.create();
+      const otherProject = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(otherProject).create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.deleteAuditStatus.mockResolvedValue();
+      policyService.authorize.mockResolvedValue();
+
+      const result = serialize(
+        await controller.deleteAuditStatus({
+          entity: "projects",
+          uuid: project.uuid,
+          auditUuid: auditStatus.uuid
+        })
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", mockEntity);
+      expect(result.meta.resourceType).toBe("auditStatuses");
+      expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
+    });
+
+    it("should throw UnauthorizedException when user cannot delete entity", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(
+        controller.deleteAuditStatus({
+          entity: "projects",
+          uuid: project.uuid,
+          auditUuid: auditStatus.uuid
+        })
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should delete audit status for sitePolygons entity", async () => {
+      const site = await SiteFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const auditStatus = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: sitePolygon.id,
+        status: "approved",
+        comment: "Test comment",
+        type: "status"
+      });
+      const mockEntity = { id: sitePolygon.id, uuid: sitePolygon.uuid } as unknown as LaravelModel;
+
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.deleteAuditStatus.mockResolvedValue();
+      policyService.authorize.mockResolvedValue();
+
+      const result = serialize(
+        await controller.deleteAuditStatus({
+          entity: "sitePolygons",
+          uuid: sitePolygon.uuid,
+          auditUuid: auditStatus.uuid
+        })
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
+      expect(service.deleteAuditStatus).toHaveBeenCalledWith(auditStatus.uuid);
+      expect(result.meta.resourceType).toBe("auditStatuses");
+      expect(result.meta.resourceIds).toEqual([auditStatus.uuid]);
     });
   });
 });

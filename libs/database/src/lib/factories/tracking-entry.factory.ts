@@ -17,7 +17,7 @@ const NAMES: Record<string, (null | string)[]> = {
   caste: [null]
 };
 
-const defaultAttributesFactory = async (type?: (typeof TYPES)[number], subtype?: string, name?: string) => {
+const defaultAttributesFactory = async (type?: string, subtype?: string, name?: string) => {
   type ??= faker.helpers.arrayElement(TYPES);
   return {
     type,
@@ -55,6 +55,18 @@ export const TrackingEntryFactory = {
   caste: (tracking?: Tracking, subtype?: string, name?: string) =>
     FactoryGirl.define(TrackingEntry, async () => ({
       ...(await defaultAttributesFactory("caste", subtype, name)),
+      trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
+    })),
+
+  years: (tracking?: Tracking, subtype?: string, name?: string) =>
+    FactoryGirl.define(TrackingEntry, async () => ({
+      ...(await defaultAttributesFactory("years", subtype, name)),
+      trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
+    })),
+
+  strategy: (tracking?: Tracking, subtype?: string, name?: string) =>
+    FactoryGirl.define(TrackingEntry, async () => ({
+      ...(await defaultAttributesFactory("strategy", subtype, name)),
       trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
     }))
 };

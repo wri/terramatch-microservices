@@ -72,6 +72,8 @@ export const RELATION_INPUT_TYPES = [
   "employees",
   "financialIndicators",
   "fundingType",
+  "hectaresGoal",
+  "hectaresHistorical",
   "indirectBeneficiaries",
   "invasive",
   "jobs",
@@ -81,6 +83,8 @@ export const RELATION_INPUT_TYPES = [
   "seedings",
   "stratas",
   "trainingBeneficiaries",
+  "treesGoal",
+  "treesHistorical",
   "treeSpecies",
   "volunteers",
   "workdays"
@@ -102,6 +106,7 @@ export const LINKED_FIELD_RESOURCES = [
   "invasives",
   "leaderships",
   "ownershipStake",
+  "restoration",
   "seedings",
   "stratas",
   "treeSpecies"

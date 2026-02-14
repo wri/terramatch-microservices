@@ -9,7 +9,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { Includeable, Op } from "sequelize";
+import { Includeable, Op, literal } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
@@ -83,8 +83,18 @@ export class SiteReportProcessor extends ReportProcessor<
     const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
     if (query.sort?.field != null) {
-      if (["dueAt", "submittedAt", "updatedAt", "status", "updateRequestStatus"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      const direction = query.sort.direction ?? "ASC";
+      if (["dueAt", "updatedAt", "status", "updateRequestStatus", "submittedAt"].includes(query.sort.field)) {
+        if (query.sort.field === "submittedAt") {
+          if (direction === "ASC") {
+            builder.order(literal("submitted_at IS NULL, submitted_at ASC"));
+          } else {
+            // NULLs last, newest first
+            builder.order(literal("submitted_at IS NULL ASC, submitted_at DESC"));
+          }
+        } else {
+          builder.order([query.sort.field, direction]);
+        }
       } else if (query.sort.field === "organisationName") {
         builder.order(["site", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
       } else if (query.sort.field === "projectName") {

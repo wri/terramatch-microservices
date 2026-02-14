@@ -90,11 +90,12 @@ export class ProjectReportLightDto extends EntityDto {
 }
 
 export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
+type ProjectReportCalculated = "feedback" | "feedbackFields" | "paidOtherActivityDescription";
 
 export class ProjectReportFullDto extends ProjectReportLightDto {
   constructor(
     projectReport: ProjectReport,
-    props: HybridSupportProps<ProjectReportFullDto, Omit<ProjectReport, "feedback" | "feedbackFields">>
+    props: HybridSupportProps<ProjectReportFullDto, Omit<ProjectReport, ProjectReportCalculated>>
   ) {
     super();
     populateDto<ProjectReportFullDto, ProjectReport>(this, projectReport, { lightResource: false, ...props });
@@ -273,6 +274,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   paidOtherActivityDescription: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  otherRestorationPartnersDescription: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   nonTreeTotal: number | null;

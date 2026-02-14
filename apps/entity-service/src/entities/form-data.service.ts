@@ -272,7 +272,13 @@ export class FormDataService {
 
     const questions = await FormQuestion.forForm(form.uuid).findAll();
     const collector = new LinkedAnswerCollector(this.mediaService);
-    const syncPromises: Promise<void>[] = [];
+    // Note: this is intentionally syncing answers in serial instead of collecting the promises
+    // and running await Promise.all(). This is because there are multiple collectors that
+    // interact with the same DB table (this can happen in trackings, and potentially others),
+    // and when they run in parallel, it can cause the creation of duplicate records. In the
+    // majority of cases, data is getting set through the fields collector directly to the
+    // underlying model which does _not_ immediately trigger a DB save, so this doesn't slow
+    // things down as much as it seems like it could.
     for (const question of questions) {
       const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
       if (config == null) {
@@ -285,19 +291,16 @@ export class FormDataService {
 
       // Note: file questions are currently handled with direct file upload in the entity form on the FE
       if (isField(config.field)) {
-        syncPromises.push(collector.fields.syncField(model, question, config.field, answers));
+        await collector.fields.syncField(model, question, config.field, answers);
       } else if (isRelation(config.field)) {
-        syncPromises.push(
-          collector[config.field.resource].syncRelation(
-            model,
-            config.field,
-            answers[question.uuid] as object[] | null | undefined,
-            question.isHidden(answers, questions)
-          )
+        await collector[config.field.resource].syncRelation(
+          model,
+          config.field,
+          answers[question.uuid] as object[] | null | undefined,
+          question.isHidden(answers, questions)
         );
       }
     }
-    await Promise.all(syncPromises);
 
     if (isReport(answersModel)) {
       answersModel.completion = this.calculateProgress(answers, questions);

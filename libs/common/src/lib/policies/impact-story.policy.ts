@@ -5,7 +5,6 @@ export class ImpactStoryPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
       this.builder.can(["read", "create", "update", "delete", "bulkDelete", "uploadFiles"], ImpactStory);
-      return;
     }
 
     if (this.permissions.includes("impact-stories-manage")) {

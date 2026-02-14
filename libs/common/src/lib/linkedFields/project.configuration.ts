@@ -477,6 +477,18 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       resource: "demographics",
       inputType: "indirectBeneficiaries",
       collection: "indirect"
+    },
+    "pro-hectares-goal": {
+      label: "Hectares Goal",
+      resource: "restoration",
+      inputType: "hectaresGoal",
+      collection: "all"
+    },
+    "pro-trees-goal": {
+      label: "Trees Goal",
+      resource: "restoration",
+      inputType: "treesGoal",
+      collection: "all"
     }
   }
 };

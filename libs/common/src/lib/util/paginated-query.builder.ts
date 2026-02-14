@@ -87,6 +87,11 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
+  attributes(attributes: Attributes<T>) {
+    this.findOptions.attributes = attributes;
+    return this;
+  }
+
   where(options: WhereOptions, filterable?: Filterable) {
     if (filterable == null) filterable = this.findOptions;
     filterable.where = combineWheresWithAnd(filterable.where ?? {}, options);

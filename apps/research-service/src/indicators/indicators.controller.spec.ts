@@ -91,7 +91,11 @@ describe("IndicatorsController", () => {
       const mockCsvContent = "Polygon Name,Size (ha)\nTest,100";
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
-      const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
+      const result = await controller.exportIndicator({
+        entityType: "sites",
+        entityUuid: "site-uuid-123",
+        slug: "treeCoverLoss"
+      });
 
       expect(result).toBe(mockCsvContent);
       expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
@@ -107,7 +111,11 @@ describe("IndicatorsController", () => {
 
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
-      const result = await controller.exportIndicator("sites", "site-uuid-123", "treeCoverLoss");
+      const result = await controller.exportIndicator({
+        entityType: "sites",
+        entityUuid: "site-uuid-123",
+        slug: "treeCoverLoss"
+      });
 
       expect(result).toBe(mockCsvContent);
       expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
@@ -123,7 +131,11 @@ describe("IndicatorsController", () => {
 
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
-      const result = await controller.exportIndicator("projects", "project-uuid", "treeCoverLoss");
+      const result = await controller.exportIndicator({
+        entityType: "projects",
+        entityUuid: "project-uuid",
+        slug: "treeCoverLoss"
+      });
 
       expect(result).toBe(mockCsvContent);
       expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
@@ -138,7 +150,7 @@ describe("IndicatorsController", () => {
 
       mockIndicatorsService.exportIndicatorToCsv.mockResolvedValue(mockCsvContent);
 
-      await controller.exportIndicator("sites", "site-uuid", "restorationByStrategy");
+      await controller.exportIndicator({ entityType: "sites", entityUuid: "site-uuid", slug: "restorationByStrategy" });
 
       expect(mockIndicatorsService.exportIndicatorToCsv).toHaveBeenCalledWith(
         "sites",

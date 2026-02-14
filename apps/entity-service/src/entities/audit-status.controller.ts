@@ -1,15 +1,16 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Delete, Get, NotFoundException, Param, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
-import { AuditStatusParamsDto } from "./dto/audit-status-params.dto";
+import { AuditStatusParamsDto, AuditStatusDeleteParamsDto } from "./dto/audit-status-params.dto";
 import { AuditStatusDto, CreateAuditStatusBody } from "./dto/audit-status.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { EntitiesService } from "./entities.service";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 @Controller("entities/v3/auditStatuses")
 export class AuditStatusController {
@@ -86,5 +87,31 @@ export class AuditStatusController {
     document.addData(auditStatus.uuid, dto);
 
     return document;
+  }
+
+  @Delete(":entity/:uuid/:auditUuid")
+  @ApiOperation({
+    operationId: "deleteAuditStatus",
+    summary: "Delete an audit status for an entity",
+    description:
+      "Soft deletes an audit status by UUID. The audit status must belong to the specified entity. " +
+      "Requires authentication and appropriate permissions."
+  })
+  @JsonApiDeletedResponse(getDtoType(AuditStatusDto), {
+    description: "Audit status was deleted"
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, {
+    description: "Entity or audit status not found, or audit status does not belong to the entity."
+  })
+  async deleteAuditStatus(@Param() { entity, uuid, auditUuid }: AuditStatusDeleteParamsDto) {
+    const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
+    await this.policyService.authorize("delete", baseEntity);
+
+    await this.auditStatusService.deleteAuditStatus(auditUuid);
+
+    return buildDeletedResponse(getDtoType(AuditStatusDto), auditUuid);
   }
 }

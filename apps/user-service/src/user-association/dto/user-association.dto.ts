@@ -18,6 +18,9 @@ export class UserAssociationDto {
   emailAddress: string;
 
   @ApiProperty()
+  fullName: string;
+
+  @ApiProperty()
   status: string;
 
   @ApiProperty()

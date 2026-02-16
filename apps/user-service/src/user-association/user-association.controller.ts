@@ -45,7 +45,7 @@ export class UserAssociationController {
     await this.policyService.authorize("read", project);
     const projectUsers = await this.userAssociationService.query(project, query);
     const document = buildJsonApi(UserAssociationDto, { forceDataArray: true });
-    await this.userAssociationService.addIndex(document, project, projectUsers);
+    await this.userAssociationService.addIndex(document, project, projectUsers, query);
     return document;
   }
 
@@ -97,6 +97,6 @@ export class UserAssociationController {
     }
     await this.policyService.authorize("update", project);
     await this.userAssociationService.deleteBulkUserAssociations(project.id, uuids);
-    return buildDeletedResponse("userAssociations", uuids);
+    return buildDeletedResponse("associatedUsers", uuids);
   }
 }

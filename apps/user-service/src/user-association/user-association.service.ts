@@ -11,7 +11,7 @@ import {
 import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { InjectQueue } from "@nestjs/bullmq";
@@ -38,11 +38,16 @@ export class UserAssociationService {
     return ProjectUser.findAll(findOptions);
   }
 
-  async addIndex(document: DocumentBuilder, project: Project, projectUsers: ProjectUser[]) {
+  async addIndex(
+    document: DocumentBuilder,
+    project: Project,
+    projectUsers: ProjectUser[],
+    query: UserAssociationQueryDto
+  ) {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress"]
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"]
     });
     users.forEach(user => {
       const projectUser = projectUsers.find(projectUser => projectUser.userId === user.id);
@@ -56,8 +61,8 @@ export class UserAssociationService {
     });
     const indexIds = users.map(user => user.uuid as string);
     document.addIndex({
-      resource: "userAssociations",
-      requestPath: `/userAssociations/v3/projects/${project.uuid}`,
+      resource: "associatedUsers",
+      requestPath: `/userAssociations/v3/projects/${project.uuid}${getStableRequestQuery(query)}`,
       total: users.length,
       ids: indexIds
     });

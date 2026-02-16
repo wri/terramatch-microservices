@@ -108,13 +108,13 @@ export class FilesController {
     }
     let document;
     if (errors.length > 0) {
-      document = buildJsonApi(MediaBulkErrorDto);
+      document = buildJsonApi(MediaBulkErrorDto, { forceDataArray: true });
       for (const error of errors) {
         document.addData(error.index.toString(), new MediaBulkErrorDto(error.index, error.error));
       }
     } else {
       await transaction.commit();
-      document = buildJsonApi(MediaDto);
+      document = buildJsonApi(MediaDto, { forceDataArray: true });
       for (const media of createdMedias) {
         document.addData(
           media.uuid,

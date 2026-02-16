@@ -161,6 +161,23 @@ describe("OrganisationsController", () => {
       expect(userResource).toBeDefined();
       expect(userResource?.id).toBe(user.uuid);
     });
+
+    it("should return only organisation data when draft creation has no user", async () => {
+      const attrs = new OrganisationCreateAttributes();
+      attrs.status = "draft";
+      attrs.name = "Draft Org";
+
+      const org = await OrganisationFactory.create({ name: attrs.name, status: "draft" });
+      organisationCreationService.createOrganisation.mockResolvedValue({ user: null, organisation: org });
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const result = serialize(await controller.create(createRequest(attrs)));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", Organisation);
+      expect(organisationCreationService.createOrganisation).toHaveBeenCalledWith(attrs);
+      expect((result.data as Resource).id).toBe(org.uuid);
+      expect(result.included ?? []).toHaveLength(0);
+    });
   });
 
   describe("show", () => {

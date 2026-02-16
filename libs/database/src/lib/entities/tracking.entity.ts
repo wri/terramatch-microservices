@@ -44,7 +44,7 @@ import { chainScope } from "../util/chain-scope";
     }
   }),
   domain: (domain: TrackingDomain) => ({ where: { domain } }),
-  type: (type: TrackingType) => ({ where: { type } }),
+  type: (type: TrackingType | TrackingType[]) => ({ where: { type } }),
   collection: (collection: string) => ({ where: { collection } })
 }))
 @Table({
@@ -118,7 +118,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     return chainScope(this, "domain", domain) as typeof Tracking;
   }
 
-  static type(type: TrackingType) {
+  static type(type: TrackingType | TrackingType[]) {
     return chainScope(this, "type", type) as typeof Tracking;
   }
 

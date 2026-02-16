@@ -408,11 +408,12 @@ describe("ProjectProcessor", () => {
     it("includes calculated fields in ProjectFullDto", async () => {
       const org = await OrganisationFactory.create();
       const application = await ApplicationFactory.create({ organisationUuid: org.uuid });
-      const { id: projectId, uuid } = await ProjectFactory.create({
+      let project = await ProjectFactory.create({
         organisationId: org.id,
         frameworkKey: "barfund" as FrameworkKey,
         applicationId: application.id
       });
+      const { id: projectId, uuid } = project;
       const approvedSites = [await SiteFactory.create({ projectId, status: "approved" })];
       approvedSites.push(await SiteFactory.create({ projectId, status: "approved" }));
       await SiteFactory.create({ projectId, status: "started" });
@@ -510,8 +511,35 @@ describe("ProjectProcessor", () => {
         )
       );
 
-      const project = await processor.findOne(uuid);
-      const { id, dto } = await processor.getFullDto(project!);
+      const hectaresGoal = await TrackingFactory.projectHectaresGoal(project).create();
+      const hectaresEntries = await Promise.all([
+        TrackingEntryFactory.years(hectaresGoal, "1-year").create(),
+        TrackingEntryFactory.years(hectaresGoal, "2-year").create(),
+        TrackingEntryFactory.strategy(hectaresGoal, "anr").create()
+      ]);
+      const totalHectaresRestoredGoal = sumBy(
+        hectaresEntries.filter(({ type }) => type === "years"),
+        "amount"
+      );
+
+      const treesGoal = await TrackingFactory.projectTreesGoal(project).create();
+      const treeEntries = await Promise.all([
+        TrackingEntryFactory.years(treesGoal, "1-year").create(),
+        TrackingEntryFactory.years(treesGoal, "2-year").create(),
+        TrackingEntryFactory.strategy(treesGoal, "anr").create(),
+        TrackingEntryFactory.strategy(treesGoal, "direct-seeding").create(),
+        TrackingEntryFactory.strategy(treesGoal, "tree-planting").create()
+      ]);
+      const treesGrownGoal = sumBy(
+        treeEntries.filter(
+          ({ type, subtype }) =>
+            type === "years" || (type === "strategy" && ["anr", "direct-seeding"].includes(subtype ?? ""))
+        ),
+        "amount"
+      );
+
+      project = (await processor.findOne(uuid)) as Project;
+      const { id, dto } = await processor.getFullDto(project);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -548,7 +576,9 @@ describe("ProjectProcessor", () => {
           uuid: application.uuid,
           fundingProgrammeName: (await application.$get("fundingProgramme"))?.name,
           projectPitchUuid: null
-        }
+        },
+        totalHectaresRestoredGoal,
+        treesGrownGoal
       });
     });
   });

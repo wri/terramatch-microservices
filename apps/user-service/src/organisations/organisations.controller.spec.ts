@@ -173,7 +173,8 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.create(createRequest(attrs)));
 
-      expect(policyService.authorize).toHaveBeenCalledWith("create", Organisation);
+      // Draft creation doesn't require authorization
+      expect(policyService.authorize).not.toHaveBeenCalled();
       expect(organisationCreationService.createOrganisation).toHaveBeenCalledWith(attrs);
       expect((result.data as Resource).id).toBe(org.uuid);
       expect(result.included ?? []).toHaveLength(0);

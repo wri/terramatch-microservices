@@ -4,12 +4,14 @@ import { Organisation, User } from "@terramatch-microservices/database/entities"
 
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
+    this.builder.can("create", Organisation);
+
     if (this.frameworks.length > 0) {
       this.builder.can(["read", "update", "delete"], Organisation);
     }
 
     if (this.permissions.includes("users-manage")) {
-      this.builder.can(["create", "uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
+      this.builder.can(["uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
     }
 
     if ((await this.isVerifiedAdmin()) || this.frameworks.length > 0) {

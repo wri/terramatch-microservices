@@ -1,13 +1,14 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
-import { Organisation } from "@terramatch-microservices/database/entities";
+import { Organisation, User, ModelHasRole } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
   OrganisationUserFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory
+  UserFactory,
+  RoleFactory
 } from "@terramatch-microservices/database/factories";
 import { mockPermissions, mockUserId } from "../util/testing";
 
@@ -171,6 +172,87 @@ describe("OrganisationPolicy", () => {
       await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "requested" });
       await expectCan(service, "update", primaryOrg);
       await expectCannot(service, "update", requestedOrg);
+    });
+  });
+
+  describe("approveReject permissions", () => {
+    it("allows approveReject for verified admin users (admin role + email verified)", async () => {
+      const org = await OrganisationFactory.create();
+      const adminRole = await RoleFactory.create({ name: "admin-super" });
+      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
+      await ModelHasRole.create({
+        modelId: user.id,
+        roleId: adminRole.id,
+        modelType: User.LARAVEL_TYPE
+      } as ModelHasRole);
+      mockUserId(user.id);
+      mockPermissions("users-manage");
+      await expectCan(service, "approveReject", org);
+    });
+
+    it("allows approveReject for framework admins", async () => {
+      const org = await OrganisationFactory.create();
+      mockUserId(123);
+      mockPermissions("framework-ppc");
+      await expectCan(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for admin users without email verification", async () => {
+      const org = await OrganisationFactory.create();
+      const adminRole = await RoleFactory.create({ name: "admin-terrafund" });
+      const user = await UserFactory.create({ emailAddressVerifiedAt: null });
+      await ModelHasRole.create({
+        modelId: user.id,
+        roleId: adminRole.id,
+        modelType: User.LARAVEL_TYPE
+      } as ModelHasRole);
+      mockUserId(user.id);
+      mockPermissions("users-manage");
+      await expectCannot(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for users without admin role", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCannot(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for regular users", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCannot(service, "approveReject", org);
+    });
+
+    it("allows approveReject for admin-ppc role with email verified", async () => {
+      const org = await OrganisationFactory.create();
+      const adminRole = await RoleFactory.create({ name: "admin-ppc" });
+      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
+      await ModelHasRole.create({
+        modelId: user.id,
+        roleId: adminRole.id,
+        modelType: User.LARAVEL_TYPE
+      } as ModelHasRole);
+      mockUserId(user.id);
+      mockPermissions("users-manage");
+      await expectCan(service, "approveReject", org);
+    });
+
+    it("allows approveReject for admin-terrafund role with email verified", async () => {
+      const org = await OrganisationFactory.create();
+      const adminRole = await RoleFactory.create({ name: "admin-terrafund" });
+      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
+      await ModelHasRole.create({
+        modelId: user.id,
+        roleId: adminRole.id,
+        modelType: User.LARAVEL_TYPE
+      } as ModelHasRole);
+      mockUserId(user.id);
+      mockPermissions("users-manage");
+      await expectCan(service, "approveReject", org);
     });
   });
 });

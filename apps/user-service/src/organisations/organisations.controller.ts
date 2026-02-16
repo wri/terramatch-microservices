@@ -11,6 +11,8 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -47,14 +49,21 @@ import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/fi
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
+import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
+  private readonly logger = new TMLogger(OrganisationsController.name);
+
   constructor(
     private readonly policyService: PolicyService,
     private readonly organisationsService: OrganisationsService,
     private readonly organisationCreationService: OrganisationCreationService,
-    private readonly mediaService: MediaService
+    private readonly mediaService: MediaService,
+    @InjectQueue("email") private readonly emailQueue: Queue
   ) {}
 
   @Get()
@@ -272,9 +281,44 @@ export class OrganisationsController {
     }
 
     const organisation = await this.organisationsService.findOne(uuid);
-    await this.policyService.authorize("update", organisation);
+
+    const newStatus = updatePayload.data.attributes.status;
+    const isStatusChange = newStatus === "approved" || newStatus === "rejected";
+    const oldStatus = organisation.status;
+
+    if (isStatusChange) {
+      await this.policyService.authorize("approveReject", organisation);
+    } else {
+      await this.policyService.authorize("update", organisation);
+    }
 
     await this.organisationsService.update(organisation, updatePayload.data.attributes);
+
+    if (isStatusChange && oldStatus !== newStatus) {
+      const userId = authenticatedUserId();
+      if (userId != null) {
+        try {
+          if (newStatus === "approved") {
+            await new OrganisationApprovedEmail({
+              organisationId: organisation.id,
+              approvedByUserId: userId
+            }).sendLater(this.emailQueue);
+            this.logger.log(`Queued organisation approved email for organisation ${organisation.id}`);
+          } else if (newStatus === "rejected") {
+            await new OrganisationRejectedEmail({
+              organisationId: organisation.id,
+              rejectedByUserId: userId
+            }).sendLater(this.emailQueue);
+            this.logger.log(`Queued organisation rejected email for organisation ${organisation.id}`);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Failed to queue organisation ${newStatus} email for organisation ${organisation.id}`,
+            error
+          );
+        }
+      }
+    }
 
     return buildJsonApi(OrganisationFullDto).addData(organisation.uuid, new OrganisationFullDto(organisation));
   }

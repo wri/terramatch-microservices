@@ -6,6 +6,7 @@ import { OrganisationsService } from "./organisations.service";
 import { OrganisationCreationService } from "./organisation-creation.service";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
+import { Queue, Job } from "bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
@@ -27,7 +28,7 @@ import {
   OwnershipStake,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
@@ -41,6 +42,7 @@ describe("OrganisationsController", () => {
   let organisationsService: DeepMocked<OrganisationsService>;
   let organisationCreationService: DeepMocked<OrganisationCreationService>;
   let mediaService: DeepMocked<MediaService>;
+  let emailQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -56,12 +58,14 @@ describe("OrganisationsController", () => {
           useValue: (organisationCreationService = createMock<OrganisationCreationService>())
         },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: getQueueToken("email"), useValue: createMock() },
+        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();
 
     controller = module.get(OrganisationsController);
+
+    emailQueue.add = jest.fn().mockResolvedValue({} as Job);
   });
 
   afterEach(() => {
@@ -748,6 +752,154 @@ describe("OrganisationsController", () => {
       };
 
       await expect(controller.update(org.uuid, updatePayload)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should use approveReject authorization when status changes to approved", async () => {
+      const org = await OrganisationFactory.create({ status: "pending" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
+      const updatedOrg = { ...org, status: "approved" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+      mockUserId(123);
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await controller.update(org.uuid, updatePayload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationApproved", {
+        organisationId: org.id,
+        approvedByUserId: 123
+      });
+    });
+
+    it("should use approveReject authorization when status changes to rejected", async () => {
+      const org = await OrganisationFactory.create({ status: "pending" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "rejected" };
+      const updatedOrg = { ...org, status: "rejected" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+      mockUserId(123);
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await controller.update(org.uuid, updatePayload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationRejected", {
+        organisationId: org.id,
+        rejectedByUserId: 123
+      });
+    });
+
+    it("should use update authorization when status changes to non-approved/rejected", async () => {
+      const org = await OrganisationFactory.create({ status: "approved" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "pending" };
+      const updatedOrg = { ...org, status: "pending" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await controller.update(org.uuid, updatePayload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("update", org);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should not queue email if status does not change", async () => {
+      const org = await OrganisationFactory.create({ status: "approved" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
+      const updatedOrg = { ...org, status: "approved" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+      mockUserId(123);
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await controller.update(org.uuid, updatePayload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should not queue email if userId is null", async () => {
+      const org = await OrganisationFactory.create({ status: "pending" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
+      const updatedOrg = { ...org, status: "approved" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+      mockUserId(undefined);
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await controller.update(org.uuid, updatePayload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should handle email queueing errors gracefully", async () => {
+      const org = await OrganisationFactory.create({ status: "pending" });
+      const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
+      const updatedOrg = { ...org, status: "approved" };
+
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
+      policyService.authorize.mockResolvedValue(undefined);
+      mockUserId(123);
+      emailQueue.add.mockRejectedValue(new Error("Queue error"));
+
+      const updatePayload = {
+        data: {
+          type: "organisations",
+          id: org.uuid,
+          attributes: updateAttrs
+        }
+      };
+
+      await expect(controller.update(org.uuid, updatePayload)).resolves.toBeDefined();
+      expect(emailQueue.add).toHaveBeenCalled();
     });
   });
 

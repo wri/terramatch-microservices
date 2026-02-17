@@ -17,6 +17,7 @@ import { DRAFT, PENDING } from "@terramatch-microservices/database/constants/sta
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { AdminUserCreationEmail } from "@terramatch-microservices/common/email/admin-user-creation.email";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Injectable()
 export class OrganisationCreationService {
@@ -44,6 +45,12 @@ export class OrganisationCreationService {
     }
 
     const organisation = await Organisation.create(this.buildOrganisationData(attributes, DRAFT) as Organisation);
+
+    const userId = authenticatedUserId();
+    if (userId != null) {
+      await User.update({ organisationId: organisation.id }, { where: { id: userId } });
+    }
+
     return { user: null, organisation };
   }
 

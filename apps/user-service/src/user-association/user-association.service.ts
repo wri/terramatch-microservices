@@ -91,7 +91,13 @@ export class UserAssociationService {
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
-      attributes: ["id", "emailAddress"]
+      attributes: ["id", "emailAddress"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
     });
 
     if (user == null) {
@@ -157,6 +163,10 @@ export class UserAssociationService {
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
+      if (user.primaryRole !== "project-manager") {
+        throw new BadRequestException("User is not a project manager");
+      }
+
       const projectUser = await ProjectUser.findOne({
         where: { projectId: project.id, userId: user.id, isManaging: true }
       });
@@ -164,10 +174,19 @@ export class UserAssociationService {
       if (projectUser != null) {
         throw new BadRequestException("User is already a project manager");
       }
+
+      await ProjectUser.create({
+        projectId: project.id,
+        userId: user.id,
+        isManaging: true
+      });
+      return;
     }
+
     const projectUser = await ProjectUser.findOne({
       where: { projectId: project.id, userId: user.id }
     });
+
     if (projectUser == null) {
       await ProjectUser.create({
         projectId: project.id,
@@ -175,6 +194,7 @@ export class UserAssociationService {
         isMonitoring: true
       });
     }
+
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,

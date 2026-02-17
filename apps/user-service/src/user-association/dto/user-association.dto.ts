@@ -31,4 +31,7 @@ export class UserAssociationDto {
 
   @ApiProperty()
   roleName: string | null;
+
+  @ApiProperty()
+  associatedType: string;
 }

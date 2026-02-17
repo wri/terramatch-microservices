@@ -75,7 +75,8 @@ export class UserAssociationService {
           status: projectUser?.status as string,
           isManager: projectUser?.isManaging as boolean,
           organisationName: organisation?.name as string,
-          roleName: user.primaryRole as string
+          roleName: user.primaryRole as string,
+          associatedType: "projects"
         })
       );
     });

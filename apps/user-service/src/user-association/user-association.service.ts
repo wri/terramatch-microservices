@@ -83,7 +83,10 @@ export class UserAssociationService {
   }
 
   async deleteBulkUserAssociations(projectId: number, uuids: string[]) {
-    const users = await User.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["uuid"] });
+    const users = await User.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "emailAddress"]
+    });
     if (users.length === 0) {
       throw new NotFoundException("Users not found");
     }

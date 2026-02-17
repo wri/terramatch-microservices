@@ -76,7 +76,6 @@ export class ScheduledJobsService {
     const now = DateTime.utc();
     const currentYear = now.year;
     const years = [currentYear, currentYear + 1] as const;
-    const months: [month: number, day: number][] = [[1, 31]];
 
     const existing = await ScheduledJob.taskDue(FRAMEWORK_KEYS_TF).findAll({
       where: { executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
@@ -90,17 +89,17 @@ export class ScheduledJobsService {
 
     for (const framework of FRAMEWORK_KEYS_TF) {
       for (const year of years) {
-        for (const [month, day] of months) {
-          const dueAt = DateTime.utc(year, month, day);
-          if (dueAt < now) continue;
-          const dueAtISO = dueAt.toISO();
-          const key = `${framework}|${dueAtISO}`;
-          if (existingKeys.has(key)) continue;
-          const executionTime = DateTime.utc(year, month, 1).toJSDate();
-          await ScheduledJob.scheduleTaskDue(executionTime, framework, dueAt.toJSDate());
-          existingKeys.add(key);
-          this.logger.log(`Scheduled TaskDue ${framework} dueAt ${dueAtISO}`);
-        }
+        const month = 1;
+        const day = 31;
+        const dueAt = DateTime.utc(year, month, day);
+        if (dueAt < now) continue;
+        const dueAtISO = dueAt.toISO();
+        const key = `${framework}|${dueAtISO}`;
+        if (existingKeys.has(key)) continue;
+        const executionTime = DateTime.utc(year, month, 1).toJSDate();
+        await ScheduledJob.scheduleTaskDue(executionTime, framework, dueAt.toJSDate());
+        existingKeys.add(key);
+        this.logger.log(`Scheduled TaskDue ${framework} dueAt ${dueAtISO}`);
       }
     }
   }

@@ -29,16 +29,6 @@ export class OrganisationUpdateAttributes {
   type?: OrganisationType | null;
 
   @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  subtype?: string | null;
-
-  @IsOptional()
-  @IsBoolean()
-  @ApiProperty({ required: false })
-  private?: boolean;
-
-  @IsOptional()
   @IsBoolean()
   @ApiProperty({ description: "Update the isTest flag.", required: false })
   isTest?: boolean;
@@ -110,49 +100,6 @@ export class OrganisationUpdateAttributes {
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false, nullable: true })
-  treeCareApproach?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(150)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  relevantExperienceYears?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  treesGrown3Year?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  treesGrownTotal?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  haRestored3Year?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  haRestoredTotal?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(12)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  finStartMonth?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
   webUrl?: string | null;
 
   @IsOptional()
@@ -176,9 +123,16 @@ export class OrganisationUpdateAttributes {
   twitterUrl?: string | null;
 
   @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(12)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  finStartMonth?: number | null;
+
+  @IsOptional()
   @IsString()
   @ApiProperty({ required: false, nullable: true })
-  leadershipTeamTxt?: string | null;
+  additionalFundingDetails?: string | null;
 
   @IsOptional()
   @IsArray()
@@ -200,68 +154,58 @@ export class OrganisationUpdateAttributes {
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false })
-  currency?: string;
+  @ApiProperty({ required: false, nullable: true })
+  communityExperience?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  totalEngagedCommunityMembers3Yr?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(150)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  relevantExperienceYears?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  haRestoredTotal?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  haRestored3Year?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  treesGrownTotal?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  treesGrown3Year?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @ApiProperty({ required: false, nullable: true, type: Number })
+  avgTreeSurvivalRate?: number | null;
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  states?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  district?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  accountNumber1?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  accountNumber2?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  loanStatusAmount?: string | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  loanStatusTypes?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  approachOfMarginalizedCommunities?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  communityEngagementNumbersMarginalized?: string | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  landSystems?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  fundUtilisation?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  detailedInterventionTypes?: string[] | null;
+  restorationTypesImplemented?: string[] | null;
 
   @IsOptional()
   @IsString()
@@ -274,17 +218,6 @@ export class OrganisationUpdateAttributes {
   restoredAreasDescription?: string | null;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  restorationTypesImplemented?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  historicMonitoringGeojson?: string | null;
-
-  @IsOptional()
   @IsString()
   @ApiProperty({ required: false, nullable: true })
   monitoringEvaluationExperience?: string | null;
@@ -292,61 +225,7 @@ export class OrganisationUpdateAttributes {
   @IsOptional()
   @IsString()
   @ApiProperty({ required: false, nullable: true })
-  fundingHistory?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  totalEngagedCommunityMembers3Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  percentEngagedWomen3Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  percentEngagedMen3Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  percentEngagedUnder353Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  percentEngagedOver353Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  percentEngagedSmallholder3Yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  totalTreesGrown?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  avgTreeSurvivalRate?: number | null;
+  historicMonitoringGeojson?: string | null;
 
   @IsOptional()
   @IsNumber()
@@ -389,279 +268,6 @@ export class OrganisationUpdateAttributes {
   @Min(0)
   @ApiProperty({ required: false, nullable: true, type: Number })
   over35Employees?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  additionalFundingDetails?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  communityExperience?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  businessModel?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  fieldStaffSkills?: string | null;
-
-  @IsOptional()
-  @IsEnum(["yes", "no"])
-  @ApiProperty({ required: false, nullable: true, enum: ["yes", "no"] })
-  fpcCompany?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  numOfMarginalisedEmployees?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  benefactorsFpcCompany?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  boardRemunerationFpcCompany?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  boardEngagementFpcCompany?: string | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  biodiversityFocus?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  globalPlanningFrameworks?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  pastGovCollaboration?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  engagementLandless?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  socioeconomicImpact?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  environmentalImpact?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  growthStage?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  totalEmployees?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  additionalComments?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  consortium?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  femaleYouthLeadershipExample?: string | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @Length(3, 3, { each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  level0PastRestoration?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @Length(3, undefined, { each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  level1PastRestoration?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  level2PastRestoration?: string[] | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  treesNaturallyRegeneratedTotal?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  treesNaturallyRegenerated3Year?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  externalTechnicalAssistance?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  barriersToFunding?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  capacityBuildingSupportNeeded?: string | null;
-
-  @IsOptional()
-  @IsBoolean()
-  @ApiProperty({ required: false, nullable: true })
-  associationsCooperatives?: boolean | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  territoriesOfOperation?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  decisionMakingStructureDescription?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  decisionMakingStructureIndividualsInvolved?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  averageWorkerIncome?: number | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  anrPracticesPast?: string[] | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  anrMonitoringApproaches?: string[] | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  anrMonitoringApproachesDescription?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  anrCommunicationFunders?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  bioeconomyProducts?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  bioeconomyTraditionalKnowledge?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  bioeconomyProductProcessing?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  bioeconomyBuyers?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yr?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yrWomen?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yrMen?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yrYouth?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yrNonYouth?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3yrSmallholder?: number | null;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiProperty({ required: false, nullable: true, type: Number })
-  communityMembersEngaged3YrBackwardClass?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({ required: false, nullable: true })
-  engagementNonYouth?: string | null;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
-  treeRestorationPractices?: string[] | null;
 }
 
 export class OrganisationUpdateBody extends JsonApiBodyDto(

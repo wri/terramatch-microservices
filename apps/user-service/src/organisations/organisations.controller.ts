@@ -345,7 +345,7 @@ export class OrganisationsController {
   @Post()
   @ApiOperation({
     operationId: "organisationCreation",
-    description: "Create a new organisation, and the first user for it."
+    description: "Create an organisation. Pending status creates the first user and onboarding records."
   })
   @JsonApiResponse({
     data: OrganisationLightDto,
@@ -360,8 +360,10 @@ export class OrganisationsController {
 
     const document = buildJsonApi(OrganisationLightDto);
     const orgResource = document.addData(organisation.uuid, new OrganisationLightDto(organisation));
-    const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
-    userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
+    if (user != null) {
+      const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
+      userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
+    }
     return document;
   }
 }

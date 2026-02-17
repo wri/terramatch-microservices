@@ -1,15 +1,18 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 import { Organisation, User } from "@terramatch-microservices/database/entities";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
+    this.builder.can("create", Organisation);
+
     if (this.frameworks.length > 0) {
       this.builder.can(["read", "update", "delete"], Organisation);
     }
 
     if (this.permissions.includes("users-manage")) {
-      this.builder.can(["create", "uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
+      this.builder.can(["uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
     }
 
     if ((await this.isVerifiedAdmin()) || this.frameworks.length > 0) {
@@ -24,6 +27,14 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     const projectOrgIds = await this.getProjectOrganisationIds();
     if (projectOrgIds.length > 0) {
       this.builder.can("read", Organisation, { id: { $in: projectOrgIds } });
+    }
+
+    const primaryOrg = await this.getPrimaryOrganisation();
+    if (primaryOrg != null) {
+      this.builder.can("delete", Organisation, {
+        id: primaryOrg.id,
+        status: DRAFT
+      });
     }
 
     if (this.permissions.includes("manage-own")) {

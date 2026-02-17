@@ -39,7 +39,6 @@ export class OwnershipStakeDto extends AssociationDto {
   yearOfBirth: number;
 }
 
-// TODO most of these fields will migrate to a full response DTO when we need one.
 export class EmbeddedOwnershipStakeDto extends OmitType(OwnershipStakeDto, ["entityType", "entityUuid"]) {
   constructor(ownershipStake: OwnershipStake) {
     super();

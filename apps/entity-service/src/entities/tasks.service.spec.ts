@@ -90,7 +90,7 @@ describe("TasksService", () => {
       const baseDate = DateTime.utc().plus({ years: 1 });
       for (const { id } of await ProjectFactory.createMany(3)) {
         await ProjectUserFactory.create({ userId, projectId: id });
-        for (let j = 0; j < 2; j++) {
+        for (let j = 0; j < 1; j++) {
           const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
           tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
         }
@@ -105,7 +105,7 @@ describe("TasksService", () => {
       const baseDate = DateTime.utc().plus({ years: 1 });
       for (const { id } of await ProjectFactory.createMany(3)) {
         await ProjectUserFactory.create({ userId, projectId: id, isMonitoring: false, isManaging: true });
-        for (let j = 0; j < 2; j++) {
+        for (let j = 0; j < 1; j++) {
           const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
           tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
         }

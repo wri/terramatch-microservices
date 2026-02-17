@@ -72,14 +72,11 @@ export class ScheduledJobsService {
   }
 
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
-  async ensureSixMonthTaskDueJobs() {
+  async ensureAnnualTaskDueJobs() {
     const now = DateTime.utc();
     const currentYear = now.year;
     const years = [currentYear, currentYear + 1] as const;
-    const semesters: [month: number, day: number][] = [
-      [1, 31],
-      [7, 31]
-    ];
+    const months: [month: number, day: number][] = [[1, 31]];
 
     const existing = await ScheduledJob.taskDue(FRAMEWORK_KEYS_TF).findAll({
       where: { executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
@@ -93,7 +90,7 @@ export class ScheduledJobsService {
 
     for (const framework of FRAMEWORK_KEYS_TF) {
       for (const year of years) {
-        for (const [month, day] of semesters) {
+        for (const [month, day] of months) {
           const dueAt = DateTime.utc(year, month, day);
           if (dueAt < now) continue;
           const dueAtISO = dueAt.toISO();

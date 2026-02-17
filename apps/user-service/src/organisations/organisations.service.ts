@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Scope } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { Organisation, User } from "@terramatch-microservices/database/entities";
+import { Organisation, OrganisationUser, User } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Op } from "sequelize";
@@ -118,6 +118,9 @@ export class OrganisationsService {
   }
 
   async delete(organisation: Organisation): Promise<void> {
+    await User.update({ organisationId: null }, { where: { organisationId: organisation.id } });
+    await OrganisationUser.destroy({ where: { organisationId: organisation.id } });
+
     await organisation.destroy();
   }
 }

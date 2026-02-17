@@ -1,6 +1,7 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 import { Organisation, User } from "@terramatch-microservices/database/entities";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -33,6 +34,10 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       if (primaryOrg != null) {
         this.builder.can(["update", "uploadFiles", "deleteFiles", "updateFiles"], Organisation, {
           id: primaryOrg.id
+        });
+        this.builder.can("delete", Organisation, {
+          id: primaryOrg.id,
+          status: DRAFT
         });
       }
 

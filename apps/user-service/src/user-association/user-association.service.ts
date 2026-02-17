@@ -20,10 +20,11 @@ import { ProjectInviteEmail } from "@terramatch-microservices/common/email/proje
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class UserAssociationService {
-  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
+  constructor(private readonly jwtService: JwtService, @InjectQueue("email") private readonly emailQueue: Queue) {}
 
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
@@ -141,7 +142,7 @@ export class UserAssociationService {
       roleId: pdRole.id,
       modelType: User.LARAVEL_TYPE
     } as ModelHasRole);
-    const token = crypto.randomBytes(32).toString("hex");
+    const token = await this.jwtService.signAsync({ sub: newUser.uuid }, { expiresIn: "7d" });
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,

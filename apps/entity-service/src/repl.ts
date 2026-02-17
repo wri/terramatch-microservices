@@ -27,7 +27,7 @@ import { acceptMimeTypes, MediaOwnerType } from "@terramatch-microservices/datab
 import { generateHashedKey } from "@transifex/native";
 import { DateTime } from "luxon";
 import { LinkedFile, RelationInputType } from "@terramatch-microservices/database/constants/linked-fields";
-import { cloneDeep, Dictionary, flattenDeep, isEqual, isNumber, isUndefined, keyBy, omitBy, sumBy, uniq } from "lodash";
+import { cloneDeep, Dictionary, flattenDeep, isEqual, isNumber, isUndefined, omitBy, sumBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
 import { Model, ModelCtor } from "sequelize-typescript";

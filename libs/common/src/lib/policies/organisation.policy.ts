@@ -29,15 +29,19 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       this.builder.can("read", Organisation, { id: { $in: projectOrgIds } });
     }
 
+    const primaryOrg = await this.getPrimaryOrganisation();
+    if (primaryOrg != null) {
+      this.builder.can("delete", Organisation, {
+        id: primaryOrg.id,
+        status: DRAFT
+      });
+    }
+
     if (this.permissions.includes("manage-own")) {
       const primaryOrg = await this.getPrimaryOrganisation();
       if (primaryOrg != null) {
         this.builder.can(["update", "uploadFiles", "deleteFiles", "updateFiles"], Organisation, {
           id: primaryOrg.id
-        });
-        this.builder.can("delete", Organisation, {
-          id: primaryOrg.id,
-          status: DRAFT
         });
       }
 

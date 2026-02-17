@@ -44,9 +44,9 @@ describe("OrganisationPolicy", () => {
   });
 
   describe("users-manage permissions", () => {
-    it("allows creating organisations with users-manage permissions", async () => {
+    it("allows creating organisations for all authenticated users", async () => {
       mockUserId(123);
-      mockPermissions("users-manage");
+      mockPermissions();
       await expectCan(service, "create", Organisation);
     });
 
@@ -62,12 +62,6 @@ describe("OrganisationPolicy", () => {
       mockPermissions("users-manage");
       const org = await OrganisationFactory.create();
       await expectCan(service, "delete", org);
-    });
-
-    it("disallows creating organisations without users-manage permissions", async () => {
-      mockUserId(123);
-      mockPermissions();
-      await expectCannot(service, "create", Organisation);
     });
   });
 
@@ -172,6 +166,22 @@ describe("OrganisationPolicy", () => {
       await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "requested" });
       await expectCan(service, "update", primaryOrg);
       await expectCannot(service, "update", requestedOrg);
+    });
+
+    it("allows deleting draft organisations for user's primary org", async () => {
+      const draftOrg = await OrganisationFactory.create({ status: "draft" });
+      const user = await UserFactory.create({ organisationId: draftOrg.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCan(service, "delete", draftOrg);
+    });
+
+    it("disallows deleting non-draft organisations for user's primary org", async () => {
+      const pendingOrg = await OrganisationFactory.create({ status: "pending" });
+      const user = await UserFactory.create({ organisationId: pendingOrg.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCannot(service, "delete", pendingOrg);
     });
   });
 

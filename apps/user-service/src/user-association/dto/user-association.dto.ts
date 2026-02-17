@@ -25,4 +25,10 @@ export class UserAssociationDto {
 
   @ApiProperty()
   isManager: boolean;
+
+  @ApiProperty()
+  organisationName: string;
+
+  @ApiProperty()
+  roleName: string | null;
 }

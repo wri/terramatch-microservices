@@ -18,6 +18,8 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { keyBy } from "lodash";
 
 @Injectable()
 export class UserAssociationService {
@@ -47,15 +49,33 @@ export class UserAssociationService {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"]
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
     });
+    const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
+    const organisations = await Organisation.findAll({
+      where: { id: { [Op.in]: organisationIds } },
+      attributes: ["id", "name"]
+    });
+    const organisationMap = keyBy(
+      organisations.map(organisation => organisation.dataValues),
+      "id"
+    );
     users.forEach(user => {
       const projectUser = projectUsers.find(projectUser => projectUser.userId === user.id);
+      const organisation = organisationMap[user.organisationId as number];
       document.addData(
         user.uuid as string,
         new UserAssociationDto(user, {
           status: projectUser?.status as string,
-          isManager: projectUser?.isManaging as boolean
+          isManager: projectUser?.isManaging as boolean,
+          organisationName: organisation?.name as string,
+          roleName: user.primaryRole as string
         })
       );
     });

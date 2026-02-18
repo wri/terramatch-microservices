@@ -169,6 +169,8 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
 
     syncRelation: (...args) => syncTrackings(...args, logger),
 
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
     async clearRelations(model) {
       await TrackingEntry.tracking(Tracking.idsSubquery([model.id], laravelType(model))).destroy();
       await Tracking.for(model).destroy();

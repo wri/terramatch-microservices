@@ -134,6 +134,8 @@ export function financialIndicatorsCollector(
       }
     },
 
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
     async clearRelations(model) {
       const { isOrg, orgId } = orgInfo(model);
       const scope = isOrg ? FinancialIndicator.organisation(orgId) : FinancialIndicator.financialReport(model.id);

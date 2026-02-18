@@ -43,6 +43,8 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
 
     syncRelation: (...args) => ownershipStakeSync(...args, logger),
 
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
     async clearRelations(model) {
       if (!(model instanceof Organisation)) {
         throw new InternalServerErrorException("Only orgs are supported for ownership stake");

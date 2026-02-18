@@ -108,6 +108,8 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
       await FundingType.destroy({ where: { ...fundingTypeWhere, id: { [Op.notIn]: includedIds } } });
     },
 
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
     async clearRelations(model) {
       const { isOrg, orgUuid } = await orgInfo(model);
       const fundingTypeWhere: WhereAttributeHash<FundingType> = isOrg

@@ -7,7 +7,8 @@ import {
   SiteReport,
   Nursery,
   NurseryReport,
-  User
+  User,
+  Task
 } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 import { groupBy } from "lodash";
@@ -96,11 +97,11 @@ export class ActionsService {
       return [];
     }
 
-    const [reportActions, entityActions] = await Promise.all([
-      Action.withTargetableStatus(
-        [ProjectReport, SiteReport, NurseryReport],
-        ["needs-more-information", "due"]
-      ).findAll({
+    // Pending report statuses that should generate actions
+    const pendingReportStatuses = ["due", "started", "needs-more-information", "requires-more-information"];
+
+    const [reportActions, entityActions, additionalReportActions] = await Promise.all([
+      Action.withTargetableStatus([ProjectReport, SiteReport, NurseryReport], pendingReportStatuses).findAll({
         where: {
           status: "pending",
           projectId: { [Op.in]: projectIds }
@@ -115,10 +116,11 @@ export class ActionsService {
         },
         order: [["updatedAt", "DESC"]],
         limit: 10
-      })
+      }),
+      this.getAdditionalReportActions(projectIds, pendingReportStatuses)
     ]);
 
-    const allActions = [...reportActions, ...entityActions].sort(
+    const allActions = [...reportActions, ...entityActions, ...additionalReportActions].sort(
       (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
     );
 
@@ -141,6 +143,152 @@ export class ActionsService {
     }
 
     return await this.loadTargetablesAndCreateDtos(deduplicatedActions);
+  }
+
+  /**
+   * Gets actions for site and nursery reports that are pending but belong to tasks
+   * where the project report is no longer pending (already submitted/started).
+   * This ensures that when a project report is submitted, individual site/nursery
+   * reports still show up as actions.
+   */
+  private async getAdditionalReportActions(projectIds: number[], pendingReportStatuses: string[]): Promise<Action[]> {
+    // Find tasks that have project reports that are NOT in pending statuses
+    // (meaning they've been submitted/started)
+    const tasksWithNonPendingProjectReports = await Task.findAll({
+      where: {
+        projectId: { [Op.in]: projectIds }
+      },
+      include: [
+        {
+          association: "projectReport",
+          required: true,
+          where: {
+            status: { [Op.notIn]: pendingReportStatuses }
+          },
+          attributes: ["id", "taskId", "projectId", "status"]
+        }
+      ],
+      attributes: ["id", "projectId"]
+    });
+
+    if (tasksWithNonPendingProjectReports.length === 0) {
+      return [];
+    }
+
+    const taskIds = tasksWithNonPendingProjectReports.map(task => task.id);
+    const taskProjectMap = new Map<number, number | null>(
+      tasksWithNonPendingProjectReports.map(task => [task.id, task.projectId])
+    );
+
+    // Find site and nursery reports for these tasks that are in pending statuses
+    const [pendingSiteReports, pendingNurseryReports] = await Promise.all([
+      SiteReport.findAll({
+        where: {
+          taskId: { [Op.in]: taskIds },
+          status: { [Op.in]: pendingReportStatuses }
+        },
+        attributes: ["id", "taskId", "status"]
+      }),
+      NurseryReport.findAll({
+        where: {
+          taskId: { [Op.in]: taskIds },
+          status: { [Op.in]: pendingReportStatuses }
+        },
+        attributes: ["id", "taskId", "status"]
+      })
+    ]);
+
+    // Get existing actions for these reports to avoid duplicates
+    const existingActions = await Action.findAll({
+      where: {
+        [Op.or]: [
+          {
+            targetableType: SiteReport.LARAVEL_TYPE,
+            targetableId: { [Op.in]: pendingSiteReports.map(r => r.id) }
+          },
+          {
+            targetableType: NurseryReport.LARAVEL_TYPE,
+            targetableId: { [Op.in]: pendingNurseryReports.map(r => r.id) }
+          }
+        ],
+        status: "pending"
+      },
+      attributes: ["targetableType", "targetableId"]
+    });
+
+    const existingActionKeys = new Set(existingActions.map(a => `${a.targetableType}|${a.targetableId}`));
+
+    // Get project and organisation IDs for creating actions
+    // Use taskProjectMap to get projectId from taskId since SiteReport/NurseryReport don't have projectId directly
+    const projectIdsForReports = [
+      ...new Set([
+        ...pendingSiteReports.map(r => taskProjectMap.get(r.taskId)).filter((id): id is number => id != null),
+        ...pendingNurseryReports.map(r => taskProjectMap.get(r.taskId)).filter((id): id is number => id != null)
+      ])
+    ];
+
+    const projects = await Project.findAll({
+      where: { id: { [Op.in]: projectIdsForReports } },
+      attributes: ["id", "organisationId"]
+    });
+
+    const projectOrgMap = new Map(projects.map(p => [p.id, p.organisationId]));
+
+    // Create actions for reports that don't have them yet
+    const actionsToCreate: Array<{
+      targetableType: string;
+      targetableId: number;
+      projectId: number | null;
+      organisationId: number | null;
+    }> = [];
+
+    for (const siteReport of pendingSiteReports) {
+      const key = `${SiteReport.LARAVEL_TYPE}|${siteReport.id}`;
+      const projectId = taskProjectMap.get(siteReport.taskId);
+      if (!existingActionKeys.has(key) && projectId != null) {
+        actionsToCreate.push({
+          targetableType: SiteReport.LARAVEL_TYPE,
+          targetableId: siteReport.id,
+          projectId,
+          organisationId: projectOrgMap.get(projectId) ?? null
+        });
+      }
+    }
+
+    for (const nurseryReport of pendingNurseryReports) {
+      const key = `${NurseryReport.LARAVEL_TYPE}|${nurseryReport.id}`;
+      const projectId = taskProjectMap.get(nurseryReport.taskId);
+      if (!existingActionKeys.has(key) && projectId != null) {
+        actionsToCreate.push({
+          targetableType: NurseryReport.LARAVEL_TYPE,
+          targetableId: nurseryReport.id,
+          projectId,
+          organisationId: projectOrgMap.get(projectId) ?? null
+        });
+      }
+    }
+
+    if (actionsToCreate.length === 0) {
+      return [];
+    }
+
+    // Bulk create actions
+    const createdActions = await Action.bulkCreate(
+      actionsToCreate.map(
+        ({ targetableType, targetableId, projectId, organisationId }) =>
+          ({
+            status: "pending",
+            targetableType,
+            targetableId,
+            type: "notification",
+            projectId,
+            organisationId
+          } as Action)
+      ),
+      { returning: true }
+    );
+
+    return createdActions;
   }
 
   private async loadTargetablesAndCreateDtos(actions: Action[]): Promise<ActionWithTarget[]> {

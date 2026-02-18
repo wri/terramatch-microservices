@@ -12,7 +12,7 @@ import {
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { OrganisationDto, UserDto } from "@terramatch-microservices/common/dto";
+import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
@@ -23,7 +23,7 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
-  type: OrganisationDto,
+  type: OrganisationLightDto,
   meta: {
     userStatus: {
       type: "string",
@@ -36,7 +36,7 @@ const USER_RESPONSE_SHAPE = {
     type: UserDto,
     relationships: [USER_ORG_RELATIONSHIP]
   },
-  included: [OrganisationDto]
+  included: [OrganisationLightDto]
 };
 
 @Controller("users/v3/users")
@@ -113,7 +113,7 @@ export class UsersController {
 
     const org = await user.primaryOrganisation();
     if (org != null) {
-      const orgResource = document.addData(org.uuid, new OrganisationDto(org));
+      const orgResource = document.addData(org.uuid, new OrganisationLightDto(org));
       const userStatus = org.OrganisationUser?.status ?? "na";
       userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }

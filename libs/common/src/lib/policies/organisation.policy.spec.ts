@@ -2,7 +2,13 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { Organisation } from "@terramatch-microservices/database/entities";
-import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  OrganisationFactory,
+  OrganisationUserFactory,
+  ProjectFactory,
+  ProjectUserFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("OrganisationPolicy", () => {
@@ -20,31 +26,151 @@ describe("OrganisationPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows creating organisations with users-manage permissions", async () => {
-    mockUserId(123);
-    mockPermissions("users-manage");
-    await expectCan(service, "create", Organisation);
+  describe("framework permissions", () => {
+    it("allows reading, updating, and deleting organisations with framework permissions", async () => {
+      mockUserId(123);
+      mockPermissions("framework-ppc");
+      const org = await OrganisationFactory.create();
+      await expectCan(service, ["read", "update", "delete"], org);
+    });
+
+    it("disallows reading organisations without framework permissions", async () => {
+      mockUserId(123);
+      mockPermissions();
+      const org = await OrganisationFactory.create();
+      await expectCannot(service, "read", org);
+    });
   });
 
-  it("disallows creating organisations without users-manage permissions", async () => {
-    mockUserId(123);
-    mockPermissions();
-    await expectCannot(service, "create", Organisation);
+  describe("users-manage permissions", () => {
+    it("allows creating organisations with users-manage permissions", async () => {
+      mockUserId(123);
+      mockPermissions("users-manage");
+      await expectCan(service, "create", Organisation);
+    });
+
+    it("allows uploading, deleting, and updating files with users-manage permissions", async () => {
+      mockUserId(123);
+      mockPermissions("users-manage");
+      const org = await OrganisationFactory.create();
+      await expectCan(service, ["uploadFiles", "deleteFiles", "updateFiles"], org);
+    });
+
+    it("allows deleting organisations with users-manage permissions", async () => {
+      mockUserId(123);
+      mockPermissions("users-manage");
+      const org = await OrganisationFactory.create();
+      await expectCan(service, "delete", org);
+    });
+
+    it("disallows creating organisations without users-manage permissions", async () => {
+      mockUserId(123);
+      mockPermissions();
+      await expectCannot(service, "create", Organisation);
+    });
   });
 
-  it("allows uploading and deleting files to the user's org", async () => {
-    const org = await OrganisationFactory.create();
-    const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
-    mockPermissions("manage-own");
-    await expectCan(service, ["uploadFiles", "deleteFiles"], org);
+  describe("orgUuids read access", () => {
+    it("allows reading organisations via orgUuids", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCan(service, "read", org);
+    });
+
+    it("allows reading organisations via organisationsConfirmed", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
+      await expectCan(service, "read", org);
+    });
+
+    it("disallows reading organisations not in orgUuids", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create({ organisationId: orgs[0].id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCannot(service, "read", orgs[1]);
+    });
   });
 
-  it("disallows uploading and deleting files to other orgs", async () => {
-    const orgs = await OrganisationFactory.createMany(2);
-    const user = await UserFactory.create({ organisationId: orgs[0].id });
-    mockUserId(user.id);
-    mockPermissions("manage-own");
-    await expectCannot(service, ["uploadFiles", "deleteFiles"], orgs[1]);
+  describe("projectOrgIds read access", () => {
+    it("allows reading organisations via project organisationIds", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      const project = await ProjectFactory.create({ organisationId: org.id });
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
+      await expectCan(service, "read", org);
+    });
+
+    it("disallows reading organisations not associated with user's projects", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      const project = await ProjectFactory.create({ organisationId: orgs[0].id });
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
+      await expectCannot(service, "read", orgs[1]);
+    });
+  });
+
+  describe("manage-own permissions", () => {
+    it("allows uploading and deleting files to the user's org", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCan(service, ["uploadFiles", "deleteFiles"], org);
+    });
+
+    it("allows updating and updating files to the user's primary org", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCan(service, ["update", "updateFiles"], org);
+    });
+
+    it("disallows uploading and deleting files to other orgs", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create({ organisationId: orgs[0].id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await expectCannot(service, ["uploadFiles", "deleteFiles"], orgs[1]);
+    });
+
+    it("allows updating organisations via organisationsConfirmed", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
+      await expectCan(service, "update", org);
+    });
+
+    it("disallows updating organisations not in organisationsConfirmed", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await OrganisationUserFactory.create({ organisationId: orgs[0].id, userId: user.id, status: "approved" });
+      await expectCannot(service, "update", orgs[1]);
+    });
+
+    it("disallows updating organisations with requested status when user has primary org", async () => {
+      const primaryOrg = await OrganisationFactory.create();
+      const requestedOrg = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: primaryOrg.id });
+      mockUserId(user.id);
+      mockPermissions("manage-own");
+      await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "requested" });
+      await expectCan(service, "update", primaryOrg);
+      await expectCannot(service, "update", requestedOrg);
+    });
   });
 });

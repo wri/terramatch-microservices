@@ -535,11 +535,14 @@ export class ProjectProcessor extends EntityProcessor<
       attributes.treesGrownGoal = pitch.totalTrees;
       attributes.landTenureProjectArea = pitch.landTenureProjArea;
       attributes.projImpactBiodiv = pitch.biodiversityImpact;
-      // attributes.country = pitch.level0Proposed;
+      attributes.level0Project = pitch.level0Proposed;
       attributes.level1Project = pitch.level1Proposed;
       attributes.level2Project = pitch.level2Proposed;
       attributes.survivalRate = pitch.projSurvivalRate;
       attributes.communityEngagementPlan = pitch.landholderCommEngage;
+      // Fallback to organisation.consortium is temporary. The field will be migrated and removed
+      // from orgs in ZZ / AA releases.
+      attributes.consortium = pitch.consortium ?? organisation.consortium;
     }
 
     const project = await Project.create(attributes);

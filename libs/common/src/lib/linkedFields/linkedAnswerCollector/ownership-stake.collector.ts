@@ -41,6 +41,13 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
       answers[questionUuid] = stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
     },
 
-    syncRelation: (...args) => ownershipStakeSync(...args, logger)
+    syncRelation: (...args) => ownershipStakeSync(...args, logger),
+
+    async clearRelations(model) {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for ownership stake");
+      }
+      await OwnershipStake.destroy({ where: { organisationId: model.uuid } });
+    }
   };
 }

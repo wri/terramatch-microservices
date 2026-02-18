@@ -22,6 +22,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { NotAcceptableException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
+import { ConfigService } from "@nestjs/config";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
@@ -40,6 +41,7 @@ describe("NurseryProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

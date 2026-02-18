@@ -59,6 +59,8 @@ export interface RelationResourceCollector extends ResourceCollector<LinkedRelat
     answer: object[] | null | undefined,
     hidden: boolean
   ): Promise<void>;
+
+  clearRelations(model: FormModel): Promise<void>;
 }
 
 type CollectorType = Exclude<LinkedFieldResource, "demographics"> | "trackings";

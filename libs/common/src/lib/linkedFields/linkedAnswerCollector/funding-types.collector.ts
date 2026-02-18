@@ -4,9 +4,26 @@ import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { EmbeddedFundingTypeDto } from "../../dto/funding-type.dto";
 import { Op, WhereAttributeHash } from "sequelize";
+import { FormModel } from "@terramatch-microservices/database/constants/entities";
 
 export function fundingTypesCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
+
+  const orgInfo = async (model: FormModel) => {
+    const isOrg = model instanceof Organisation;
+    if (!isOrg && !(model instanceof FinancialReport)) {
+      throw new InternalServerErrorException("Only orgs and financialReports are supported for fundingTypes");
+    }
+
+    const orgUuid = isOrg
+      ? model.uuid
+      : (await Organisation.findOne({ where: { id: model.organisationId }, attributes: ["uuid"] }))?.uuid;
+    if (orgUuid == null) {
+      throw new InternalServerErrorException("Organisation not found for fundingTypes");
+    }
+
+    return { isOrg, orgUuid };
+  };
 
   return {
     addField(_, modelType, questionUuid) {
@@ -36,17 +53,7 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
     },
 
     async syncRelation(model, _, answer) {
-      const isOrg = model instanceof Organisation;
-      if (!isOrg && !(model instanceof FinancialReport)) {
-        throw new InternalServerErrorException("Only orgs and financialReports are supported for fundingTypes");
-      }
-
-      const orgUuid = isOrg
-        ? model.uuid
-        : (await Organisation.findOne({ where: { id: model.organisationId }, attributes: ["uuid"] }))?.uuid;
-      if (orgUuid == null) {
-        throw new InternalServerErrorException("Organisation not found for fundingTypes");
-      }
+      const { isOrg, orgUuid } = await orgInfo(model);
 
       const fundingTypeWhere: WhereAttributeHash<FundingType> = isOrg
         ? { organisationId: orgUuid, financialReportId: null }
@@ -99,6 +106,14 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
       );
 
       await FundingType.destroy({ where: { ...fundingTypeWhere, id: { [Op.notIn]: includedIds } } });
+    },
+
+    async clearRelations(model) {
+      const { isOrg, orgUuid } = await orgInfo(model);
+      const fundingTypeWhere: WhereAttributeHash<FundingType> = isOrg
+        ? { organisationId: orgUuid, financialReportId: null }
+        : { financialReportId: model.id };
+      await FundingType.destroy({ where: fundingTypeWhere });
     }
   };
 }

@@ -167,6 +167,11 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
       }
     },
 
-    syncRelation: (...args) => syncTrackings(...args, logger)
+    syncRelation: (...args) => syncTrackings(...args, logger),
+
+    async clearRelations(model) {
+      await TrackingEntry.tracking(Tracking.idsSubquery([model.id], laravelType(model))).destroy();
+      await Tracking.for(model).destroy();
+    }
   };
 };

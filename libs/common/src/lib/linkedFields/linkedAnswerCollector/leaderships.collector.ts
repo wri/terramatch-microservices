@@ -60,6 +60,13 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       }
     },
 
-    syncRelation: (...args) => leadershipsSync(...args, logger)
+    syncRelation: (...args) => leadershipsSync(...args, logger),
+
+    async clearRelations(model) {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for leaderships");
+      }
+      await Leadership.destroy({ where: { organisationId: model.id } });
+    }
   };
 }

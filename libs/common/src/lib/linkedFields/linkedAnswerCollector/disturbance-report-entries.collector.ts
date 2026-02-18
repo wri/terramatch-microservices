@@ -65,6 +65,13 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
       );
 
       await DisturbanceReportEntry.destroy({ where: { disturbanceReportId: model.id, id: { [Op.notIn]: entryIds } } });
+    },
+
+    async clearRelations(model) {
+      if (!(model instanceof DisturbanceReport)) {
+        throw new BadRequestException("disturbanceReportEntries is only supported on disturbanceReports");
+      }
+      await DisturbanceReportEntry.report(model.id).destroy();
     }
   };
 }

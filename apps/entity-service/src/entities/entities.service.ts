@@ -55,6 +55,8 @@ import { EntityCreateData } from "./dto/entity-create.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
+import { ConfigService } from "@nestjs/config";
+import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -121,12 +123,17 @@ export class EntitiesService {
   constructor(
     private readonly mediaService: MediaService,
     private readonly policyService: PolicyService,
-    private readonly localizationService: LocalizationService
+    private readonly localizationService: LocalizationService,
+    private readonly configService: ConfigService
   ) {}
 
   get userId() {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this.policyService.userId!;
+  }
+
+  get isProd() {
+    return this.configService.get<string>("DEPLOY_ENV") === "prod";
   }
 
   async getPermissions() {
@@ -255,5 +262,9 @@ export class EntitiesService {
       }),
       {}
     );
+  }
+
+  createLinkedAnswerCollector() {
+    return new LinkedAnswerCollector(this.mediaService);
   }
 }

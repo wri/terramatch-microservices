@@ -141,7 +141,9 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       attributes: ["firstName", "lastName"]
     };
 
-    this._queryBuilder = await this.entitiesService.buildQuery(Media, this.query, [userAssociations]);
+    const modelClass = this.query.sort?.direction != null ? Media.unscoped() : Media;
+
+    this._queryBuilder = await this.entitiesService.buildQuery(modelClass, this.query, [userAssociations]);
 
     let models: QueryModelType[];
     if (baseEntity instanceof Project) {
@@ -235,8 +237,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
-    if (this.query.direction != null) {
-      this._queryBuilder.order(["createdAt", this.query.direction]);
+    if (this.query.sort?.direction != null) {
+      this._queryBuilder.order(["createdAt", this.query.sort.direction]);
     }
     return this._queryBuilder;
   }

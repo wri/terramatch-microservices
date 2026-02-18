@@ -176,7 +176,9 @@ export class ActionsService {
     }
 
     const taskIds = tasksWithNonPendingProjectReports.map(task => task.id);
-    const taskProjectMap = new Map(tasksWithNonPendingProjectReports.map(task => [task.id, task.projectId]));
+    const taskProjectMap = new Map<number, number | null>(
+      tasksWithNonPendingProjectReports.map(task => [task.id, task.projectId])
+    );
 
     // Find site and nursery reports for these tasks that are in pending statuses
     const [pendingSiteReports, pendingNurseryReports] = await Promise.all([
@@ -185,14 +187,14 @@ export class ActionsService {
           taskId: { [Op.in]: taskIds },
           status: { [Op.in]: pendingReportStatuses }
         },
-        attributes: ["id", "taskId", "projectId", "status"]
+        attributes: ["id", "taskId", "status"]
       }),
       NurseryReport.findAll({
         where: {
           taskId: { [Op.in]: taskIds },
           status: { [Op.in]: pendingReportStatuses }
         },
-        attributes: ["id", "taskId", "projectId", "status"]
+        attributes: ["id", "taskId", "status"]
       })
     ]);
 
@@ -217,9 +219,13 @@ export class ActionsService {
     const existingActionKeys = new Set(existingActions.map(a => `${a.targetableType}|${a.targetableId}`));
 
     // Get project and organisation IDs for creating actions
+    // Use taskProjectMap to get projectId from taskId since SiteReport/NurseryReport don't have projectId directly
     const projectIdsForReports = [
-      ...new Set([...pendingSiteReports.map(r => r.projectId), ...pendingNurseryReports.map(r => r.projectId)])
-    ].filter((id): id is number => id != null);
+      ...new Set([
+        ...pendingSiteReports.map(r => taskProjectMap.get(r.taskId)).filter((id): id is number => id != null),
+        ...pendingNurseryReports.map(r => taskProjectMap.get(r.taskId)).filter((id): id is number => id != null)
+      ])
+    ];
 
     const projects = await Project.findAll({
       where: { id: { [Op.in]: projectIdsForReports } },
@@ -238,24 +244,26 @@ export class ActionsService {
 
     for (const siteReport of pendingSiteReports) {
       const key = `${SiteReport.LARAVEL_TYPE}|${siteReport.id}`;
-      if (!existingActionKeys.has(key) && siteReport.projectId != null) {
+      const projectId = taskProjectMap.get(siteReport.taskId);
+      if (!existingActionKeys.has(key) && projectId != null) {
         actionsToCreate.push({
           targetableType: SiteReport.LARAVEL_TYPE,
           targetableId: siteReport.id,
-          projectId: siteReport.projectId,
-          organisationId: projectOrgMap.get(siteReport.projectId) ?? null
+          projectId,
+          organisationId: projectOrgMap.get(projectId) ?? null
         });
       }
     }
 
     for (const nurseryReport of pendingNurseryReports) {
       const key = `${NurseryReport.LARAVEL_TYPE}|${nurseryReport.id}`;
-      if (!existingActionKeys.has(key) && nurseryReport.projectId != null) {
+      const projectId = taskProjectMap.get(nurseryReport.taskId);
+      if (!existingActionKeys.has(key) && projectId != null) {
         actionsToCreate.push({
           targetableType: NurseryReport.LARAVEL_TYPE,
           targetableId: nurseryReport.id,
-          projectId: nurseryReport.projectId,
-          organisationId: projectOrgMap.get(nurseryReport.projectId) ?? null
+          projectId,
+          organisationId: projectOrgMap.get(projectId) ?? null
         });
       }
     }

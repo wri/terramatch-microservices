@@ -36,4 +36,14 @@ export class OrganisationIndexQueryDto extends IndexQueryDto {
   })
   @TransformBooleanString()
   lightResource?: boolean;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description:
+      "Enable public listing mode: returns approved, non-private, non-test organisations. Forces status=approved."
+  })
+  @TransformBooleanString()
+  listing?: boolean;
 }

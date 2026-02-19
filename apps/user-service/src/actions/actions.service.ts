@@ -198,28 +198,31 @@ export class ActionsService {
       })
     ]);
 
-    // Get existing actions for these reports to avoid duplicates
-    const existingActions = await Action.findAll({
+    const pendingSiteReportIds = pendingSiteReports.map(r => r.id);
+    const pendingNurseryReportIds = pendingNurseryReports.map(r => r.id);
+    if (pendingSiteReportIds.length === 0 && pendingNurseryReportIds.length === 0) {
+      return [];
+    }
+
+    // Fetch full existing actions so we can return them (ensures nursery/site actions are included
+    // even when the main reportActions query is limited and would drop them)
+    const existingActionsFull = await Action.findAll({
       where: {
         [Op.or]: [
-          {
-            targetableType: SiteReport.LARAVEL_TYPE,
-            targetableId: { [Op.in]: pendingSiteReports.map(r => r.id) }
-          },
-          {
-            targetableType: NurseryReport.LARAVEL_TYPE,
-            targetableId: { [Op.in]: pendingNurseryReports.map(r => r.id) }
-          }
+          ...(pendingSiteReportIds.length > 0
+            ? [{ targetableType: SiteReport.LARAVEL_TYPE, targetableId: { [Op.in]: pendingSiteReportIds } }]
+            : []),
+          ...(pendingNurseryReportIds.length > 0
+            ? [{ targetableType: NurseryReport.LARAVEL_TYPE, targetableId: { [Op.in]: pendingNurseryReportIds } }]
+            : [])
         ],
         status: "pending"
-      },
-      attributes: ["targetableType", "targetableId"]
+      }
     });
 
-    const existingActionKeys = new Set(existingActions.map(a => `${a.targetableType}|${a.targetableId}`));
+    const existingActionKeys = new Set(existingActionsFull.map(a => `${a.targetableType}|${a.targetableId}`));
 
     // Get project and organisation IDs for creating actions
-    // Use taskProjectMap to get projectId from taskId since SiteReport/NurseryReport don't have projectId directly
     const projectIdsForReports = [
       ...new Set([
         ...pendingSiteReports.map(r => taskProjectMap.get(r.taskId)).filter((id): id is number => id != null),
@@ -234,7 +237,6 @@ export class ActionsService {
 
     const projectOrgMap = new Map(projects.map(p => [p.id, p.organisationId]));
 
-    // Create actions for reports that don't have them yet
     const actionsToCreate: Array<{
       targetableType: string;
       targetableId: number;
@@ -268,27 +270,26 @@ export class ActionsService {
       }
     }
 
-    if (actionsToCreate.length === 0) {
-      return [];
-    }
+    const createdActions =
+      actionsToCreate.length > 0
+        ? await Action.bulkCreate(
+            actionsToCreate.map(
+              ({ targetableType, targetableId, projectId, organisationId }) =>
+                ({
+                  status: "pending",
+                  targetableType,
+                  targetableId,
+                  type: "notification",
+                  projectId,
+                  organisationId
+                } as Action)
+            ),
+            { returning: true }
+          )
+        : [];
 
-    // Bulk create actions
-    const createdActions = await Action.bulkCreate(
-      actionsToCreate.map(
-        ({ targetableType, targetableId, projectId, organisationId }) =>
-          ({
-            status: "pending",
-            targetableType,
-            targetableId,
-            type: "notification",
-            projectId,
-            organisationId
-          } as Action)
-      ),
-      { returning: true }
-    );
-
-    return createdActions;
+    // Return both existing and newly created actions so the card stays until all report types are done
+    return [...existingActionsFull, ...createdActions];
   }
 
   private async loadTargetablesAndCreateDtos(actions: Action[]): Promise<ActionWithTarget[]> {

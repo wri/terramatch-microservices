@@ -346,7 +346,8 @@ export class EntityStatusUpdate extends EventProcessor {
       include: [
         { association: "projectReport", attributes },
         { association: "siteReports", attributes },
-        { association: "nurseryReports", attributes }
+        { association: "nurseryReports", attributes },
+        { association: "srpReports", attributes }
       ]
     });
     if (task == null) {
@@ -354,9 +355,12 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    const reports = flatten<ReportModel | null>([task.projectReport, task.siteReports, task.nurseryReports]).filter(
-      report => report != null
-    );
+    const reports = flatten<ReportModel | null>([
+      task.projectReport,
+      task.siteReports,
+      task.nurseryReports,
+      task.srpReports
+    ]).filter(report => report != null);
 
     const reportStatuses = uniq(reports.map(({ status }) => status));
     if (reportStatuses.length === 1 && reportStatuses[0] === APPROVED) {

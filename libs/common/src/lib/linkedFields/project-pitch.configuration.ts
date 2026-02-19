@@ -580,6 +580,11 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       label:
         "How did you arrive at the provided estimate of number of jobs created, direct and indirect beneficiaries?",
       inputType: "long-text"
+    },
+    "pro-pit-consortium": {
+      property: "consortium",
+      label: "Consortium description",
+      inputType: "long-text"
     }
   },
   fileCollections: {

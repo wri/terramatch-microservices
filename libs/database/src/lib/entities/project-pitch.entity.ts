@@ -518,4 +518,8 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   @AllowNull
   @Column(TEXT)
   jobsCreatedBeneficiariesDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  consortium: string | null;
 }

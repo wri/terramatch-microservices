@@ -45,13 +45,22 @@ export class ResetPasswordService {
       throw new BadRequestException("Provided token is invalid or expired");
     }
 
-    const user = await User.findOne({ where: { uuid: userGuid }, attributes: ["id", "uuid", "emailAddress"] });
+    const user = await User.findOne({
+      where: { uuid: userGuid },
+      attributes: ["id", "uuid", "emailAddress", "emailAddressVerifiedAt"]
+    });
     if (user == null) {
       throw new NotFoundException("User not found");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.update({ password: hashedPassword }, { where: { id: user.id } });
+
+    let updateBody: Partial<User> = { password: hashedPassword };
+    if (user.emailAddressVerifiedAt == null) {
+      updateBody.emailAddressVerifiedAt = new Date();
+    }
+
+    await User.update(updateBody, { where: { id: user.id } });
 
     return { email: user.emailAddress, uuid: user.uuid };
   }

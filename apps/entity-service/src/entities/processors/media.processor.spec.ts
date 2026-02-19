@@ -19,6 +19,7 @@ import { MediaProcessor } from "./media.processor";
 import { Media } from "@terramatch-microservices/database/entities";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { MediaQueryDto } from "../dto/media-query.dto";
+import { ConfigService } from "@nestjs/config";
 
 describe("MediaProcessor", () => {
   let processor: MediaProcessor;
@@ -56,6 +57,7 @@ describe("MediaProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

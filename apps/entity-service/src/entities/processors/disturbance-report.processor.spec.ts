@@ -17,6 +17,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("DisturbanceReportProcessor", () => {
   let processor: DisturbanceReportProcessor;
@@ -35,6 +36,7 @@ describe("DisturbanceReportProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

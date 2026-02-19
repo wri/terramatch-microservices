@@ -60,6 +60,15 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       }
     },
 
-    syncRelation: (...args) => leadershipsSync(...args, logger)
+    syncRelation: (...args) => leadershipsSync(...args, logger),
+
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
+    async clearRelations(model) {
+      if (!(model instanceof Organisation)) {
+        throw new InternalServerErrorException("Only orgs are supported for leaderships");
+      }
+      await Leadership.destroy({ where: { organisationId: model.id } });
+    }
   };
 }

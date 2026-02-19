@@ -7,12 +7,23 @@ import { CreationAttributes, Op } from "sequelize";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { MediaService } from "../../media/media.service";
 import { EmbeddedMediaDto } from "../../dto/media.dto";
+import { FormModel } from "@terramatch-microservices/database/constants/entities";
 
 export function financialIndicatorsCollector(
   logger: LoggerService,
   mediaService: MediaService
 ): RelationResourceCollector {
   const questions: Dictionary<string> = {};
+
+  const orgInfo = (model: FormModel) => {
+    const isOrg = model instanceof Organisation;
+    if (!isOrg && !(model instanceof FinancialReport)) {
+      throw new InternalServerErrorException("Only orgs and financialReports are supported for financialIndicators");
+    }
+
+    const orgId = isOrg ? model.id : model.organisationId;
+    return { isOrg, orgId };
+  };
 
   return {
     addField(_, modelType, questionUuid) {
@@ -62,13 +73,9 @@ export function financialIndicatorsCollector(
       });
     },
 
-    async syncRelation(model, _, answer) {
-      const isOrg = model instanceof Organisation;
-      if (!isOrg && !(model instanceof FinancialReport)) {
-        throw new InternalServerErrorException("Only orgs and financialReports are supported for financialIndicators");
-      }
-
-      const orgId = isOrg ? model.id : model.organisationId;
+    async syncRelation(formModel, _, answer) {
+      const { isOrg, orgId } = orgInfo(formModel);
+      const model = formModel as Organisation | FinancialReport;
       const scope = isOrg ? FinancialIndicator.organisation(orgId) : FinancialIndicator.financialReport(model.id);
       if (answer == null || answer.length === 0) {
         await scope.destroy();
@@ -125,6 +132,14 @@ export function financialIndicatorsCollector(
         model.currency = currency ?? model.currency;
         await model.save();
       }
+    },
+
+    // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+    /* istanbul ignore next */
+    async clearRelations(model) {
+      const { isOrg, orgId } = orgInfo(model);
+      const scope = isOrg ? FinancialIndicator.organisation(orgId) : FinancialIndicator.financialReport(model.id);
+      await scope.destroy();
     }
   };
 }

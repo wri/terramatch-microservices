@@ -59,6 +59,10 @@ export interface RelationResourceCollector extends ResourceCollector<LinkedRelat
     answer: object[] | null | undefined,
     hidden: boolean
   ): Promise<void>;
+
+  // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+  /* istanbul ignore next */
+  clearRelations(model: FormModel): Promise<void>;
 }
 
 type CollectorType = Exclude<LinkedFieldResource, "demographics"> | "trackings";

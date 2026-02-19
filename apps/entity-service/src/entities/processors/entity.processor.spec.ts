@@ -12,6 +12,7 @@ import { ActionFactory } from "@terramatch-microservices/database/factories/acti
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 describe("EntityProcessor", () => {
   let service: EntitiesService;
@@ -25,6 +26,7 @@ describe("EntityProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

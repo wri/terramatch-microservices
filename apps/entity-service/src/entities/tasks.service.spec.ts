@@ -31,6 +31,7 @@ import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microserv
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
+import { ConfigService } from "@nestjs/config";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -52,6 +53,7 @@ describe("TasksService", () => {
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService,
         TasksService
       ]

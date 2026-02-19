@@ -63,7 +63,8 @@ jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector",
           (): RelationResourceCollector => ({
             syncRelation: jest.fn(),
             addField: jest.fn(),
-            collect: jest.fn()
+            collect: jest.fn(),
+            clearRelations: jest.fn()
           })
         )
       );

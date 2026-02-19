@@ -360,7 +360,7 @@ export class EntityStatusUpdate extends EventProcessor {
       task.siteReports,
       task.nurseryReports,
       task.srpReports
-    ]).filter(report => report != null);
+    ]).filter(isNotNull);
 
     const reportStatuses = uniq(reports.map(({ status }) => status));
     if (reportStatuses.length === 1 && reportStatuses[0] === APPROVED) {
@@ -383,8 +383,8 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    // If there are no reports or update requests in needs-more-information, the only option left is that
-    // something is in awaiting-approval.
+    // At this point, there are no reports in due, started or needs-more-information, but they're
+    // not all approved, so at least one report is in awaiting-approval.
     await task.update({ status: AWAITING_APPROVAL });
   }
 }

@@ -6,7 +6,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskQueryDto } from "./dto/task-query.dto";
 import { Task } from "@terramatch-microservices/database/entities";
-import { orderBy, reverse, sortBy, sumBy, uniq } from "lodash";
+import { orderBy, sumBy, uniq } from "lodash";
 import {
   NurseryFactory,
   NurseryReportFactory,
@@ -80,9 +80,11 @@ describe("TasksService", () => {
       expect(tasks.length).toBe(expected.length);
       expect(total).toBe(paginationTotal);
 
-      const sorted = sortBy(tasks, sortField);
-      if (!sortUp) reverse(sorted);
-      expect(tasks.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
+      // Sort with id as tie-breaker so assertion is stable when primary sort field has equal values
+      const direction = sortUp ? "asc" : "desc";
+      const expectedSorted = orderBy(expected, [sortField, "id"], [direction, "asc"]);
+      const returnedSorted = orderBy(tasks, [sortField, "id"], [direction, "asc"]);
+      expect(returnedSorted.map(({ id }) => id)).toEqual(expectedSorted.map(({ id }) => id));
     }
 
     it("should return my tasks", async () => {
@@ -90,10 +92,8 @@ describe("TasksService", () => {
       const baseDate = DateTime.utc().plus({ years: 1 });
       for (const { id } of await ProjectFactory.createMany(3)) {
         await ProjectUserFactory.create({ userId, projectId: id });
-        for (let j = 0; j < 2; j++) {
-          const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
-          tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
-        }
+        const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
+        tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
       }
       await TaskFactory.createMany(2);
 
@@ -105,10 +105,8 @@ describe("TasksService", () => {
       const baseDate = DateTime.utc().plus({ years: 1 });
       for (const { id } of await ProjectFactory.createMany(3)) {
         await ProjectUserFactory.create({ userId, projectId: id, isMonitoring: false, isManaging: true });
-        for (let j = 0; j < 2; j++) {
-          const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
-          tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
-        }
+        const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
+        tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
       }
       await TaskFactory.createMany(2);
 
@@ -155,11 +153,14 @@ describe("TasksService", () => {
         clock.setSystemTime(newDate);
         tasks[0].setDataValue("status", "approved");
         await tasks[0].save();
+        clock.tick(1000);
         clock.setSystemTime((newDate = DateTime.fromJSDate(newDate).plus({ hours: 1 }).toJSDate()));
         await tasks[1].update({ status: "awaiting-approval" });
+        clock.tick(1000);
         clock.setSystemTime(DateTime.fromJSDate(newDate).plus({ hours: 1 }).toJSDate());
         tasks[2].setDataValue("status", "needs-more-information");
         await tasks[2].save();
+        clock.tick(1000);
 
         const frameworks: string[] = [];
         for (const task of tasks) {

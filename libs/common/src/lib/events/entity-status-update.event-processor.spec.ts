@@ -37,7 +37,6 @@ import {
   ReportStatus,
   STARTED
 } from "@terramatch-microservices/database/constants/status";
-import { InternalServerErrorException } from "@nestjs/common";
 import { mockUserId } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
@@ -204,14 +203,6 @@ describe("EntityStatusUpdate EventProcessor", () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringMatching("No task found for task id"));
     });
 
-    it("should NOOP if the task is DUE", async () => {
-      const task = await createOldTask();
-      const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: AWAITING_APPROVAL });
-      await createHandler(projectReport).handle();
-      await task.reload();
-      expect(task.updatedAt).toEqual(task.createdAt);
-    });
-
     it("should move task to approved if all reports are approved", async () => {
       const task = await createOldTask({ status: AWAITING_APPROVAL });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: APPROVED });
@@ -223,14 +214,13 @@ describe("EntityStatusUpdate EventProcessor", () => {
       expect(task.status).toBe(APPROVED);
     });
 
-    it("should throw if there is a report in a bad status", async () => {
+    it("should NOOP if there is a report in due or started", async () => {
       const task = await createOldTask({ status: AWAITING_APPROVAL });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: APPROVED });
-      const siteReport = await SiteReportFactory.create({ taskId: task.id, status: DUE });
-      await expect(createHandler(projectReport).handle()).rejects.toThrow(InternalServerErrorException);
-
-      await siteReport.update({ status: STARTED });
-      await expect(createHandler(projectReport).handle()).rejects.toThrow(InternalServerErrorException);
+      await SiteReportFactory.create({ taskId: task.id, status: DUE });
+      await createHandler(projectReport).handle();
+      await task.reload();
+      expect(task.updatedAt).toEqual(task.createdAt);
     });
 
     it("should move to needs-more-information if a report is in that status", async () => {
@@ -251,7 +241,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should move the task to awaiting-approval when all reports are in awaiting-approval", async () => {
-      const task = await createOldTask({ status: NEEDS_MORE_INFORMATION });
+      const task = await createOldTask({ status: DUE });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: AWAITING_APPROVAL });
       await SiteReportFactory.create({ taskId: task.id, status: AWAITING_APPROVAL });
       await NurseryReportFactory.create({
@@ -309,7 +299,8 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("sends status update email and checks status", async () => {
-      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL });
+      const { id: taskId } = await TaskFactory.create({ status: AWAITING_APPROVAL });
+      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL, taskId });
       const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
         status: NEEDS_MORE_INFORMATION
       });

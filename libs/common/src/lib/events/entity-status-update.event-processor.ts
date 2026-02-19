@@ -39,7 +39,6 @@ import {
   STARTED,
   STATUS_DISPLAY_STRINGS
 } from "@terramatch-microservices/database/constants/status";
-import { InternalServerErrorException } from "@nestjs/common";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
@@ -335,8 +334,7 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    const modelWithTaskId = model as ReportModel & { taskId: number | null };
-    const { taskId } = modelWithTaskId;
+    const { taskId } = model as { taskId: number | null };
     if (taskId == null) {
       this.logger.warn(`No task found for status changed report [${model.constructor.name}, ${model.id}]`);
       return;
@@ -356,11 +354,6 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    if (task.status === DUE) {
-      // No further processing needed; nothing automatic happens until the task has been submitted.
-      return;
-    }
-
     const reports = flatten<ReportModel | null>([task.projectReport, task.siteReports, task.nurseryReports]).filter(
       report => report != null
     );
@@ -372,7 +365,7 @@ export class EntityStatusUpdate extends EventProcessor {
     }
 
     if (reportStatuses.includes(DUE) || reportStatuses.includes(STARTED)) {
-      throw new InternalServerErrorException(`Task has unsubmitted reports [${taskId}]`);
+      return; // NOOP
     }
 
     const moreInfoReport = reports.find(

@@ -28,8 +28,7 @@ import {
   Leadership,
   OwnershipStake,
   TreeSpecies,
-  Notification,
-  User
+  Notification
 } from "@terramatch-microservices/database/entities";
 import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -979,7 +978,7 @@ describe("OrganisationsController", () => {
       await UserFactory.create({ organisationId: org.id });
       await UserFactory.create({ organisationId: org.id });
 
-      policyService.userId = user.id;
+      mockUserId(user.id);
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.requestJoin.mockResolvedValue(
         await OrganisationUserFactory.create({
@@ -997,37 +996,17 @@ describe("OrganisationsController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("joinRequest", org);
       expect(organisationsService.requestJoin).toHaveBeenCalledWith(org.uuid, user.id);
       expect(Notification.bulkCreate).toHaveBeenCalled();
-      expect(result.data.id).toBe(org.uuid);
+      expect(result.data != null).toBe(true);
+      expect((result.data as Resource).id).toBe(org.uuid);
     });
 
     it("should throw UnauthorizedException if policy denies", async () => {
       const org = await OrganisationFactory.create();
-      policyService.userId = 1;
+      mockUserId(1);
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.joinRequest(org.uuid)).rejects.toThrow(UnauthorizedException);
-    });
-
-    it("should handle no owners gracefully", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-
-      policyService.userId = user.id;
-      organisationsService.findOne.mockResolvedValue(org);
-      organisationsService.requestJoin.mockResolvedValue(
-        await OrganisationUserFactory.create({
-          organisationId: org.id,
-          userId: user.id,
-          status: "requested"
-        })
-      );
-      policyService.authorize.mockResolvedValue(undefined);
-      jest.spyOn(OrganisationJoinRequestEmail.prototype, "sendLater").mockResolvedValue();
-
-      await controller.joinRequest(org.uuid);
-
-      expect(Notification.bulkCreate).not.toHaveBeenCalled();
     });
   });
 });

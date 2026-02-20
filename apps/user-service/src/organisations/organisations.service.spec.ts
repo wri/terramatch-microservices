@@ -10,7 +10,7 @@ import {
   ProjectFactory,
   OrganisationUserFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, OrganisationUser, User } from "@terramatch-microservices/database/entities";
+import { Organisation } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";

@@ -22,7 +22,10 @@ import {
   Form,
   FormQuestion,
   FormSubmission,
+  NurseryReport,
   ProjectPitch,
+  ProjectReport,
+  SiteReport,
   Task,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -268,7 +271,10 @@ export class EntityStatusUpdate extends EventProcessor {
   private async updateActions() {
     this.logger.log(`Updating actions [${JSON.stringify({ model: this.model.constructor.name, id: this.model.id })}]`);
     const entity = this.model as EntityModel;
-    await Action.for(entity).destroy({ where: { type: "notification" } });
+
+    if (await this.canActionBeDeleted()) {
+      await Action.for(entity).destroy({ where: { type: "notification" } });
+    }
 
     if (entity.status !== AWAITING_APPROVAL) {
       const action = new Action();
@@ -389,5 +395,46 @@ export class EntityStatusUpdate extends EventProcessor {
     // If there are no reports or update requests in needs-more-information, the only option left is that
     // something is in awaiting-approval.
     await task.update({ status: AWAITING_APPROVAL });
+  }
+
+  private async canActionBeDeleted() {
+    if (
+      this.model instanceof ProjectReport ||
+      this.model instanceof SiteReport ||
+      this.model instanceof NurseryReport
+    ) {
+      if (this.model.taskId == null) {
+        this.logger.error(`No taskId found for report [${this.model.constructor.name}, ${this.model.id}]`);
+        return false;
+      }
+      const task = await Task.findOne({
+        where: { id: this.model.taskId },
+        include: [
+          {
+            association: "projectReport",
+            attributes: ["id", "status"],
+            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+          },
+          {
+            association: "siteReports",
+            attributes: ["id", "status"],
+            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+          },
+          {
+            association: "nurseryReports",
+            attributes: ["id", "status"],
+            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+          }
+        ]
+      });
+      if (task == null) {
+        this.logger.error(`No task found for report [${this.model.constructor.name}, ${this.model.id}]`);
+        return false;
+      }
+      if (task.projectReport == null && task.siteReports?.length === 0 && task.nurseryReports?.length === 0) {
+        return false;
+      }
+    }
+    return true;
   }
 }

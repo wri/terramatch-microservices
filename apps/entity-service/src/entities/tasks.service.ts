@@ -7,7 +7,8 @@ import {
   TreeSpecies,
   User,
   AuditStatus,
-  NurseryReport
+  NurseryReport,
+  Action
 } from "@terramatch-microservices/database/entities";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { TaskFullDto } from "./dto/task.dto";
@@ -162,6 +163,7 @@ export class TasksService {
       }
 
       report.status = AWAITING_APPROVAL;
+      await Action.destroy({ where: { targetableType: laravelType(report), targetableId: report.id } });
       await report.save();
     }
 

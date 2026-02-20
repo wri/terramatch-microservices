@@ -4,10 +4,15 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import { faker } from "@faker-js/faker";
-import { OrganisationFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import {
+  OrganisationFactory,
+  UserFactory,
+  ProjectFactory,
+  OrganisationUserFactory
+} from "@terramatch-microservices/database/factories";
 import { Organisation } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 
@@ -190,6 +195,50 @@ describe("OrganisationsService", () => {
 
       const deleted = await Organisation.findByPk(orgId);
       expect(deleted).toBeNull();
+    });
+  });
+
+  describe("requestJoin", () => {
+    it("should create new join request", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      const result = await service.requestJoin(org.uuid, user.id);
+
+      expect(result.status).toBe("requested");
+      expect(result.organisationId).toBe(org.id);
+      expect(result.userId).toBe(user.id);
+    });
+
+    it("should update existing relationship to requested", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const existing = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "approved"
+      });
+      mockUserId(user.id);
+
+      const result = await service.requestJoin(org.uuid, user.id);
+
+      expect(result.status).toBe("requested");
+      expect(result.id).toBe(existing.id);
+    });
+
+    it("should throw UnauthorizedException if user not found", async () => {
+      const org = await OrganisationFactory.create();
+      mockUserId(999);
+
+      await expect(service.requestJoin(org.uuid, 999)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw NotFoundException if organisation not found", async () => {
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+
+      await expect(service.requestJoin("non-existent-uuid", user.id)).rejects.toThrow(NotFoundException);
     });
   });
 });

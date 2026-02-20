@@ -265,4 +265,28 @@ describe("OrganisationPolicy", () => {
       await expectCan(service, "approveReject", org);
     });
   });
+
+  describe("joinRequest", () => {
+    it("allows joinRequest for regular users", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCan(service, "joinRequest", org);
+    });
+
+    it("denies joinRequest for greenhouse-service-account", async () => {
+      const org = await OrganisationFactory.create();
+      const serviceRole = await RoleFactory.create({ name: "greenhouse-service-account" });
+      const user = await UserFactory.create();
+      await ModelHasRole.create({
+        modelId: user.id,
+        roleId: serviceRole.id,
+        modelType: User.LARAVEL_TYPE
+      } as ModelHasRole);
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCannot(service, "joinRequest", org);
+    });
+  });
 });

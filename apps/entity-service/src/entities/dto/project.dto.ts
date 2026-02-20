@@ -122,7 +122,10 @@ export class ProjectApplicationDto {
 export class ProjectFullDto extends ProjectLightDto {
   constructor(
     project: Project,
-    props: HybridSupportProps<ProjectFullDto, Omit<Project, "application" | "feedback" | "feedbackFields">>
+    props: HybridSupportProps<
+      ProjectFullDto,
+      Omit<Project, "application" | "feedback" | "feedbackFields" | "totalHectaresRestoredGoal" | "treesGrownGoal">
+    >
   ) {
     super();
     populateDto<ProjectFullDto, Project>(this, project, { lightResource: false, ...props });

@@ -280,6 +280,8 @@ export class ProjectProcessor extends EntityProcessor<
 
       application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
+      ...(await this.getRestorationGoals(project)),
+
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(project).findAll(),
         Project.MEDIA,
@@ -291,6 +293,33 @@ export class ProjectProcessor extends EntityProcessor<
     await this.entitiesService.removeHiddenValues(project, dto);
 
     return { id: project.uuid, dto };
+  }
+
+  protected async getRestorationGoals(project: Project) {
+    const trackings = await Tracking.for(project)
+      .domain("restoration")
+      .type(["hectares-goal", "trees-goal"])
+      .collection("all")
+      .findAll({
+        include: [{ association: "entries" }]
+      });
+    const hectares = trackings.find(({ type }) => type === "hectares-goal");
+    const totalHectaresRestoredGoal = sumBy(
+      (hectares?.entries ?? []).filter(({ type }) => type === "years"),
+      "amount"
+    );
+
+    const trees = trackings.find(({ type }) => type === "trees-goal");
+    // trees grown goal is a bit more complicated: it's the sum of years + anr + direct seeding.
+    const treesGrownGoal = sumBy(
+      (trees?.entries ?? []).filter(
+        ({ type, subtype }) =>
+          type === "years" || (type === "strategy" && ["anr", "direct-seeding"].includes(subtype ?? ""))
+      ),
+      "amount"
+    );
+
+    return { totalHectaresRestoredGoal, treesGrownGoal };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

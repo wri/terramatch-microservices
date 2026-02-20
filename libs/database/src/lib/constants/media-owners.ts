@@ -92,6 +92,21 @@ export const MIME_TYPES = Object.entries(MIME_TYPE_ABBREVIATIONS).reduce(
 );
 export type MimeType = keyof typeof MIME_TYPE_ABBREVIATIONS;
 
+// Media owners que deben contarse en la Project Gallery (All Images / Sources)
+export const PROJECT_GALLERY_MEDIA_OWNER_TYPES = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+] as const satisfies readonly MediaOwnerType[];
+
+export type ProjectGalleryMediaOwnerType = (typeof PROJECT_GALLERY_MEDIA_OWNER_TYPES)[number];
+
+export const isProjectGalleryMediaOwner = (type: MediaOwnerType | undefined): type is ProjectGalleryMediaOwnerType =>
+  type != null && PROJECT_GALLERY_MEDIA_OWNER_TYPES.includes(type as ProjectGalleryMediaOwnerType);
+
 export const FILE_VALIDATION: {
   VALIDATION_RULES: Record<ValidationKey, string>;
   VALIDATION_FILE_TYPES: Record<ValidationKey, "media" | "documents">;
@@ -178,6 +193,14 @@ export const sizeValidation = (validation: ValidationKey) => {
 
 export const isMediaOwner = (type: string): type is MediaOwnerType =>
   MEDIA_OWNER_TYPES.includes(type as MediaOwnerType);
+
+/** Resolves media owner's short type (e.g. "sites") from Laravel modelType for DTO. */
+export const entityTypeFromLaravel = (laravelType: string): MediaOwnerType | undefined => {
+  const entry = Object.entries(MEDIA_OWNER_MODELS).find(
+    ([, modelClass]) => (modelClass as { LARAVEL_TYPE: string }).LARAVEL_TYPE === laravelType
+  );
+  return entry?.[0] as MediaOwnerType | undefined;
+};
 
 export const mediaConfiguration = (mediaOwner: MediaOwnerType, collection: string) =>
   Object.values(MEDIA_OWNER_MODELS[mediaOwner]?.MEDIA ?? {}).find(({ dbCollection }) => dbCollection === collection);

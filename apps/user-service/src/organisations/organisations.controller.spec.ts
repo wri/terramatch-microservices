@@ -17,7 +17,8 @@ import {
   MediaFactory,
   UserFactory,
   LeadershipFactory,
-  OwnershipStakeFactory
+  OwnershipStakeFactory,
+  OrganisationUserFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Organisation,
@@ -26,11 +27,14 @@ import {
   Media,
   Leadership,
   OwnershipStake,
-  TreeSpecies
+  TreeSpecies,
+  Notification,
+  User
 } from "@terramatch-microservices/database/entities";
 import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -965,6 +969,65 @@ describe("OrganisationsController", () => {
       const result = serialize(await controller.index({ lightResource: true }));
 
       expect(result.data).toHaveLength(2);
+    });
+  });
+
+  describe("joinRequest", () => {
+    it("should create join request and notify owners", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await UserFactory.create({ organisationId: org.id });
+      await UserFactory.create({ organisationId: org.id });
+
+      policyService.userId = user.id;
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.requestJoin.mockResolvedValue(
+        await OrganisationUserFactory.create({
+          organisationId: org.id,
+          userId: user.id,
+          status: "requested"
+        })
+      );
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(OrganisationJoinRequestEmail.prototype, "sendLater").mockResolvedValue();
+
+      const result = serialize(await controller.joinRequest(org.uuid));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("joinRequest", org);
+      expect(organisationsService.requestJoin).toHaveBeenCalledWith(org.uuid, user.id);
+      expect(Notification.bulkCreate).toHaveBeenCalled();
+      expect(result.data.id).toBe(org.uuid);
+    });
+
+    it("should throw UnauthorizedException if policy denies", async () => {
+      const org = await OrganisationFactory.create();
+      policyService.userId = 1;
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.joinRequest(org.uuid)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should handle no owners gracefully", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+
+      policyService.userId = user.id;
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.requestJoin.mockResolvedValue(
+        await OrganisationUserFactory.create({
+          organisationId: org.id,
+          userId: user.id,
+          status: "requested"
+        })
+      );
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(OrganisationJoinRequestEmail.prototype, "sendLater").mockResolvedValue();
+
+      await controller.joinRequest(org.uuid);
+
+      expect(Notification.bulkCreate).not.toHaveBeenCalled();
     });
   });
 });

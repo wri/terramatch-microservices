@@ -168,7 +168,8 @@ export class ActionsService {
           attributes: ["id", "taskId", "projectId", "status"]
         }
       ],
-      attributes: ["id", "projectId"]
+      attributes: ["id", "projectId"],
+      limit: 10
     });
 
     if (tasksWithNonPendingProjectReports.length === 0) {

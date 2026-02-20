@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Scope } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Scope, UnauthorizedException } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Organisation, OrganisationUser, User } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
@@ -135,5 +135,37 @@ export class OrganisationsService {
     await OrganisationUser.destroy({ where: { organisationId: organisation.id } });
 
     await organisation.destroy();
+  }
+
+  async requestJoin(organisationUuid: string, userId: number): Promise<OrganisationUser> {
+    const organisation = await this.findOne(organisationUuid);
+
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id"]
+    });
+
+    if (user == null) {
+      throw new UnauthorizedException("Authenticated user not found");
+    }
+
+    const [orgUser, created] = await OrganisationUser.findOrCreate({
+      where: {
+        organisationId: organisation.id,
+        userId: userId
+      },
+      defaults: {
+        organisationId: organisation.id,
+        userId: userId,
+        status: "requested"
+      } as OrganisationUser
+    });
+
+    if (!created && orgUser.status !== "requested") {
+      orgUser.status = "requested";
+      await orgUser.save();
+    }
+
+    return orgUser;
   }
 }

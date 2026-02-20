@@ -35,6 +35,7 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       this.builder.can("read", Organisation, { id: { $in: projectOrgIds } });
     }
 
+    this.builder.can("joinRequest", Organisation);
     const primaryOrg = await this.getPrimaryOrganisation();
     if (primaryOrg != null) {
       this.builder.can("delete", Organisation, {
@@ -57,6 +58,17 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
         if (confirmedOrgIds.length > 0) {
           this.builder.can("update", Organisation, { id: { $in: confirmedOrgIds } });
         }
+      }
+    }
+
+    const user = await User.findOne({
+      where: { id: this.userId },
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    if (user != null) {
+      const roleNames = user.roles?.map(role => role.name) ?? [];
+      if (roleNames.includes("greenhouse-service-account")) {
+        this.builder.cannot("joinRequest", Organisation);
       }
     }
   }

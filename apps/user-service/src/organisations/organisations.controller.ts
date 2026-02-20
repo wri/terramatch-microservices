@@ -37,7 +37,9 @@ import {
   FundingType,
   Leadership,
   OwnershipStake,
-  TreeSpecies
+  TreeSpecies,
+  Notification,
+  User
 } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
@@ -53,6 +55,7 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
+import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -341,6 +344,55 @@ export class OrganisationsController {
     await this.policyService.authorize("delete", organisation);
     await this.organisationsService.delete(organisation);
     return buildDeletedResponse(getDtoType(OrganisationFullDto), organisation.uuid);
+  }
+
+  @Post(":uuid/join-request")
+  @ApiOperation({
+    operationId: "organisationJoinRequest",
+    summary: "Request to join an existing organisation"
+  })
+  @JsonApiResponse({ data: OrganisationLightDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "User not authorized to request joining organisations."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
+  async joinRequest(@Param("uuid") uuid: string) {
+    const userId = this.policyService.userId as number;
+    const organisation = await this.organisationsService.findOne(uuid);
+
+    await this.policyService.authorize("joinRequest", organisation);
+
+    await this.organisationsService.requestJoin(uuid, userId);
+
+    const owners = await User.findAll({
+      where: { organisationId: organisation.id },
+      attributes: ["id"]
+    });
+
+    if (owners.length > 0) {
+      await Notification.bulkCreate(
+        owners.map(owner => ({
+          userId: owner.id,
+          title: "A user has requested to join your organization",
+          body: "A user has requested to join your organization. Please go to the 'Meet the Team' page to review this request.",
+          action: "user_join_organisation_requested",
+          referencedModel: Organisation.LARAVEL_TYPE,
+          referencedModelId: organisation.id
+        }))
+      );
+    }
+
+    try {
+      await new OrganisationJoinRequestEmail({
+        organisationId: organisation.id,
+        requestingUserId: userId
+      }).sendLater(this.emailQueue);
+    } catch (error) {
+      this.logger.error(`Failed to queue organisation join request email for organisation ${organisation.id}`, error);
+    }
+
+    return buildJsonApi(OrganisationLightDto).addData(organisation.uuid, new OrganisationLightDto(organisation));
   }
 
   @Post()

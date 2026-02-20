@@ -3,7 +3,6 @@ import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-r
 import { EntityQueryDto } from "./entities/dto/entity-query.dto";
 import {
   Audit,
-  AuditStatus,
   Form,
   FormQuestion,
   FormSection,
@@ -14,7 +13,6 @@ import {
   Organisation,
   Project,
   ProjectPitch,
-  SrpReport,
   Task,
   Tracking,
   TrackingEntry,
@@ -38,7 +36,6 @@ import {
   isEqual,
   isNumber,
   isUndefined,
-  keyBy,
   omitBy,
   sumBy,
   uniq
@@ -118,53 +115,6 @@ bootstrapRepl("Entity Service", AppModule, {
         `\nTasks updated: [approved=${approved.length}, needs-more-information=${moreInfo.length}, awaiting-approval=${awaitingApproval.length}]`
       );
     }),
-
-    addMissingAuditStatuses: async () => {
-      const auditStatuses = (
-        await AuditStatus.findAll({
-          where: {
-            auditableType: SrpReport.LARAVEL_TYPE,
-            updatedAt: {
-              [Op.eq]: literal(`(
-              SELECT MAX(a2.updated_at)
-              FROM audit_statuses a2
-              WHERE a2.auditable_id = AuditStatus.auditable_id
-                AND a2.auditable_type = '${SrpReport.LARAVEL_TYPE.replaceAll("\\", "\\\\")}'
-            )`)
-            }
-          },
-          attributes: ["id", "status", "auditableId", "updatedAt"]
-        })
-      ).map(auditStatusObject => auditStatusObject.dataValues);
-      const srps = (
-        await SrpReport.findAll({
-          attributes: ["id", "status"],
-          where: {
-            id: auditStatuses.map(({ auditableId }) => auditableId)
-          }
-        })
-      ).map(srpObject => srpObject.dataValues);
-      const srpsById = keyBy(srps, "id");
-      let createdCount = 0;
-      for (const auditStatus of auditStatuses) {
-        const srp = srpsById[auditStatus.auditableId];
-        if (srp == null) continue;
-        if (srp.status !== auditStatus.status) {
-          await AuditStatus.create({
-            type: "status",
-            status: srp.status,
-            auditableType: SrpReport.LARAVEL_TYPE,
-            auditableId: auditStatus.auditableId,
-            createdAt: srp.updatedAt,
-            updatedAt: srp.updatedAt,
-            createdBy: "system"
-          });
-          createdCount++;
-        }
-      }
-      console.log("Finished adding missing audit statuses.");
-      console.log(`Created ${createdCount} audit statuses.`);
-    },
 
     migrateRestorationData: withoutSqlLogs(async () => {
       await processRestorationModel("Organisations", Organisation, ORGS_RESTORATION);

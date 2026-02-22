@@ -23,11 +23,23 @@ type Mutable<T> = {
 };
 
 // Recommendations for optimal pricing from AWs
-const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, { cpu: number; memoryLimitMiB: number }>> = {
+const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, ApplicationLoadBalancedFargateServiceProps>> = {
   "research-service": {
     prod: {
       cpu: 1024,
       memoryLimitMiB: 2048
+    }
+  },
+  "entity-service": {
+    prod: {
+      cpu: 512,
+      memoryLimitMiB: 1024,
+      desiredCount: 2
+    },
+    staging: {
+      cpu: 512,
+      memoryLimitMiB: 1024,
+      desiredCount: 2
     }
   }
 };

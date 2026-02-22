@@ -208,6 +208,13 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
         }
       },
 
-      syncRelation: (...args) => syncRelation(...args, logger)
+      syncRelation: (...args) => syncRelation(...args, logger),
+
+      async clearRelations(model) {
+        const where = { [typeAttribute]: laravelType(model), [idAttribute]: model.id } as WhereAttributeHash<
+          Attributes<M>
+        >;
+        await modelClass.destroy({ where });
+      }
     };
   };

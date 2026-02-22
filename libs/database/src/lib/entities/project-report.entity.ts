@@ -636,8 +636,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(INTEGER.UNSIGNED)
   oldId: number | null;
 
-  @AllowNull
-  @Column(BOOLEAN)
+  @Column({ type: BOOLEAN, defaultValue: false })
   siteAddition: boolean;
 
   @Column({ type: TEXT, defaultValue: "" })

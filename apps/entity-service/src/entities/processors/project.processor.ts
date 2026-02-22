@@ -76,14 +76,14 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "proposedNumNurseries",
   "projBoundary",
   "proposedGovPartners",
-  "proposedNumNurseries",
   "states",
   "waterSource",
   "baselineBiodiversity",
   "goalTreesRestoredPlanting",
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
-  "directSeedingSurvivalRate"
+  "directSeedingSurvivalRate",
+  "landownerAgreement"
 ];
 
 export class ProjectProcessor extends EntityProcessor<
@@ -535,6 +535,14 @@ export class ProjectProcessor extends EntityProcessor<
       attributes.treesGrownGoal = pitch.totalTrees;
       attributes.landTenureProjectArea = pitch.landTenureProjArea;
       attributes.projImpactBiodiv = pitch.biodiversityImpact;
+      attributes.level0Project = pitch.level0Proposed;
+      attributes.level1Project = pitch.level1Proposed;
+      attributes.level2Project = pitch.level2Proposed;
+      attributes.survivalRate = pitch.projSurvivalRate;
+      attributes.communityEngagementPlan = pitch.landholderCommEngage;
+      // Fallback to organisation.consortium is temporary. The field will be migrated and removed
+      // from orgs in ZZ / AA releases.
+      attributes.consortium = pitch.consortium ?? organisation.consortium;
     }
 
     const project = await Project.create(attributes);
@@ -590,7 +598,7 @@ export class ProjectProcessor extends EntityProcessor<
       if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
-        .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
+        .collection(["detailed_project_budget", "proof_of_land_tenure_mou", "consortium_partnership_agreements"])
         .findAll();
       await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
     }

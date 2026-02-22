@@ -1,7 +1,7 @@
 import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
 import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
 import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
@@ -13,6 +13,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
+import { ConfigService } from "@nestjs/config";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -33,6 +34,15 @@ describe("EntitiesService", () => {
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        {
+          provide: ConfigService,
+          useValue: createMock<ConfigService>({
+            get: (key: string): PartialFuncReturn<unknown> => {
+              if (key === "DEPLOY_ENV") return "prod";
+              return "";
+            }
+          })
+        },
         EntitiesService
       ]
     }).compile();
@@ -46,6 +56,12 @@ describe("EntitiesService", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("isProd", () => {
+    it("returns true for prod", () => {
+      expect(service.isProd).toBe(true);
+    });
   });
 
   describe("createProcessor", () => {

@@ -42,7 +42,6 @@ import {
   STARTED,
   STATUS_DISPLAY_STRINGS
 } from "@terramatch-microservices/database/constants/status";
-import { InternalServerErrorException } from "@nestjs/common";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
 import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
@@ -341,8 +340,7 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    const modelWithTaskId = model as ReportModel & { taskId: number | null };
-    const { taskId } = modelWithTaskId;
+    const { taskId } = model as { taskId: number | null };
     if (taskId == null) {
       this.logger.warn(`No task found for status changed report [${model.constructor.name}, ${model.id}]`);
       return;
@@ -354,7 +352,8 @@ export class EntityStatusUpdate extends EventProcessor {
       include: [
         { association: "projectReport", attributes },
         { association: "siteReports", attributes },
-        { association: "nurseryReports", attributes }
+        { association: "nurseryReports", attributes },
+        { association: "srpReports", attributes }
       ]
     });
     if (task == null) {
@@ -362,14 +361,12 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    if (task.status === DUE) {
-      // No further processing needed; nothing automatic happens until the task has been submitted.
-      return;
-    }
-
-    const reports = flatten<ReportModel | null>([task.projectReport, task.siteReports, task.nurseryReports]).filter(
-      report => report != null
-    );
+    const reports = flatten<ReportModel | null>([
+      task.projectReport,
+      task.siteReports,
+      task.nurseryReports,
+      task.srpReports
+    ]).filter(isNotNull);
 
     const reportStatuses = uniq(reports.map(({ status }) => status));
     if (reportStatuses.length === 1 && reportStatuses[0] === APPROVED) {
@@ -378,7 +375,7 @@ export class EntityStatusUpdate extends EventProcessor {
     }
 
     if (reportStatuses.includes(DUE) || reportStatuses.includes(STARTED)) {
-      throw new InternalServerErrorException(`Task has unsubmitted reports [${taskId}]`);
+      return; // NOOP
     }
 
     const moreInfoReport = reports.find(
@@ -392,8 +389,8 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    // If there are no reports or update requests in needs-more-information, the only option left is that
-    // something is in awaiting-approval.
+    // At this point, there are no reports in due, started or needs-more-information, but they're
+    // not all approved, so at least one report is in awaiting-approval.
     await task.update({ status: AWAITING_APPROVAL });
   }
 

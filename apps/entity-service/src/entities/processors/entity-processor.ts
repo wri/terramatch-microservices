@@ -13,8 +13,11 @@ import {
   AWAITING_APPROVAL,
   NEEDS_MORE_INFORMATION
 } from "@terramatch-microservices/database/constants/status";
-import { ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
+import { Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
+import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
+import { uniq } from "lodash";
+import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -216,6 +219,15 @@ export abstract class ReportProcessor<
   CreateDto extends EntityCreateAttributes = EntityCreateAttributes
 > extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto, CreateDto> {
   async update(model: ModelType, update: UpdateDto) {
+    // This is a testing utility available in lower environments only and is not covered by unit tests.
+    /* istanbul ignore next */
+    if (update.status === "due") {
+      // special case for reports - in lower envs, we allow a "reset" of a report, setting it back
+      // to a pristine state for testing.
+      await this.resetReport(model);
+      return;
+    }
+
     if (update.nothingToReport != null) {
       if (model instanceof ProjectReport) {
         throw new BadRequestException("ProjectReport does not support nothingToReport");
@@ -252,4 +264,49 @@ export abstract class ReportProcessor<
       return { [Op.or]: [null, false] };
     }
   };
+
+  // This is a testing utility available in lower environments only and is not covered by unit tests.
+  /* istanbul ignore next */
+  protected async resetReport(model: ModelType) {
+    if (this.entitiesService.isProd) {
+      throw new BadRequestException("Cannot reset a report in production");
+    }
+
+    await UpdateRequest.for(model).destroy();
+
+    // @ts-expect-error the typing on setDataValue() makes this expression "not callable"
+    model.setDataValue("status", "due"); // circumvent the status state machine
+    model.submittedAt = null;
+    model.completion = 0;
+    if (!(model instanceof ProjectReport)) model.nothingToReport = null;
+    model.approvedBy = null;
+    model.updateRequestStatus = null;
+    model.answers = null;
+    model.feedback = null;
+    model.feedbackFields = null;
+
+    // go through all the form fields and clear associations / properties that match.
+    const linkedFields = LinkedFieldsConfiguration[this.resource];
+    const resources = Object.values(linkedFields.relations).map(({ resource }) => resource);
+    const collector = this.entitiesService.createLinkedAnswerCollector();
+    const attributes = (model.constructor as ModelCtor).getAttributes();
+
+    for (const field of Object.values(linkedFields.fields)) {
+      if (isPropertyField(field)) {
+        if (attributes[field.property] == null) continue;
+        model[field.property] = attributes[field.property].defaultValue ?? null;
+      } else if (field.virtual.type === "demographicsAggregate" || field.virtual.type === "demographicsDescription") {
+        resources.push("demographics");
+      }
+    }
+    await model.save();
+
+    if (Object.keys(linkedFields.fileCollections).length > 0) {
+      await Media.for(model).destroy();
+    }
+
+    for (const resource of uniq(resources)) {
+      await collector[resource].clearRelations(model);
+    }
+  }
 }

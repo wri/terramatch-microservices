@@ -3,14 +3,15 @@ import { JsonApiDto } from "../decorators";
 import { ApiProperty } from "@nestjs/swagger";
 import { populateDto } from "./json-api-attributes";
 import { Organisation } from "@terramatch-microservices/database/entities";
-import { HybridSupportProps } from "./hybrid-support.dto";
+import { HybridSupportDto, HybridSupportProps } from "./hybrid-support.dto";
 
 const STATUSES = ["draft", "pending", "approved", "rejected"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "organisations" })
-export class OrganisationLightDto {
+export class OrganisationLightDto extends HybridSupportDto {
   constructor(org?: Organisation, props?: HybridSupportProps<OrganisationLightDto, Organisation>) {
+    super();
     if (org != null) {
       const mergedProps = props != null ? { lightResource: true, ...props } : { lightResource: true };
       populateDto<OrganisationLightDto, Organisation>(this, org, mergedProps);

@@ -428,6 +428,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   shortName: string | null;
 
   @AllowNull
+  @JsonColumn({ field: "level_0_project" })
+  level0Project: string[] | null;
+
+  @AllowNull
   @JsonColumn({ field: "level_1_project" })
   level1Project: string[] | null;
 

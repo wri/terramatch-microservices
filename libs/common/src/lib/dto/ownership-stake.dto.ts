@@ -1,11 +1,17 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, OmitType } from "@nestjs/swagger";
 import { OwnershipStake } from "@terramatch-microservices/database/entities";
 import { populateDto } from "./json-api-attributes";
+import { AssociationDto } from "./association.dto";
+import { JsonApiDto } from "../decorators";
+import { HybridSupportProps } from "./hybrid-support.dto";
 
-// TODO most of these fields will migrate to a full response DTO when we need one.
-export class EmbeddedOwnershipStakeDto {
-  constructor(ownershipStake: OwnershipStake) {
-    populateDto<EmbeddedOwnershipStakeDto>(this, ownershipStake);
+@JsonApiDto({ type: "ownershipStakes" })
+export class OwnershipStakeDto extends AssociationDto {
+  constructor(ownershipStake?: OwnershipStake, props?: HybridSupportProps<OwnershipStakeDto, OwnershipStake>) {
+    super();
+    if (ownershipStake != null && props != null) {
+      populateDto<OwnershipStakeDto, OwnershipStake>(this, ownershipStake, props);
+    }
   }
 
   @ApiProperty()
@@ -31,4 +37,11 @@ export class EmbeddedOwnershipStakeDto {
 
   @ApiProperty()
   yearOfBirth: number;
+}
+
+export class EmbeddedOwnershipStakeDto extends OmitType(OwnershipStakeDto, ["entityType", "entityUuid"]) {
+  constructor(ownershipStake: OwnershipStake) {
+    super();
+    populateDto<EmbeddedOwnershipStakeDto>(this, ownershipStake);
+  }
 }

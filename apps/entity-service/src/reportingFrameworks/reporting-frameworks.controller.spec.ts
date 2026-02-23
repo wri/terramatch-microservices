@@ -195,6 +195,30 @@ describe("ReportingFrameworksController", () => {
       expect(callArgs[0]).toHaveProperty("resourceType", "reportingFrameworks");
       expect(callArgs[0]).toHaveProperty("options.forceDataArray", true);
     });
+
+    it("should handle error when findAll throws", async () => {
+      const error = new Error("Database error");
+      reportingFrameworksService.findAll.mockRejectedValue(error);
+
+      await expect(controller.index({})).rejects.toThrow("Database error");
+      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).not.toHaveBeenCalled();
+    });
+
+    it("should handle error when addDtos throws", async () => {
+      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+      createdFrameworkIds.push(...frameworks.map(f => f.id));
+
+      reportingFrameworksService.findAll.mockResolvedValue(frameworks);
+      policyService.authorize.mockResolvedValue(undefined);
+      const error = new Error("Serialization error");
+      reportingFrameworksService.addDtos.mockRejectedValue(error);
+
+      await expect(controller.index({})).rejects.toThrow("Serialization error");
+      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("read", frameworks);
+      expect(reportingFrameworksService.addDtos).toHaveBeenCalled();
+    });
   });
 
   describe("get", () => {
@@ -374,30 +398,6 @@ describe("ReportingFrameworksController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       const data = result.data as unknown as { id: string; attributes: { slug: string; totalProjectsCount: number } };
       expect(data.attributes.totalProjectsCount).toBe(0);
-    });
-
-    it("should handle error when findAll throws", async () => {
-      const error = new Error("Database error");
-      reportingFrameworksService.findAll.mockRejectedValue(error);
-
-      await expect(controller.index({})).rejects.toThrow("Database error");
-      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
-      expect(policyService.authorize).not.toHaveBeenCalled();
-    });
-
-    it("should handle error when addDtos throws", async () => {
-      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
-      createdFrameworkIds.push(...frameworks.map(f => f.id));
-
-      reportingFrameworksService.findAll.mockResolvedValue(frameworks);
-      policyService.authorize.mockResolvedValue(undefined);
-      const error = new Error("Serialization error");
-      reportingFrameworksService.addDtos.mockRejectedValue(error);
-
-      await expect(controller.index({})).rejects.toThrow("Serialization error");
-      expect(reportingFrameworksService.findAll).toHaveBeenCalled();
-      expect(policyService.authorize).toHaveBeenCalledWith("read", frameworks);
-      expect(reportingFrameworksService.addDtos).toHaveBeenCalled();
     });
 
     it("should handle error when addDto throws", async () => {

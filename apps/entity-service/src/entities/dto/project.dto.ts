@@ -291,6 +291,9 @@ export class ProjectFullDto extends ProjectLightDto {
   goalTreesRestoredAnr: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
+  seedsGrownGoal: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
 
   @ApiProperty({ nullable: true, type: ProjectApplicationDto })

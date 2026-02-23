@@ -5,7 +5,6 @@ import { AssociationDto } from "./association.dto";
 import { JsonApiDto } from "../decorators";
 import { HybridSupportProps } from "./hybrid-support.dto";
 
-// TODO most of these fields will migrate to a full response DTO when we need one.
 @JsonApiDto({ type: "leaderships" })
 export class LeadershipDto extends AssociationDto {
   constructor(leadership?: Leadership, props?: HybridSupportProps<LeadershipDto, Leadership>) {

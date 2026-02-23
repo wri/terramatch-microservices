@@ -16,6 +16,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("SrpReportProcessor", () => {
   let processor: SrpReportProcessor;
@@ -34,6 +35,7 @@ describe("SrpReportProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

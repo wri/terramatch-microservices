@@ -68,7 +68,7 @@ export class Task extends Model<Task> {
   @BelongsTo(() => Project, { constraints: false })
   project: Project | null;
 
-  get projectUuid() {
+  get projectUuid(): string {
     return this.project?.uuid ?? "";
   }
 

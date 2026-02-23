@@ -34,6 +34,13 @@ import { serialize, mockUserId } from "@terramatch-microservices/common/util/tes
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
+import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
+import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -121,6 +128,21 @@ describe("OrganisationsController", () => {
       await controller.index({});
 
       expect(organisationsService.findMany).toHaveBeenCalledWith({});
+    });
+
+    it("uses listing authorization when view=public", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      organisationsService.findMany.mockResolvedValue({
+        organisations: orgs,
+        paginationTotal: 2
+      });
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const result = serialize(await controller.index({ view: "public" }));
+
+      expect(organisationsService.findMany).toHaveBeenCalledWith({ view: "public" });
+      expect(policyService.authorize).toHaveBeenCalledWith("listing", orgs);
+      expect(result.data).toHaveLength(2);
     });
   });
 
@@ -226,6 +248,47 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("financialCollection")) {
+          const financialIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
+          if (financialIndicators.length > 0) {
+            const mediaCollection = await Media.for(financialIndicators).findAll({
+              where: { collectionName: "documentation" }
+            });
+
+            const mediaByIndicatorId = mediaCollection.reduce((acc, media) => {
+              if (acc[media.modelId] == null) {
+                acc[media.modelId] = [];
+              }
+              acc[media.modelId].push(media);
+              return acc;
+            }, {} as Record<number, Media[]>);
+
+            for (const indicator of financialIndicators) {
+              const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];
+              const mediaDtos =
+                indicatorMedia.length > 0
+                  ? indicatorMedia.map(
+                      media =>
+                        new EmbeddedMediaDto(media, {
+                          url: mediaService.getUrl(media),
+                          thumbUrl: mediaService.getUrl(media, "thumbnail")
+                        })
+                    )
+                  : null;
+
+              const indicatorDto = new FinancialIndicatorDto(indicator, {
+                entityType: "financialIndicators" as const,
+                entityUuid: indicator.uuid,
+                documentation: mediaDtos
+              });
+              Object.assign(indicatorDto, { organisationUuid: organisation.uuid });
+              document.addData(indicator.uuid, indicatorDto);
+            }
+          }
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([financialIndicator1, financialIndicator2]);
       const organisationSpy = jest.spyOn(FinancialIndicator, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -243,6 +306,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["financialCollection"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(FinancialIndicator.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
       expect(Media.for).toHaveBeenCalledWith([financialIndicator1, financialIndicator2]);
@@ -266,12 +330,12 @@ describe("OrganisationsController", () => {
     it("should not include financial indicators when sideloads is not provided", async () => {
       const org = await OrganisationFactory.create();
       organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.processSideloads.mockResolvedValue(undefined);
       policyService.authorize.mockResolvedValue(undefined);
-
-      jest.restoreAllMocks();
 
       const result = serialize(await controller.show(org.uuid, {}));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe(org.uuid);
       const included = result.included ?? [];
@@ -283,6 +347,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("financialCollection")) {
+          await FinancialIndicator.organisation(organisation.id).findAll();
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const organisationSpy = jest.spyOn(FinancialIndicator, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -290,6 +360,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["financialCollection"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(FinancialIndicator.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -308,6 +379,22 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("financialReport")) {
+          const financialReports = await FinancialReport.organisation(organisation.id).findAll();
+          if (financialReports.length > 0) {
+            for (const report of financialReports) {
+              const dto = new FinancialReportLightDto(report, {
+                entityType: "financialReports" as const,
+                entityUuid: report.uuid
+              });
+              dto.organisationUuid = organisation.uuid;
+              document.addData(report.uuid, dto);
+            }
+          }
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([financialReport1, financialReport2]);
       const organisationSpy = jest.spyOn(FinancialReport, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -315,6 +402,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["financialReport"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(FinancialReport.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
 
@@ -332,6 +420,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("financialReport")) {
+          await FinancialReport.organisation(organisation.id).findAll();
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const organisationSpy = jest.spyOn(FinancialReport, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -339,6 +433,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["financialReport"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(FinancialReport.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -364,6 +459,25 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("media")) {
+          const allMedia = await Media.for(organisation).findAll();
+          if (allMedia.length > 0) {
+            for (const media of allMedia) {
+              document.addData(
+                media.uuid,
+                new MediaDto(media, {
+                  entityType: "organisations" as const,
+                  entityUuid: organisation.uuid,
+                  url: mediaService.getUrl(media),
+                  thumbUrl: mediaService.getUrl(media, "thumbnail")
+                })
+              );
+            }
+          }
+        }
+      });
+
       const mockMediaFindAll = jest.fn().mockResolvedValue([coverMedia, logoMedia, additionalMedia]);
       const mediaForSpy = jest.spyOn(Media, "for").mockReturnValue({
         findAll: mockMediaFindAll
@@ -376,6 +490,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["media"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(Media.for).toHaveBeenCalledWith(org);
       expect(mockMediaFindAll).toHaveBeenCalledWith();
       expect(mediaService.getUrl).toHaveBeenCalledTimes(6); // 3 media × 2 calls (url + thumbUrl)
@@ -395,6 +510,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("media")) {
+          await Media.for(organisation).findAll();
+        }
+      });
+
       const mockMediaFindAll = jest.fn().mockResolvedValue([]);
       const mediaForSpy = jest.spyOn(Media, "for").mockReturnValue({
         findAll: mockMediaFindAll
@@ -402,6 +523,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["media"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(Media.for).toHaveBeenCalledWith(org);
       expect(mockMediaFindAll).toHaveBeenCalledWith();
       expect(result.data).toBeDefined();
@@ -424,6 +546,23 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("leadership")) {
+          const leaderships = await Leadership.organisation(organisation.id).findAll();
+          if (leaderships.length > 0) {
+            for (const leadership of leaderships) {
+              document.addData(
+                leadership.uuid,
+                new LeadershipDto(leadership, {
+                  entityType: "organisations" as const,
+                  entityUuid: organisation.uuid
+                })
+              );
+            }
+          }
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([leadership1, leadership2]);
       const organisationSpy = jest.spyOn(Leadership, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -431,6 +570,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["leadership"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
 
@@ -448,6 +588,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("leadership")) {
+          await Leadership.organisation(organisation.id).findAll();
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const organisationSpy = jest.spyOn(Leadership, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -455,6 +601,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["leadership"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(Leadership.organisation).toHaveBeenCalledWith(org.id);
       expect(mockFindAll).toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -473,6 +620,23 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("ownershipStakes")) {
+          const ownershipStakes = await OwnershipStake.organisation(organisation.uuid).findAll();
+          if (ownershipStakes.length > 0) {
+            for (const ownershipStake of ownershipStakes) {
+              document.addData(
+                ownershipStake.uuid,
+                new OwnershipStakeDto(ownershipStake, {
+                  entityType: "organisations" as const,
+                  entityUuid: organisation.uuid
+                })
+              );
+            }
+          }
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([stake1, stake2]);
       const organisationSpy = jest.spyOn(OwnershipStake, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -480,6 +644,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["ownershipStakes"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(OwnershipStake.organisation).toHaveBeenCalledWith(org.uuid);
       expect(mockFindAll).toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -500,6 +665,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("ownershipStakes")) {
+          await OwnershipStake.organisation(organisation.uuid).findAll();
+        }
+      });
+
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const organisationSpy = jest.spyOn(OwnershipStake, "organisation").mockReturnValue({
         findAll: mockFindAll
@@ -507,6 +678,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["ownershipStakes"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(OwnershipStake.organisation).toHaveBeenCalledWith(org.uuid);
       expect(mockFindAll).toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -537,6 +709,23 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("treeSpeciesHistorical")) {
+          const treeSpecies = await TreeSpecies.for(organisation).collection("historical-tree-species").findAll();
+          if (treeSpecies.length > 0) {
+            for (const species of treeSpecies) {
+              document.addData(
+                species.uuid,
+                new TreeSpeciesDto(species, {
+                  entityType: "organisations" as const,
+                  entityUuid: organisation.uuid
+                })
+              );
+            }
+          }
+        }
+      });
+
       const mockFor = jest.fn().mockReturnValue({
         collection: jest.fn().mockReturnValue({
           findAll: jest.fn().mockResolvedValue([species1, species2])
@@ -546,6 +735,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["treeSpeciesHistorical"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(TreeSpecies.for).toHaveBeenCalledWith(org);
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe(org.uuid);
@@ -565,6 +755,12 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
 
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("treeSpeciesHistorical")) {
+          await TreeSpecies.for(organisation).collection("historical-tree-species").findAll();
+        }
+      });
+
       const mockFor = jest.fn().mockReturnValue({
         collection: jest.fn().mockReturnValue({
           findAll: jest.fn().mockResolvedValue([])
@@ -574,6 +770,7 @@ describe("OrganisationsController", () => {
 
       const result = serialize(await controller.show(org.uuid, { sideloads: ["treeSpeciesHistorical"] }));
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(TreeSpecies.for).toHaveBeenCalledWith(org);
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe(org.uuid);
@@ -610,6 +807,87 @@ describe("OrganisationsController", () => {
 
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockResolvedValue(undefined);
+
+      organisationsService.processSideloads.mockImplementation(async (document, organisation, query) => {
+        if (query.sideloads?.includes("financialCollection")) {
+          const financialIndicators = await FinancialIndicator.organisation(organisation.id).findAll();
+          if (financialIndicators.length > 0) {
+            await Media.for(financialIndicators).findAll({
+              where: { collectionName: "documentation" }
+            });
+            for (const indicator of financialIndicators) {
+              const indicatorDto = new FinancialIndicatorDto(indicator, {
+                entityType: "financialIndicators" as const,
+                entityUuid: indicator.uuid,
+                documentation: null
+              });
+              Object.assign(indicatorDto, { organisationUuid: organisation.uuid });
+              document.addData(indicator.uuid, indicatorDto);
+            }
+          }
+        }
+        if (query.sideloads?.includes("financialReport")) {
+          const financialReports = await FinancialReport.organisation(organisation.id).findAll();
+          for (const report of financialReports) {
+            const dto = new FinancialReportLightDto(report, {
+              entityType: "financialReports" as const,
+              entityUuid: report.uuid
+            });
+            dto.organisationUuid = organisation.uuid;
+            document.addData(report.uuid, dto);
+          }
+        }
+        if (query.sideloads?.includes("media")) {
+          const allMedia = await Media.for(organisation).findAll();
+          for (const media of allMedia) {
+            document.addData(
+              media.uuid,
+              new MediaDto(media, {
+                entityType: "organisations" as const,
+                entityUuid: organisation.uuid,
+                url: mediaService.getUrl(media),
+                thumbUrl: mediaService.getUrl(media, "thumbnail")
+              })
+            );
+          }
+        }
+        if (query.sideloads?.includes("leadership")) {
+          const leaderships = await Leadership.organisation(organisation.id).findAll();
+          for (const leadership of leaderships) {
+            document.addData(
+              leadership.uuid,
+              new LeadershipDto(leadership, {
+                entityType: "organisations" as const,
+                entityUuid: organisation.uuid
+              })
+            );
+          }
+        }
+        if (query.sideloads?.includes("ownershipStakes")) {
+          const ownershipStakes = await OwnershipStake.organisation(organisation.uuid).findAll();
+          for (const stake of ownershipStakes) {
+            document.addData(
+              stake.uuid,
+              new OwnershipStakeDto(stake, {
+                entityType: "organisations" as const,
+                entityUuid: organisation.uuid
+              })
+            );
+          }
+        }
+        if (query.sideloads?.includes("treeSpeciesHistorical")) {
+          const treeSpecies = await TreeSpecies.for(organisation).collection("historical-tree-species").findAll();
+          for (const species of treeSpecies) {
+            document.addData(
+              species.uuid,
+              new TreeSpeciesDto(species, {
+                entityType: "organisations" as const,
+                entityUuid: organisation.uuid
+              })
+            );
+          }
+        }
+      });
 
       const mockIndicatorFindAll = jest.fn().mockResolvedValue([financialIndicator]);
       const indicatorSpy = jest.spyOn(FinancialIndicator, "organisation").mockReturnValue({
@@ -661,6 +939,7 @@ describe("OrganisationsController", () => {
         })
       );
 
+      expect(organisationsService.processSideloads).toHaveBeenCalled();
       expect(FinancialIndicator.organisation).toHaveBeenCalledWith(org.id);
       expect(FinancialReport.organisation).toHaveBeenCalledWith(org.id);
       expect(Media.for).toHaveBeenCalledTimes(2);

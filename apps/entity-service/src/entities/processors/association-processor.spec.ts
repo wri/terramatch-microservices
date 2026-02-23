@@ -19,6 +19,7 @@ import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("AssociationProcessor", () => {
   let service: EntitiesService;
@@ -29,6 +30,7 @@ describe("AssociationProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

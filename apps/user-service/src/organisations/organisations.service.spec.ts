@@ -1,36 +1,46 @@
 import { OrganisationsService } from "./organisations.service";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
-import { REQUEST } from "@nestjs/core";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
+import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { faker } from "@faker-js/faker";
 import {
   OrganisationFactory,
   UserFactory,
   ProjectFactory,
-  OrganisationUserFactory
+  OrganisationUserFactory,
+  FinancialIndicatorFactory,
+  FinancialReportFactory,
+  MediaFactory,
+  LeadershipFactory,
+  OwnershipStakeFactory,
+  FundingTypeFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation } from "@terramatch-microservices/database/entities";
+import { Organisation, Media, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { OrganisationFullDto } from "@terramatch-microservices/common/dto";
 
 describe("OrganisationsService", () => {
   let service: OrganisationsService;
   let policyService: DeepMocked<PolicyService>;
+  let mediaService: DeepMocked<MediaService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         OrganisationsService,
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: getQueueToken("email"), useValue: {} },
-        { provide: REQUEST, useValue: {} }
+        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: getQueueToken("email"), useValue: {} }
       ]
     }).compile();
 
-    service = await module.resolve(OrganisationsService);
+    service = module.get(OrganisationsService);
   });
 
   afterEach(() => {
@@ -102,6 +112,20 @@ describe("OrganisationsService", () => {
       policyService.getPermissions.mockResolvedValue(["framework-test"]);
       const result = await service.findMany({ hqCountry: country });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("should return public organisations when view=public", async () => {
+      await OrganisationFactory.create({
+        status: "approved",
+        private: false,
+        isTest: false,
+        name: "Public Org"
+      });
+      mockUserId(999);
+      policyService.getPermissions.mockResolvedValue([]);
+      const result = await service.findMany({ view: "public" });
+      expect(result.organisations.length).toBeGreaterThanOrEqual(1);
+      expect(result.organisations.every(o => o.status === "approved" && !o.private && !o.isTest)).toBe(true);
     });
 
     it("should sort by valid field", async () => {
@@ -239,6 +263,171 @@ describe("OrganisationsService", () => {
       mockUserId(user.id);
 
       await expect(service.requestJoin("non-existent-uuid", user.id)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("processSideloads", () => {
+    it("should return early if no sideloads provided", async () => {
+      const org = await OrganisationFactory.create();
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = {};
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included).toHaveLength(0);
+    });
+
+    it("should process financialCollection sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const indicator = await FinancialIndicatorFactory.org(org).create();
+      await MediaFactory.financialIndicator(indicator).create({
+        collectionName: "documentation"
+      });
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["financialCollection"] };
+
+      mediaService.getUrl.mockImplementation((m: Media, variant?: string) => {
+        const suffix = variant != null && variant !== "" ? `-${variant}` : "";
+        return `https://example.com/media/${m.id}${suffix}`;
+      });
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const indicatorResource = document.included.find(r => r.id === indicator.uuid);
+      expect(indicatorResource).toBeDefined();
+    });
+
+    it("should process financialReport sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const report = await FinancialReportFactory.org(org).create();
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["financialReport"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const reportResource = document.included.find(r => r.id === report.uuid);
+      expect(reportResource).toBeDefined();
+    });
+
+    it("should process media sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const media = await MediaFactory.org(org).create({ collectionName: "cover" });
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["media"] };
+
+      mediaService.getUrl.mockImplementation((m: Media, variant?: string) => {
+        const suffix = variant != null && variant !== "" ? `-${variant}` : "";
+        return `https://example.com/media/${m.id}${suffix}`;
+      });
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const mediaResource = document.included.find(r => r.id === media.uuid);
+      expect(mediaResource).toBeDefined();
+    });
+
+    it("should process fundingTypes sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const fundingType = await FundingTypeFactory.org(org).create();
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["fundingTypes"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const fundingTypeResource = document.included.find(r => r.id === fundingType.uuid);
+      expect(fundingTypeResource).toBeDefined();
+    });
+
+    it("should process leadership sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const leadership = await LeadershipFactory.org(org).create({
+        collection: "leadership-team"
+      });
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["leadership"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const leadershipResource = document.included.find(r => r.id === leadership.uuid);
+      expect(leadershipResource).toBeDefined();
+    });
+
+    it("should process ownershipStakes sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const stake = await OwnershipStakeFactory.org(org).create();
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["ownershipStakes"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const stakeResource = document.included.find(r => r.id === stake.uuid);
+      expect(stakeResource).toBeDefined();
+    });
+
+    it("should process treeSpeciesHistorical sideload", async () => {
+      const org = await OrganisationFactory.create();
+      const species = await TreeSpecies.create({
+        speciesableType: Organisation.LARAVEL_TYPE,
+        speciesableId: org.id,
+        collection: "historical-tree-species",
+        name: "Oak",
+        hidden: false
+      });
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["treeSpeciesHistorical"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      const speciesResource = document.included.find(r => r.id === species.uuid);
+      expect(speciesResource).toBeDefined();
+    });
+
+    it("should handle empty sideloads gracefully", async () => {
+      const org = await OrganisationFactory.create();
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = { sideloads: ["financialCollection", "media"] };
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included).toHaveLength(0);
+    });
+
+    it("should process multiple sideloads together", async () => {
+      const org = await OrganisationFactory.create();
+      const indicator = await FinancialIndicatorFactory.org(org).create();
+      const report = await FinancialReportFactory.org(org).create();
+      const media = await MediaFactory.org(org).create({ collectionName: "cover" });
+
+      const document = buildJsonApi(OrganisationFullDto);
+      const query: OrganisationShowQueryDto = {
+        sideloads: ["financialCollection", "financialReport", "media"]
+      };
+
+      mediaService.getUrl.mockImplementation((m: Media, variant?: string) => {
+        const suffix = variant != null && variant !== "" ? `-${variant}` : "";
+        return `https://example.com/media/${m.id}${suffix}`;
+      });
+
+      await service.processSideloads(document, org, query);
+
+      expect(document.included.length).toBeGreaterThan(0);
+      expect(document.included.find(r => r.id === indicator.uuid)).toBeDefined();
+      expect(document.included.find(r => r.id === report.uuid)).toBeDefined();
+      expect(document.included.find(r => r.id === media.uuid)).toBeDefined();
     });
   });
 });

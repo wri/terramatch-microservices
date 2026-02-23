@@ -27,6 +27,52 @@ describe("OrganisationPolicy", () => {
     jest.restoreAllMocks();
   });
 
+  describe("listing permissions", () => {
+    it("allows listing public organisations for authenticated users", async () => {
+      const org = await OrganisationFactory.create({
+        status: "approved",
+        private: false,
+        isTest: false
+      });
+      mockUserId(123);
+      mockPermissions();
+      await expectCan(service, "listing", org);
+    });
+
+    it("disallows listing private organisations", async () => {
+      const org = await OrganisationFactory.create({
+        status: "approved",
+        private: true,
+        isTest: false
+      });
+      mockUserId(123);
+      mockPermissions();
+      await expectCannot(service, "listing", org);
+    });
+
+    it("disallows listing test organisations", async () => {
+      const org = await OrganisationFactory.create({
+        status: "approved",
+        private: false,
+        isTest: true
+      });
+      mockUserId(123);
+      mockPermissions();
+      await expectCannot(service, "listing", org);
+    });
+
+    it("disallows listing non-approved organisations", async () => {
+      const org = await OrganisationFactory.create({
+        status: "pending",
+        private: false,
+        isTest: false
+      });
+      mockUserId(123);
+      mockPermissions();
+      await expectCannot(service, "listing", org);
+    });
+  });
+
   describe("framework permissions", () => {
     it("allows reading, updating, and deleting organisations with framework permissions", async () => {
       mockUserId(123);

@@ -1,5 +1,5 @@
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
-import { IsOptional, IsString } from "class-validator";
+import { IsIn, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
@@ -39,11 +39,10 @@ export class OrganisationIndexQueryDto extends IndexQueryDto {
 
   @ApiProperty({
     required: false,
-    default: false,
-    type: "boolean",
     description:
-      "Enable public listing mode: returns approved, non-private, non-test organisations. Forces status=approved."
+      "Public view: returns approved, non-private, non-test organisations. Forces status=approved. Use view=public."
   })
-  @TransformBooleanString()
-  listing?: boolean;
+  @IsOptional()
+  @IsIn(["public"])
+  view?: "public";
 }

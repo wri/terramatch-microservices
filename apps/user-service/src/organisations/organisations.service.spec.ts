@@ -113,6 +113,20 @@ describe("OrganisationsService", () => {
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
+    it("should return public organisations when view=public", async () => {
+      await OrganisationFactory.create({
+        status: "approved",
+        private: false,
+        isTest: false,
+        name: "Public Org"
+      });
+      mockUserId(999);
+      policyService.getPermissions.mockResolvedValue([]);
+      const result = await service.findMany({ view: "public" });
+      expect(result.organisations.length).toBeGreaterThanOrEqual(1);
+      expect(result.organisations.every(o => o.status === "approved" && !o.private && !o.isTest)).toBe(true);
+    });
+
     it("should sort by valid field", async () => {
       policyService.getPermissions.mockResolvedValue(["framework-test"]);
       await service.findMany({ sort: { field: "name", direction: "ASC" } });

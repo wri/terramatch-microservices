@@ -42,7 +42,7 @@ export class OrganisationsService {
     const permissions = await this.policyService.getPermissions();
     const hasFrameworkPermission = permissions.find(p => p.startsWith("framework-")) != null;
 
-    if (query.listing === true) {
+    if (query.view === "public") {
       builder.where({
         status: APPROVED,
         private: false,
@@ -93,7 +93,7 @@ export class OrganisationsService {
       builder.where({ name: { [Op.like]: `%${query.search}%` } });
     }
 
-    if (query.status != null && query.listing !== true) {
+    if (query.status != null && query.view !== "public") {
       builder.where({ status: query.status });
     }
 
@@ -122,7 +122,7 @@ export class OrganisationsService {
       } else if (entityField !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
-    } else if (query.listing !== true) {
+    } else if (query.view !== "public") {
       builder.order(["createdAt", "DESC"]);
     }
 

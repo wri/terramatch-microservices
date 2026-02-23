@@ -67,7 +67,7 @@ export class OrganisationsController {
     const { organisations, paginationTotal } = await this.organisationsService.findMany(query);
 
     if (organisations.length > 0) {
-      const action = query.listing === true ? "listing" : "read";
+      const action = query.view === "public" ? "listing" : "read";
       await this.policyService.authorize(action, organisations);
     }
 

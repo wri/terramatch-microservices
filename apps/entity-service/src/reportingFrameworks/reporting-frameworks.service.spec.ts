@@ -33,6 +33,26 @@ describe("ReportingFrameworksService", () => {
     jest.restoreAllMocks();
   });
 
+  describe("findByUuid", () => {
+    it("should return a framework by uuid", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+
+      const result = await service.findByUuid(framework.uuid as string);
+
+      expect(result).toBeInstanceOf(Framework);
+      expect(result.uuid).toBe(framework.uuid);
+      expect(result.slug).toBe("terrafund");
+    });
+
+    it("should throw NotFoundException for invalid uuid", async () => {
+      await expect(service.findByUuid("00000000-0000-0000-0000-000000000000")).rejects.toThrow(NotFoundException);
+      await expect(service.findByUuid("00000000-0000-0000-0000-000000000000")).rejects.toThrow(
+        "Reporting framework not found"
+      );
+    });
+  });
+
   describe("findBySlug", () => {
     it("should return a framework by slug", async () => {
       await Framework.destroy({ where: { slug: "terrafund" }, force: true });

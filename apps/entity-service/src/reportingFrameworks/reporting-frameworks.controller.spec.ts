@@ -3,7 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksController } from "./reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -413,6 +413,171 @@ describe("ReportingFrameworksController", () => {
       expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
+    });
+  });
+
+  describe("create", () => {
+    it("should create framework and return JSON:API response", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      createdFrameworkIds.push(framework.id);
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          attributes: {
+            name: "TerraFund",
+            accessCode: null,
+            projectFormUuid: null,
+            projectReportFormUuid: null,
+            siteFormUuid: null,
+            siteReportFormUuid: null,
+            nurseryFormUuid: null,
+            nurseryReportFormUuid: null
+          }
+        }
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      reportingFrameworksService.create.mockResolvedValue(framework);
+      const mockDocument = createMock<DocumentBuilder>();
+      mockDocument.serialize.mockReturnValue({
+        data: { id: "terrafund", attributes: { name: "TerraFund", slug: "terrafund" } }
+      } as never);
+      reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
+
+      const result = await controller.create(payload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", expect.any(Object));
+      expect(reportingFrameworksService.create).toHaveBeenCalledWith(payload.data.attributes);
+      expect(reportingFrameworksService.addDto).toHaveBeenCalled();
+      expect(result).toBe(mockDocument);
+    });
+
+    it("should throw UnauthorizedException when create not allowed", async () => {
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          attributes: { name: "New Framework" }
+        }
+      };
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
+
+      await expect(controller.create(payload)).rejects.toThrow(UnauthorizedException);
+      expect(reportingFrameworksService.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("update", () => {
+    it("should update framework by uuid and return JSON:API response", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      createdFrameworkIds.push(framework.id);
+      const uuid = framework.uuid as string;
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          id: uuid,
+          attributes: { name: "TerraFund Updated" }
+        }
+      };
+
+      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      policyService.authorize.mockResolvedValue(undefined);
+      reportingFrameworksService.update.mockResolvedValue(framework);
+      const mockDocument = createMock<DocumentBuilder>();
+      mockDocument.serialize.mockReturnValue({
+        data: { id: "terrafund", attributes: { name: "TerraFund Updated" } }
+      } as never);
+      reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
+
+      const result = await controller.update({ uuid }, payload);
+
+      expect(reportingFrameworksService.findByUuid).toHaveBeenCalledWith(uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", framework);
+      expect(reportingFrameworksService.update).toHaveBeenCalledWith(framework, payload.data.attributes);
+      expect(reportingFrameworksService.addDto).toHaveBeenCalled();
+      expect(result).toBe(mockDocument);
+    });
+
+    it("should throw BadRequestException when payload id does not match path uuid", async () => {
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          id: "other-uuid",
+          attributes: { name: "Updated" }
+        }
+      };
+
+      await expect(controller.update({ uuid: "path-uuid" }, payload)).rejects.toThrow(BadRequestException);
+      expect(reportingFrameworksService.findByUuid).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when framework not found", async () => {
+      reportingFrameworksService.findByUuid.mockRejectedValue(new NotFoundException("Reporting framework not found"));
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          id: "non-existent-uuid",
+          attributes: {}
+        }
+      };
+
+      await expect(controller.update({ uuid: "non-existent-uuid" }, payload)).rejects.toThrow(NotFoundException);
+      expect(reportingFrameworksService.update).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when update not allowed", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          id: framework.uuid,
+          attributes: { name: "Updated" }
+        }
+      };
+      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
+
+      await expect(controller.update({ uuid: framework.uuid as string }, payload)).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(reportingFrameworksService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("delete", () => {
+    it("should delete framework by uuid and return deleted response", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+      const uuid = framework.uuid as string;
+
+      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      policyService.authorize.mockResolvedValue(undefined);
+      reportingFrameworksService.delete.mockResolvedValue(undefined);
+
+      const result = await controller.delete({ uuid });
+
+      expect(reportingFrameworksService.findByUuid).toHaveBeenCalledWith(uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", framework);
+      expect(reportingFrameworksService.delete).toHaveBeenCalledWith(framework);
+      expect(result).toBeDefined();
+      expect(result.meta).toBeDefined();
+    });
+
+    it("should throw NotFoundException when framework not found", async () => {
+      reportingFrameworksService.findByUuid.mockRejectedValue(new NotFoundException("Reporting framework not found"));
+
+      await expect(controller.delete({ uuid: "non-existent-uuid" })).rejects.toThrow(NotFoundException);
+      expect(reportingFrameworksService.delete).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when delete not allowed", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
+
+      await expect(controller.delete({ uuid: framework.uuid as string })).rejects.toThrow(UnauthorizedException);
+      expect(reportingFrameworksService.delete).not.toHaveBeenCalled();
     });
   });
 });

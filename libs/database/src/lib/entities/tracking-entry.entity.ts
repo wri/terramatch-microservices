@@ -1,11 +1,13 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
-import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, Op, STRING } from "sequelize";
 import { chainScope } from "../util/chain-scope";
 import { Tracking } from "./tracking.entity";
+import { Literal } from "sequelize/types/utils";
+import { isNumber } from "lodash";
 
 @Scopes(() => ({
   gender: { where: { type: "gender" } },
-  tracking: (id: number) => ({ where: { trackingId: id } })
+  tracking: (id: number | Literal) => ({ where: { trackingId: isNumber(id) ? id : { [Op.in]: id } } })
 }))
 @Table({
   tableName: "tracking_entries",
@@ -13,7 +15,7 @@ import { Tracking } from "./tracking.entity";
   paranoid: true
 })
 export class TrackingEntry extends Model<InferAttributes<TrackingEntry>, InferCreationAttributes<TrackingEntry>> {
-  static tracking(id: number) {
+  static tracking(id: number | Literal) {
     return chainScope(this, "tracking", id) as typeof TrackingEntry;
   }
 

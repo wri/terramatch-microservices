@@ -14,6 +14,8 @@ import { ApplicationSubmittedEmail } from "./application-submitted.email";
 import { EmailSender } from "./email-sender";
 import { FormSubmissionFeedbackEmail } from "./form-submission-feedback.email";
 import { PolygonClippingCompleteEmail } from "./polygon-clipping-complete.email";
+import { OrganisationApprovedEmail } from "./organisation-approved.email";
+import { OrganisationRejectedEmail } from "./organisation-rejected.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -32,7 +34,9 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   ProjectManagerEmail,
   ApplicationSubmittedEmail,
   FormSubmissionFeedbackEmail,
-  PolygonClippingCompleteEmail
+  PolygonClippingCompleteEmail,
+  OrganisationApprovedEmail,
+  OrganisationRejectedEmail
 ];
 
 /**

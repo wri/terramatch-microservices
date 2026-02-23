@@ -330,6 +330,13 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Aggregate associates",
       inputType: "number"
     },
+    "pro-level-0-project": {
+      property: "level0Project",
+      label: "GADM level 0 administrative areas where project will be restoring land",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gadm-level-0"
+    },
     "pro-level-1-project": {
       property: "level1Project",
       label: "GADM level 1 administrative areas where project will be restoring land",

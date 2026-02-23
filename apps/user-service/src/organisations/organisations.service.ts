@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
   Organisation,
+  OrganisationUser,
   User,
   FinancialIndicator,
   FinancialReport,
@@ -138,6 +139,9 @@ export class OrganisationsService {
   }
 
   async delete(organisation: Organisation): Promise<void> {
+    await User.update({ organisationId: null }, { where: { organisationId: organisation.id } });
+    await OrganisationUser.destroy({ where: { organisationId: organisation.id } });
+
     await organisation.destroy();
   }
 

@@ -1,6 +1,116 @@
 import { FileService } from "@terramatch-microservices/common/file/file.service";
-import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
 import { parseCsv } from "@terramatch-microservices/common/util/repl/parse-csv";
+import {
+  PAID_NURSERY_OPERATIONS,
+  PAID_OTHER,
+  PAID_PLANTING,
+  PAID_PROJECT_MANAGEMENT,
+  PAID_SITE_ESTABLISHMENT,
+  PAID_SITE_MAINTENANCE,
+  PAID_SITE_MONITORING,
+  VOLUNTEER_NURSERY_OPERATIONS,
+  VOLUNTEER_OTHER,
+  VOLUNTEER_PLANTING,
+  VOLUNTEER_PROJECT_MANAGEMENT,
+  VOLUNTEER_SITE_ESTABLISHMENT,
+  VOLUNTEER_SITE_MAINTENANCE,
+  VOLUNTEER_SITE_MONITORING
+} from "@terramatch-microservices/database/constants/demographic-collections";
+import { Project, ProjectReport, Site, SiteReport, TrackingEntry } from "@terramatch-microservices/database/entities";
+import { Dictionary, isEqualWith, uniq } from "lodash";
+import { Model, ModelCtor } from "sequelize-typescript";
+import { Attributes, CreationAttributes } from "sequelize";
+import { DateTime } from "luxon";
+import { Valid } from "luxon/src/_util";
+import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+
+type ModelConfig<M extends Model> = {
+  model: ModelCtor<M>;
+  parentAssociation: keyof Attributes<M>;
+  parentIdColumn: string;
+  oldModelValue: string;
+  oldModelColumn: string;
+  collections: Dictionary<string>;
+};
+
+type ModelConfigs = {
+  sites: ModelConfig<SiteReport>;
+  projects: ModelConfig<ProjectReport>;
+};
+
+type SupportedType = keyof ModelConfigs;
+type SupportedModel = InstanceType<ModelConfigs[SupportedType]["model"]>;
+
+const MODEL_CONFIGS: ModelConfigs = {
+  sites: {
+    model: SiteReport,
+    parentAssociation: "site",
+    parentIdColumn: "site_id",
+    oldModelValue: "App\\Models\\SiteSubmission",
+    oldModelColumn: "site_submission_id",
+    collections: {
+      Paid_site_establishment: PAID_SITE_ESTABLISHMENT,
+      Vol_site_establishment: VOLUNTEER_SITE_ESTABLISHMENT,
+      Paid_planting: PAID_PLANTING,
+      Vol_planting: VOLUNTEER_PLANTING,
+      Paid_monitoring: PAID_SITE_MONITORING,
+      Vol_monitoring: VOLUNTEER_SITE_MONITORING,
+      Paid_maintenance: PAID_SITE_MAINTENANCE,
+      Vol_maintenance: VOLUNTEER_SITE_MAINTENANCE,
+      Paid_other: PAID_OTHER,
+      Vol_other: VOLUNTEER_OTHER
+    }
+  },
+
+  projects: {
+    model: ProjectReport,
+    parentAssociation: "project",
+    parentIdColumn: "project_id",
+    oldModelValue: "App\\Models\\Submission",
+    oldModelColumn: "programme_submission_id",
+    collections: {
+      Paid_project_management: PAID_PROJECT_MANAGEMENT,
+      Vol_project_management: VOLUNTEER_PROJECT_MANAGEMENT,
+      Paid_nursery_ops: PAID_NURSERY_OPERATIONS,
+      Vol_nursery_ops: VOLUNTEER_NURSERY_OPERATIONS,
+      Paid_seed_collection: PAID_NURSERY_OPERATIONS,
+      Vol_seed_collection: VOLUNTEER_NURSERY_OPERATIONS,
+      Paid_other: PAID_OTHER,
+      Vol_other: VOLUNTEER_OTHER
+    }
+  }
+};
+
+type Entry = {
+  type: string;
+  subtype: string;
+  name?: string;
+};
+
+type Workday = {
+  collection: string;
+  entries: Omit<CreationAttributes<TrackingEntry>, "trackingId">[];
+};
+
+const DEMOGRAPHICS = {
+  women: { type: "gender", subtype: "female" },
+  men: { type: "gender", subtype: "male" },
+  "non-binary": { type: "gender", subtype: "non-binary" },
+  nonbinary: { type: "gender", subtype: "non-binary" },
+  "gender-unknown": { type: "gender", subtype: "unknown" },
+  "no-gender": { type: "gender", subtype: "unknown" },
+
+  "youth_15-24": { type: "age", subtype: "youth" },
+  "adult_24-64": { type: "age", subtype: "adult" },
+  "elder_65+": { type: "age", subtype: "elder" },
+  "age-unknown": { type: "age", subtype: "unknown" },
+  age_unknown: { type: "age", subtype: "unknown" },
+
+  indigenous: { type: "ethnicity", subtype: "indigenous" },
+  "ethnicity-other": { type: "ethnicity", subtype: "other" },
+  "ethnicity-unknown": { type: "ethnicity", subtype: "unknown" }
+} as const;
 
 /**
  * This script is meant to run in the REPL:
@@ -9,16 +119,171 @@ import { parseCsv } from "@terramatch-microservices/common/util/repl/parse-csv";
  * In local dev, the file path is expected to be on the local machine. In AWS, the file path should
  * be in the wri-tm-repl S3 bucket.
  */
-export const bulkWorkdayImport = withoutSqlLogs(async (fileService: FileService, csvPath: string) => {
-  try {
+export const bulkWorkdayImport = withoutSqlLogs(
+  async (fileService: FileService, csvPath: string, type: SupportedType, dryRun = false) => {
+    const logger = new TMLogger("Bulk PPC Workday Import");
     let rowCount = 0;
-    await parseCsv(fileService, csvPath, row => {
-      rowCount++;
-      console.log("Processing row", row);
-    });
+    const warnings: string[] = [];
+    const workdays: Record<number, Workday[]> = {};
+    try {
+      const config = MODEL_CONFIGS[type];
 
-    console.log(`Processed ${rowCount} rows from ${csvPath}`);
-  } catch (err) {
-    console.error(`Error processing CSV at ${csvPath}: ${err.message}`);
+      await parseCsv(fileService, csvPath, async row => {
+        rowCount++;
+        const result = await parseRow(config, row);
+        warnings.push(...result.warnings);
+        assert(workdays[result.reportId] == null, `Duplicate report ID: ${result.reportId} [row ${rowCount + 1}]`);
+
+        if (result.workdays.length === 0) {
+          warnings.push(`No workdays found for report ID: ${result.reportId} [row ${rowCount + 1}]`);
+        } else workdays[result.reportId] = result.workdays;
+      });
+
+      logger.log(`Processed ${rowCount} rows from ${csvPath}`);
+
+      if (warnings.length > 0) {
+        logger.warn("Warnings:");
+        for (const warning of warnings) logger.warn(`${warning}`);
+      }
+
+      if (dryRun) {
+        logger.log("Dry run complete. No workdays were persisted.");
+      } else {
+        logger.log("Persisting workdays...");
+      }
+    } catch (err) {
+      logger.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
+    }
   }
-});
+);
+
+const assert = (condition: boolean, message: string) => {
+  if (!condition) throw new Error(message);
+};
+
+const assertNotNull = <T>(value: T | null | undefined, message: string): T => {
+  assert(value != null, message);
+  return value as T;
+};
+
+const assertNumber = (value: string | null, message: string) => {
+  const stringValue = assertNotNull(value, message);
+  assert(!isNaN(Number(stringValue)), message);
+  return Number(stringValue);
+};
+
+const assertDate = (value: string | null, message: string, format = "M/d/yy") => {
+  const stringValue = assertNotNull(value, message);
+  const result = DateTime.fromFormat(stringValue, format);
+  assert(result.isValid, message);
+  return result as DateTime<Valid>;
+};
+
+const assertEntry = (demographicName: string, header: string, row: Dictionary<string>): Entry => {
+  const entry = DEMOGRAPHICS[demographicName];
+  if (entry != null) return entry;
+
+  if (demographicName.startsWith("ethnicity-unknown") || demographicName.startsWith("ethnicity-decline")) {
+    return DEMOGRAPHICS["ethnicity-unknown"];
+  }
+
+  const name = assertNotNull(columnValue(row, demographicName), `Demographic name not found: ${demographicName}`);
+  if (demographicName.startsWith("indigenous")) {
+    return { ...DEMOGRAPHICS.indigenous, name };
+  }
+  if (demographicName.startsWith("other-ethnicity") || demographicName.startsWith("ethnicity-other")) {
+    return { ...DEMOGRAPHICS["ethnicity-other"], name };
+  }
+
+  throw new Error(`Unknown demographic: ${header}`);
+};
+
+const entryMatcher = (a: Entry) => (b: CreationAttributes<TrackingEntry>) =>
+  isEqualWith(
+    { type: a.type, subtype: a.subtype, name: a.name },
+    { type: b.type, subtype: b.subtype, name: b.name },
+    (valueA, valueB) => (valueA == null && valueB == null ? true : undefined)
+  );
+
+const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<string>) => {
+  const parentId = assertNumber(columnValue(row, config.parentIdColumn), "Parent ID not found or malformed");
+  const submissionId = assertNumber(columnValue(row, config.oldModelColumn), "Parent ID not found or malformed");
+  const dueDate = assertDate(columnValue(row, "due_date"), "Due date not found");
+
+  const report = assertNotNull(
+    (await (config.model as ModelCtor).findOne({
+      where: { oldModel: config.oldModelValue, oldId: submissionId },
+      attributes: ["id", "dueAt"],
+      include: [{ association: config.parentAssociation, attributes: ["ppcExternalId"] }]
+    })) as SupportedModel | null,
+    "Report not found"
+  );
+  const parent = assertNotNull(report?.[config.parentAssociation] as Site | Project | null, "Parent not found");
+  assert(parent.ppcExternalId === parentId, "Parent ID does not match");
+
+  const reportDueAt = report.dueAt == null ? null : DateTime.fromJSDate(report.dueAt);
+  const datesMatch =
+    reportDueAt != null &&
+    reportDueAt.year === dueDate.year &&
+    reportDueAt.month === dueDate.month &&
+    reportDueAt.day === dueDate.day;
+  assert(datesMatch, "Due date does not match");
+
+  const entriesByCollection: Dictionary<Omit<CreationAttributes<TrackingEntry>, "trackingId">[]> = {};
+  const collectionKeys = Object.keys(config.collections);
+  for (const [header, value] of Object.entries(row)) {
+    if (!header.startsWith("Paid_") && !header.startsWith("Vol_")) continue;
+    if (value === "") continue;
+
+    const columnTitlePrefix = assertNotNull(
+      collectionKeys.find(key => header.startsWith(key)),
+      `Collection not found: ${header}`
+    );
+    const collection = config.collections[columnTitlePrefix];
+    const demographicName = header.substring(columnTitlePrefix.length + 1);
+    const entry = assertEntry(demographicName, header, row);
+    const amount = Math.round(assertNumber(value, "Amount invalid"));
+    assert(amount >= 0, "Amount must be non-negative");
+
+    const entries = (entriesByCollection[collection] ??= []);
+    const existing = entries.find(entryMatcher(entry));
+    if (existing != null) {
+      existing.amount += amount;
+    } else {
+      entries.push({ ...entry, amount });
+    }
+  }
+
+  // Check for balanced workdays
+  const warnings: string[] = [];
+  for (const [collection, entries] of Object.entries(entriesByCollection)) {
+    const totals = {
+      gender: 0,
+      age: 0,
+      ethnicity: 0
+    };
+    for (const { type, amount } of entries) {
+      totals[type] += amount;
+    }
+
+    if (uniq(Object.values(totals)).length > 1) {
+      let message = "Demographics for collection are unbalanced\n";
+      if (totals.gender < totals.age || totals.gender < totals.ethnicity) {
+        message += "GENDER IS NOT THE LARGEST VALUE IN THIS COLLECTION\n";
+      }
+      message += JSON.stringify({ submissionId, collection, totals }, null, 2);
+      warnings.push(message);
+    }
+  }
+
+  const workdays: Workday[] = Object.entries(entriesByCollection).map(([collection, entries]) => ({
+    collection,
+    entries
+  }));
+  return { reportId: report.id as number, workdays, warnings };
+};
+
+const columnValue = (row: Dictionary<string>, columnName: string) => {
+  assert(columnName in row, `Column ${columnName} not found.`);
+  return row[columnName] === "" ? null : row[columnName];
+};

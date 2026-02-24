@@ -1,4 +1,4 @@
-import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
+import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import {
   Organisation,
   Project,

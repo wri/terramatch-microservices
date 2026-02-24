@@ -1,4 +1,4 @@
-import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
+import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Task } from "@terramatch-microservices/database/entities";
 import ProgressBar from "progress";

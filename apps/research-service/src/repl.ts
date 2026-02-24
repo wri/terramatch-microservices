@@ -4,7 +4,7 @@ import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/en
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
-import { withoutSqlLogs } from "@terramatch-microservices/common/util/without-sql-logs";
+import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import ProgressBar from "progress";
 import { EstimatedAreaValidator } from "./validations/validators/estimated-area.validator";
 import { Op } from "sequelize";

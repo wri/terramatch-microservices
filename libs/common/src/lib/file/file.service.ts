@@ -14,7 +14,7 @@ import { parse } from "csv";
 import { NodeJsClient } from "@smithy/types";
 import { Injectable } from "@nestjs/common";
 
-export type CsvRowCallback = (row: Dictionary<string>) => void;
+export type CsvRowCallback = (row: Dictionary<string>) => void | Promise<void>;
 
 @Injectable()
 export class FileService {
@@ -89,13 +89,9 @@ export class FileService {
       throw new Error(`No stream found [path=${path}, bucket=${bucket}]`);
     }
 
-    await new Promise((resolve, reject) => {
-      stream
-        .pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))
-        .on("data", onRow)
-        .on("error", reject)
-        .on("end", resolve);
-    });
+    for await (const row of stream.pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))) {
+      await onRow(row);
+    }
   }
 
   /* istanbul ignore next */

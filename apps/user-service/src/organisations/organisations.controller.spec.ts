@@ -33,7 +33,6 @@ import {
 import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
@@ -1257,7 +1256,11 @@ describe("OrganisationsController", () => {
       await UserFactory.create({ organisationId: org.id });
       await UserFactory.create({ organisationId: org.id });
 
-      mockUserId(user.id);
+      Object.defineProperty(policyService, "userId", {
+        value: user.id,
+        writable: true,
+        configurable: true
+      });
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.requestJoin.mockResolvedValue(
         await OrganisationUserFactory.create({
@@ -1268,20 +1271,27 @@ describe("OrganisationsController", () => {
       );
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
-      jest.spyOn(OrganisationJoinRequestEmail.prototype, "sendLater").mockResolvedValue();
 
       const result = serialize(await controller.joinRequest(org.uuid));
 
       expect(policyService.authorize).toHaveBeenCalledWith("joinRequest", org);
       expect(organisationsService.requestJoin).toHaveBeenCalledWith(org.uuid, user.id);
       expect(Notification.bulkCreate).toHaveBeenCalled();
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationJoinRequest", {
+        organisationId: org.id,
+        requestingUserId: user.id
+      });
       expect(result.data != null).toBe(true);
       expect((result.data as Resource).id).toBe(org.uuid);
     });
 
     it("should throw UnauthorizedException if policy denies", async () => {
       const org = await OrganisationFactory.create();
-      mockUserId(1);
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
       organisationsService.findOne.mockResolvedValue(org);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 

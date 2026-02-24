@@ -14,6 +14,8 @@ import { parse } from "csv";
 import { NodeJsClient } from "@smithy/types";
 import { Injectable } from "@nestjs/common";
 
+export type CsvRowCallback = (row: Dictionary<string>) => void;
+
 @Injectable()
 export class FileService {
   private readonly logger = new TMLogger(FileService.name);
@@ -77,9 +79,11 @@ export class FileService {
   /**
    * Read a CSV file. If bucket is not provided, the file path is expected to be on the local file
    * system (useful for local REPL testing - should not be used in AWS).
+   *
+   * When the promise returned from this method resolves, the CSV file has been fully processed.
    */
   /* istanbul ignore next */
-  async parseCsv(onRow: (row: Dictionary<string>) => void, path: string, bucket?: string) {
+  async parseCsv(onRow: CsvRowCallback, path: string, bucket?: string) {
     const stream = bucket == null ? fs.createReadStream(path) : await this.readRemoteFile(bucket, path);
     if (stream == null) {
       throw new Error(`No stream found [path=${path}, bucket=${bucket}]`);

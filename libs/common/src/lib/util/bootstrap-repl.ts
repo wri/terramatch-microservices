@@ -10,6 +10,7 @@ import { buildJsonApi } from "./json-api-builder";
 import { Op } from "sequelize";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
+import { parseCsv } from "./repl/parse-csv";
 
 const logger = new TMLogger("REPL");
 
@@ -32,6 +33,7 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
     buildJsonApi,
     Op,
     Reflect,
+    parseCsv,
     ...replServer.context["get"](Sequelize).models,
     ...context
   };

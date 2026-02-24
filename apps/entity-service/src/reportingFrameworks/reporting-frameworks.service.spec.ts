@@ -505,7 +505,7 @@ describe("ReportingFrameworksService", () => {
   });
 
   describe("delete", () => {
-    it("should remove permission, detach forms, and destroy framework", async () => {
+    it("should detach forms and destroy framework (permissions left to permissions.ts + sync)", async () => {
       const framework = await FrameworkFactory.create({
         slug: "terrafund",
         name: "TerraFund",
@@ -513,20 +513,11 @@ describe("ReportingFrameworksService", () => {
         siteFormUuid: null
       });
       createdFrameworkIds.push(framework.id);
-      const permission = {
-        id: 1,
-        name: "framework-terrafund",
-        guardName: "api",
-        destroy: jest.fn().mockResolvedValue(undefined)
-      } as unknown as Permission;
       const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
-      jest.spyOn(Permission, "findOne").mockResolvedValue(permission);
-      jest.spyOn(RoleHasPermission, "destroy").mockResolvedValue(1);
       const destroyFrameworkSpy = jest.spyOn(framework, "destroy").mockResolvedValue(undefined);
 
       await service.delete(framework);
 
-      expect(permission.destroy).toHaveBeenCalled();
       expect(formUpdateSpy).toHaveBeenCalledWith(
         { frameworkKey: null, model: null },
         { where: { uuid: "form-uuid-1" } }
@@ -545,25 +536,12 @@ describe("ReportingFrameworksService", () => {
         nurseryReportFormUuid: null
       });
       createdFrameworkIds.push(framework.id);
-      jest.spyOn(Permission, "findOne").mockResolvedValue(null as unknown as Permission);
       const formUpdateSpy = jest.spyOn(Form, "update");
       jest.spyOn(framework, "destroy").mockResolvedValue(undefined);
 
       await service.delete(framework);
 
       expect(formUpdateSpy).not.toHaveBeenCalled();
-    });
-
-    it("should return early from removePermission when permission does not exist", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
-      createdFrameworkIds.push(framework.id);
-      jest.spyOn(Permission, "findOne").mockResolvedValue(null as unknown as Permission);
-      const destroySpy = jest.spyOn(RoleHasPermission, "destroy");
-      jest.spyOn(framework, "destroy").mockResolvedValue(undefined);
-
-      await service.delete(framework);
-
-      expect(destroySpy).not.toHaveBeenCalled();
     });
   });
 

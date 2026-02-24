@@ -54,7 +54,7 @@ export class ReportingFrameworkDto {
   totalProjectsCount: number;
 }
 
-const formUuidApiProperty = { required: false, nullable: true, type: String, format: "uuid" as const };
+const FORM_UUID_API_PROPERTY = { required: false, nullable: true, type: String, format: "uuid" as const };
 export class ReportingFrameworkFormUuidAttributes {
   @IsOptional()
   @IsString()
@@ -68,32 +68,32 @@ export class ReportingFrameworkFormUuidAttributes {
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   projectFormUuid?: string | null;
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   projectReportFormUuid?: string | null;
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   siteFormUuid?: string | null;
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   siteReportFormUuid?: string | null;
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   nurseryFormUuid?: string | null;
 
   @IsOptional()
   @IsUUID()
-  @ApiProperty(formUuidApiProperty)
+  @ApiProperty(FORM_UUID_API_PROPERTY)
   nurseryReportFormUuid?: string | null;
 }
 

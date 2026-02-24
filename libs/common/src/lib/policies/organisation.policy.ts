@@ -1,7 +1,7 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 import { Organisation, User } from "@terramatch-microservices/database/entities";
-import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class OrganisationPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -18,6 +18,12 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     if ((await this.isVerifiedAdmin()) || this.frameworks.length > 0) {
       this.builder.can("approveReject", Organisation);
     }
+
+    this.builder.can("listing", Organisation, {
+      status: APPROVED,
+      private: false,
+      isTest: false
+    });
 
     const orgUuids = await this.getOrgUuids();
     if (orgUuids.length > 0) {

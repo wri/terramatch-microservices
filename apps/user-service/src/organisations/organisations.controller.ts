@@ -67,7 +67,8 @@ export class OrganisationsController {
     const { organisations, paginationTotal } = await this.organisationsService.findMany(query);
 
     if (organisations.length > 0) {
-      await this.policyService.authorize("read", organisations);
+      const action = query.view === "public" ? "listing" : "read";
+      await this.policyService.authorize(action, organisations);
     }
 
     const dtoType = query.lightResource === true ? OrganisationLightDto : OrganisationFullDto;

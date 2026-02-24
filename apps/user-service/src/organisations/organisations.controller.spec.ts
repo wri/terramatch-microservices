@@ -126,6 +126,21 @@ describe("OrganisationsController", () => {
 
       expect(organisationsService.findMany).toHaveBeenCalledWith({});
     });
+
+    it("uses listing authorization when view=public", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      organisationsService.findMany.mockResolvedValue({
+        organisations: orgs,
+        paginationTotal: 2
+      });
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const result = serialize(await controller.index({ view: "public" }));
+
+      expect(organisationsService.findMany).toHaveBeenCalledWith({ view: "public" });
+      expect(policyService.authorize).toHaveBeenCalledWith("listing", orgs);
+      expect(result.data).toHaveLength(2);
+    });
   });
 
   describe("create", () => {

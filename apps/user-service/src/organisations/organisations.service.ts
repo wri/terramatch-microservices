@@ -19,6 +19,7 @@ import { Op } from "sequelize";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { PolicyService } from "@terramatch-microservices/common";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
@@ -39,7 +40,19 @@ export class OrganisationsService {
     const builder = PaginatedQueryBuilder.forNumberPage(Organisation, query.page);
 
     const permissions = await this.policyService.getPermissions();
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
+    const hasFrameworkPermission = permissions.find(p => p.startsWith("framework-")) != null;
+
+    if (query.view === "public") {
+      builder.where({
+        status: APPROVED,
+        private: false,
+        isTest: false
+      });
+
+      if (query.sort?.field == null) {
+        builder.order(["name", "ASC"]);
+      }
+    } else if (!hasFrameworkPermission) {
       const userId = authenticatedUserId();
       if (userId == null) {
         throw new BadRequestException("User ID is required");
@@ -80,7 +93,7 @@ export class OrganisationsService {
       builder.where({ name: { [Op.like]: `%${query.search}%` } });
     }
 
-    if (query.status != null) {
+    if (query.status != null && query.view !== "public") {
       builder.where({ status: query.status });
     }
 
@@ -109,7 +122,7 @@ export class OrganisationsService {
       } else if (entityField !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
-    } else {
+    } else if (query.view !== "public") {
       builder.order(["createdAt", "DESC"]);
     }
 

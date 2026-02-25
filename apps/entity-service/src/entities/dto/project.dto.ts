@@ -191,6 +191,9 @@ export class ProjectFullDto extends ProjectLightDto {
   treesGrownGoal: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
+  jobsCreatedGoal: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
@@ -286,6 +289,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   goalTreesRestoredAnr: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  seedsGrownGoal: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;

@@ -69,6 +69,22 @@ describe("OrganisationCreationService", () => {
   });
 
   describe("validation", () => {
+    it("should create organisation without user/app when pending creation is missing user fields", async () => {
+      const { user, organisation } = await service.createOrganisation({ status: "pending" });
+      expect(user).toBeNull();
+      expect(organisation).toBeDefined();
+      expect(organisation.status).toBe("pending");
+    });
+
+    it("should throw an error if status is unsupported", async () => {
+      await expect(
+        service.createOrganisation({
+          ...createAttributes(),
+          status: "approved" as never
+        })
+      ).rejects.toThrow("Only draft and pending statuses are allowed during organisation creation");
+    });
+
     it("should throw an error if the org name is already taken", async () => {
       const attributes = createAttributes();
       await OrganisationFactory.create({ name: attributes.name });
@@ -124,6 +140,8 @@ describe("OrganisationCreationService", () => {
 
       // org creation
       const { user, organisation } = await service.createOrganisation(attributes);
+      expect(user).not.toBeNull();
+      const createdUser = user!;
       expect(organisation).toMatchObject({
         status: "pending",
         private: false,
@@ -146,15 +164,17 @@ describe("OrganisationCreationService", () => {
       });
 
       // user creation
-      expect(user).toMatchObject({
+      expect(createdUser).toMatchObject({
         organisationId: organisation.id,
         emailAddress: attributes.userEmailAddress,
         firstName: attributes.userFirstName,
         lastName: attributes.userLastName,
         locale: attributes.userLocale
       });
-      expect(user.emailAddressVerifiedAt).not.toBeNull();
-      const modelRole = await ModelHasRole.findOne({ where: { modelType: User.LARAVEL_TYPE, modelId: user.id } });
+      expect(createdUser.emailAddressVerifiedAt).not.toBeNull();
+      const modelRole = await ModelHasRole.findOne({
+        where: { modelType: User.LARAVEL_TYPE, modelId: createdUser.id }
+      });
       expect(modelRole?.roleId).toBe(role.id);
 
       // pitch, application, form submission creation
@@ -167,7 +187,7 @@ describe("OrganisationCreationService", () => {
       const application = await Application.findOne({ where: { organisationUuid: organisation.uuid } });
       expect(application).toMatchObject({
         fundingProgrammeUuid: attributes.fundingProgrammeUuid,
-        updatedBy: user.id
+        updatedBy: createdUser.id
       });
       const submission = await FormSubmission.findOne({ where: { organisationUuid: organisation.uuid } });
       expect(submission).toMatchObject({
@@ -181,9 +201,37 @@ describe("OrganisationCreationService", () => {
 
       // email queue
       expect(emailQueue.add).toHaveBeenCalledWith("adminUserCreation", {
-        userId: user.id,
+        userId: createdUser.id,
         fundingProgrammeName: fundingProgramme.name
       });
+    });
+
+    it("should create only a draft organisation when draft status is provided", async () => {
+      const attributes: OrganisationCreateAttributes = {
+        status: "draft",
+        name: faker.company.name()
+      };
+
+      const { user, organisation } = await service.createOrganisation(attributes);
+
+      expect(user).toBeNull();
+      expect(organisation).toMatchObject({
+        status: "draft",
+        name: attributes.name,
+        private: false,
+        isTest: false
+      });
+
+      const createdUser = await User.findOne({ where: { organisationId: organisation.id } });
+      const createdPitch = await ProjectPitch.findOne({ where: { organisationId: organisation.uuid } });
+      const createdApplication = await Application.findOne({ where: { organisationUuid: organisation.uuid } });
+      const createdSubmission = await FormSubmission.findOne({ where: { organisationUuid: organisation.uuid } });
+
+      expect(createdUser).toBeNull();
+      expect(createdPitch).toBeNull();
+      expect(createdApplication).toBeNull();
+      expect(createdSubmission).toBeNull();
+      expect(emailQueue.add).not.toHaveBeenCalled();
     });
   });
 });

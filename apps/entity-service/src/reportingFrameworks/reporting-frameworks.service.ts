@@ -5,11 +5,8 @@ import {
   Form,
   Nursery,
   NurseryReport,
-  Permission,
   Project,
   ProjectReport,
-  Role,
-  RoleHasPermission,
   Site,
   SiteReport
 } from "@terramatch-microservices/database/entities";
@@ -22,13 +19,6 @@ import {
   UpdateReportingFrameworkAttributes
 } from "./dto/reporting-framework.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-
-const ADMIN_SUPER_ROLE_NAME = "admin-super";
-const GUARD_NAME = "api";
-
-function frameworkPermissionName(frameworkName: string): string {
-  return `framework-${kebabCase(frameworkName)}`;
-}
 
 export type FrameworkFormUuids = {
   projectFormUuid?: string | null;
@@ -92,7 +82,6 @@ export class ReportingFrameworksService {
       nurseryFormUuid: attributes.nurseryFormUuid ?? null,
       nurseryReportFormUuid: attributes.nurseryReportFormUuid ?? null
     });
-    await this.ensurePermissionForFramework(attributes.name);
     await this.syncFormsForFramework(slug, attributes);
     return framework;
   }
@@ -182,34 +171,5 @@ export class ReportingFrameworksService {
       detachWhere.uuid = { [Op.notIn]: currentUuids };
     }
     await Form.update({ frameworkKey: null, model: null }, { where: detachWhere });
-  }
-
-  /**
-   * Ensure a permission exists for the framework (framework-{slug}) and is assigned to admin-super.
-   * Call after creating a framework. Idempotent if permission and assignment already exist.
-   *
-   * Sync caveat: Permission.syncPermissions() treats permissions.ts as source of
-   * truth and removes DB permissions not in config, and strips role assignments not in config. So
-   * if sync is run after creating a new framework, this permission and its admin-super assignment
-   * will be removed. To make new frameworks survive sync, add the permission to
-   * libs/database/src/lib/constants/permissions.ts (PERMISSIONS and ROLES["admin-super"]) and run
-   * sync once; thereafter sync will keep it.
-   */
-  async ensurePermissionForFramework(frameworkName: string): Promise<void> {
-    const name = frameworkPermissionName(frameworkName);
-    let permission = await Permission.findOne({ where: { name } });
-    if (permission == null) {
-      permission = await Permission.create({ name, guardName: GUARD_NAME });
-    }
-
-    const role = await Role.findOne({ where: { name: ADMIN_SUPER_ROLE_NAME } });
-    if (role == null) return;
-
-    const existing = await RoleHasPermission.findOne({
-      where: { roleId: role.id, permissionId: permission.id }
-    });
-    if (existing == null) {
-      await RoleHasPermission.create({ roleId: role.id, permissionId: permission.id });
-    }
   }
 }

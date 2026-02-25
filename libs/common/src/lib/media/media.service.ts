@@ -10,7 +10,6 @@ import {
   SiteReport,
   User
 } from "@terramatch-microservices/database/entities";
-import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { TMLogger } from "../util/tm-logger";
 import { MediaUpdateBody } from "../dto/media-update.dto";
 import "multer";
@@ -32,6 +31,7 @@ import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Readable } from "stream";
 import path from "path";
+import { FileService } from "../file/file.service";
 
 export type MediaAttributes = {
   isPublic: boolean;
@@ -51,28 +51,18 @@ const MIME_TYPES = {
 export class MediaService {
   private logger = new TMLogger(MediaService.name);
 
-  private readonly s3: S3Client;
-
-  constructor(private readonly configService: ConfigService) {
-    const endpoint = this.endpoint;
-    this.s3 = new S3Client({
-      endpoint,
-      region: this.configService.get<string>("AWS_REGION"),
-      credentials: {
-        accessKeyId: this.configService.get<string>("AWS_ACCESS_KEY_ID") ?? "",
-        secretAccessKey: this.configService.get<string>("AWS_SECRET_ACCESS_KEY") ?? ""
-      },
-      // required for local dev when accessing the minio docker container
-      forcePathStyle: (endpoint ?? "").includes("localhost") ? true : undefined
-    });
-  }
+  constructor(private readonly fileService: FileService, private readonly configService: ConfigService) {}
 
   get endpoint() {
-    return this.configService.get<string>("AWS_ENDPOINT");
+    const endpoint = this.configService.get<string>("AWS_ENDPOINT");
+    if (endpoint == null) throw new InternalServerErrorException("AWS_ENDPOINT is not set");
+    return endpoint;
   }
 
   get bucket() {
-    return this.configService.get<string>("AWS_BUCKET");
+    const bucket = this.configService.get<string>("AWS_BUCKET");
+    if (bucket == null) throw new InternalServerErrorException("AWS_BUCKET is not set");
+    return bucket;
   }
 
   async getProjectForModel(model: MediaOwnerModel) {
@@ -205,7 +195,7 @@ export class MediaService {
           // EXIF orientation tags to set up the photo the way it's meant to be viewed.
           await sharp(buffer).rotate().keepExif().toBuffer()
         : buffer;
-      await this.uploadFile(original, `${media.id}/${originalname}`, mimetype);
+      await this.fileService.uploadFile(original, this.bucket, `${media.id}/${originalname}`, mimetype);
 
       if (supportsThumbnail) {
         const thumbnail = await sharp(original)
@@ -215,7 +205,7 @@ export class MediaService {
         const extensionIdx = originalname.lastIndexOf(".");
         const extension = originalname.substring(extensionIdx);
         const filename = `${originalname.substring(0, extensionIdx)}-thumbnail${extension}`;
-        await this.uploadFile(thumbnail, `${media.id}/conversions/${filename}`, mimetype);
+        await this.fileService.uploadFile(thumbnail, this.bucket, `${media.id}/conversions/${filename}`, mimetype);
         await media.update(
           {
             generatedConversions: { thumbnail: true },
@@ -254,14 +244,20 @@ export class MediaService {
       photographer: media.photographer
     });
 
-    await this.copyFile(`${media.id}/${media.fileName}`, `${copy.id}/${copy.fileName}`, copy.mimeType ?? undefined);
+    await this.fileService.copyRemoteFile(
+      this.bucket,
+      `${media.id}/${media.fileName}`,
+      `${copy.id}/${copy.fileName}`,
+      copy.mimeType ?? undefined
+    );
     await Promise.all(
       Object.entries(copy.generatedConversions).map(async ([conversion, generated]: [string, boolean]) => {
         if (!generated) return;
 
         const fromPath = this.conversionFilePath(media, conversion);
         const toPath = this.conversionFilePath(copy, conversion);
-        if (fromPath != null && toPath != null) return this.copyFile(fromPath, toPath, copy.mimeType ?? undefined);
+        if (fromPath != null && toPath != null)
+          return this.fileService.copyRemoteFile(this.bucket, fromPath, toPath, copy.mimeType ?? undefined);
       })
     );
 
@@ -286,37 +282,6 @@ export class MediaService {
       (conversion === "thumbnail" ? ".jpg" : media.fileName.slice(lastIndex));
 
     return `${this.bucket}/${media.id}/conversions/${baseFileName}-${conversion}${extension}`;
-  }
-
-  private async uploadFile(buffer: Buffer<ArrayBufferLike>, path: string, mimetype: string) {
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: path,
-      Body: buffer,
-      ContentType: mimetype,
-      ACL: "public-read"
-    });
-
-    await this.s3.send(command);
-    this.logger.log(`Uploaded ${path} to S3`);
-  }
-
-  private async copyFile(fromPath: string, toPath: string, mimeType?: string) {
-    const bucket = this.bucket;
-    const command = new CopyObjectCommand({
-      Bucket: bucket,
-      Key: toPath,
-      CopySource: `${bucket}/${fromPath}`,
-      ContentType: mimeType,
-      ACL: "public-read"
-    });
-
-    try {
-      await this.s3.send(command);
-      this.logger.log(`Copied ${fromPath} to ${toPath} in S3`);
-    } catch (error) {
-      this.logger.error(`Error copying file from ${fromPath} to ${toPath} in S3 [${error}]`);
-    }
   }
 
   private getMediaType(file: Express.Multer.File, configuration: MediaConfiguration) {
@@ -371,15 +336,8 @@ export class MediaService {
   }
 
   async deleteMediaFromS3(media: Media) {
-    const key = `${media.id}/${media.fileName}`;
-
-    const command = new DeleteObjectCommand({
-      Bucket: this.configService.get<string>("AWS_BUCKET") ?? "",
-      Key: key
-    });
-
     this.logger.log(`Deleting media ${media.uuid} from S3`);
-    await this.s3.send(command);
+    await this.fileService.deleteRemoteFile(this.bucket, `${media.id}/${media.fileName}`);
   }
 
   async deleteMedia(media: Media) {

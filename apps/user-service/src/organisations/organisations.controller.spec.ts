@@ -28,7 +28,8 @@ import {
   Leadership,
   OwnershipStake,
   TreeSpecies,
-  Notification
+  Notification,
+  User
 } from "@terramatch-microservices/database/entities";
 import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
@@ -1296,6 +1297,90 @@ describe("OrganisationsController", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.joinRequest(org.uuid)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe("updateUserStatus", () => {
+    it("should approve user and queue email", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.updateUserStatus.mockResolvedValue({ user, organisation: org });
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(User, "findOne").mockResolvedValue(user as User);
+      jest.spyOn(user, "myFrameworks").mockResolvedValue([]);
+
+      const payload = {
+        data: {
+          type: "users",
+          id: user.uuid ?? "test-uuid",
+          attributes: { status: "approved" as const }
+        }
+      };
+
+      await controller.updateUserStatus(org.uuid, user.uuid ?? "", payload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(organisationsService.updateUserStatus).toHaveBeenCalledWith(org.uuid, user.uuid, "approved");
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationUserApproved", {
+        organisationId: org.id,
+        userId: user.id
+      });
+    });
+
+    it("should reject user and queue email", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+      organisationsService.findOne.mockResolvedValue(org);
+      organisationsService.updateUserStatus.mockResolvedValue({ user, organisation: org });
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(User, "findOne").mockResolvedValue(user as User);
+      jest.spyOn(user, "myFrameworks").mockResolvedValue([]);
+
+      const payload = {
+        data: {
+          type: "users",
+          id: user.uuid ?? "test-uuid",
+          attributes: { status: "rejected" as const }
+        }
+      };
+
+      await controller.updateUserStatus(org.uuid, user.uuid ?? "", payload);
+
+      expect(organisationsService.updateUserStatus).toHaveBeenCalledWith(org.uuid, user.uuid, "rejected");
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationUserRejected", {
+        organisationId: org.id,
+        userId: user.id
+      });
+    });
+
+    it("should throw UnauthorizedException if not authorized", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      const payload = {
+        data: {
+          type: "users",
+          id: user.uuid ?? "test-uuid",
+          attributes: { status: "approved" as const }
+        }
+      };
+
+      await expect(controller.updateUserStatus(org.uuid, user.uuid ?? "", payload)).rejects.toThrow(
+        UnauthorizedException
+      );
     });
   });
 });

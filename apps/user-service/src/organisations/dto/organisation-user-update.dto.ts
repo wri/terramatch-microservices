@@ -12,8 +12,5 @@ export class OrganisationUserUpdateAttributes {
 }
 
 export class OrganisationUserUpdateBody extends JsonApiBodyDto(
-  class OrganisationUserUpdateData extends JsonApiDataDto(
-    { type: "organisation-user" },
-    OrganisationUserUpdateAttributes
-  ) {}
+  class OrganisationUserUpdateData extends JsonApiDataDto({ type: "users" }, OrganisationUserUpdateAttributes) {}
 ) {}

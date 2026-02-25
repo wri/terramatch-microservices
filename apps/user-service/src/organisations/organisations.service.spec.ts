@@ -16,7 +16,7 @@ import {
   OwnershipStakeFactory,
   FundingTypeFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, Media, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { Organisation, Media, TreeSpecies, OrganisationUser, User } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -263,6 +263,77 @@ describe("OrganisationsService", () => {
       mockUserId(user.id);
 
       await expect(service.requestJoin("non-existent-uuid", user.id)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("updateUserStatus", () => {
+    it("should approve user and set organisationId", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+
+      const result = await service.updateUserStatus(org.uuid, user.uuid ?? "", "approved");
+
+      await orgUser.reload();
+      await user.reload();
+      expect(orgUser.status).toBe("approved");
+      expect(user.organisationId).toBe(org.id);
+      expect(result.user.id).toBe(user.id);
+      expect(result.organisation.id).toBe(org.id);
+    });
+
+    it("should reject user without setting organisationId", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+
+      const result = await service.updateUserStatus(org.uuid, user.uuid ?? "", "rejected");
+
+      await orgUser.reload();
+      await user.reload();
+      expect(orgUser.status).toBe("rejected");
+      expect(user.organisationId).not.toBe(org.id);
+      expect(result.user.id).toBe(user.id);
+      expect(result.organisation.id).toBe(org.id);
+    });
+
+    it("should throw NotFoundException if user not found", async () => {
+      const org = await OrganisationFactory.create();
+
+      await expect(service.updateUserStatus(org.uuid, "non-existent-uuid", "approved")).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw BadRequestException if user has no relationship", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+
+      await expect(service.updateUserStatus(org.uuid, user.uuid ?? "", "approved")).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException if status is not requested", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "approved"
+      });
+
+      await expect(service.updateUserStatus(org.uuid, user.uuid ?? "", "approved")).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 

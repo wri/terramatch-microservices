@@ -17,6 +17,8 @@ import { PolygonClippingCompleteEmail } from "./polygon-clipping-complete.email"
 import { OrganisationApprovedEmail } from "./organisation-approved.email";
 import { OrganisationRejectedEmail } from "./organisation-rejected.email";
 import { OrganisationJoinRequestEmail } from "./organisation-join-request.email";
+import { OrganisationUserApprovedEmail } from "./organisation-user-approved.email";
+import { OrganisationUserRejectedEmail } from "./organisation-user-rejected.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -38,7 +40,9 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   PolygonClippingCompleteEmail,
   OrganisationApprovedEmail,
   OrganisationRejectedEmail,
-  OrganisationJoinRequestEmail
+  OrganisationJoinRequestEmail,
+  OrganisationUserApprovedEmail,
+  OrganisationUserRejectedEmail
 ];
 
 /**

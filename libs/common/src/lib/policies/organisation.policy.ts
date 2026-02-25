@@ -19,6 +19,20 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       this.builder.can("approveReject", Organisation);
     }
 
+    const user = await this.getUser();
+    if (user != null) {
+      // Organisation owner: user.organisationId == organisation.id
+      if (user.organisationId != null) {
+        this.builder.can("approveReject", Organisation, { id: user.organisationId });
+      }
+
+      // Approved partner: user exists in organisationsConfirmed
+      const confirmedOrgIds = this.getConfirmedOrgIds(user);
+      if (confirmedOrgIds.length > 0) {
+        this.builder.can("approveReject", Organisation, { id: { $in: confirmedOrgIds } });
+      }
+    }
+
     this.builder.can("listing", Organisation, {
       status: APPROVED,
       private: false,
@@ -45,28 +59,26 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("manage-own")) {
-      const primaryOrg = await this.getPrimaryOrganisation();
       if (primaryOrg != null) {
         this.builder.can(["update", "uploadFiles", "deleteFiles", "updateFiles"], Organisation, {
           id: primaryOrg.id
         });
       }
 
-      const user = await this.getUser();
-      if (user != null && user.organisationsConfirmed != null) {
-        const confirmedOrgIds = user.organisationsConfirmed.map(({ id }) => id);
+      if (user != null) {
+        const confirmedOrgIds = this.getConfirmedOrgIds(user);
         if (confirmedOrgIds.length > 0) {
           this.builder.can("update", Organisation, { id: { $in: confirmedOrgIds } });
         }
       }
     }
 
-    const user = await User.findOne({
+    const userWithRoles = await User.findOne({
       where: { id: this.userId },
       include: [{ association: "roles", attributes: ["name"] }]
     });
-    if (user != null) {
-      const roleNames = user.roles?.map(role => role.name) ?? [];
+    if (userWithRoles != null) {
+      const roleNames = userWithRoles.roles?.map(role => role.name) ?? [];
       if (roleNames.includes("greenhouse-service-account")) {
         this.builder.cannot("joinRequest", Organisation);
       }
@@ -125,5 +137,12 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     const isEmailVerified = user.emailAddressVerifiedAt != null;
 
     return (this._isVerifiedAdmin = hasAdminRole && isEmailVerified);
+  }
+
+  private getConfirmedOrgIds(user: User): number[] {
+    if (user.organisationsConfirmed == null || user.organisationsConfirmed.length === 0) {
+      return [];
+    }
+    return user.organisationsConfirmed.map(({ id }) => id);
   }
 }

@@ -15,6 +15,7 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
+import { OrganisationUserUpdateBody } from "./dto/organisation-user-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { OrganisationFullDto, OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
@@ -44,6 +45,8 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
 import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { OrganisationUserApprovedEmail } from "@terramatch-microservices/common/email/organisation-user-approved.email";
+import { OrganisationUserRejectedEmail } from "@terramatch-microservices/common/email/organisation-user-rejected.email";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -244,6 +247,73 @@ export class OrganisationsController {
     }
 
     return buildJsonApi(OrganisationLightDto).addData(organisation.uuid, new OrganisationLightDto(organisation));
+  }
+
+  @Patch(":uuid/users/:userUuid")
+  @ApiOperation({
+    operationId: "organisationUserUpdate",
+    summary: "Approve or reject a user's join request to an organisation"
+  })
+  @JsonApiResponse({
+    data: UserDto,
+    included: [{ type: OrganisationLightDto, relationships: [USER_ORG_RELATIONSHIP] }]
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "User not authorized to approve/reject join requests."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation or user not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
+  async updateUserStatus(
+    @Param("uuid") organisationUuid: string,
+    @Param("userUuid") userUuid: string,
+    @Body() updatePayload: OrganisationUserUpdateBody
+  ) {
+    const organisation = await this.organisationsService.findOne(organisationUuid);
+    await this.policyService.authorize("approveReject", organisation);
+
+    const status = updatePayload.data.attributes.status;
+    await this.organisationsService.updateUserStatus(organisationUuid, userUuid, status);
+
+    const user = await User.findOne({
+      where: { uuid: userUuid },
+      include: ["roles", "organisation", "frameworks"]
+    });
+
+    if (user == null) {
+      throw new NotFoundException(`User with UUID ${userUuid} not found`);
+    }
+
+    try {
+      if (status === "approved") {
+        await new OrganisationUserApprovedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+        this.logger.log(
+          `Queued organisation user approved email for user ${user.id} in organisation ${organisation.id}`
+        );
+      } else {
+        await new OrganisationUserRejectedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+        this.logger.log(
+          `Queued organisation user rejected email for user ${user.id} in organisation ${organisation.id}`
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue organisation user ${status} email for user ${user.id} in organisation ${organisation.id}`,
+        error
+      );
+    }
+
+    const document = buildJsonApi(UserDto);
+    const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
+    const orgResource = document.addData(organisation.uuid, new OrganisationLightDto(organisation));
+    userResource.relateTo("org", orgResource, { meta: { userStatus: status } });
+
+    return document;
   }
 
   @Post()

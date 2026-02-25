@@ -189,6 +189,50 @@ export class OrganisationsService {
 
     return orgUser;
   }
+
+  async updateUserStatus(
+    organisationUuid: string,
+    userUuid: string,
+    status: "approved" | "rejected"
+  ): Promise<{ user: User; organisation: Organisation }> {
+    const organisation = await this.findOne(organisationUuid);
+
+    const user = await User.findOne({
+      where: { uuid: userUuid },
+      attributes: ["id", "uuid"]
+    });
+
+    if (user == null) {
+      throw new NotFoundException(`User with UUID ${userUuid} not found`);
+    }
+
+    const orgUser = await OrganisationUser.findOne({
+      where: {
+        organisationId: organisation.id,
+        userId: user.id
+      }
+    });
+
+    if (orgUser == null) {
+      throw new BadRequestException("User does not have a relationship with this organisation");
+    }
+
+    if (orgUser.status !== "requested") {
+      throw new BadRequestException(`User status is '${orgUser.status}', expected 'requested'`);
+    }
+
+    orgUser.status = status;
+    await orgUser.save();
+
+    // Only set organisationId on approval
+    if (status === "approved") {
+      user.organisationId = organisation.id;
+      await user.save();
+    }
+
+    return { user, organisation };
+  }
+
   async processSideloads(
     document: DocumentBuilder,
     organisation: Organisation,

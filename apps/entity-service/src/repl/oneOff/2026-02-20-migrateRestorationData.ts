@@ -279,7 +279,7 @@ const processRestorationModel = async <M extends Model>(
   mappings: RestorationMapping<M>[]
 ) => {
   const builder = new PaginatedQueryBuilder(ctor, 100);
-  builder.attributes(uniq(flattenDeep(["id", mappings.map(({ attributes }) => attributes)])));
+  builder.attributes(uniq(flattenDeep(["id", mappings.map(({ attributes }) => attributes)])) as string[]);
   const total = await builder.paginationTotal();
   const bar = new ProgressBar(`Processing ${total} ${label} [:bar] :percent :etas`, { width: 40, total });
   for await (const page of batchFindAll(builder)) {

@@ -1,5 +1,14 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
+import {
+  Attributes,
+  Filterable,
+  FindAttributeOptions,
+  FindOptions,
+  Includeable,
+  Op,
+  OrderItem,
+  WhereOptions
+} from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { flatten, isObject } from "lodash";
 import { NumberPage } from "../dto/page.dto";
@@ -87,7 +96,7 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
-  attributes(attributes: Attributes<T>) {
+  attributes(attributes: FindAttributeOptions) {
     this.findOptions.attributes = attributes;
     return this;
   }

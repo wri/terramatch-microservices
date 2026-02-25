@@ -1,14 +1,17 @@
 import { BadRequestException, Controller, Get, NotFoundException, Param, UnauthorizedException } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
-import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ENTITY_MODELS } from "@terramatch-microservices/database/constants/entities";
 import { intersection } from "lodash";
 import { AggregateReportsParamsDto } from "./dto/aggregate-reports-params.dto";
-import { AggregateReportsResponseDto } from "./dto/aggregate-reports-response.dto";
+import { AggregateReportsDto } from "./dto/aggregate-reports-response.dto";
 import { AggregateReportsService } from "./aggregate-reports.service";
 
 @Controller("entities/v3/:entity/:uuid")
+@ApiExtraModels(AggregateReportsDto)
 export class AggregateReportsController {
   constructor(
     private readonly aggregateReportsService: AggregateReportsService,
@@ -18,8 +21,9 @@ export class AggregateReportsController {
   @Get("aggregate-reports")
   @ApiOperation({
     operationId: "getAggregateReports",
-    summary: "Get aggregated reporting data for progress charts (cumulative tree planting, seeding, regeneration)."
+    summary: "Get aggregated reporting data for progress charts (tree planting, seeding, regeneration by period)."
   })
+  @JsonApiResponse(AggregateReportsDto)
   @ExceptionResponse(BadRequestException, {
     description: "Unsupported entity type or framework."
   })
@@ -29,9 +33,7 @@ export class AggregateReportsController {
   @ExceptionResponse(UnauthorizedException, {
     description: "Current user is not authorized to read this entity."
   })
-  async getAggregateReports(
-    @Param() { entity, uuid }: AggregateReportsParamsDto
-  ): Promise<AggregateReportsResponseDto> {
+  async getAggregateReports(@Param() { entity, uuid }: AggregateReportsParamsDto) {
     const modelClass = ENTITY_MODELS[entity];
     if (modelClass == null) {
       throw new BadRequestException(`Unsupported entity type: ${entity}`);
@@ -52,6 +54,10 @@ export class AggregateReportsController {
 
     await this.policyService.authorize("read", entityModel);
 
-    return this.aggregateReportsService.getAggregateReports(entity, entityModel);
+    const attributesData = await this.aggregateReportsService.getAggregateReports(entity, entityModel);
+    return buildJsonApi(AggregateReportsDto).addData(
+      `${entity}|${uuid}`,
+      populateDto(new AggregateReportsDto(), attributesData)
+    );
   }
 }

@@ -19,11 +19,11 @@ const SUPPORTED_FRAMEWORKS: ReadonlySet<FrameworkKey> = new Set([
 type AggregateReportCollectionKey = keyof AggregateReportsResponseDto;
 
 const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollectionKey>> = {
-  terrafund: ["tree-planted", "trees-regenerating"],
-  "terrafund-landscapes": ["tree-planted", "trees-regenerating"],
-  enterprises: ["tree-planted", "trees-regenerating"],
-  ppc: ["tree-planted", "seeding-records", "trees-regenerating"],
-  hbf: ["tree-planted", "seeding-records", "trees-regenerating"]
+  terrafund: ["treePlanted", "treesRegenerating"],
+  "terrafund-landscapes": ["treePlanted", "treesRegenerating"],
+  enterprises: ["treePlanted", "treesRegenerating"],
+  ppc: ["treePlanted", "seedingRecords", "treesRegenerating"],
+  hbf: ["treePlanted", "seedingRecords", "treesRegenerating"]
 };
 
 function toIsoDate(date: Date): string {
@@ -73,7 +73,7 @@ export class AggregateReportsService {
 
     const collections = FRAMEWORK_COLLECTIONS[frameworkKey];
     if (collections == null || collections.length === 0) {
-      return this.emptyResponse();
+      return {};
     }
 
     const reports = await this.getApprovedReportRows(entityType, entity);
@@ -200,19 +200,15 @@ export class AggregateReportsService {
     treesRegenerating: AggregateReportSeriesItemDto[]
   ): AggregateReportsResponseDto {
     const response: AggregateReportsResponseDto = {};
-    if (collections.includes("tree-planted")) {
-      response["tree-planted"] = treePlanted;
+    if (collections.includes("treePlanted")) {
+      response.treePlanted = treePlanted;
     }
-    if (collections.includes("seeding-records")) {
-      response["seeding-records"] = seedingRecords;
+    if (collections.includes("seedingRecords")) {
+      response.seedingRecords = seedingRecords;
     }
-    if (collections.includes("trees-regenerating")) {
-      response["trees-regenerating"] = treesRegenerating;
+    if (collections.includes("treesRegenerating")) {
+      response.treesRegenerating = treesRegenerating;
     }
     return response;
-  }
-
-  private emptyResponse(): AggregateReportsResponseDto {
-    return {};
   }
 }

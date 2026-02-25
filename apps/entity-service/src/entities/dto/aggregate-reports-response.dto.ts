@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
 export class AggregateReportSeriesItemDto {
   @ApiProperty({
@@ -8,31 +9,40 @@ export class AggregateReportSeriesItemDto {
   dueDate: string;
 
   @ApiProperty({
-    description: "Cumulative count up to that reporting period.",
+    description: "Sum for that reporting period (V2 compatible).",
     example: 1500
   })
   aggregateAmount: number;
 }
 
-export class AggregateReportsResponseDto {
+export interface AggregateReportsAttributes {
+  treePlanted?: AggregateReportSeriesItemDto[];
+  seedingRecords?: AggregateReportSeriesItemDto[];
+  treesRegenerating?: AggregateReportSeriesItemDto[];
+}
+
+export type AggregateReportsResponseDto = AggregateReportsAttributes;
+
+@JsonApiDto({ type: "aggregateReports", id: "string" })
+export class AggregateReportsDto {
   @ApiProperty({
     type: [AggregateReportSeriesItemDto],
-    description: "Cumulative trees planted by reporting period (when framework supports it).",
+    description: "Trees planted by reporting period (when framework supports it).",
     required: false
   })
-  "tree-planted"?: AggregateReportSeriesItemDto[];
+  treePlanted?: AggregateReportSeriesItemDto[];
 
   @ApiProperty({
     type: [AggregateReportSeriesItemDto],
-    description: "Cumulative seeds planted by reporting period (when framework supports it).",
+    description: "Seeds planted by reporting period (when framework supports it).",
     required: false
   })
-  "seeding-records"?: AggregateReportSeriesItemDto[];
+  seedingRecords?: AggregateReportSeriesItemDto[];
 
   @ApiProperty({
     type: [AggregateReportSeriesItemDto],
-    description: "Cumulative trees regenerating (ANR) by reporting period (when framework supports it).",
+    description: "Trees regenerating (ANR) by reporting period (when framework supports it).",
     required: false
   })
-  "trees-regenerating"?: AggregateReportSeriesItemDto[];
+  treesRegenerating?: AggregateReportSeriesItemDto[];
 }

@@ -29,7 +29,7 @@ export class UserAssociationDto {
   @ApiProperty()
   organisationName: string;
 
-  @ApiProperty()
+  @ApiProperty({ nullable: true, type: String })
   roleName: string | null;
 
   @ApiProperty()

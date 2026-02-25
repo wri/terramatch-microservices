@@ -37,16 +37,6 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
       return;
     }
 
-    const requestingUser = await User.findByPk(this.data.requestingUserId, {
-      attributes: ["firstName", "lastName", "emailAddress"]
-    });
-
-    let requestingUserName = "A user";
-    if (requestingUser != null) {
-      const fullName = `${requestingUser.firstName ?? ""} ${requestingUser.lastName ?? ""}`.trim();
-      requestingUserName = fullName !== "" ? fullName : requestingUser.emailAddress ?? "A user";
-    }
-
     await Promise.all(
       owners
         .filter(owner => owner.emailAddress != null)
@@ -59,19 +49,13 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
             owner.emailAddress,
             owner.locale,
             {
-              subject: "organisation-join-request.subject",
-              title: "organisation-join-request.title",
-              body: "organisation-join-request.body",
-              cta: "organisation-join-request.cta"
+              subject: "organisation-user-join-requested.subject",
+              title: "organisation-user-join-requested.title",
+              body: "organisation-user-join-requested.body"
             },
             {
               additionalValues: {
-                link: "/auth/login",
                 transactional: "transactional"
-              },
-              i18nReplacements: {
-                "{requestingUserName}": requestingUserName,
-                "{organisationName}": organisation.name ?? "the organisation"
               }
             }
           );

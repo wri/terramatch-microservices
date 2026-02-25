@@ -16,7 +16,14 @@ import {
   VOLUNTEER_SITE_MAINTENANCE,
   VOLUNTEER_SITE_MONITORING
 } from "@terramatch-microservices/database/constants/demographic-collections";
-import { Project, ProjectReport, Site, SiteReport, TrackingEntry } from "@terramatch-microservices/database/entities";
+import {
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport,
+  Tracking,
+  TrackingEntry
+} from "@terramatch-microservices/database/entities";
 import { Dictionary, isEqualWith, uniq } from "lodash";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, CreationAttributes } from "sequelize";
@@ -24,9 +31,10 @@ import { DateTime } from "luxon";
 import { Valid } from "luxon/src/_util";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { LaravelModelCtor } from "@terramatch-microservices/database/types/util";
 
 type ModelConfig<M extends Model> = {
-  model: ModelCtor<M>;
+  model: LaravelModelCtor & ModelCtor<M>;
   parentAssociation: keyof Attributes<M>;
   parentIdColumn: string;
   oldModelValue: string;
@@ -112,6 +120,8 @@ const DEMOGRAPHICS = {
   "ethnicity-unknown": { type: "ethnicity", subtype: "unknown" }
 } as const;
 
+const LOGGER = new TMLogger("Bulk PPC Workday Import");
+
 /**
  * This script is meant to run in the REPL:
  * > await bulkWorkdayImport(await resolve(FileService), 'path-to.csv'));
@@ -120,8 +130,7 @@ const DEMOGRAPHICS = {
  * be in the wri-tm-repl S3 bucket.
  */
 export const bulkWorkdayImport = withoutSqlLogs(
-  async (fileService: FileService, csvPath: string, type: SupportedType, dryRun = false) => {
-    const logger = new TMLogger("Bulk PPC Workday Import");
+  async (fileService: FileService, csvPath: string, type: SupportedType, dryRun?: boolean) => {
     let rowCount = 0;
     const warnings: string[] = [];
     const workdays: Record<number, Workday[]> = {};
@@ -139,23 +148,30 @@ export const bulkWorkdayImport = withoutSqlLogs(
         } else workdays[result.reportId] = result.workdays;
       });
 
-      logger.log(`Processed ${rowCount} rows from ${csvPath}`);
+      LOGGER.log(`Processed ${rowCount} rows from ${csvPath}`);
 
       if (warnings.length > 0) {
-        logger.warn("Warnings:");
-        for (const warning of warnings) logger.warn(`${warning}`);
+        LOGGER.warn("Warnings:");
+        for (const warning of warnings) LOGGER.warn(`${warning}`);
       }
 
       if (dryRun) {
-        logger.log("Dry run complete. No workdays were persisted.");
+        LOGGER.log("Dry run complete. No workdays were persisted.");
+        LOGGER.log(`Workdays parsed:\n${JSON.stringify(workdays, null, 2)}`);
       } else {
-        logger.log("Persisting workdays...");
+        LOGGER.log("Persisting workdays...");
+        await persistWorkdays(config, workdays);
       }
     } catch (err) {
-      logger.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
+      LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
     }
   }
 );
+
+const columnValue = (row: Dictionary<string>, columnName: string) => {
+  assert(columnName in row, `Column ${columnName} not found.`);
+  return row[columnName] === "" ? null : row[columnName];
+};
 
 const assert = (condition: boolean, message: string) => {
   if (!condition) throw new Error(message);
@@ -283,7 +299,36 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
   return { reportId: report.id as number, workdays, warnings };
 };
 
-const columnValue = (row: Dictionary<string>, columnName: string) => {
-  assert(columnName in row, `Column ${columnName} not found.`);
-  return row[columnName] === "" ? null : row[columnName];
+const persistWorkdays = async (config: ModelConfigs[SupportedType], reportWorkdays: Record<number, Workday[]>) => {
+  for (const [reportId, workdays] of Object.entries(reportWorkdays)) {
+    const report = (await (config.model as ModelCtor).findOne({
+      where: { id: Number(reportId) },
+      attributes: ["id", "uuid"]
+    })) as SupportedModel;
+    const modelDescription = `${config.model.name} [id=${report.id}, uuid=${report.uuid}]`;
+    LOGGER.log(`Persisting workdays for ${modelDescription}...`);
+    for (const { collection, entries } of workdays) {
+      const exists =
+        (await Tracking.for(report).domain("demographics").type("workdays").collection(collection).count()) > 0;
+      if (exists) {
+        LOGGER.warn(
+          `Tracking already exists, skipping this row [reportId=${
+            report.id
+          }, collection=${collection}]\n${JSON.stringify(entries, null, 2)}`
+        );
+        continue;
+      }
+
+      LOGGER.log(`Creating workdays for ${collection}`);
+      const tracking = await Tracking.create({
+        trackableType: config.model.LARAVEL_TYPE,
+        trackableId: report.id,
+        domain: "demographics",
+        type: "workdays",
+        collection
+      });
+      await TrackingEntry.bulkCreate(entries.map(entry => ({ ...entry, trackingId: tracking.id })));
+    }
+    LOGGER.log(`Persistence complete for ${modelDescription}`);
+  }
 };

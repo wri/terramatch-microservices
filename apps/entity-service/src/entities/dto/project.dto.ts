@@ -124,7 +124,15 @@ export class ProjectFullDto extends ProjectLightDto {
     project: Project,
     props: HybridSupportProps<
       ProjectFullDto,
-      Omit<Project, "application" | "feedback" | "feedbackFields" | "totalHectaresRestoredGoal" | "treesGrownGoal">
+      Omit<
+        Project,
+        | "application"
+        | "feedback"
+        | "feedbackFields"
+        | "totalHectaresRestoredGoal"
+        | "treesGrownGoal"
+        | "goalTreesRestoredAnr"
+      >
     >
   ) {
     super();

@@ -1,0 +1,218 @@
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { Project, Seeding, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { col, fn } from "sequelize";
+import { Literal } from "sequelize/types/utils";
+import { sortBy } from "lodash";
+import { AggregateReportsEntityType } from "./dto/aggregate-reports-params.dto";
+import { AggregateReportSeriesItemDto, AggregateReportsResponseDto } from "./dto/aggregate-reports-response.dto";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+
+const SUPPORTED_FRAMEWORKS: ReadonlySet<FrameworkKey> = new Set([
+  "terrafund",
+  "terrafund-landscapes",
+  "enterprises",
+  "ppc",
+  "hbf"
+]);
+
+type AggregateReportCollectionKey = keyof AggregateReportsResponseDto;
+
+const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollectionKey>> = {
+  terrafund: ["tree-planted", "trees-regenerating"],
+  "terrafund-landscapes": ["tree-planted", "trees-regenerating"],
+  enterprises: ["tree-planted", "trees-regenerating"],
+  ppc: ["tree-planted", "seeding-records", "trees-regenerating"],
+  hbf: ["tree-planted", "seeding-records", "trees-regenerating"]
+};
+
+function toIsoDate(date: Date): string {
+  return date.toISOString();
+}
+
+function buildPeriodSeries(
+  reportRows: SiteReport[],
+  amountByReportId: Map<number, number>,
+  getAmountFromRow: (row: SiteReport) => number
+): AggregateReportSeriesItemDto[] {
+  const withDueAt = reportRows.filter((row): row is SiteReport & { dueAt: Date } => row.dueAt != null);
+  if (withDueAt.length === 0) return [];
+
+  const amountByDueTime = new Map<number, { dueAt: Date; amount: number }>();
+  for (const row of withDueAt) {
+    const dueTime = row.dueAt.getTime();
+    const periodAmount = amountByReportId.get(row.id) ?? getAmountFromRow(row);
+    const existing = amountByDueTime.get(dueTime);
+    if (existing == null) {
+      amountByDueTime.set(dueTime, { dueAt: row.dueAt, amount: periodAmount });
+    } else {
+      existing.amount += periodAmount;
+    }
+  }
+
+  const sorted = sortBy(Array.from(amountByDueTime.values()), x => x.dueAt.getTime());
+  return sorted.map(period => ({
+    dueDate: toIsoDate(period.dueAt),
+    aggregateAmount: period.amount
+  }));
+}
+
+@Injectable()
+export class AggregateReportsService {
+  async getAggregateReports(
+    entityType: AggregateReportsEntityType,
+    entity: EntityModel
+  ): Promise<AggregateReportsResponseDto> {
+    const frameworkKey: FrameworkKey | null = entity.frameworkKey;
+    if (frameworkKey == null) {
+      throw new BadRequestException("Entity has no framework; aggregate reports are not supported.");
+    }
+    if (!SUPPORTED_FRAMEWORKS.has(frameworkKey)) {
+      throw new BadRequestException(`Unsupported framework for aggregate reports: ${frameworkKey}`);
+    }
+
+    const collections = FRAMEWORK_COLLECTIONS[frameworkKey];
+    if (collections == null || collections.length === 0) {
+      return this.emptyResponse();
+    }
+
+    const reports = await this.getApprovedReportRows(entityType, entity);
+    const reportIds = reports.map(r => r.id);
+
+    if (reportIds.length === 0) {
+      return this.buildResponse(collections, [], [], []);
+    }
+
+    const [treePlantedByReport, seedingByReport] = await Promise.all([
+      this.getTreePlantedByReportId(reportIds),
+      this.getSeedingByReportId(reportIds)
+    ]);
+
+    const treePlantedSeries = buildPeriodSeries(reports, treePlantedByReport, () => 0);
+    const seedingSeries = buildPeriodSeries(reports, seedingByReport, () => 0);
+    const treesRegeneratingSeries = buildPeriodSeries(reports, new Map<number, number>(), (row): number => {
+      const n = row.numTreesRegenerating;
+      return n != null ? n : 0;
+    });
+
+    return this.buildResponse(collections, treePlantedSeries, seedingSeries, treesRegeneratingSeries);
+  }
+
+  private async getApprovedReportRows(
+    entityType: AggregateReportsEntityType,
+    entity: EntityModel
+  ): Promise<SiteReport[]> {
+    if (entityType === "projects") {
+      const project = entity instanceof Project ? entity : null;
+      if (project == null) return [];
+      const approvedSitesQuery: Literal = Site.approvedIdsSubquery(project.id);
+      return SiteReport.approved()
+        .sites(approvedSitesQuery)
+        .findAll({
+          attributes: ["id", "dueAt", "numTreesRegenerating"],
+          order: [["dueAt", "ASC"]]
+        });
+    }
+
+    if (entityType === "sites") {
+      const site = entity instanceof Site ? entity : null;
+      if (site == null) return [];
+      return SiteReport.approved()
+        .sites([site.id])
+        .findAll({
+          attributes: ["id", "dueAt", "numTreesRegenerating"],
+          order: [["dueAt", "ASC"]]
+        });
+    }
+
+    return [];
+  }
+
+  private async getTreePlantedByReportId(reportIds: number[]): Promise<Map<number, number>> {
+    if (reportIds.length === 0) return new Map();
+
+    const rows = await TreeSpecies.visible()
+      .collection("tree-planted")
+      .siteReports(reportIds)
+      .findAll({
+        attributes: ["speciesableId", [fn("SUM", col("amount")), "total"]],
+        group: ["speciesableId"],
+        raw: true
+      });
+
+    const map = new Map<number, number>();
+    for (const row of rows) {
+      const raw = row as unknown;
+      if (
+        raw !== null &&
+        typeof raw === "object" &&
+        "speciesableId" in raw &&
+        typeof (raw as { speciesableId: unknown }).speciesableId === "number"
+      ) {
+        const id = (raw as { speciesableId: number }).speciesableId;
+        const totalVal = (raw as { total?: unknown }).total;
+        const total =
+          typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
+        if (Number.isFinite(total)) {
+          map.set(id, total);
+        }
+      }
+    }
+    return map;
+  }
+
+  private async getSeedingByReportId(reportIds: number[]): Promise<Map<number, number>> {
+    if (reportIds.length === 0) return new Map();
+
+    const rows = await Seeding.visible()
+      .siteReports(reportIds)
+      .findAll({
+        attributes: ["seedableId", [fn("SUM", col("amount")), "total"]],
+        group: ["seedableId"],
+        raw: true
+      });
+
+    const map = new Map<number, number>();
+    for (const row of rows) {
+      const raw = row as unknown;
+      if (
+        raw !== null &&
+        typeof raw === "object" &&
+        "seedableId" in raw &&
+        typeof (raw as { seedableId: unknown }).seedableId === "number"
+      ) {
+        const id = (raw as { seedableId: number }).seedableId;
+        const totalVal = (raw as { total?: unknown }).total;
+        const total =
+          typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
+        if (Number.isFinite(total)) {
+          map.set(id, total);
+        }
+      }
+    }
+    return map;
+  }
+
+  private buildResponse(
+    collections: ReadonlyArray<AggregateReportCollectionKey>,
+    treePlanted: AggregateReportSeriesItemDto[],
+    seedingRecords: AggregateReportSeriesItemDto[],
+    treesRegenerating: AggregateReportSeriesItemDto[]
+  ): AggregateReportsResponseDto {
+    const response: AggregateReportsResponseDto = {};
+    if (collections.includes("tree-planted")) {
+      response["tree-planted"] = treePlanted;
+    }
+    if (collections.includes("seeding-records")) {
+      response["seeding-records"] = seedingRecords;
+    }
+    if (collections.includes("trees-regenerating")) {
+      response["trees-regenerating"] = treesRegenerating;
+    }
+    return response;
+  }
+
+  private emptyResponse(): AggregateReportsResponseDto {
+    return {};
+  }
+}

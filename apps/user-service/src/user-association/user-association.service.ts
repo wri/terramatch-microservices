@@ -11,17 +11,20 @@ import {
 import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { keyBy } from "lodash";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class UserAssociationService {
-  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
+  constructor(private readonly jwtService: JwtService, @InjectQueue("email") private readonly emailQueue: Queue) {}
 
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
@@ -38,26 +41,50 @@ export class UserAssociationService {
     return ProjectUser.findAll(findOptions);
   }
 
-  async addIndex(document: DocumentBuilder, project: Project, projectUsers: ProjectUser[]) {
+  async addIndex(
+    document: DocumentBuilder,
+    project: Project,
+    projectUsers: ProjectUser[],
+    query: UserAssociationQueryDto
+  ) {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress"]
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
     });
+    const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
+    const organisations = await Organisation.findAll({
+      where: { id: { [Op.in]: organisationIds } },
+      attributes: ["id", "name"]
+    });
+    const organisationMap = keyBy(
+      organisations.map(organisation => organisation.dataValues),
+      "id"
+    );
     users.forEach(user => {
       const projectUser = projectUsers.find(projectUser => projectUser.userId === user.id);
+      const organisation = organisationMap[user.organisationId as number];
       document.addData(
         user.uuid as string,
         new UserAssociationDto(user, {
           status: projectUser?.status as string,
-          isManager: projectUser?.isManaging as boolean
+          isManager: projectUser?.isManaging as boolean,
+          organisationName: organisation?.name as string,
+          roleName: user.primaryRole as string,
+          associatedType: "projects"
         })
       );
     });
     const indexIds = users.map(user => user.uuid as string);
     document.addIndex({
-      resource: "userAssociations",
-      requestPath: `/userAssociations/v3/projects/${project.uuid}`,
+      resource: "associatedUsers",
+      requestPath: `/userAssociations/v3/projects/${project.uuid}${getStableRequestQuery(query)}`,
       total: users.length,
       ids: indexIds
     });
@@ -66,7 +93,13 @@ export class UserAssociationService {
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
-      attributes: ["id", "emailAddress"]
+      attributes: ["id", "emailAddress"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
     });
 
     if (user == null) {
@@ -78,7 +111,10 @@ export class UserAssociationService {
   }
 
   async deleteBulkUserAssociations(projectId: number, uuids: string[]) {
-    const users = await User.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["uuid"] });
+    const users = await User.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "emailAddress"]
+    });
     if (users.length === 0) {
       throw new NotFoundException("Users not found");
     }
@@ -106,7 +142,7 @@ export class UserAssociationService {
       roleId: pdRole.id,
       modelType: User.LARAVEL_TYPE
     } as ModelHasRole);
-    const token = crypto.randomBytes(32).toString("hex");
+    const token = await this.jwtService.signAsync({ sub: newUser.uuid }, { expiresIn: "7d" });
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
@@ -129,6 +165,10 @@ export class UserAssociationService {
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
+      if (user.primaryRole !== "project-manager") {
+        throw new BadRequestException("User is not a project manager");
+      }
+
       const projectUser = await ProjectUser.findOne({
         where: { projectId: project.id, userId: user.id, isManaging: true }
       });
@@ -136,10 +176,19 @@ export class UserAssociationService {
       if (projectUser != null) {
         throw new BadRequestException("User is already a project manager");
       }
+
+      await ProjectUser.create({
+        projectId: project.id,
+        userId: user.id,
+        isManaging: true
+      });
+      return;
     }
+
     const projectUser = await ProjectUser.findOne({
       where: { projectId: project.id, userId: user.id }
     });
+
     if (projectUser == null) {
       await ProjectUser.create({
         projectId: project.id,
@@ -147,6 +196,7 @@ export class UserAssociationService {
         isMonitoring: true
       });
     }
+
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,

@@ -19,6 +19,7 @@ import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/co
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
+import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
 
 @Controller("userAssociations/v3/projects")
 export class UserAssociationController {
@@ -45,7 +46,7 @@ export class UserAssociationController {
     await this.policyService.authorize("read", project);
     const projectUsers = await this.userAssociationService.query(project, query);
     const document = buildJsonApi(UserAssociationDto, { forceDataArray: true });
-    await this.userAssociationService.addIndex(document, project, projectUsers);
+    await this.userAssociationService.addIndex(document, project, projectUsers, query);
     return document;
   }
 
@@ -87,7 +88,7 @@ export class UserAssociationController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Project not found" })
-  async deleteBulkUserAssociations(@Param("uuid") uuid: string, @Query() { uuids }: { uuids: string[] }) {
+  async deleteBulkUserAssociations(@Param("uuid") uuid: string, @Query() query: UserAssociationDeleteQueryDto) {
     const project = await Project.findOne({
       where: { uuid },
       attributes: ["id", "uuid", "frameworkKey", "organisationId"]
@@ -96,7 +97,7 @@ export class UserAssociationController {
       throw new NotFoundException("Project not found");
     }
     await this.policyService.authorize("update", project);
-    await this.userAssociationService.deleteBulkUserAssociations(project.id, uuids);
-    return buildDeletedResponse("userAssociations", uuids);
+    await this.userAssociationService.deleteBulkUserAssociations(project.id, query.uuids);
+    return buildDeletedResponse("associatedUsers", query.uuids);
   }
 }

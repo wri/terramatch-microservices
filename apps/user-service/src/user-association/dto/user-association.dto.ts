@@ -18,8 +18,20 @@ export class UserAssociationDto {
   emailAddress: string;
 
   @ApiProperty()
+  fullName: string;
+
+  @ApiProperty()
   status: string;
 
   @ApiProperty()
   isManager: boolean;
+
+  @ApiProperty()
+  organisationName: string;
+
+  @ApiProperty()
+  roleName: string | null;
+
+  @ApiProperty()
+  associatedType: string;
 }

@@ -55,8 +55,10 @@ export class OrganisationUserRejectedEmail extends EmailSender<OrganisationUserR
         body: "organisation-user-rejected.body"
       },
       {
+        i18nReplacements: {
+          "{organisationName}": organisation.name
+        },
         additionalValues: {
-          organisationName: organisation.name,
           transactional: "transactional"
         }
       }

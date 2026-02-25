@@ -95,6 +95,27 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
   });
 
+  it("should update actions and not delete them if the task is not found", async () => {
+    mockUserId();
+    const project = await ProjectFactory.create({ status: APPROVED });
+    const task = await TaskFactory.create({ projectId: project.id });
+    const projectReport = await ProjectReportFactory.create({ projectId: project.id, taskId: task.id });
+    await ActionFactory.forProjectReport.create({ targetableId: projectReport.id });
+    await new EntityStatusUpdate(eventService, projectReport).handle();
+    const actions = await Action.for(projectReport).findAll();
+    expect(actions.length).toBeGreaterThan(0);
+  });
+
+  it("should update actions and not delete them if the taskId is null", async () => {
+    mockUserId();
+    const project = await ProjectFactory.create({ status: APPROVED });
+    const projectReport = await ProjectReportFactory.create({ projectId: project.id, taskId: null });
+    await ActionFactory.forProjectReport.create({ targetableId: projectReport.id });
+    await new EntityStatusUpdate(eventService, projectReport).handle();
+    const actions = await Action.for(projectReport).findAll();
+    expect(actions.length).toBeGreaterThan(0);
+  });
+
   it("should create an approved audit status", async () => {
     const user = await UserFactory.create();
     mockUserId(user.id);

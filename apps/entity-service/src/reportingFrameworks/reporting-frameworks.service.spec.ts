@@ -1,14 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
-import {
-  Framework,
-  Form,
-  Project,
-  FrameworkUser,
-  Permission,
-  Role,
-  RoleHasPermission
-} from "@terramatch-microservices/database/entities";
+import { Framework, Form, Project, FrameworkUser } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -322,7 +314,7 @@ describe("ReportingFrameworksService", () => {
   });
 
   describe("create", () => {
-    it("should create framework with slug from name and call ensurePermission and syncForms", async () => {
+    it("should create framework with slug from name and call syncForms", async () => {
       const attributes = {
         name: "My New Framework",
         accessCode: null as string | null,
@@ -341,16 +333,6 @@ describe("ReportingFrameworksService", () => {
       } as unknown as Framework;
 
       const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
-      const permissionFindSpy = jest.spyOn(Permission, "findOne").mockResolvedValue(null as unknown as Permission);
-      const permissionCreateSpy = jest
-        .spyOn(Permission, "create")
-        .mockResolvedValue({ id: 1, name: "framework-my-new-framework", guardName: "api" } as Permission);
-      const roleFindSpy = jest.spyOn(Role, "findOne").mockResolvedValue({ id: 1, name: "admin-super" } as Role);
-      const roleHasPermFindSpy = jest
-        .spyOn(RoleHasPermission, "findOne")
-        .mockResolvedValue(null as unknown as RoleHasPermission);
-      const roleHasPermCreateSpy = jest.spyOn(RoleHasPermission, "create").mockResolvedValue({} as RoleHasPermission);
-
       const createSpy = jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
 
       const result = await service.create(attributes);
@@ -367,90 +349,7 @@ describe("ReportingFrameworksService", () => {
         nurseryReportFormUuid: null
       });
       expect(result).toEqual(createdFramework);
-      expect(permissionFindSpy).toHaveBeenCalledWith({ where: { name: "framework-my-new-framework" } });
-      expect(permissionCreateSpy).toHaveBeenCalledWith({ name: "framework-my-new-framework", guardName: "api" });
-      expect(roleFindSpy).toHaveBeenCalledWith({ where: { name: "admin-super" } });
-      expect(roleHasPermFindSpy).toHaveBeenCalled();
-      expect(roleHasPermCreateSpy).toHaveBeenCalledWith({ roleId: 1, permissionId: 1 });
       expect(formUpdateSpy).toHaveBeenCalled();
-    });
-
-    it("should create framework when permission already exists", async () => {
-      const attributes = {
-        name: "Existing Perm Framework",
-        projectFormUuid: "form-uuid-1" as string | null
-      };
-      const existingPermission = { id: 2, name: "framework-existing-perm-framework", guardName: "api" } as Permission;
-      const createdFramework = {
-        id: 2,
-        uuid: "uuid-2",
-        slug: "existing-perm-framework",
-        name: attributes.name,
-        projectFormUuid: "form-uuid-1",
-        projectReportFormUuid: null,
-        siteFormUuid: null,
-        siteReportFormUuid: null,
-        nurseryFormUuid: null,
-        nurseryReportFormUuid: null
-      } as unknown as Framework;
-
-      jest.spyOn(Form, "update").mockResolvedValue([1]);
-      jest.spyOn(Permission, "findOne").mockResolvedValue(existingPermission);
-      const permissionCreateSpy = jest.spyOn(Permission, "create");
-      jest.spyOn(Role, "findOne").mockResolvedValue({ id: 1, name: "admin-super" } as Role);
-      jest.spyOn(RoleHasPermission, "findOne").mockResolvedValue(null as unknown as RoleHasPermission);
-      jest.spyOn(RoleHasPermission, "create").mockResolvedValue({} as RoleHasPermission);
-      jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
-
-      await service.create(attributes);
-
-      expect(permissionCreateSpy).not.toHaveBeenCalled();
-    });
-
-    it("should not create RoleHasPermission when role admin-super is missing", async () => {
-      const attributes = { name: "No Admin Role" };
-      const createdFramework = {
-        id: 3,
-        slug: "no-admin-role",
-        name: attributes.name,
-        projectFormUuid: null,
-        projectReportFormUuid: null,
-        siteFormUuid: null,
-        siteReportFormUuid: null,
-        nurseryFormUuid: null,
-        nurseryReportFormUuid: null
-      } as unknown as Framework;
-
-      jest.spyOn(Form, "update").mockResolvedValue([1]);
-      jest.spyOn(Permission, "findOne").mockResolvedValue(null as unknown as Permission);
-      jest
-        .spyOn(Permission, "create")
-        .mockResolvedValue({ id: 1, name: "framework-no-admin-role", guardName: "api" } as Permission);
-      jest.spyOn(Role, "findOne").mockResolvedValue(null as unknown as Role);
-      const roleHasPermCreateSpy = jest.spyOn(RoleHasPermission, "create");
-      jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
-
-      await service.create(attributes);
-
-      expect(roleHasPermCreateSpy).not.toHaveBeenCalled();
-    });
-
-    it("should not create RoleHasPermission when assignment already exists", async () => {
-      const attributes = { name: "Already Assigned" };
-      const createdFramework = { id: 4, slug: "already-assigned", name: attributes.name } as unknown as Framework;
-
-      jest.spyOn(Form, "update").mockResolvedValue([1]);
-      jest
-        .spyOn(Permission, "findOne")
-        .mockResolvedValue({ id: 1, name: "framework-already-assigned", guardName: "api" } as Permission);
-      jest.spyOn(Role, "findOne").mockResolvedValue({ id: 1, name: "admin-super" } as Role);
-      jest.spyOn(RoleHasPermission, "findOne").mockResolvedValue({ roleId: 1, permissionId: 1 } as RoleHasPermission);
-      const roleHasPermCreateSpy = jest.spyOn(RoleHasPermission, "create");
-      jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
-
-      await service.create(attributes);
-
-      expect(roleHasPermCreateSpy).not.toHaveBeenCalled();
     });
   });
 

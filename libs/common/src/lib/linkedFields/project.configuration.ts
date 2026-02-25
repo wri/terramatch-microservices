@@ -440,6 +440,12 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Documentation on project area’s land tenure",
       inputType: "file",
       multiChoice: true
+    },
+    "pro-col-consortium-partnership-agreements": {
+      collection: "consortium_partnership_agreements",
+      label: "Consortium agreements",
+      inputType: "file",
+      multiChoice: true
     }
   },
   relations: {

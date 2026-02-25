@@ -319,7 +319,17 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
-    return { totalHectaresRestoredGoal, treesGrownGoal };
+    const goalTreesRestoredAnr = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "anr"),
+      "amount"
+    );
+
+    const seedsGrownGoal = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
+      "amount"
+    );
+
+    return { totalHectaresRestoredGoal, treesGrownGoal, goalTreesRestoredAnr, seedsGrownGoal };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

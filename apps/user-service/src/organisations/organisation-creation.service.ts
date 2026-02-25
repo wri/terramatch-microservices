@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
+import { CreateOrganisationStatus, OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import {
   Application,
   Form,
@@ -13,9 +13,11 @@ import {
   Stage,
   User
 } from "@terramatch-microservices/database/entities";
+import { DRAFT, PENDING } from "@terramatch-microservices/database/constants/status";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { AdminUserCreationEmail } from "@terramatch-microservices/common/email/admin-user-creation.email";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Injectable()
 export class OrganisationCreationService {
@@ -24,36 +26,62 @@ export class OrganisationCreationService {
   constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   async createOrganisation(attributes: OrganisationCreateAttributes) {
-    const { roleId, stageUuid, formUuid, fundingProgrammeName } = await this.validateAttributes(attributes);
+    const status = attributes.status ?? PENDING;
 
-    // create Organisation
-    const orgData: Partial<Organisation> = {
-      status: "pending",
-      private: false, // required by DB schema, but not in use
-      isTest: false, // This endpoint does not create test orgs
-      name: attributes.name,
-      type: attributes.type,
-      hqStreet1: attributes.hqStreet1,
-      hqStreet2: attributes.hqStreet2,
-      hqCity: attributes.hqCity,
-      hqZipcode: attributes.hqZipcode,
-      hqState: attributes.hqState,
-      hqCountry: attributes.hqCountry,
-      phone: attributes.phone,
-      countries: attributes.countries,
-      currency: attributes.currency ?? "USD",
-      level0PastRestoration: attributes.level0PastRestoration ?? null,
-      level1PastRestoration: attributes.level1PastRestoration ?? null
-    };
-    const organisation = await Organisation.create(orgData as Organisation);
+    if (status !== DRAFT && status !== PENDING) {
+      throw new BadRequestException("Only draft and pending statuses are allowed during organisation creation");
+    }
 
-    // create User
+    if (status === DRAFT) {
+      return this.createDraft(attributes);
+    }
+
+    return this.createWithUser(attributes);
+  }
+
+  private async createDraft(attributes: OrganisationCreateAttributes) {
+    if (attributes.name != null && (await Organisation.count({ where: { name: attributes.name } })) !== 0) {
+      throw new BadRequestException("Organisation already exists");
+    }
+
+    const organisation = await Organisation.create(this.buildOrganisationData(attributes, DRAFT) as Organisation);
+
+    const userId = authenticatedUserId();
+    if (userId != null) {
+      await User.update({ organisationId: organisation.id }, { where: { id: userId } });
+    }
+
+    return { user: null, organisation };
+  }
+
+  private async createWithUser(attributes: OrganisationCreateAttributes) {
+    if (attributes.name != null && (await Organisation.count({ where: { name: attributes.name } })) !== 0) {
+      throw new BadRequestException("Organisation already exists");
+    }
+
+    const organisation = await Organisation.create(this.buildOrganisationData(attributes, PENDING) as Organisation);
+
+    const hasAllUserFields =
+      attributes.userFirstName != null &&
+      attributes.userLastName != null &&
+      attributes.userEmailAddress != null &&
+      attributes.userRole != null &&
+      attributes.userLocale != null &&
+      attributes.fundingProgrammeUuid != null;
+
+    if (!hasAllUserFields) {
+      return { user: null, organisation };
+    }
+
+    const { roleId, stageUuid, formUuid, fundingProgrammeName } = await this.validatePendingAssociations(attributes);
+
+    // create User (we know these fields are not null due to hasAllUserFields check)
     const userData: Partial<User> = {
       organisationId: organisation.id,
-      emailAddress: attributes.userEmailAddress,
-      firstName: attributes.userFirstName,
-      lastName: attributes.userLastName,
-      locale: attributes.userLocale,
+      emailAddress: attributes.userEmailAddress ?? "",
+      firstName: attributes.userFirstName ?? "",
+      lastName: attributes.userLastName ?? "",
+      locale: attributes.userLocale ?? "en-US",
       // We can set the verified stamp for this user, because they only way they can log in is by following the
       // set password link in the email sent.
       emailAddressVerifiedAt: new Date()
@@ -64,13 +92,13 @@ export class OrganisationCreationService {
     // create Project Pitch, Application and Form Submission for chosen funding programme
     const pitch = await ProjectPitch.create({
       organisationId: organisation.uuid,
-      fundingProgrammeId: attributes.fundingProgrammeUuid,
+      fundingProgrammeId: attributes.fundingProgrammeUuid ?? "",
       level0Proposed: attributes.level0Proposed,
       level1Proposed: attributes.level1Proposed
     } as ProjectPitch);
     const application = await Application.create({
       organisationUuid: organisation.uuid,
-      fundingProgrammeUuid: attributes.fundingProgrammeUuid,
+      fundingProgrammeUuid: attributes.fundingProgrammeUuid ?? "",
       updatedBy: user.id
     } as Application);
     await FormSubmission.create({
@@ -89,11 +117,31 @@ export class OrganisationCreationService {
     return { user, organisation };
   }
 
-  private async validateAttributes(attributes: OrganisationCreateAttributes) {
-    if ((await Organisation.count({ where: { name: attributes.name } })) !== 0) {
-      throw new BadRequestException("Organisation already exists");
-    }
+  private buildOrganisationData(
+    attributes: OrganisationCreateAttributes,
+    status: CreateOrganisationStatus
+  ): Partial<Organisation> {
+    return {
+      status,
+      private: false, // required by DB schema, but not in use
+      isTest: false, // This endpoint does not create test orgs
+      name: attributes.name ?? null,
+      type: attributes.type ?? null,
+      hqStreet1: attributes.hqStreet1 ?? null,
+      hqStreet2: attributes.hqStreet2 ?? null,
+      hqCity: attributes.hqCity ?? null,
+      hqZipcode: attributes.hqZipcode ?? null,
+      hqState: attributes.hqState ?? null,
+      hqCountry: attributes.hqCountry ?? null,
+      phone: attributes.phone ?? null,
+      countries: attributes.countries ?? null,
+      currency: attributes.currency ?? "USD",
+      level0PastRestoration: attributes.level0PastRestoration ?? null,
+      level1PastRestoration: attributes.level1PastRestoration ?? null
+    };
+  }
 
+  private async validatePendingAssociations(attributes: OrganisationCreateAttributes) {
     const fundingProgramme = await FundingProgramme.findOne({
       where: { uuid: attributes.fundingProgrammeUuid },
       attributes: ["name"]

@@ -55,7 +55,7 @@ export class ResetPasswordService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    let updateBody: Partial<User> = { password: hashedPassword };
+    const updateBody: Partial<User> = { password: hashedPassword };
     if (user.emailAddressVerifiedAt == null) {
       updateBody.emailAddressVerifiedAt = new Date();
     }

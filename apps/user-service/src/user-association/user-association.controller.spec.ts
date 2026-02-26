@@ -10,9 +10,17 @@ import { REQUEST } from "@nestjs/core";
 import {
   OrganisationFactory,
   UserFactory,
-  OrganisationUserFactory
+  OrganisationUserFactory,
+  ProjectFactory,
+  ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, OrganisationUser, User } from "@terramatch-microservices/database/entities";
+import {
+  Organisation,
+  OrganisationUser,
+  User,
+  Project,
+  ProjectUser
+} from "@terramatch-microservices/database/entities";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 
@@ -42,6 +50,161 @@ describe("UserAssociationController", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("getUserAssociation", () => {
+    it("should return user associations for a project", async () => {
+      const project = await ProjectFactory.create();
+      const projectUser1 = await ProjectUserFactory.create({ projectId: project.id });
+      const projectUser2 = await ProjectUserFactory.create({ projectId: project.id });
+
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.query.mockResolvedValue([projectUser1, projectUser2] as ProjectUser[]);
+      userAssociationService.addIndex.mockResolvedValue(undefined);
+
+      const result = serialize(await controller.getUserAssociation(project.uuid, {}));
+
+      expect(Project.findOne).toHaveBeenCalledWith({
+        where: { uuid: project.uuid },
+        attributes: ["id", "uuid", "frameworkKey", "organisationId"]
+      });
+      expect(policyService.authorize).toHaveBeenCalledWith("read", project);
+      expect(userAssociationService.query).toHaveBeenCalledWith(project, {});
+      expect(userAssociationService.addIndex).toHaveBeenCalled();
+      expect(result.data).toBeDefined();
+    });
+
+    it("should throw NotFoundException when project does not exist", async () => {
+      jest.spyOn(Project, "findOne").mockResolvedValue(null);
+
+      await expect(controller.getUserAssociation("non-existent-uuid", {})).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw UnauthorizedException when policy denies", async () => {
+      const project = await ProjectFactory.create();
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.getUserAssociation(project.uuid, {})).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe("createUserAssociation", () => {
+    it("should create user association and return UserAssociationDto", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create();
+
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.createUserAssociation.mockResolvedValue(user);
+
+      const result = serialize(
+        await controller.createUserAssociation(project.uuid, {
+          data: {
+            type: "userAssociations",
+            attributes: {
+              emailAddress: user.emailAddress,
+              isManager: false
+            }
+          }
+        })
+      );
+
+      expect(Project.findOne).toHaveBeenCalledWith({
+        where: { uuid: project.uuid },
+        attributes: ["id", "uuid", "frameworkKey", "organisationId"]
+      });
+      expect(policyService.authorize).toHaveBeenCalledWith("update", project);
+      expect(userAssociationService.createUserAssociation).toHaveBeenCalledWith(project, {
+        emailAddress: user.emailAddress,
+        isManager: false
+      });
+      expect(result.data != null).toBe(true);
+      expect((result.data as Resource).id).toBe(user.uuid);
+    });
+
+    it("should throw NotFoundException when project does not exist", async () => {
+      jest.spyOn(Project, "findOne").mockResolvedValue(null);
+
+      await expect(
+        controller.createUserAssociation("non-existent-uuid", {
+          data: {
+            type: "userAssociations",
+            attributes: {
+              emailAddress: "test@example.com",
+              isManager: false
+            }
+          }
+        })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw UnauthorizedException when policy denies", async () => {
+      const project = await ProjectFactory.create();
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(
+        controller.createUserAssociation(project.uuid, {
+          data: {
+            type: "userAssociations",
+            attributes: {
+              emailAddress: "test@example.com",
+              isManager: false
+            }
+          }
+        })
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe("deleteBulkUserAssociations", () => {
+    it("should delete user associations for a project", async () => {
+      const project = await ProjectFactory.create();
+      const user1 = await UserFactory.create();
+      const user2 = await UserFactory.create();
+
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.deleteBulkUserAssociations.mockResolvedValue([user1.uuid as string, user2.uuid as string]);
+
+      const result = serialize(
+        await controller.deleteBulkUserAssociations(project.uuid, {
+          uuids: [user1.uuid as string, user2.uuid as string]
+        })
+      );
+
+      expect(Project.findOne).toHaveBeenCalledWith({
+        where: { uuid: project.uuid },
+        attributes: ["id", "uuid", "frameworkKey", "organisationId"]
+      });
+      expect(policyService.authorize).toHaveBeenCalledWith("update", project);
+      expect(userAssociationService.deleteBulkUserAssociations).toHaveBeenCalledWith(project.id, [
+        user1.uuid,
+        user2.uuid
+      ]);
+      expect(result.meta).toBeDefined();
+      expect((result.meta as { resourceIds?: string[] })?.resourceIds).toEqual([user1.uuid, user2.uuid]);
+    });
+
+    it("should throw NotFoundException when project does not exist", async () => {
+      jest.spyOn(Project, "findOne").mockResolvedValue(null);
+
+      await expect(controller.deleteBulkUserAssociations("non-existent-uuid", { uuids: [] })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw UnauthorizedException when policy denies", async () => {
+      const project = await ProjectFactory.create();
+      jest.spyOn(Project, "findOne").mockResolvedValue(project);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.deleteBulkUserAssociations(project.uuid, { uuids: [] })).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
   });
 
   describe("createOrgUserAssociation", () => {

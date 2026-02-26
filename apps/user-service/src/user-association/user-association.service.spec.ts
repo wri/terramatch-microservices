@@ -158,11 +158,12 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create();
 
       jest.spyOn(User, "findAll").mockResolvedValue([]);
+      const destroySpy = jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(0);
 
       await expect(service.deleteBulkOrgUserAssociations(org.id, ["non-existent-uuid"])).rejects.toThrow(
         NotFoundException
       );
-      expect(OrganisationUser.destroy).not.toHaveBeenCalled();
+      expect(destroySpy).not.toHaveBeenCalled();
     });
   });
 
@@ -245,9 +246,12 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create();
 
       jest.spyOn(User, "findOne").mockResolvedValue(null);
+      const findOrCreateSpy = jest
+        .spyOn(OrganisationUser, "findOrCreate")
+        .mockResolvedValue([await OrganisationUserFactory.create(), false] as [OrganisationUser, boolean]);
 
       await expect(service.requestOrgJoin(org, 999)).rejects.toThrow(UnauthorizedException);
-      expect(OrganisationUser.findOrCreate).not.toHaveBeenCalled();
+      expect(findOrCreateSpy).not.toHaveBeenCalled();
     });
 
     it("should not create notifications when no owners exist", async () => {

@@ -1,7 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import {
   ModelHasRole,
+  Notification,
   Organisation,
+  OrganisationUser,
   Project,
   ProjectInvite,
   ProjectUser,
@@ -18,9 +20,13 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
+import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 @Injectable()
 export class UserAssociationService {
+  private readonly logger = new TMLogger(UserAssociationService.name);
+
   constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   query(project: Project, query: UserAssociationQueryDto) {
@@ -125,6 +131,56 @@ export class UserAssociationService {
       token
     }).sendLater(this.emailQueue);
     return newUser;
+  }
+
+  async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "uuid", "emailAddress"]
+    });
+
+    if (user == null) {
+      throw new UnauthorizedException("Authenticated user not found");
+    }
+
+    const [orgUser, created] = await OrganisationUser.findOrCreate({
+      where: { organisationId: organisation.id, userId },
+      defaults: { organisationId: organisation.id, userId, status: "requested" } as OrganisationUser
+    });
+
+    if (!created && orgUser.status !== "requested") {
+      orgUser.status = "requested";
+      await orgUser.save();
+    }
+
+    const owners = await User.findAll({
+      where: { organisationId: organisation.id },
+      attributes: ["id"]
+    });
+
+    if (owners.length > 0) {
+      await Notification.bulkCreate(
+        owners.map(owner => ({
+          userId: owner.id,
+          title: "A user has requested to join your organization",
+          body: "A user has requested to join your organization. Please go to the 'Meet the Team' page to review this request.",
+          action: "user_join_organisation_requested",
+          referencedModel: Organisation.LARAVEL_TYPE,
+          referencedModelId: organisation.id
+        }))
+      );
+    }
+
+    try {
+      await new OrganisationJoinRequestEmail({
+        organisationId: organisation.id,
+        requestingUserId: userId
+      }).sendLater(this.emailQueue);
+    } catch (error) {
+      this.logger.error(`Failed to queue organisation join request email for organisation ${organisation.id}`, error);
+    }
+
+    return user;
   }
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {

@@ -11,7 +11,7 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import { UserAssociationService } from "./user-association.service";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Organisation, Project } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -20,14 +20,14 @@ import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 
-@Controller("userAssociations/v3/projects")
+@Controller("userAssociations/v3")
 export class UserAssociationController {
   constructor(
     private readonly userAssociationService: UserAssociationService,
     private readonly policyService: PolicyService
   ) {}
 
-  @Get(":uuid")
+  @Get("projects/:uuid")
   @ApiOperation({
     operationId: "getUserAssociation",
     summary: "Get the users associated with a project"
@@ -49,7 +49,7 @@ export class UserAssociationController {
     return document;
   }
 
-  @Post(":uuid")
+  @Post("projects/:uuid")
   @ApiOperation({
     operationId: "createUserAssociation",
     summary: "Create a new user association for a project"
@@ -77,7 +77,7 @@ export class UserAssociationController {
     return document;
   }
 
-  @Delete(":uuid")
+  @Delete("projects/:uuid")
   @ApiOperation({
     operationId: "deleteUserAssociation",
     summary: "Delete a user association for a project"
@@ -98,5 +98,33 @@ export class UserAssociationController {
     await this.policyService.authorize("update", project);
     await this.userAssociationService.deleteBulkUserAssociations(project.id, uuids);
     return buildDeletedResponse("userAssociations", uuids);
+  }
+
+  @Post("organisations/:uuid")
+  @ApiOperation({
+    operationId: "createOrgUserAssociation",
+    summary: "Request to join an existing organisation as the authenticated user"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or user not permitted to request joining organisations."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation not found." })
+  async createOrgUserAssociation(@Param("uuid") uuid: string) {
+    const organisation = await Organisation.findOne({
+      where: { uuid },
+      attributes: ["id", "uuid"]
+    });
+    if (organisation == null) {
+      throw new NotFoundException("Organisation not found");
+    }
+
+    await this.policyService.authorize("joinRequest", organisation);
+
+    const user = await this.userAssociationService.requestOrgJoin(organisation, this.policyService.userId as number);
+
+    const document = buildJsonApi(UserAssociationDto);
+    document.addData(user.uuid as string, new UserAssociationDto(user, { status: "requested", isManager: false }));
+    return document;
   }
 }

@@ -15,7 +15,7 @@ import {
   OwnershipStakeFactory,
   FundingTypeFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, Media, TreeSpecies, OrganisationUser, User } from "@terramatch-microservices/database/entities";
+import { Organisation, Media, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";

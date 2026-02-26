@@ -11,7 +11,7 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import { UserAssociationService } from "./user-association.service";
-import { Organisation, Project } from "@terramatch-microservices/database/entities";
+import { Organisation, Project, User } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -114,7 +114,7 @@ export class UserAssociationController {
   async createOrgUserAssociation(@Param("uuid") uuid: string) {
     const organisation = await Organisation.findOne({
       where: { uuid },
-      attributes: ["id", "uuid"]
+      attributes: ["id", "uuid", "name"]
     });
     if (organisation == null) {
       throw new NotFoundException("Organisation not found");
@@ -122,10 +122,35 @@ export class UserAssociationController {
 
     await this.policyService.authorize("joinRequest", organisation);
 
-    const user = await this.userAssociationService.requestOrgJoin(organisation, this.policyService.userId as number);
+    const userId = this.policyService.userId as number;
+    await this.userAssociationService.requestOrgJoin(organisation, userId);
+
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
+    });
+
+    if (user == null) {
+      throw new UnauthorizedException("Authenticated user not found");
+    }
 
     const document = buildJsonApi(UserAssociationDto);
-    document.addData(user.uuid as string, new UserAssociationDto(user, { status: "requested", isManager: false }));
+    document.addData(
+      user.uuid as string,
+      new UserAssociationDto(user, {
+        status: "requested",
+        isManager: false,
+        organisationName: organisation.name ?? "",
+        roleName: user.primaryRole ?? null,
+        associatedType: "organisations"
+      })
+    );
     return document;
   }
 }

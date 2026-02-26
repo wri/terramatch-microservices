@@ -21,6 +21,8 @@ import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
 import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { OrganisationUserApprovedEmail } from "@terramatch-microservices/common/email/organisation-user-approved.email";
+import { OrganisationUserRejectedEmail } from "@terramatch-microservices/common/email/organisation-user-rejected.email";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
@@ -275,6 +277,63 @@ export class UserAssociationService {
       }).sendLater(this.emailQueue);
     } catch (error) {
       this.logger.error(`Failed to queue organisation join request email for organisation ${organisation.id}`, error);
+    }
+
+    return user;
+  }
+
+  async updateOrgUserStatus(
+    organisation: Organisation,
+    userUuid: string,
+    status: "approved" | "rejected"
+  ): Promise<User> {
+    const user = await User.findOne({
+      where: { uuid: userUuid },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+
+    if (user == null) {
+      throw new NotFoundException(`User with UUID ${userUuid} not found`);
+    }
+
+    const orgUser = await OrganisationUser.findOne({
+      where: { organisationId: organisation.id, userId: user.id }
+    });
+
+    if (orgUser == null) {
+      throw new BadRequestException("User does not have a relationship with this organisation");
+    }
+
+    if (orgUser.status !== "requested") {
+      throw new BadRequestException(`User status is '${orgUser.status}', expected 'requested'`);
+    }
+
+    orgUser.status = status;
+    await orgUser.save();
+
+    if (status === "approved") {
+      user.organisationId = organisation.id;
+      await user.save();
+    }
+
+    try {
+      if (status === "approved") {
+        await new OrganisationUserApprovedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+      } else {
+        await new OrganisationUserRejectedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue organisation user ${status} email for user ${user.id} in organisation ${organisation.id}`,
+        error
+      );
     }
 
     return user;

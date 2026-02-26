@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UserAssociationService } from "./user-association.service";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue, Job } from "bullmq";
 import { REQUEST } from "@nestjs/core";
@@ -181,6 +181,82 @@ describe("UserAssociationController", () => {
       await expect(controller.deleteBulkOrgUserAssociations(org.uuid, { uuids: [] })).rejects.toThrow(
         UnauthorizedException
       );
+    });
+  });
+
+  describe("updateOrgUserAssociation", () => {
+    const makeBody = (status: "approved" | "rejected") => ({
+      data: { type: "associatedUsers", attributes: { status } }
+    });
+
+    it("should approve a user and return UserAssociationDto", async () => {
+      const org = await OrganisationFactory.create({ name: "Test Org" });
+      const user = await UserFactory.create();
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.updateOrgUserStatus.mockResolvedValue(user);
+
+      const result = serialize(
+        await controller.updateOrgUserAssociation(org.uuid, user.uuid as string, makeBody("approved"))
+      );
+
+      expect(Organisation.findOne).toHaveBeenCalledWith({
+        where: { uuid: org.uuid },
+        attributes: ["id", "uuid", "name"]
+      });
+      expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+      expect(userAssociationService.updateOrgUserStatus).toHaveBeenCalledWith(org, user.uuid, "approved");
+      expect((result.data as Resource).id).toBe(user.uuid);
+      expect((result.data as Resource).attributes?.status).toBe("approved");
+    });
+
+    it("should reject a user and return UserAssociationDto", async () => {
+      const org = await OrganisationFactory.create({ name: "Test Org" });
+      const user = await UserFactory.create();
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.updateOrgUserStatus.mockResolvedValue(user);
+
+      const result = serialize(
+        await controller.updateOrgUserAssociation(org.uuid, user.uuid as string, makeBody("rejected"))
+      );
+
+      expect((result.data as Resource).attributes?.status).toBe("rejected");
+    });
+
+    it("should throw NotFoundException when organisation does not exist", async () => {
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
+
+      await expect(
+        controller.updateOrgUserAssociation("non-existent-uuid", "user-uuid", makeBody("approved"))
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw UnauthorizedException when policy denies", async () => {
+      const org = await OrganisationFactory.create();
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.updateOrgUserAssociation(org.uuid, "user-uuid", makeBody("approved"))).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should propagate BadRequestException from service", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+      userAssociationService.updateOrgUserStatus.mockRejectedValue(
+        new BadRequestException("User status is 'approved', expected 'requested'")
+      );
+
+      await expect(
+        controller.updateOrgUserAssociation(org.uuid, user.uuid as string, makeBody("approved"))
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

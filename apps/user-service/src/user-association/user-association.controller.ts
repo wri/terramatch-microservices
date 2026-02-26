@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UnauthorizedException
@@ -17,6 +18,7 @@ import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
+import { UserAssociationUpdateBody } from "./dto/user-association-update.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
@@ -167,6 +169,52 @@ export class UserAssociationController {
       user.uuid as string,
       new UserAssociationDto(user, {
         status: "requested",
+        isManager: false,
+        organisationName: organisation.name ?? "",
+        roleName: user.primaryRole ?? null,
+        associatedType: "organisations"
+      })
+    );
+    return document;
+  }
+
+  @Patch("organisations/:orgUuid/:userUuid")
+  @ApiOperation({
+    operationId: "updateOrgUserAssociation",
+    summary: "Approve or reject a user's join request to an organisation"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "User not authorized to approve/reject join requests."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation or user not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
+  async updateOrgUserAssociation(
+    @Param("orgUuid") orgUuid: string,
+    @Param("userUuid") userUuid: string,
+    @Body() body: UserAssociationUpdateBody
+  ) {
+    const organisation = await Organisation.findOne({
+      where: { uuid: orgUuid },
+      attributes: ["id", "uuid", "name"]
+    });
+    if (organisation == null) {
+      throw new NotFoundException("Organisation not found");
+    }
+
+    await this.policyService.authorize("approveReject", organisation);
+
+    const user = await this.userAssociationService.updateOrgUserStatus(
+      organisation,
+      userUuid,
+      body.data.attributes.status
+    );
+
+    const document = buildJsonApi(UserAssociationDto);
+    document.addData(
+      user.uuid as string,
+      new UserAssociationDto(user, {
+        status: body.data.attributes.status,
         isManager: false,
         organisationName: organisation.name ?? "",
         roleName: user.primaryRole ?? null,

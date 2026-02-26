@@ -12,7 +12,7 @@ import {
   RoleFactory
 } from "@terramatch-microservices/database/factories";
 import { OrganisationUser, User, Notification } from "@terramatch-microservices/database/entities";
-import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 describe("UserAssociationService", () => {
@@ -299,6 +299,93 @@ describe("UserAssociationService", () => {
         expect.any(Error)
       );
       expect(result).toEqual(user);
+    });
+  });
+
+  describe("updateOrgUserStatus", () => {
+    it("should approve a user and update organisationId", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
+      jest.spyOn(user, "save").mockResolvedValue(user);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+
+      const result = await service.updateOrgUserStatus(org, user.uuid as string, "approved");
+
+      expect(orgUser.status).toBe("approved");
+      expect(orgUser.save).toHaveBeenCalled();
+      expect(user.organisationId).toBe(org.id);
+      expect(user.save).toHaveBeenCalled();
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationUserApproved", expect.any(Object));
+      expect(result).toEqual(user);
+    });
+
+    it("should reject a user without updating organisationId", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "requested"
+      });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
+      jest.spyOn(user, "save").mockResolvedValue(user);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+
+      await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
+
+      expect(orgUser.status).toBe("rejected");
+      expect(user.save).not.toHaveBeenCalled();
+      expect(emailQueue.add).toHaveBeenCalledWith("organisationUserRejected", expect.any(Object));
+    });
+
+    it("should throw NotFoundException when user not found", async () => {
+      const org = await OrganisationFactory.create();
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      await expect(service.updateOrgUserStatus(org, "non-existent-uuid", "approved")).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw BadRequestException when no OrganisationUser relationship", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
+
+      await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException when status is not 'requested'", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "approved"
+      });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+
+      await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 });

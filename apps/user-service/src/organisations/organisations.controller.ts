@@ -15,7 +15,6 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
-import { OrganisationUserUpdateBody } from "./dto/organisation-user-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { OrganisationFullDto, OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";

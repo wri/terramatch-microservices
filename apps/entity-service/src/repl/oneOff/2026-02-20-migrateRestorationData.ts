@@ -259,17 +259,21 @@ const processRestorationMapping = async <M extends Model>(model: M, mappings: Re
         entries.push({ trackingId: -1, type: entry.type, subtype: entry.subtype, amount });
       }
     }
-    if (entries.length > 0) {
-      const tracking = await Tracking.create({
-        domain: "restoration",
-        type: mapping.type,
-        collection: mapping.collection,
-        trackableType: laravelType(model),
-        trackableId: model.id
-      });
-      for (const entry of entries) entry.trackingId = tracking.id;
-      await TrackingEntry.bulkCreate(entries);
-    }
+    if (entries.length === 0) continue;
+
+    // Assume that if the tracking already exists, it's valid.
+    const exists = (await Tracking.for(model).domain("restoration").type(mapping.type).count()) > 0;
+    if (exists) continue;
+
+    const tracking = await Tracking.create({
+      domain: "restoration",
+      type: mapping.type,
+      collection: mapping.collection,
+      trackableType: laravelType(model),
+      trackableId: model.id
+    });
+    for (const entry of entries) entry.trackingId = tracking.id;
+    await TrackingEntry.bulkCreate(entries);
   }
 };
 

@@ -151,6 +151,8 @@ export class EntityStatusUpdate extends EventProcessor {
       if (hasNothingToReport(baseModel)) {
         baseModel.nothingToReport = false;
       }
+    } else if (updateRequest.status === AWAITING_APPROVAL) {
+      baseModel.status = AWAITING_APPROVAL;
     } else if (updateRequest.status === NEEDS_MORE_INFORMATION) {
       const entityType = getEntityType(baseModel);
       if (entityType != null) {

@@ -355,6 +355,18 @@ describe("EntityStatusUpdate EventProcessor", () => {
       );
       expect(pmEmailSpy).toHaveBeenCalledWith("siteReports", expect.objectContaining({ uuid: siteReport.uuid }));
     });
+
+    it("syncs base model status to awaiting-approval when Champion re-submits after addressing feedback", async () => {
+      const siteReport = await SiteReportFactory.create({ status: NEEDS_MORE_INFORMATION });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
+        status: AWAITING_APPROVAL,
+        content: { "some-question-uuid": "answered" }
+      });
+      await new EntityStatusUpdate(eventService, updateRequest).handle();
+      await siteReport.reload();
+      expect(siteReport.status).toBe(AWAITING_APPROVAL);
+      expect(siteReport.updateRequestStatus).toBe(AWAITING_APPROVAL);
+    });
   });
 
   describe("handleFormSubmission", () => {

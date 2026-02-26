@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Project, Seeding, Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { col, fn } from "sequelize";
+import { cast, col, fn } from "sequelize";
 import { Literal } from "sequelize/types/utils";
 import { sortBy } from "lodash";
 import { AggregateReportsEntityType } from "./dto/aggregate-reports-params.dto";
@@ -131,20 +131,15 @@ export class AggregateReportsService {
       .collection("tree-planted")
       .siteReports(reportIds)
       .findAll({
-        attributes: ["speciesableId", [fn("SUM", col("amount")), "total"]],
+        attributes: ["speciesableId", [cast(fn("SUM", col("amount")), "SIGNED"), "total"]],
         group: ["speciesableId"],
         raw: true
       })) as unknown as { speciesableId: number; total: number }[];
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null) {
-        const totalVal = row.total;
-        const total =
-          typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
-        if (Number.isFinite(total)) {
-          map.set(row.speciesableId, total);
-        }
+      if (row != null && Number.isFinite(row.total)) {
+        map.set(row.speciesableId, row.total);
       }
     }
     return map;
@@ -156,20 +151,15 @@ export class AggregateReportsService {
     const rows = (await Seeding.visible()
       .siteReports(reportIds)
       .findAll({
-        attributes: ["seedableId", [fn("SUM", col("amount")), "total"]],
+        attributes: ["seedableId", [cast(fn("SUM", col("amount")), "SIGNED"), "total"]],
         group: ["seedableId"],
         raw: true
       })) as unknown as { seedableId: number; total: number }[];
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null) {
-        const totalVal = row.total;
-        const total =
-          typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
-        if (Number.isFinite(total)) {
-          map.set(row.seedableId, total);
-        }
+      if (row != null && Number.isFinite(row.total)) {
+        map.set(row.seedableId, row.total);
       }
     }
     return map;

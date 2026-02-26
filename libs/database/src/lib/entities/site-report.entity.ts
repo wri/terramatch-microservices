@@ -397,6 +397,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column(BOOLEAN)
   nothingToReport: boolean | null;
 
+  @AllowNull
+  @JsonColumn()
+  anrPractices: string[] | null;
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,

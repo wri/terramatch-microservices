@@ -13,7 +13,6 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   buildDeletedResponse,
@@ -78,37 +77,39 @@ export class ReportingFrameworksController {
     return await this.reportingFrameworksService.addDto(buildJsonApi(ReportingFrameworkDto), framework);
   }
 
-  @Put(":uuid")
+  @Put(":frameworkKey")
   @ApiOperation({
     operationId: "reportingFrameworkUpdate",
-    summary: "Update a reporting framework by UUID (admin only)"
+    summary: "Update a reporting framework by framework key (slug) (admin only)"
   })
+  @ApiParam({ name: "frameworkKey", type: String, description: "Framework slug/key" })
   @JsonApiResponse(ReportingFrameworkDto)
   @ExceptionResponse(NotFoundException, { description: "Reporting framework not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Reporting framework update not allowed." })
-  @ExceptionResponse(BadRequestException, { description: "Payload id must match path UUID." })
-  async update(@Param() { uuid }: SingleResourceDto, @Body() payload: UpdateReportingFrameworkBody) {
-    if (payload.data.id !== uuid) {
+  @ExceptionResponse(BadRequestException, { description: "Payload id must match path frameworkKey." })
+  async update(@Param("frameworkKey") frameworkKey: string, @Body() payload: UpdateReportingFrameworkBody) {
+    if (payload.data.id != null && payload.data.id !== frameworkKey) {
       throw new BadRequestException("Reporting framework id in path and payload do not match");
     }
-    const framework = await this.reportingFrameworksService.findByUuid(uuid);
+    const framework = await this.reportingFrameworksService.findBySlug(frameworkKey);
     await this.policyService.authorize("update", framework);
     const updated = await this.reportingFrameworksService.update(framework, payload.data.attributes);
     return await this.reportingFrameworksService.addDto(buildJsonApi(ReportingFrameworkDto), updated);
   }
 
-  @Delete(":uuid")
+  @Delete(":frameworkKey")
   @ApiOperation({
     operationId: "reportingFrameworkDelete",
-    summary: "Delete a reporting framework by UUID (admin only)"
+    summary: "Delete a reporting framework by framework key (slug) (admin only)"
   })
+  @ApiParam({ name: "frameworkKey", type: String, description: "Framework slug/key" })
   @ExceptionResponse(NotFoundException, { description: "Reporting framework not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Reporting framework delete not allowed." })
-  async delete(@Param() { uuid }: SingleResourceDto) {
-    const framework = await this.reportingFrameworksService.findByUuid(uuid);
+  async delete(@Param("frameworkKey") frameworkKey: string) {
+    const framework = await this.reportingFrameworksService.findBySlug(frameworkKey);
     await this.policyService.authorize("delete", framework);
     await this.reportingFrameworksService.delete(framework);
-    return buildDeletedResponse(getDtoType(ReportingFrameworkDto), uuid);
+    return buildDeletedResponse(getDtoType(ReportingFrameworkDto), frameworkKey);
   }
 
   @Get(":frameworkKey")

@@ -12,7 +12,7 @@ import {
   UserFactory,
   OrganisationUserFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, OrganisationUser } from "@terramatch-microservices/database/entities";
+import { Organisation, OrganisationUser, User } from "@terramatch-microservices/database/entities";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 
@@ -77,6 +77,19 @@ describe("UserAssociationController", () => {
       const org = await OrganisationFactory.create();
       jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.createOrgUserAssociation(org.uuid)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw UnauthorizedException when user is not found after requestOrgJoin", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: user.id, writable: true, configurable: true });
+      userAssociationService.requestOrgJoin.mockResolvedValue(user);
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
 
       await expect(controller.createOrgUserAssociation(org.uuid)).rejects.toThrow(UnauthorizedException);
     });

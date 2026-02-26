@@ -2,7 +2,7 @@ import { SequelizeOptions } from "sequelize-typescript";
 import { User } from "@terramatch-microservices/database/entities";
 
 /**
- * Wraps a one-off script to turn off SQL logs for the duration of the script run. The return value
+ * Wraps a REPL function to turn off SQL logs for the duration of the function run. The return value
  * is a function with the same signature as the closure argument.
  */
 export const withoutSqlLogs =

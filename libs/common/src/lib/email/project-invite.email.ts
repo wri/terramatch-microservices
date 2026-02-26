@@ -52,7 +52,7 @@ export class ProjectInviteEmail extends EmailSender<ProjectInviteEmailData> {
       "{to}": this.data.emailAddress
     };
     const additionalValues = {
-      link: `/reset-password/${this.data.token}`,
+      link: `/auth/reset-password/${this.data.token}`,
       transactional: "transactional"
     };
     await emailService.sendI18nTemplateEmail(this.data.emailAddress, "en-US", EMAIL_PROJECT_INVITE_KEYS, {

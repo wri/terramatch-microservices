@@ -117,7 +117,7 @@ export class CreateReportingFrameworkBody extends JsonApiBodyDto(
 
 export class UpdateReportingFrameworkBody extends JsonApiBodyDto(
   class UpdateReportingFrameworkData extends JsonApiDataDto(
-    { type: "reportingFrameworks" },
+    { type: "reportingFrameworks", id: "string" },
     UpdateReportingFrameworkAttributes
   ) {}
 ) {}

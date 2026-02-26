@@ -467,19 +467,19 @@ describe("ReportingFrameworksController", () => {
   });
 
   describe("update", () => {
-    it("should update framework by uuid and return JSON:API response", async () => {
+    it("should update framework by frameworkKey and return JSON:API response", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);
-      const uuid = framework.uuid as string;
+      const frameworkKey = "terrafund";
       const payload = {
         data: {
           type: "reportingFrameworks",
-          id: uuid,
+          id: frameworkKey,
           attributes: { name: "TerraFund Updated" }
         }
       };
 
-      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
       reportingFrameworksService.update.mockResolvedValue(framework);
       const mockDocument = createMock<DocumentBuilder>();
@@ -488,39 +488,39 @@ describe("ReportingFrameworksController", () => {
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const result = await controller.update({ uuid }, payload);
+      const result = await controller.update(frameworkKey, payload);
 
-      expect(reportingFrameworksService.findByUuid).toHaveBeenCalledWith(uuid);
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith(frameworkKey);
       expect(policyService.authorize).toHaveBeenCalledWith("update", framework);
       expect(reportingFrameworksService.update).toHaveBeenCalledWith(framework, payload.data.attributes);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
       expect(result).toBe(mockDocument);
     });
 
-    it("should throw BadRequestException when payload id does not match path uuid", async () => {
+    it("should throw BadRequestException when payload id does not match path frameworkKey", async () => {
       const payload = {
         data: {
           type: "reportingFrameworks",
-          id: "other-uuid",
+          id: "other-slug",
           attributes: { name: "Updated" }
         }
       };
 
-      await expect(controller.update({ uuid: "path-uuid" }, payload)).rejects.toThrow(BadRequestException);
-      expect(reportingFrameworksService.findByUuid).not.toHaveBeenCalled();
+      await expect(controller.update("path-framework-key", payload)).rejects.toThrow(BadRequestException);
+      expect(reportingFrameworksService.findBySlug).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when framework not found", async () => {
-      reportingFrameworksService.findByUuid.mockRejectedValue(new NotFoundException("Reporting framework not found"));
+      reportingFrameworksService.findBySlug.mockRejectedValue(new NotFoundException("Reporting framework not found"));
       const payload = {
         data: {
           type: "reportingFrameworks",
-          id: "non-existent-uuid",
+          id: "non-existent-slug",
           attributes: {}
         }
       };
 
-      await expect(controller.update({ uuid: "non-existent-uuid" }, payload)).rejects.toThrow(NotFoundException);
+      await expect(controller.update("non-existent-slug", payload)).rejects.toThrow(NotFoundException);
       expect(reportingFrameworksService.update).not.toHaveBeenCalled();
     });
 
@@ -530,33 +530,31 @@ describe("ReportingFrameworksController", () => {
       const payload = {
         data: {
           type: "reportingFrameworks",
-          id: framework.uuid,
+          id: "terrafund",
           attributes: { name: "Updated" }
         }
       };
-      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
 
-      await expect(controller.update({ uuid: framework.uuid as string }, payload)).rejects.toThrow(
-        UnauthorizedException
-      );
+      await expect(controller.update("terrafund", payload)).rejects.toThrow(UnauthorizedException);
       expect(reportingFrameworksService.update).not.toHaveBeenCalled();
     });
   });
 
   describe("delete", () => {
-    it("should delete framework by uuid and return deleted response", async () => {
+    it("should delete framework by frameworkKey and return deleted response", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
       createdFrameworkIds.push(framework.id);
-      const uuid = framework.uuid as string;
+      const frameworkKey = "terrafund";
 
-      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
       reportingFrameworksService.delete.mockResolvedValue(undefined);
 
-      const result = await controller.delete({ uuid });
+      const result = await controller.delete(frameworkKey);
 
-      expect(reportingFrameworksService.findByUuid).toHaveBeenCalledWith(uuid);
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith(frameworkKey);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", framework);
       expect(reportingFrameworksService.delete).toHaveBeenCalledWith(framework);
       expect(result).toBeDefined();
@@ -564,19 +562,19 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should throw NotFoundException when framework not found", async () => {
-      reportingFrameworksService.findByUuid.mockRejectedValue(new NotFoundException("Reporting framework not found"));
+      reportingFrameworksService.findBySlug.mockRejectedValue(new NotFoundException("Reporting framework not found"));
 
-      await expect(controller.delete({ uuid: "non-existent-uuid" })).rejects.toThrow(NotFoundException);
+      await expect(controller.delete("non-existent-slug")).rejects.toThrow(NotFoundException);
       expect(reportingFrameworksService.delete).not.toHaveBeenCalled();
     });
 
     it("should throw UnauthorizedException when delete not allowed", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund" });
       createdFrameworkIds.push(framework.id);
-      reportingFrameworksService.findByUuid.mockResolvedValue(framework);
+      reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
 
-      await expect(controller.delete({ uuid: framework.uuid as string })).rejects.toThrow(UnauthorizedException);
+      await expect(controller.delete("terrafund")).rejects.toThrow(UnauthorizedException);
       expect(reportingFrameworksService.delete).not.toHaveBeenCalled();
     });
   });

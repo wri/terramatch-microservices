@@ -26,10 +26,6 @@ const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollect
   hbf: ["treePlanted", "seedingRecords", "treesRegenerating"]
 };
 
-function toIsoDate(date: Date): string {
-  return date.toISOString();
-}
-
 function buildPeriodSeries(
   reportRows: SiteReport[],
   amountByReportId: Map<number, number>,
@@ -52,7 +48,7 @@ function buildPeriodSeries(
 
   const sorted = sortBy(Array.from(amountByDueTime.values()), x => x.dueAt.getTime());
   return sorted.map(period => ({
-    dueDate: toIsoDate(period.dueAt),
+    dueDate: period.dueAt.toISOString(),
     aggregateAmount: period.amount
   }));
 }
@@ -131,30 +127,23 @@ export class AggregateReportsService {
   private async getTreePlantedByReportId(reportIds: number[]): Promise<Map<number, number>> {
     if (reportIds.length === 0) return new Map();
 
-    const rows = await TreeSpecies.visible()
+    const rows = (await TreeSpecies.visible()
       .collection("tree-planted")
       .siteReports(reportIds)
       .findAll({
         attributes: ["speciesableId", [fn("SUM", col("amount")), "total"]],
         group: ["speciesableId"],
         raw: true
-      });
+      })) as unknown as { speciesableId: number; total: number }[];
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      const raw = row as unknown;
-      if (
-        raw !== null &&
-        typeof raw === "object" &&
-        "speciesableId" in raw &&
-        typeof (raw as { speciesableId: unknown }).speciesableId === "number"
-      ) {
-        const id = (raw as { speciesableId: number }).speciesableId;
-        const totalVal = (raw as { total?: unknown }).total;
+      if (row != null) {
+        const totalVal = row.total;
         const total =
           typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
         if (Number.isFinite(total)) {
-          map.set(id, total);
+          map.set(row.speciesableId, total);
         }
       }
     }
@@ -164,29 +153,22 @@ export class AggregateReportsService {
   private async getSeedingByReportId(reportIds: number[]): Promise<Map<number, number>> {
     if (reportIds.length === 0) return new Map();
 
-    const rows = await Seeding.visible()
+    const rows = (await Seeding.visible()
       .siteReports(reportIds)
       .findAll({
         attributes: ["seedableId", [fn("SUM", col("amount")), "total"]],
         group: ["seedableId"],
         raw: true
-      });
+      })) as unknown as { seedableId: number; total: number }[];
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      const raw = row as unknown;
-      if (
-        raw !== null &&
-        typeof raw === "object" &&
-        "seedableId" in raw &&
-        typeof (raw as { seedableId: unknown }).seedableId === "number"
-      ) {
-        const id = (raw as { seedableId: number }).seedableId;
-        const totalVal = (raw as { total?: unknown }).total;
+      if (row != null) {
+        const totalVal = row.total;
         const total =
           typeof totalVal === "number" ? totalVal : typeof totalVal === "string" ? parseInt(totalVal, 10) : NaN;
         if (Number.isFinite(total)) {
-          map.set(id, total);
+          map.set(row.seedableId, total);
         }
       }
     }

@@ -1,5 +1,5 @@
 import { BadRequestException, Controller, Get, NotFoundException, Param, UnauthorizedException } from "@nestjs/common";
-import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -10,15 +10,14 @@ import { AggregateReportsParamsDto } from "./dto/aggregate-reports-params.dto";
 import { AggregateReportsDto } from "./dto/aggregate-reports-response.dto";
 import { AggregateReportsService } from "./aggregate-reports.service";
 
-@Controller("entities/v3/:entity/:uuid")
-@ApiExtraModels(AggregateReportsDto)
+@Controller("entities/v3/:entity/:uuid/aggregateReports")
 export class AggregateReportsController {
   constructor(
     private readonly aggregateReportsService: AggregateReportsService,
     private readonly policyService: PolicyService
   ) {}
 
-  @Get("aggregate-reports")
+  @Get()
   @ApiOperation({
     operationId: "getAggregateReports",
     summary: "Get aggregated reporting data for progress charts (tree planting, seeding, regeneration by period)."

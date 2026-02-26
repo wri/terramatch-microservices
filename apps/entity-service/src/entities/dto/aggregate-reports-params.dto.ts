@@ -1,4 +1,4 @@
-import { IsIn, IsUUID } from "class-validator";
+import { IsIn } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 
@@ -12,8 +12,4 @@ export class AggregateReportsParamsDto extends SingleResourceDto {
     description: "Entity type (project or site) for aggregate reports."
   })
   entity: AggregateReportsEntityType;
-
-  @IsUUID()
-  @ApiProperty({ description: "UUID of the project or site." })
-  override uuid: string;
 }

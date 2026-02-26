@@ -18,6 +18,7 @@ import { TemplateService } from "./templates/template.service";
 import { ReportGenerationService } from "./tasks/report-generation-service";
 import { AnalyticsEventService } from "./analytics/analytics-events.service";
 import { AnalyticsProcessor } from "./analytics/analytics.processor";
+import { FileService } from "./file/file.service";
 
 export const QUEUES = ["email", "analytics", "entities"];
 
@@ -60,6 +61,7 @@ export const QUEUES = ["email", "analytics", "entities"];
     { provide: APP_GUARD, useClass: AuthGuard },
     EmailService,
     LocalizationService,
+    FileService,
     MediaService,
     TemplateService,
     SlackService,
@@ -74,6 +76,7 @@ export const QUEUES = ["email", "analytics", "entities"];
     JwtModule,
     EmailService,
     LocalizationService,
+    FileService,
     MediaService,
     TemplateService,
     SlackService,

@@ -14,6 +14,8 @@ import { ApplicationSubmittedEmail } from "./application-submitted.email";
 import { EmailSender } from "./email-sender";
 import { FormSubmissionFeedbackEmail } from "./form-submission-feedback.email";
 import { PolygonClippingCompleteEmail } from "./polygon-clipping-complete.email";
+import { ProjectInviteEmail } from "./project-invite.email";
+import { ProjectMonitoringNotificationEmail } from "./project-monitoring-notification.email";
 import { OrganisationApprovedEmail } from "./organisation-approved.email";
 import { OrganisationRejectedEmail } from "./organisation-rejected.email";
 import { OrganisationJoinRequestEmail } from "./organisation-join-request.email";
@@ -38,6 +40,8 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   ApplicationSubmittedEmail,
   FormSubmissionFeedbackEmail,
   PolygonClippingCompleteEmail,
+  ProjectInviteEmail,
+  ProjectMonitoringNotificationEmail,
   OrganisationApprovedEmail,
   OrganisationRejectedEmail,
   OrganisationJoinRequestEmail,

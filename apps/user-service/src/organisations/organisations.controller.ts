@@ -29,7 +29,7 @@ import {
   getStableRequestQuery,
   getDtoType
 } from "@terramatch-microservices/common/util";
-import { Organisation, Notification, User } from "@terramatch-microservices/database/entities";
+import { Organisation } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { OrganisationsService } from "./organisations.service";
@@ -44,9 +44,6 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
-import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
-import { OrganisationUserApprovedEmail } from "@terramatch-microservices/common/email/organisation-user-approved.email";
-import { OrganisationUserRejectedEmail } from "@terramatch-microservices/common/email/organisation-user-rejected.email";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -198,122 +195,6 @@ export class OrganisationsController {
     await this.policyService.authorize("delete", organisation);
     await this.organisationsService.delete(organisation);
     return buildDeletedResponse(getDtoType(OrganisationFullDto), organisation.uuid);
-  }
-
-  @Post(":uuid/join-request")
-  @ApiOperation({
-    operationId: "organisationJoinRequest",
-    summary: "Request to join an existing organisation"
-  })
-  @JsonApiResponse({ data: OrganisationLightDto })
-  @ExceptionResponse(UnauthorizedException, {
-    description: "User not authorized to request joining organisations."
-  })
-  @ExceptionResponse(NotFoundException, { description: "Organisation not found." })
-  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
-  async joinRequest(@Param("uuid") uuid: string) {
-    const userId = this.policyService.userId as number;
-    const organisation = await this.organisationsService.findOne(uuid);
-
-    await this.policyService.authorize("joinRequest", organisation);
-
-    await this.organisationsService.requestJoin(uuid, userId);
-
-    const owners = await User.findAll({
-      where: { organisationId: organisation.id },
-      attributes: ["id"]
-    });
-
-    if (owners.length > 0) {
-      await Notification.bulkCreate(
-        owners.map(owner => ({
-          userId: owner.id,
-          title: "A user has requested to join your organization",
-          body: "A user has requested to join your organization. Please go to the 'Meet the Team' page to review this request.",
-          action: "user_join_organisation_requested",
-          referencedModel: Organisation.LARAVEL_TYPE,
-          referencedModelId: organisation.id
-        }))
-      );
-    }
-
-    try {
-      await new OrganisationJoinRequestEmail({
-        organisationId: organisation.id,
-        requestingUserId: userId
-      }).sendLater(this.emailQueue);
-    } catch (error) {
-      this.logger.error(`Failed to queue organisation join request email for organisation ${organisation.id}`, error);
-    }
-
-    return buildJsonApi(OrganisationLightDto).addData(organisation.uuid, new OrganisationLightDto(organisation));
-  }
-
-  @Patch(":uuid/users/:userUuid")
-  @ApiOperation({
-    operationId: "organisationUserUpdate",
-    summary: "Approve or reject a user's join request to an organisation"
-  })
-  @JsonApiResponse({
-    data: UserDto,
-    included: [{ type: OrganisationLightDto, relationships: [USER_ORG_RELATIONSHIP] }]
-  })
-  @ExceptionResponse(UnauthorizedException, {
-    description: "User not authorized to approve/reject join requests."
-  })
-  @ExceptionResponse(NotFoundException, { description: "Organisation or user not found." })
-  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
-  async updateUserStatus(
-    @Param("uuid") organisationUuid: string,
-    @Param("userUuid") userUuid: string,
-    @Body() updatePayload: OrganisationUserUpdateBody
-  ) {
-    const organisation = await this.organisationsService.findOne(organisationUuid);
-    await this.policyService.authorize("approveReject", organisation);
-
-    const status = updatePayload.data.attributes.status;
-    await this.organisationsService.updateUserStatus(organisationUuid, userUuid, status);
-
-    const user = await User.findOne({
-      where: { uuid: userUuid },
-      include: ["roles", "organisation", "frameworks"]
-    });
-
-    if (user == null) {
-      throw new NotFoundException(`User with UUID ${userUuid} not found`);
-    }
-
-    try {
-      if (status === "approved") {
-        await new OrganisationUserApprovedEmail({
-          organisationId: organisation.id,
-          userId: user.id
-        }).sendLater(this.emailQueue);
-        this.logger.log(
-          `Queued organisation user approved email for user ${user.id} in organisation ${organisation.id}`
-        );
-      } else {
-        await new OrganisationUserRejectedEmail({
-          organisationId: organisation.id,
-          userId: user.id
-        }).sendLater(this.emailQueue);
-        this.logger.log(
-          `Queued organisation user rejected email for user ${user.id} in organisation ${organisation.id}`
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to queue organisation user ${status} email for user ${user.id} in organisation ${organisation.id}`,
-        error
-      );
-    }
-
-    const document = buildJsonApi(UserDto);
-    const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
-    const orgResource = document.addData(organisation.uuid, new OrganisationLightDto(organisation));
-    userResource.relateTo("org", orgResource, { meta: { userStatus: status } });
-
-    return document;
   }
 
   @Post()

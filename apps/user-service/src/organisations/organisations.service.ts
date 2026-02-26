@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
   Organisation,
@@ -156,81 +156,6 @@ export class OrganisationsService {
     await OrganisationUser.destroy({ where: { organisationId: organisation.id } });
 
     await organisation.destroy();
-  }
-
-  async requestJoin(organisationUuid: string, userId: number): Promise<OrganisationUser> {
-    const organisation = await this.findOne(organisationUuid);
-
-    const user = await User.findOne({
-      where: { id: userId },
-      attributes: ["id"]
-    });
-
-    if (user == null) {
-      throw new UnauthorizedException("Authenticated user not found");
-    }
-
-    const [orgUser, created] = await OrganisationUser.findOrCreate({
-      where: {
-        organisationId: organisation.id,
-        userId: userId
-      },
-      defaults: {
-        organisationId: organisation.id,
-        userId: userId,
-        status: "requested"
-      } as OrganisationUser
-    });
-
-    if (!created && orgUser.status !== "requested") {
-      orgUser.status = "requested";
-      await orgUser.save();
-    }
-
-    return orgUser;
-  }
-
-  async updateUserStatus(
-    organisationUuid: string,
-    userUuid: string,
-    status: "approved" | "rejected"
-  ): Promise<{ user: User; organisation: Organisation }> {
-    const organisation = await this.findOne(organisationUuid);
-
-    const user = await User.findOne({
-      where: { uuid: userUuid },
-      attributes: ["id", "uuid"]
-    });
-
-    if (user == null) {
-      throw new NotFoundException(`User with UUID ${userUuid} not found`);
-    }
-
-    const orgUser = await OrganisationUser.findOne({
-      where: {
-        organisationId: organisation.id,
-        userId: user.id
-      }
-    });
-
-    if (orgUser == null) {
-      throw new BadRequestException("User does not have a relationship with this organisation");
-    }
-
-    if (orgUser.status !== "requested") {
-      throw new BadRequestException(`User status is '${orgUser.status}', expected 'requested'`);
-    }
-
-    orgUser.status = status;
-    await orgUser.save();
-
-    // Only set organisationId on approval
-    if (status === "approved") {
-      user.organisationId = organisation.id;
-      await user.save();
-    }
-
-    return { user, organisation };
   }
 
   async processSideloads(

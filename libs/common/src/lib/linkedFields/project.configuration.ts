@@ -399,6 +399,11 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "select",
       multiChoice: false,
       optionListKey: "landowner-collection"
+    },
+    "pro-nursery-seedlings-goal": {
+      property: "nurserySeedlingsGoal",
+      label: "Nursery seedlings goal",
+      inputType: "number"
     }
   },
   fileCollections: {

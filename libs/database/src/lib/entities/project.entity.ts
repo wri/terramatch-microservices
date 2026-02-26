@@ -474,6 +474,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(STRING(255))
   landownerAgreement: string | null;
 
+  @AllowNull
+  @Column(INTEGER)
+  nurserySeedlingsGoal: number | null;
+
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

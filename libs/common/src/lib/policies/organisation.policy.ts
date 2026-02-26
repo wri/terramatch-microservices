@@ -21,12 +21,6 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
 
     const user = await this.getUser();
     if (user != null) {
-      // Organisation owner: user.organisationId == organisation.id
-      if (user.organisationId != null) {
-        this.builder.can("approveReject", Organisation, { id: user.organisationId });
-      }
-
-      // Approved partner: user exists in organisationsConfirmed
       const confirmedOrgIds = this.getConfirmedOrgIds(user);
       if (confirmedOrgIds.length > 0) {
         this.builder.can("approveReject", Organisation, { id: { $in: confirmedOrgIds } });

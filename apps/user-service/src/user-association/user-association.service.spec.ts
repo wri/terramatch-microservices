@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { UserAssociationService } from "./user-association.service";
 import { JwtService } from "@nestjs/jwt";
 import { getQueueToken } from "@nestjs/bullmq";
-import { Queue } from "bullmq";
+import { Queue, Job } from "bullmq";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Op } from "sequelize";
 import {
@@ -11,14 +11,12 @@ import {
   OrganisationUserFactory,
   RoleFactory
 } from "@terramatch-microservices/database/factories";
-import { Organisation, OrganisationUser, User, Notification, Role } from "@terramatch-microservices/database/entities";
+import { OrganisationUser, User, Notification } from "@terramatch-microservices/database/entities";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
 
 describe("UserAssociationService", () => {
   let service: UserAssociationService;
-  let jwtService: DeepMocked<JwtService>;
   let emailQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
@@ -27,7 +25,7 @@ describe("UserAssociationService", () => {
         UserAssociationService,
         {
           provide: JwtService,
-          useValue: (jwtService = createMock<JwtService>())
+          useValue: createMock<JwtService>()
         },
         {
           provide: getQueueToken("email"),
@@ -84,7 +82,7 @@ describe("UserAssociationService", () => {
       user2.roles = [role2];
 
       jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
-      const document = new DocumentBuilder({} as any);
+      const document = new DocumentBuilder("associatedUsers");
 
       const addDataSpy = jest.spyOn(document, "addData");
       const addIndexSpy = jest.spyOn(document, "addIndex");
@@ -114,7 +112,7 @@ describe("UserAssociationService", () => {
 
     it("should handle empty orgUsers array", async () => {
       const org = await OrganisationFactory.create();
-      const document = new DocumentBuilder({} as any);
+      const document = new DocumentBuilder("associatedUsers");
 
       jest.spyOn(User, "findAll").mockResolvedValue([]);
       const addIndexSpy = jest.spyOn(document, "addIndex");
@@ -185,7 +183,7 @@ describe("UserAssociationService", () => {
       ] as [OrganisationUser, boolean]);
       jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
       jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as any);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
 
       const result = await service.requestOrgJoin(org, user.id);
 
@@ -215,7 +213,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       jest.spyOn(User, "findAll").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as any);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
@@ -236,7 +234,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save");
       jest.spyOn(User, "findAll").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as any);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
@@ -267,7 +265,7 @@ describe("UserAssociationService", () => {
       ] as [OrganisationUser, boolean]);
       jest.spyOn(User, "findAll").mockResolvedValue([]);
       jest.spyOn(Notification, "bulkCreate");
-      emailQueue.add = jest.fn().mockResolvedValue({} as any);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 

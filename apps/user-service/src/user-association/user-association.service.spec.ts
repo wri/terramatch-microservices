@@ -678,7 +678,45 @@ describe("UserAssociationService", () => {
       );
     });
 
-    it("should throw BadRequestException when status is not 'requested'", async () => {
+    it("should approve a user who was previously rejected", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "rejected"
+      });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
+      jest.spyOn(user, "save").mockResolvedValue(user);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+
+      await service.updateOrgUserStatus(org, user.uuid as string, "approved");
+
+      expect(orgUser.status).toBe("approved");
+      expect(user.organisationId).toBe(org.id);
+    });
+
+    it("should throw BadRequestException when trying to reject an already-approved user", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "approved"
+      });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+
+      await expect(service.updateOrgUserStatus(org, user.uuid as string, "rejected")).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw BadRequestException when trying to approve an already-approved user", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
       const orgUser = await OrganisationUserFactory.create({

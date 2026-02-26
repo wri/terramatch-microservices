@@ -305,8 +305,9 @@ export class UserAssociationService {
       throw new BadRequestException("User does not have a relationship with this organisation");
     }
 
-    if (orgUser.status !== "requested") {
-      throw new BadRequestException(`User status is '${orgUser.status}', expected 'requested'`);
+    const allowedFrom = status === "approved" ? ["requested", "rejected"] : ["requested"];
+    if (!allowedFrom.includes(orgUser.status ?? "")) {
+      throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
     }
 
     orgUser.status = status;

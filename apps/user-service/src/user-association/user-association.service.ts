@@ -169,6 +169,67 @@ export class UserAssociationService {
     return newUser;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  queryOrg(organisation: Organisation, query: UserAssociationQueryDto) {
+    const findOptions: FindOptions<OrganisationUser> = {
+      where: { organisationId: organisation.id },
+      attributes: ["id", "userId", "status"]
+    };
+    return OrganisationUser.findAll(findOptions);
+  }
+
+  async addOrgIndex(
+    document: DocumentBuilder,
+    organisation: Organisation,
+    orgUsers: OrganisationUser[],
+    query: UserAssociationQueryDto
+  ) {
+    const orgUsersData = orgUsers.map(orgUser => orgUser.dataValues);
+    const users = await User.findAll({
+      where: { id: { [Op.in]: orgUsersData.map(orgUser => orgUser.userId) } },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      include: [
+        {
+          association: "roles",
+          attributes: ["name"]
+        }
+      ]
+    });
+    users.forEach(user => {
+      const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
+      document.addData(
+        user.uuid as string,
+        new UserAssociationDto(user, {
+          status: orgUser?.status ?? "",
+          isManager: false,
+          organisationName: organisation.name ?? "",
+          roleName: user.primaryRole ?? null,
+          associatedType: "organisations"
+        })
+      );
+    });
+    const indexIds = users.map(user => user.uuid as string);
+    document.addIndex({
+      resource: "associatedUsers",
+      requestPath: `/userAssociations/v3/organisations/${organisation.uuid}${getStableRequestQuery(query)}`,
+      total: users.length,
+      ids: indexIds
+    });
+  }
+
+  async deleteBulkOrgUserAssociations(organisationId: number, uuids: string[]) {
+    const users = await User.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "emailAddress"]
+    });
+    if (users.length === 0) {
+      throw new NotFoundException("Users not found");
+    }
+    const userIds = users.map(user => user.id);
+    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
+    return users.map(user => user.uuid);
+  }
+
   async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {
     const user = await User.findOne({
       where: { id: userId },

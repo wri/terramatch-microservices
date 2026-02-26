@@ -101,6 +101,28 @@ export class UserAssociationController {
     return buildDeletedResponse("associatedUsers", query.uuids);
   }
 
+  @Get("organisations/:uuid")
+  @ApiOperation({
+    operationId: "getOrgUserAssociation",
+    summary: "Get the users associated with an organisation"
+  })
+  @JsonApiResponse([{ data: UserAssociationDto, hasMany: true }])
+  @ExceptionResponse(NotFoundException, { description: "Organisation not found" })
+  async getOrgUserAssociation(@Param("uuid") uuid: string, @Query() query: UserAssociationQueryDto) {
+    const organisation = await Organisation.findOne({
+      where: { uuid },
+      attributes: ["id", "uuid", "name"]
+    });
+    if (organisation == null) {
+      throw new NotFoundException("Organisation not found");
+    }
+    await this.policyService.authorize("read", organisation);
+    const orgUsers = await this.userAssociationService.queryOrg(organisation, query);
+    const document = buildJsonApi(UserAssociationDto, { forceDataArray: true });
+    await this.userAssociationService.addOrgIndex(document, organisation, orgUsers, query);
+    return document;
+  }
+
   @Post("organisations/:uuid")
   @ApiOperation({
     operationId: "createOrgUserAssociation",
@@ -152,5 +174,28 @@ export class UserAssociationController {
       })
     );
     return document;
+  }
+
+  @Delete("organisations/:uuid")
+  @ApiOperation({
+    operationId: "deleteOrgUserAssociation",
+    summary: "Delete a user association for an organisation"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation not found" })
+  async deleteBulkOrgUserAssociations(@Param("uuid") uuid: string, @Query() query: UserAssociationDeleteQueryDto) {
+    const organisation = await Organisation.findOne({
+      where: { uuid },
+      attributes: ["id", "uuid", "name"]
+    });
+    if (organisation == null) {
+      throw new NotFoundException("Organisation not found");
+    }
+    await this.policyService.authorize("update", organisation);
+    await this.userAssociationService.deleteBulkOrgUserAssociations(organisation.id, query.uuids);
+    return buildDeletedResponse("associatedUsers", query.uuids);
   }
 }

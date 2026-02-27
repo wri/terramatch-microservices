@@ -310,6 +310,61 @@ describe("OrganisationPolicy", () => {
       mockPermissions("users-manage");
       await expectCan(service, "approveReject", org);
     });
+
+    it("allows approveReject for organisation owners (primary org)", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCan(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for organisation owners of different org", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create({ organisationId: orgs[0].id });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCan(service, "approveReject", orgs[0]);
+      await expectCannot(service, "approveReject", orgs[1]);
+    });
+
+    it("allows approveReject for previously approved partners (organisationsConfirmed)", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCan(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for users with requested status", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "requested" });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCannot(service, "approveReject", org);
+    });
+
+    it("disallows approveReject for users with rejected status", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "rejected" });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCannot(service, "approveReject", org);
+    });
+
+    it("allows approveReject for approved partners of multiple orgs", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: orgs[0].id, userId: user.id, status: "approved" });
+      await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
+      mockUserId(user.id);
+      mockPermissions();
+      await expectCan(service, "approveReject", orgs[0]);
+      await expectCan(service, "approveReject", orgs[1]);
+    });
   });
 
   describe("joinRequest", () => {

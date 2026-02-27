@@ -18,7 +18,7 @@ import * as process from "node:process";
 const V3_SERVICES = {
   "user-service": ["auth", "users", "organisations", "userAssociations"],
   "job-service": ["jobs"],
-  "entity-service": ["entities", "trees", "forms", "applications", "fundingProgrammes"],
+  "entity-service": ["entities", "trees", "forms", "applications", "fundingProgrammes", "reportingFrameworks"],
   "research-service": ["research", "boundingBoxes", "validations", "polygonClipping"],
   "dashboard-service": ["dashboard"],
   "unified-database-service": ["unified-database"]

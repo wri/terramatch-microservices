@@ -3,10 +3,11 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 
 export class AggregateReportSeriesItemDto {
   @ApiProperty({
-    description: "Reporting task due date (ISO 8601).",
-    example: "2024-06-30T23:59:59.000Z"
+    description: "Reporting task due date (ISO 8601), or null when the report has no due date.",
+    example: "2024-06-30T23:59:59.000Z",
+    nullable: true
   })
-  dueDate: string;
+  dueDate: string | null;
 
   @ApiProperty({
     description: "Sum for that reporting period (V2 compatible).",

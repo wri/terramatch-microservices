@@ -127,7 +127,7 @@ describe("AggregateReportsService", () => {
       expect(result.treesRegenerating).toEqual([]);
     });
 
-    it("filters out reports with null dueAt from series", async () => {
+    it("includes reports with null dueAt in series as single item with dueDate null", async () => {
       const project = Project.build({ id: 1, frameworkKey: "terrafund" });
       const reportWithDue = createMock<SiteReport>({
         id: 1,
@@ -159,8 +159,61 @@ describe("AggregateReportsService", () => {
 
       expect(result.treePlanted).toBeDefined();
       expect(Array.isArray(result.treePlanted)).toBe(true);
-      expect(result.treesRegenerating).toHaveLength(1);
-      expect(result.treesRegenerating != null && result.treesRegenerating[0].aggregateAmount).toBe(5);
+      expect(result.treesRegenerating).toHaveLength(2);
+      expect(result.treesRegenerating != null && result.treesRegenerating[0]).toMatchObject({
+        dueDate: null,
+        aggregateAmount: 10
+      });
+      expect(result.treesRegenerating != null && result.treesRegenerating[1]).toMatchObject({
+        dueDate: "2024-06-30T00:00:00.000Z",
+        aggregateAmount: 5
+      });
+    });
+
+    it("includes tree-planted amounts from reports with null dueAt in null-dueDate bucket", async () => {
+      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const reportWithDue = createMock<SiteReport>({
+        id: 1,
+        dueAt: new Date("2024-06-30"),
+        numTreesRegenerating: 0
+      });
+      const reportNullDue = createMock<SiteReport>({
+        id: 2,
+        dueAt: null,
+        numTreesRegenerating: 0
+      });
+
+      const mockFindAll = jest.fn().mockResolvedValue([reportWithDue, reportNullDue]);
+      const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
+      jest.spyOn(SiteReport, "approved").mockReturnValue({
+        sites: mockSites
+      } as unknown as ReturnType<typeof SiteReport.approved>);
+      jest.spyOn(Site, "approvedIdsSubquery").mockReturnValue(undefined as never);
+      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
+        collection: jest.fn().mockReturnValue({
+          siteReports: jest.fn().mockReturnValue({
+            findAll: jest.fn().mockResolvedValue([
+              { speciesableId: 1, total: 100 },
+              { speciesableId: 2, total: 6840 }
+            ])
+          })
+        })
+      } as unknown as ReturnType<typeof TreeSpecies.visible>);
+      jest.spyOn(Seeding, "visible").mockReturnValue({
+        siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+      } as unknown as ReturnType<typeof Seeding.visible>);
+
+      const result = await service.getAggregateReports("projects", project);
+
+      expect(result.treePlanted).toHaveLength(2);
+      expect(result.treePlanted != null && result.treePlanted[0]).toMatchObject({
+        dueDate: null,
+        aggregateAmount: 6840
+      });
+      expect(result.treePlanted != null && result.treePlanted[1]).toMatchObject({
+        dueDate: "2024-06-30T00:00:00.000Z",
+        aggregateAmount: 100
+      });
     });
 
     it("returns period series (one point per unique due_at, sum per period) matching V2 with camelCase", async () => {

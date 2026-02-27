@@ -11,7 +11,7 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereOptions } from "sequelize";
-import { UserAssociationCreateAttributes } from "./dto/user-association-create.dto";
+import { UserAssociationCreateAttributes, UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
@@ -26,11 +26,107 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
 import { JwtService } from "@nestjs/jwt";
 
+export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
+export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
+
+export interface UserAssociationProcessor {
+  getEntity(): Promise<Project | Organisation>;
+  readonly readPolicy: string;
+  readonly createPolicy: string;
+  readonly updatePolicy: string;
+  addDtos(document: DocumentBuilder, query: UserAssociationQueryDto): Promise<void>;
+  handleCreate(document: DocumentBuilder, body: UserAssociationCreateBody | undefined, userId: number): Promise<void>;
+  handleDelete(uuids: string[]): Promise<void>;
+}
+
 @Injectable()
 export class UserAssociationService {
   private readonly logger = new TMLogger(UserAssociationService.name);
 
   constructor(private readonly jwtService: JwtService, @InjectQueue("email") private readonly emailQueue: Queue) {}
+
+  createProcessor(model: AssociableModel, uuid: string): UserAssociationProcessor {
+    let _entity: Project | Organisation | null = null;
+    const loadEntity = async (): Promise<Project | Organisation> => {
+      if (_entity != null) return _entity;
+      if (model === "projects") {
+        const project = await Project.findOne({
+          where: { uuid },
+          attributes: ["id", "uuid", "frameworkKey", "organisationId"]
+        });
+        if (project == null) throw new NotFoundException("Project not found");
+        return (_entity = project);
+      }
+      const organisation = await Organisation.findOne({
+        where: { uuid },
+        attributes: ["id", "uuid", "name"]
+      });
+      if (organisation == null) throw new NotFoundException("Organisation not found");
+      return (_entity = organisation);
+    };
+
+    if (model === "projects") {
+      return {
+        getEntity: loadEntity,
+        readPolicy: "read",
+        createPolicy: "update",
+        updatePolicy: "update",
+        addDtos: async (document, query) => {
+          const project = (await loadEntity()) as Project;
+          const projectUsers = await this.query(project, query);
+          await this.addIndex(document, project, projectUsers, query);
+        },
+        handleCreate: async (document, body) => {
+          if (body == null) throw new BadRequestException("Request body is required for project associations");
+          const project = (await loadEntity()) as Project;
+          const userAssociation = await this.createUserAssociation(project, body.data.attributes);
+          if (userAssociation != null) {
+            document.addData(userAssociation.uuid as string, new UserAssociationDto(userAssociation));
+          }
+        },
+        handleDelete: async uuids => {
+          const project = (await loadEntity()) as Project;
+          await this.deleteBulkUserAssociations(project.id, uuids);
+        }
+      };
+    }
+
+    return {
+      getEntity: loadEntity,
+      readPolicy: "read",
+      createPolicy: "joinRequest",
+      updatePolicy: "update",
+      addDtos: async (document, query) => {
+        const org = (await loadEntity()) as Organisation;
+        const orgUsers = await this.queryOrg(org, query);
+        await this.addOrgIndex(document, org, orgUsers, query);
+      },
+      handleCreate: async (document, _body, userId) => {
+        const org = (await loadEntity()) as Organisation;
+        await this.requestOrgJoin(org, userId);
+        const user = await User.findOne({
+          where: { id: userId },
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          include: [{ association: "roles", attributes: ["name"] }]
+        });
+        if (user == null) throw new UnauthorizedException("Authenticated user not found");
+        document.addData(
+          user.uuid as string,
+          new UserAssociationDto(user, {
+            status: "requested",
+            isManager: false,
+            organisationName: (org as Organisation).name ?? "",
+            roleName: user.primaryRole ?? null,
+            associatedType: "organisations"
+          })
+        );
+      },
+      handleDelete: async uuids => {
+        const org = (await loadEntity()) as Organisation;
+        await this.deleteBulkOrgUserAssociations(org.id, uuids);
+      }
+    };
+  }
 
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
@@ -57,12 +153,7 @@ export class UserAssociationService {
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
-      include: [
-        {
-          association: "roles",
-          attributes: ["name"]
-        }
-      ]
+      include: [{ association: "roles", attributes: ["name"] }]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
     const organisations = await Organisation.findAll({
@@ -100,14 +191,8 @@ export class UserAssociationService {
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
       attributes: ["id", "emailAddress"],
-      include: [
-        {
-          association: "roles",
-          attributes: ["name"]
-        }
-      ]
+      include: [{ association: "roles", attributes: ["name"] }]
     });
-
     if (user == null) {
       return this.handleUserNotFound(project, attributes);
     } else {
@@ -121,9 +206,7 @@ export class UserAssociationService {
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["id", "uuid", "emailAddress"]
     });
-    if (users.length === 0) {
-      throw new NotFoundException("Users not found");
-    }
+    if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
     await ProjectUser.destroy({ where: { projectId, userId: { [Op.in]: userIds } } });
     await ProjectInvite.destroy({
@@ -133,9 +216,7 @@ export class UserAssociationService {
   }
 
   private async handleUserNotFound(project: Project, attributes: UserAssociationCreateAttributes) {
-    if (attributes.isManager) {
-      throw new NotFoundException("User not found");
-    }
+    if (attributes.isManager) throw new NotFoundException("User not found");
     const newUser = await User.create({
       organisationId: project.organisationId,
       emailAddress: attributes.emailAddress,
@@ -158,9 +239,7 @@ export class UserAssociationService {
       where: { id: project.organisationId as number },
       attributes: ["name"]
     });
-    if (organisation == null) {
-      throw new NotFoundException("Organisation not found");
-    }
+    if (organisation == null) throw new NotFoundException("Organisation not found");
     await new ProjectInviteEmail({
       projectId: project.id,
       emailAddress: newUser.emailAddress,
@@ -188,12 +267,7 @@ export class UserAssociationService {
     const users = await User.findAll({
       where: { id: { [Op.in]: orgUsersData.map(orgUser => orgUser.userId) } },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
-      include: [
-        {
-          association: "roles",
-          attributes: ["name"]
-        }
-      ]
+      include: [{ association: "roles", attributes: ["name"] }]
     });
     users.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
@@ -222,9 +296,7 @@ export class UserAssociationService {
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["id", "uuid", "emailAddress"]
     });
-    if (users.length === 0) {
-      throw new NotFoundException("Users not found");
-    }
+    if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
     await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
     return users.map(user => user.uuid);
@@ -235,26 +307,18 @@ export class UserAssociationService {
       where: { id: userId },
       attributes: ["id", "uuid", "emailAddress"]
     });
-
-    if (user == null) {
-      throw new UnauthorizedException("Authenticated user not found");
-    }
+    if (user == null) throw new UnauthorizedException("Authenticated user not found");
 
     const [orgUser, created] = await OrganisationUser.findOrCreate({
       where: { organisationId: organisation.id, userId },
       defaults: { organisationId: organisation.id, userId, status: "requested" } as OrganisationUser
     });
-
     if (!created && orgUser.status !== "requested") {
       orgUser.status = "requested";
       await orgUser.save();
     }
 
-    const owners = await User.findAll({
-      where: { organisationId: organisation.id },
-      attributes: ["id"]
-    });
-
+    const owners = await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] });
     if (owners.length > 0) {
       await Notification.bulkCreate(
         owners.map(owner => ({
@@ -282,36 +346,18 @@ export class UserAssociationService {
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
-      if (user.primaryRole !== "project-manager") {
-        throw new BadRequestException("User is not a project manager");
-      }
-
+      if (user.primaryRole !== "project-manager") throw new BadRequestException("User is not a project manager");
       const projectUser = await ProjectUser.findOne({
         where: { projectId: project.id, userId: user.id, isManaging: true }
       });
-
-      if (projectUser != null) {
-        throw new BadRequestException("User is already a project manager");
-      }
-
-      await ProjectUser.create({
-        projectId: project.id,
-        userId: user.id,
-        isManaging: true
-      });
+      if (projectUser != null) throw new BadRequestException("User is already a project manager");
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isManaging: true });
       return;
     }
 
-    const projectUser = await ProjectUser.findOne({
-      where: { projectId: project.id, userId: user.id }
-    });
-
+    const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
     if (projectUser == null) {
-      await ProjectUser.create({
-        projectId: project.id,
-        userId: user.id,
-        isMonitoring: true
-      });
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
     }
 
     const token = crypto.randomBytes(32).toString("hex");

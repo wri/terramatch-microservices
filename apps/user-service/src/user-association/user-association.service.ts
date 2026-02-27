@@ -99,7 +99,7 @@ export class UserAssociationService {
       addDtos: async (document, query) => {
         const org = (await loadEntity()) as Organisation;
         const orgUsers = await this.queryOrg(org, query);
-        await this.addOrgIndex(document, org, orgUsers, query);
+        await this.addOrgUserDtos(document, org, orgUsers, query);
       },
       handleCreate: async (document, _body, userId) => {
         const org = (await loadEntity()) as Organisation;
@@ -257,7 +257,7 @@ export class UserAssociationService {
     return OrganisationUser.findAll(findOptions);
   }
 
-  async addOrgIndex(
+  async addOrgUserDtos(
     document: DocumentBuilder,
     organisation: Organisation,
     orgUsers: OrganisationUser[],

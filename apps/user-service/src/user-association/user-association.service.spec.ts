@@ -20,6 +20,7 @@ import {
   ProjectUser,
   ProjectInvite,
   Organisation,
+  Project,
   Role,
   ModelHasRole
 } from "@terramatch-microservices/database/entities";
@@ -51,6 +52,223 @@ describe("UserAssociationService", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("createProcessor", () => {
+    describe("projects model", () => {
+      it("should create processor with correct policies", () => {
+        const processor = service.createProcessor("projects", "test-uuid");
+
+        expect(processor.readPolicy).toBe("read");
+        expect(processor.createPolicy).toBe("update");
+        expect(processor.updatePolicy).toBe("update");
+      });
+
+      it("should load project entity on getEntity call", async () => {
+        const project = await ProjectFactory.create();
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+
+        const processor = service.createProcessor("projects", project.uuid);
+        const entity = await processor.getEntity();
+
+        expect(Project.findOne).toHaveBeenCalledWith({
+          where: { uuid: project.uuid },
+          attributes: ["id", "uuid", "frameworkKey", "organisationId"]
+        });
+        expect(entity).toEqual(project);
+      });
+
+      it("should cache entity on subsequent getEntity calls", async () => {
+        const project = await ProjectFactory.create();
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+
+        const processor = service.createProcessor("projects", project.uuid);
+        await processor.getEntity();
+        await processor.getEntity();
+
+        expect(Project.findOne).toHaveBeenCalledTimes(1);
+      });
+
+      it("should throw NotFoundException when project not found", async () => {
+        jest.spyOn(Project, "findOne").mockResolvedValue(null);
+
+        const processor = service.createProcessor("projects", "non-existent-uuid");
+
+        await expect(processor.getEntity()).rejects.toThrow(NotFoundException);
+        await expect(processor.getEntity()).rejects.toThrow("Project not found");
+      });
+
+      it("should call addDtos through processor", async () => {
+        const project = await ProjectFactory.create();
+        const projectUser = await ProjectUserFactory.create({ projectId: project.id });
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+        jest.spyOn(service, "query").mockResolvedValue([projectUser] as ProjectUser[]);
+        jest.spyOn(service, "addIndex").mockResolvedValue(undefined);
+        const document = new DocumentBuilder("associatedUsers");
+
+        const processor = service.createProcessor("projects", project.uuid);
+        await processor.addDtos(document, {});
+
+        expect(service.query).toHaveBeenCalledWith(project, {});
+        expect(service.addIndex).toHaveBeenCalledWith(document, project, [projectUser], {});
+      });
+
+      it("should call handleCreate through processor with body", async () => {
+        const project = await ProjectFactory.create();
+        const user = await UserFactory.create();
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+        jest.spyOn(service, "createUserAssociation").mockResolvedValue(user);
+        const document = new DocumentBuilder("associatedUsers");
+        const body = {
+          data: {
+            type: "userAssociations",
+            attributes: { emailAddress: "test@test.com", isManager: false }
+          }
+        };
+
+        const processor = service.createProcessor("projects", project.uuid);
+        await processor.handleCreate(document, body, 1);
+
+        expect(service.createUserAssociation).toHaveBeenCalledWith(project, body.data.attributes);
+      });
+
+      it("should throw BadRequestException when handleCreate called without body for projects", async () => {
+        const project = await ProjectFactory.create();
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+        const document = new DocumentBuilder("associatedUsers");
+
+        const processor = service.createProcessor("projects", project.uuid);
+
+        await expect(processor.handleCreate(document, undefined, 1)).rejects.toThrow(BadRequestException);
+        await expect(processor.handleCreate(document, undefined, 1)).rejects.toThrow(
+          "Request body is required for project associations"
+        );
+      });
+
+      it("should call handleDelete through processor", async () => {
+        const project = await ProjectFactory.create();
+        const user1 = await UserFactory.create();
+        const user2 = await UserFactory.create();
+        jest.spyOn(Project, "findOne").mockResolvedValue(project);
+        jest
+          .spyOn(service, "deleteBulkUserAssociations")
+          .mockResolvedValue([user1.uuid as string, user2.uuid as string]);
+
+        const processor = service.createProcessor("projects", project.uuid);
+        await processor.handleDelete([user1.uuid as string, user2.uuid as string]);
+
+        expect(service.deleteBulkUserAssociations).toHaveBeenCalledWith(project.id, [user1.uuid, user2.uuid]);
+      });
+    });
+
+    describe("organisations model", () => {
+      it("should create processor with correct policies", () => {
+        const processor = service.createProcessor("organisations", "test-uuid");
+
+        expect(processor.readPolicy).toBe("read");
+        expect(processor.createPolicy).toBe("joinRequest");
+        expect(processor.updatePolicy).toBe("update");
+      });
+
+      it("should load organisation entity on getEntity call", async () => {
+        const org = await OrganisationFactory.create();
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+
+        const processor = service.createProcessor("organisations", org.uuid);
+        const entity = await processor.getEntity();
+
+        expect(Organisation.findOne).toHaveBeenCalledWith({
+          where: { uuid: org.uuid },
+          attributes: ["id", "uuid", "name"]
+        });
+        expect(entity).toEqual(org);
+      });
+
+      it("should cache entity on subsequent getEntity calls", async () => {
+        const org = await OrganisationFactory.create();
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+
+        const processor = service.createProcessor("organisations", org.uuid);
+        await processor.getEntity();
+        await processor.getEntity();
+
+        expect(Organisation.findOne).toHaveBeenCalledTimes(1);
+      });
+
+      it("should throw NotFoundException when organisation not found", async () => {
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
+
+        const processor = service.createProcessor("organisations", "non-existent-uuid");
+
+        await expect(processor.getEntity()).rejects.toThrow(NotFoundException);
+        await expect(processor.getEntity()).rejects.toThrow("Organisation not found");
+      });
+
+      it("should call addDtos through processor", async () => {
+        const org = await OrganisationFactory.create();
+        const orgUser = await OrganisationUserFactory.create({ organisationId: org.id });
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+        jest.spyOn(service, "queryOrg").mockResolvedValue([orgUser] as OrganisationUser[]);
+        jest.spyOn(service, "addOrgUserDtos").mockResolvedValue(undefined);
+        const document = new DocumentBuilder("associatedUsers");
+
+        const processor = service.createProcessor("organisations", org.uuid);
+        await processor.addDtos(document, {});
+
+        expect(service.queryOrg).toHaveBeenCalledWith(org, {});
+        expect(service.addOrgUserDtos).toHaveBeenCalledWith(document, org, [orgUser], {});
+      });
+
+      it("should call handleCreate through processor for organisations", async () => {
+        const org = await OrganisationFactory.create({ name: "Test Org" });
+        const user = await UserFactory.create();
+        user.roles = [await RoleFactory.create()];
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+        jest.spyOn(service, "requestOrgJoin").mockResolvedValue(user);
+        jest.spyOn(User, "findOne").mockResolvedValue(user);
+        const document = new DocumentBuilder("associatedUsers");
+        const addDataSpy = jest.spyOn(document, "addData");
+
+        const processor = service.createProcessor("organisations", org.uuid);
+        await processor.handleCreate(document, undefined, user.id);
+
+        expect(service.requestOrgJoin).toHaveBeenCalledWith(org, user.id);
+        expect(User.findOne).toHaveBeenCalledWith({
+          where: { id: user.id },
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          include: [{ association: "roles", attributes: ["name"] }]
+        });
+        expect(addDataSpy).toHaveBeenCalled();
+      });
+
+      it("should throw UnauthorizedException when user not found after requestOrgJoin", async () => {
+        const org = await OrganisationFactory.create();
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+        jest.spyOn(service, "requestOrgJoin").mockResolvedValue({} as User);
+        jest.spyOn(User, "findOne").mockResolvedValue(null);
+        const document = new DocumentBuilder("associatedUsers");
+
+        const processor = service.createProcessor("organisations", org.uuid);
+
+        await expect(processor.handleCreate(document, undefined, 999)).rejects.toThrow(UnauthorizedException);
+        await expect(processor.handleCreate(document, undefined, 999)).rejects.toThrow("Authenticated user not found");
+      });
+
+      it("should call handleDelete through processor", async () => {
+        const org = await OrganisationFactory.create();
+        const user1 = await UserFactory.create();
+        const user2 = await UserFactory.create();
+        jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
+        jest
+          .spyOn(service, "deleteBulkOrgUserAssociations")
+          .mockResolvedValue([user1.uuid as string, user2.uuid as string]);
+
+        const processor = service.createProcessor("organisations", org.uuid);
+        await processor.handleDelete([user1.uuid as string, user2.uuid as string]);
+
+        expect(service.deleteBulkOrgUserAssociations).toHaveBeenCalledWith(org.id, [user1.uuid, user2.uuid]);
+      });
+    });
   });
 
   describe("query", () => {
@@ -362,7 +580,7 @@ describe("UserAssociationService", () => {
     });
   });
 
-  describe("addOrgIndex", () => {
+  describe("addOrgUserDtos", () => {
     it("should add user associations to document with correct DTOs", async () => {
       const org = await OrganisationFactory.create({ name: "Test Org" });
       const user1 = await UserFactory.create({ organisationId: org.id });
@@ -390,7 +608,7 @@ describe("UserAssociationService", () => {
       const addDataSpy = jest.spyOn(document, "addData");
       const addIndexSpy = jest.spyOn(document, "addIndex");
 
-      await service.addOrgIndex(document, org, [orgUser1, orgUser2] as OrganisationUser[], {});
+      await service.addOrgUserDtos(document, org, [orgUser1, orgUser2] as OrganisationUser[], {});
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
@@ -420,7 +638,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findAll").mockResolvedValue([]);
       const addIndexSpy = jest.spyOn(document, "addIndex");
 
-      await service.addOrgIndex(document, org, [], {});
+      await service.addOrgUserDtos(document, org, [], {});
 
       expect(addIndexSpy).toHaveBeenCalledWith(
         expect.objectContaining({

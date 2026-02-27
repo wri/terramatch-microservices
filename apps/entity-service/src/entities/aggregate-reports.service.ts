@@ -32,7 +32,12 @@ function buildPeriodSeries(
   getAmountFromRow: (row: SiteReport) => number
 ): AggregateReportSeriesItemDto[] {
   const withDueAt = reportRows.filter((row): row is SiteReport & { dueAt: Date } => row.dueAt != null);
-  if (withDueAt.length === 0) return [];
+  const withNullDueAt = reportRows.filter(row => row.dueAt == null);
+
+  let nullDueAmount = 0;
+  for (const row of withNullDueAt) {
+    nullDueAmount += amountByReportId.get(row.id) ?? getAmountFromRow(row);
+  }
 
   const amountByDueTime = new Map<number, { dueAt: Date; amount: number }>();
   for (const row of withDueAt) {
@@ -47,10 +52,17 @@ function buildPeriodSeries(
   }
 
   const sorted = sortBy(Array.from(amountByDueTime.values()), x => x.dueAt.getTime());
-  return sorted.map(period => ({
+  const datedItems = sorted.map(period => ({
     dueDate: period.dueAt.toISOString(),
     aggregateAmount: period.amount
   }));
+
+  const result: AggregateReportSeriesItemDto[] = [];
+  if (withNullDueAt.length > 0) {
+    result.push({ dueDate: null, aggregateAmount: nullDueAmount });
+  }
+  result.push(...datedItems);
+  return result;
 }
 
 @Injectable()

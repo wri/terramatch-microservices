@@ -22,9 +22,15 @@ import {
   Organisation,
   Project,
   Role,
-  ModelHasRole
+  ModelHasRole,
+  OrganisationInvite
 } from "@terramatch-microservices/database/entities";
-import { NotFoundException, UnauthorizedException, BadRequestException } from "@nestjs/common";
+import {
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 describe("UserAssociationService", () => {
@@ -824,6 +830,58 @@ describe("UserAssociationService", () => {
         expect.any(Error)
       );
       expect(result).toEqual(user);
+    });
+  });
+
+  describe("inviteOrganisationUser", () => {
+    it("should throw UnprocessableEntityException when user with email already exists", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ emailAddress: "exists@example.com" });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+
+      await expect(service.inviteOrganisationUser(org, "exists@example.com")).rejects.toThrow(
+        UnprocessableEntityException
+      );
+    });
+
+    it("should create user, organisation invite and queue email when user does not exist", async () => {
+      const org = await OrganisationFactory.create();
+      const role = await RoleFactory.create({ name: "project-developer" });
+      const newUser = await UserFactory.create({ organisationId: org.id, emailAddress: "new@example.com" });
+      const invite = {
+        id: 1,
+        uuid: "invite-uuid",
+        organisationId: org.id,
+        emailAddress: "new@example.com",
+        token: "fake-token",
+        acceptedAt: null,
+        createdAt: new Date()
+      } as OrganisationInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+      jest.spyOn(User, "create").mockResolvedValue(newUser);
+      jest.spyOn(Role, "findOne").mockResolvedValue(role);
+      jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
+      jwtService.signAsync.mockResolvedValue("fake-token");
+      jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+
+      const result = await service.inviteOrganisationUser(org, "new@example.com", "http://frontend/auth/signup");
+
+      expect(User.create).toHaveBeenCalled();
+      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "project-developer" } });
+      expect(ModelHasRole.create).toHaveBeenCalled();
+      expect(jwtService.signAsync).toHaveBeenCalled();
+      expect(OrganisationInvite.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisationId: org.id,
+          emailAddress: "new@example.com",
+          token: "fake-token"
+        })
+      );
+      expect(emailQueue.add).toHaveBeenCalled();
+      expect(result).toBe(invite);
     });
   });
 });

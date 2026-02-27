@@ -37,8 +37,7 @@ type ModelConfig<M extends Model> = {
   model: LaravelModelCtor & ModelCtor<M>;
   parentAssociation: keyof Attributes<M>;
   parentIdColumn: string;
-  oldModelValue: string;
-  oldModelColumn: string;
+  reportIdColumn: string;
   collections: Dictionary<string>;
 };
 
@@ -55,8 +54,7 @@ const MODEL_CONFIGS: ModelConfigs = {
     model: SiteReport,
     parentAssociation: "site",
     parentIdColumn: "site_id",
-    oldModelValue: "App\\Models\\SiteSubmission",
-    oldModelColumn: "site_submission_id",
+    reportIdColumn: "report_id",
     collections: {
       Paid_site_establishment: PAID_SITE_ESTABLISHMENT,
       Vol_site_establishment: VOLUNTEER_SITE_ESTABLISHMENT,
@@ -75,8 +73,7 @@ const MODEL_CONFIGS: ModelConfigs = {
     model: ProjectReport,
     parentAssociation: "project",
     parentIdColumn: "project_id",
-    oldModelValue: "App\\Models\\Submission",
-    oldModelColumn: "programme_submission_id",
+    reportIdColumn: "report_id",
     collections: {
       Paid_project_management: PAID_PROJECT_MANAGEMENT,
       Vol_project_management: VOLUNTEER_PROJECT_MANAGEMENT,
@@ -223,12 +220,12 @@ const entryMatcher = (a: Entry) => (b: CreationAttributes<TrackingEntry>) =>
 
 const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<string>) => {
   const parentId = assertNumber(columnValue(row, config.parentIdColumn), "Parent ID not found or malformed");
-  const submissionId = assertNumber(columnValue(row, config.oldModelColumn), "Parent ID not found or malformed");
+  const reportId = assertNumber(columnValue(row, config.reportIdColumn), "Report ID not found or malformed");
   const dueDate = assertDate(columnValue(row, "due_date"), "Due date not found");
 
   const report = assertNotNull(
     (await (config.model as ModelCtor).findOne({
-      where: { oldModel: config.oldModelValue, oldId: submissionId },
+      where: { id: reportId },
       attributes: ["id", "dueAt"],
       include: [{ association: config.parentAssociation, attributes: ["ppcExternalId"] }]
     })) as SupportedModel | null,
@@ -237,19 +234,19 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
   const parent = assertNotNull(report?.[config.parentAssociation] as Site | Project | null, "Parent not found");
   assert(parent.ppcExternalId === parentId, "Parent ID does not match");
 
-  const reportDueAt = report.dueAt == null ? null : DateTime.fromJSDate(report.dueAt);
+  const reportDueAt = report.dueAt == null ? null : DateTime.fromJSDate(report.dueAt).setZone("UTC");
   const datesMatch =
     reportDueAt != null &&
     reportDueAt.year === dueDate.year &&
     reportDueAt.month === dueDate.month &&
     reportDueAt.day === dueDate.day;
-  assert(datesMatch, "Due date does not match");
+  assert(datesMatch, `Due date does not match [db=${reportDueAt}, csv=${dueDate}]`);
 
   const entriesByCollection: Dictionary<Omit<CreationAttributes<TrackingEntry>, "trackingId">[]> = {};
   const collectionKeys = Object.keys(config.collections);
   for (const [header, value] of Object.entries(row)) {
     if (!header.startsWith("Paid_") && !header.startsWith("Vol_")) continue;
-    if (value === "") continue;
+    if (value === "" || value === "-") continue;
 
     const columnTitlePrefix = assertNotNull(
       collectionKeys.find(key => header.startsWith(key)),
@@ -258,7 +255,7 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
     const collection = config.collections[columnTitlePrefix];
     const demographicName = header.substring(columnTitlePrefix.length + 1);
     const entry = assertEntry(demographicName, header, row);
-    const amount = Math.round(assertNumber(value, "Amount invalid"));
+    const amount = Math.round(assertNumber(value, `Amount invalid [${value}]`));
     assert(amount >= 0, "Amount must be non-negative");
 
     const entries = (entriesByCollection[collection] ??= []);
@@ -287,7 +284,7 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
       if (totals.gender < totals.age || totals.gender < totals.ethnicity) {
         message += "GENDER IS NOT THE LARGEST VALUE IN THIS COLLECTION\n";
       }
-      message += JSON.stringify({ submissionId, collection, totals }, null, 2);
+      message += JSON.stringify({ reportId, collection, totals }, null, 2);
       warnings.push(message);
     }
   }
@@ -296,7 +293,7 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
     collection,
     entries
   }));
-  return { reportId: report.id as number, workdays, warnings };
+  return { reportId, workdays, warnings };
 };
 
 const persistWorkdays = async (config: ModelConfigs[SupportedType], reportWorkdays: Record<number, Workday[]>) => {

@@ -550,6 +550,7 @@ export class ProjectProcessor extends EntityProcessor<
       attributes.level2Project = pitch.level2Proposed;
       attributes.survivalRate = pitch.projSurvivalRate;
       attributes.communityEngagementPlan = pitch.landholderCommEngage;
+      attributes.sitingStrategy = pitch.projectSiteModel;
       // Fallback to organisation.consortium is temporary. The field will be migrated and removed
       // from orgs in ZZ / AA releases.
       attributes.consortium = pitch.consortium ?? organisation.consortium;

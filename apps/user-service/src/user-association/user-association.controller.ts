@@ -22,6 +22,7 @@ import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
 import { UserAssociationModelParamDto } from "./dto/user-association-model.dto";
 import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
+import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto";
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
 
 @Controller("userAssociations/v3/:model")
@@ -88,14 +89,10 @@ export class UserAssociationController {
     description: "A user with this email already exists."
   })
   async inviteOrganisationUser(
-    @Param() { model, uuid }: UserAssociationModelParamDto,
+    @Param() { uuid }: OrganisationInviteParamDto,
     @Body() body: OrganisationInviteRequestDto
   ) {
-    if (model !== "organisations") {
-      throw new BadRequestException("Invites are only supported for organisations");
-    }
-
-    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const processor = this.userAssociationService.createProcessor("organisations", uuid);
     const organisation = await processor.getEntity();
     await this.policyService.authorize("update", organisation);
 
@@ -105,9 +102,7 @@ export class UserAssociationController {
       body.callbackUrl
     );
 
-    const document = buildJsonApi(OrganisationInviteDto);
-    document.addData(invite.uuid, new OrganisationInviteDto(invite));
-    return document;
+    return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
   }
 
   @Delete(":uuid")

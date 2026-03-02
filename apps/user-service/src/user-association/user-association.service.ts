@@ -324,7 +324,7 @@ export class UserAssociationService {
       attributes: ["id"]
     });
     if (existingUser != null) {
-      throw new UnprocessableEntityException("User is already a part of this programme");
+      throw new UnprocessableEntityException("A user with this email address already exists");
     }
 
     const newUser = await User.create({
@@ -347,7 +347,10 @@ export class UserAssociationService {
       emailAddress,
       token
     } as OrganisationInvite);
-
+    await PasswordReset.create({
+      userId: newUser.id,
+      token
+    } as PasswordReset);
     try {
       await new OrganisationInviteEmail({
         organisationId: organisation.id,

@@ -129,7 +129,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   static idsSubquery(
     trackableIds: Literal | number[],
     trackableType: string,
-    options: { type?: TrackingType; domain?: TrackingDomain } = {}
+    options: { type?: TrackingType; domain?: TrackingDomain; collection?: string } = {}
   ) {
     const query = Subquery.select(Tracking, "id")
       .eq("trackableType", trackableType)
@@ -138,6 +138,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
 
     if (options.domain != null) query.eq("domain", options.domain);
     if (options.type != null) query.eq("type", options.type);
+    if (options.collection != null) query.eq("collection", options.collection);
 
     return query.literal;
   }

@@ -169,6 +169,7 @@ export class ActionsService {
         }
       ],
       attributes: ["id", "projectId"],
+      order: [["dueAt", "DESC"]],
       limit: 10
     });
 

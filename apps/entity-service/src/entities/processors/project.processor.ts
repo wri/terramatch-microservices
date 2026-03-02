@@ -24,7 +24,8 @@ import { Dictionary, groupBy, sumBy } from "lodash";
 import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
+import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -276,7 +277,7 @@ export class ProjectProcessor extends EntityProcessor<
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(project.id),
       combinedWorkdayCount:
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
-      totalJobsCreated: await this.getTotalJobs(project.id),
+      totalJobsCreated: await this.getTotalJobs(project.id, project.frameworkKey),
 
       application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
@@ -380,7 +381,22 @@ export class ProjectProcessor extends EntityProcessor<
     );
   }
 
-  protected async getTotalJobs(projectId: number) {
+  protected async getTotalJobs(projectId: number, frameworkKey: FrameworkKey | null) {
+    if (frameworkKey === HBF) {
+      return (
+        (await TrackingEntry.gender().sum("amount", {
+          where: {
+            trackingId: {
+              [Op.in]: Tracking.idsSubquery(ProjectReport.approvedIdsSubquery(projectId), ProjectReport.LARAVEL_TYPE, {
+                domain: "demographics",
+                type: Tracking.WORKDAYS_TYPE,
+                collection: DIRECT
+              })
+            }
+          }
+        })) ?? 0
+      );
+    }
     return (
       (await TrackingEntry.gender().sum("amount", {
         where: {

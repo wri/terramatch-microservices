@@ -22,9 +22,16 @@ import {
   Organisation,
   Project,
   Role,
-  ModelHasRole
+  ModelHasRole,
+  OrganisationInvite,
+  PasswordReset
 } from "@terramatch-microservices/database/entities";
-import { NotFoundException, UnauthorizedException, BadRequestException } from "@nestjs/common";
+import {
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 describe("UserAssociationService", () => {
@@ -411,16 +418,16 @@ describe("UserAssociationService", () => {
     });
 
     it("should call handleUserNotFound when user does not exist", async () => {
-      const project = await ProjectFactory.create();
-      const org = await OrganisationFactory.create();
-      project.organisationId = org.id;
-      const newUser = await UserFactory.create({ organisationId: org.id });
-      const role = await RoleFactory.create({ name: "project-developer" });
+      const project = { id: 1, uuid: "project-uuid", organisationId: 1 } as Project;
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      const newUser = { id: 10, emailAddress: "new@example.com", organisationId: org.id } as User;
+      const role = { id: 1, name: "project-developer" } as Role;
 
       jest.spyOn(User, "findOne").mockResolvedValue(null);
       jest.spyOn(User, "create").mockResolvedValue(newUser);
       jest.spyOn(Role, "findOne").mockResolvedValue(role);
       jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
+      jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
       jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
       jwtService.signAsync.mockResolvedValue("fake-token");
@@ -824,6 +831,57 @@ describe("UserAssociationService", () => {
         expect.any(Error)
       );
       expect(result).toEqual(user);
+    });
+  });
+
+  describe("inviteOrganisationUser", () => {
+    it("should throw UnprocessableEntityException when user with email already exists", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      const user = { id: 1, emailAddress: "exists@example.com" } as User;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+
+      await expect(service.inviteOrganisationUser(org, "exists@example.com")).rejects.toThrow(
+        UnprocessableEntityException
+      );
+    });
+
+    it("should create user, organisation invite and queue email when user does not exist", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      const role = { id: 1, name: "project-developer" } as Role;
+      const newUser = { id: 10, emailAddress: "new@example.com", organisationId: org.id } as User;
+      const invite = {
+        id: 1,
+        uuid: "invite-uuid",
+        organisationId: org.id,
+        emailAddress: "new@example.com",
+        token: "fake-token",
+        acceptedAt: null,
+        createdAt: new Date()
+      } as OrganisationInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+      jest.spyOn(User, "create").mockResolvedValue(newUser);
+      jest.spyOn(Role, "findOne").mockResolvedValue(role);
+      jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
+      jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
+      jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
+      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+
+      const result = await service.inviteOrganisationUser(org, "new@example.com", "http://frontend/auth/signup");
+
+      expect(User.create).toHaveBeenCalled();
+      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "project-developer" } });
+      expect(ModelHasRole.create).toHaveBeenCalled();
+      expect(OrganisationInvite.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisationId: org.id,
+          emailAddress: "new@example.com",
+          token: expect.any(String)
+        })
+      );
+      expect(emailQueue.add).toHaveBeenCalled();
+      expect(result).toBe(invite);
     });
   });
 });

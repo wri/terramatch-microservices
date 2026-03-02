@@ -4,11 +4,14 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UserAssociationService, UserAssociationProcessor } from "./user-association.service";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { UserAssociationUpdateBody } from "./dto/user-association-update.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Resource } from "@terramatch-microservices/common/util";
+import { UserAssociationDto } from "./dto/user-association.dto";
 
 function makeStubProcessor(overrides: Partial<UserAssociationProcessor> = {}): UserAssociationProcessor {
   return {
@@ -16,9 +19,11 @@ function makeStubProcessor(overrides: Partial<UserAssociationProcessor> = {}): U
     readPolicy: "read",
     createPolicy: "update",
     updatePolicy: "update",
+    approveRejectPolicy: "approveReject",
     addDtos: jest.fn().mockResolvedValue(undefined),
     handleCreate: jest.fn().mockResolvedValue(undefined),
     handleDelete: jest.fn().mockResolvedValue(undefined),
+    handleUpdate: jest.fn().mockResolvedValue(undefined),
     ...overrides
   };
 }
@@ -189,6 +194,144 @@ describe("UserAssociationController", () => {
       await expect(
         controller.deleteUserAssociations({ model: "organisations", uuid: org.uuid }, { uuids: [] })
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe("updateUserAssociation", () => {
+    const makeBody = (status: "approved" | "rejected"): UserAssociationUpdateBody => ({
+      data: { type: "associatedUsers", attributes: { status } }
+    });
+
+    describe("model = organisations", () => {
+      it("should approve a user and return UserAssociationDto", async () => {
+        const org = await OrganisationFactory.create({ name: "Test Org" });
+        const user = await UserFactory.create();
+
+        stubProcessor = makeStubProcessor({
+          approveRejectPolicy: "approveReject",
+          handleUpdate: jest.fn().mockImplementation(async (document, userUuid, status) => {
+            document.addData(
+              userUuid,
+              new UserAssociationDto(user, {
+                status,
+                isManager: false,
+                organisationName: org.name ?? "",
+                roleName: user.primaryRole ?? null,
+                associatedType: "organisations"
+              })
+            );
+          })
+        });
+        userAssociationService.createProcessor.mockReturnValue(stubProcessor);
+        (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
+
+        const result = serialize(
+          await controller.updateUserAssociation(
+            { model: "organisations", uuid: org.uuid, userUuid: user.uuid as string },
+            makeBody("approved")
+          )
+        );
+
+        expect(userAssociationService.createProcessor).toHaveBeenCalledWith("organisations", org.uuid);
+        expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
+        expect(stubProcessor.handleUpdate).toHaveBeenCalledWith(expect.any(Object), user.uuid, "approved");
+        expect(result.data != null).toBe(true);
+        expect((result.data as Resource).id).toBe(user.uuid);
+      });
+
+      it("should reject a user and return UserAssociationDto", async () => {
+        const org = await OrganisationFactory.create({ name: "Test Org" });
+        const user = await UserFactory.create();
+
+        stubProcessor = makeStubProcessor({
+          approveRejectPolicy: "approveReject",
+          handleUpdate: jest.fn().mockImplementation(async (document, userUuid, status) => {
+            document.addData(
+              userUuid,
+              new UserAssociationDto(user, {
+                status,
+                isManager: false,
+                organisationName: org.name ?? "",
+                roleName: user.primaryRole ?? null,
+                associatedType: "organisations"
+              })
+            );
+          })
+        });
+        userAssociationService.createProcessor.mockReturnValue(stubProcessor);
+        (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
+
+        const result = serialize(
+          await controller.updateUserAssociation(
+            { model: "organisations", uuid: org.uuid, userUuid: user.uuid as string },
+            makeBody("rejected")
+          )
+        );
+
+        expect(stubProcessor.handleUpdate).toHaveBeenCalledWith(expect.any(Object), user.uuid, "rejected");
+        expect(result.data != null).toBe(true);
+        expect((result.data as Resource).id).toBe(user.uuid);
+      });
+
+      it("should throw NotFoundException when organisation does not exist", async () => {
+        (stubProcessor.getEntity as jest.Mock).mockRejectedValue(new NotFoundException("Organisation not found"));
+
+        await expect(
+          controller.updateUserAssociation(
+            { model: "organisations", uuid: "non-existent-uuid", userUuid: "user-uuid" },
+            makeBody("approved")
+          )
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it("should throw UnauthorizedException when policy denies", async () => {
+        const org = await OrganisationFactory.create();
+        (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
+        policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+        await expect(
+          controller.updateUserAssociation(
+            { model: "organisations", uuid: org.uuid, userUuid: "user-uuid" },
+            makeBody("approved")
+          )
+        ).rejects.toThrow(UnauthorizedException);
+      });
+
+      it("should propagate BadRequestException from handleUpdate", async () => {
+        const org = await OrganisationFactory.create();
+        (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
+        (stubProcessor.handleUpdate as jest.Mock).mockRejectedValue(
+          new BadRequestException("User status is 'approved', expected 'requested'")
+        );
+
+        await expect(
+          controller.updateUserAssociation(
+            { model: "organisations", uuid: org.uuid, userUuid: "user-uuid" },
+            makeBody("approved")
+          )
+        ).rejects.toThrow(BadRequestException);
+      });
+    });
+
+    describe("model = projects", () => {
+      it("should throw BadRequestException when trying to update project user association", async () => {
+        const project = await ProjectFactory.create();
+        stubProcessor = makeStubProcessor({
+          approveRejectPolicy: "update",
+          handleUpdate: jest
+            .fn()
+            .mockRejectedValue(new BadRequestException("Update status is not supported for projects"))
+        });
+        userAssociationService.createProcessor.mockReturnValue(stubProcessor);
+        (stubProcessor.getEntity as jest.Mock).mockResolvedValue(project);
+
+        await expect(
+          controller.updateUserAssociation(
+            { model: "projects", uuid: project.uuid, userUuid: "user-uuid" },
+            makeBody("approved")
+          )
+        ).rejects.toThrow(BadRequestException);
+      });
     });
   });
 });

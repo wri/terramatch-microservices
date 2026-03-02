@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UnauthorizedException,
@@ -17,10 +18,12 @@ import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
+import { UserAssociationUpdateBody } from "./dto/user-association-update.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
 import { UserAssociationModelParamDto } from "./dto/user-association-model.dto";
+import { UserAssociationUpdateParamDto } from "./dto/user-association-update-param.dto";
 import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
 import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto";
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
@@ -71,6 +74,29 @@ export class UserAssociationController {
     await this.policyService.authorize(processor.createPolicy, entity);
     const document = buildJsonApi(UserAssociationDto);
     await processor.handleCreate(document, body, this.policyService.userId as number);
+    return document;
+  }
+
+  @Patch(":uuid/:userUuid")
+  @ApiOperation({
+    operationId: "updateUserAssociation",
+    summary: "Approve or reject a user's join request to an organisation"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "User not authorized to approve/reject join requests."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource or user not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
+  async updateUserAssociation(
+    @Param() { model, uuid, userUuid }: UserAssociationUpdateParamDto,
+    @Body() body: UserAssociationUpdateBody
+  ) {
+    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const entity = await processor.getEntity();
+    await this.policyService.authorize(processor.approveRejectPolicy, entity);
+    const document = buildJsonApi(UserAssociationDto);
+    await processor.handleUpdate(document, userUuid, body.data.attributes.status);
     return document;
   }
 

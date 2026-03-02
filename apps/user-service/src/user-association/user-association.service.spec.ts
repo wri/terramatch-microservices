@@ -881,6 +881,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
+      jest.spyOn(user, "save");
       emailQueue.add = jest.fn().mockResolvedValue({} as Job);
 
       const result = await service.updateOrgUserStatus(org, user.uuid as string, "rejected");

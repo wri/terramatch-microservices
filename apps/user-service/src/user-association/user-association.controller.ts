@@ -22,6 +22,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
 import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
 import { UserAssociationModelParamDto } from "./dto/user-association-model.dto";
+import { UserAssociationUpdateParamDto } from "./dto/user-association-update-param.dto";
 
 @Controller("userAssociations/v3/:model")
 export class UserAssociationController {
@@ -84,8 +85,7 @@ export class UserAssociationController {
   @ExceptionResponse(NotFoundException, { description: "Resource or user not found." })
   @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
   async updateUserAssociation(
-    @Param() { model, uuid }: UserAssociationModelParamDto,
-    @Param("userUuid") userUuid: string,
+    @Param() { model, uuid, userUuid }: UserAssociationUpdateParamDto,
     @Body() body: UserAssociationUpdateBody
   ) {
     const processor = this.userAssociationService.createProcessor(model, uuid);

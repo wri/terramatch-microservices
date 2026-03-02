@@ -277,9 +277,9 @@ describe("OrganisationPolicy", () => {
 
     it("disallows approveReject for regular users", async () => {
       const org = await OrganisationFactory.create();
-      const user = await UserFactory.create({ organisationId: org.id });
+      const user = await UserFactory.create();
       mockUserId(user.id);
-      mockPermissions("manage-own");
+      mockPermissions();
       await expectCannot(service, "approveReject", org);
     });
 

@@ -10,6 +10,7 @@ import { Queue } from "bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Resource } from "@terramatch-microservices/common/util";
 
 function makeStubProcessor(overrides: Partial<UserAssociationProcessor> = {}): UserAssociationProcessor {
   return {
@@ -214,8 +215,7 @@ describe("UserAssociationController", () => {
 
         const result = serialize(
           await controller.updateUserAssociation(
-            { model: "organisations", uuid: org.uuid },
-            user.uuid as string,
+            { model: "organisations", uuid: org.uuid, userUuid: user.uuid as string },
             makeBody("approved")
           )
         );
@@ -240,8 +240,7 @@ describe("UserAssociationController", () => {
 
         const result = serialize(
           await controller.updateUserAssociation(
-            { model: "organisations", uuid: org.uuid },
-            user.uuid as string,
+            { model: "organisations", uuid: org.uuid, userUuid: user.uuid as string },
             makeBody("rejected")
           )
         );
@@ -255,8 +254,7 @@ describe("UserAssociationController", () => {
 
         await expect(
           controller.updateUserAssociation(
-            { model: "organisations", uuid: "non-existent-uuid" },
-            "user-uuid",
+            { model: "organisations", uuid: "non-existent-uuid", userUuid: "user-uuid" },
             makeBody("approved")
           )
         ).rejects.toThrow(NotFoundException);
@@ -269,8 +267,7 @@ describe("UserAssociationController", () => {
 
         await expect(
           controller.updateUserAssociation(
-            { model: "organisations", uuid: org.uuid },
-            "user-uuid",
+            { model: "organisations", uuid: org.uuid, userUuid: "user-uuid" },
             makeBody("approved")
           )
         ).rejects.toThrow(UnauthorizedException);
@@ -285,8 +282,7 @@ describe("UserAssociationController", () => {
 
         await expect(
           controller.updateUserAssociation(
-            { model: "organisations", uuid: org.uuid },
-            "user-uuid",
+            { model: "organisations", uuid: org.uuid, userUuid: "user-uuid" },
             makeBody("approved")
           )
         ).rejects.toThrow(BadRequestException);
@@ -306,7 +302,10 @@ describe("UserAssociationController", () => {
         (stubProcessor.getEntity as jest.Mock).mockResolvedValue(project);
 
         await expect(
-          controller.updateUserAssociation({ model: "projects", uuid: project.uuid }, "user-uuid", makeBody("approved"))
+          controller.updateUserAssociation(
+            { model: "projects", uuid: project.uuid, userUuid: "user-uuid" },
+            makeBody("approved")
+          )
         ).rejects.toThrow(BadRequestException);
       });
     });

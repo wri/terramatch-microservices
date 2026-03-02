@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
-import { Framework, Project, FrameworkUser } from "@terramatch-microservices/database/entities";
+import { Framework, Form, Project, FrameworkUser } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
@@ -31,6 +31,26 @@ describe("ReportingFrameworksService", () => {
       await Framework.destroy({ where: { id: createdFrameworkIds }, force: true });
     }
     jest.restoreAllMocks();
+  });
+
+  describe("findByUuid", () => {
+    it("should return a framework by uuid", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+
+      const result = await service.findByUuid(framework.uuid as string);
+
+      expect(result).toBeInstanceOf(Framework);
+      expect(result.uuid).toBe(framework.uuid);
+      expect(result.slug).toBe("terrafund");
+    });
+
+    it("should throw NotFoundException for invalid uuid", async () => {
+      await expect(service.findByUuid("00000000-0000-0000-0000-000000000000")).rejects.toThrow(NotFoundException);
+      await expect(service.findByUuid("00000000-0000-0000-0000-000000000000")).rejects.toThrow(
+        "Reporting framework not found"
+      );
+    });
   });
 
   describe("findBySlug", () => {
@@ -290,6 +310,191 @@ describe("ReportingFrameworksService", () => {
       expect(dataArray[0].attributes.siteFormUuid).toBeNull();
       expect(dataArray[0].attributes.siteReportFormUuid).toBe("site-report-1");
       expect(dataArray[1].attributes.projectFormUuid).toBeNull();
+    });
+  });
+
+  describe("create", () => {
+    it("should create framework with slug from name and call syncForms", async () => {
+      const attributes = {
+        name: "My New Framework",
+        accessCode: null as string | null,
+        projectFormUuid: null as string | null,
+        projectReportFormUuid: null as string | null,
+        siteFormUuid: null as string | null,
+        siteReportFormUuid: null as string | null,
+        nurseryFormUuid: null as string | null,
+        nurseryReportFormUuid: null as string | null
+      };
+      const createdFramework = {
+        id: 1,
+        uuid: "framework-uuid",
+        slug: "my-new-framework",
+        ...attributes
+      } as unknown as Framework;
+
+      const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
+
+      const result = await service.create(attributes);
+
+      expect(createSpy).toHaveBeenCalledWith({
+        name: attributes.name,
+        slug: "my-new-framework",
+        accessCode: null,
+        projectFormUuid: null,
+        projectReportFormUuid: null,
+        siteFormUuid: null,
+        siteReportFormUuid: null,
+        nurseryFormUuid: null,
+        nurseryReportFormUuid: null
+      });
+      expect(result).toEqual(createdFramework);
+      expect(formUpdateSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("update", () => {
+    it("should update framework when payload has attributes", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      const result = await service.update(framework, { name: "TerraFund Updated" });
+
+      expect(updateSpy).toHaveBeenCalledWith({ name: "TerraFund Updated" });
+      expect(result).toBe(framework);
+    });
+
+    it("should not call framework.update when payload is empty", async () => {
+      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update");
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, {});
+
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should not call syncFormsForFramework when framework slug is null", async () => {
+      const framework = await FrameworkFactory.create({ slug: null, name: "Null Slug" });
+      createdFrameworkIds.push(framework.id);
+      const formUpdateSpy = jest.spyOn(Form, "update");
+
+      await service.update(framework, { name: "Updated Name" });
+
+      expect(formUpdateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should update form UUIDs and call syncFormsForFramework", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "ppc",
+        projectFormUuid: "old-uuid",
+        siteFormUuid: null
+      });
+      createdFrameworkIds.push(framework.id);
+      jest.spyOn(framework, "update").mockResolvedValue({ ...framework, siteFormUuid: "new-site-uuid" } as Framework);
+      const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, { siteFormUuid: "new-site-uuid" });
+
+      expect(formUpdateSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("delete", () => {
+    it("should detach forms and destroy framework (permissions left to permissions.ts + sync)", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund",
+        name: "TerraFund",
+        projectFormUuid: "form-uuid-1",
+        siteFormUuid: null
+      });
+      createdFrameworkIds.push(framework.id);
+      const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const destroyFrameworkSpy = jest.spyOn(framework, "destroy").mockResolvedValue(undefined);
+
+      await service.delete(framework);
+
+      expect(formUpdateSpy).toHaveBeenCalledWith(
+        { frameworkKey: null, model: null },
+        { where: { uuid: "form-uuid-1" } }
+      );
+      expect(destroyFrameworkSpy).toHaveBeenCalled();
+    });
+
+    it("should skip Form.update when framework has no form UUIDs", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund",
+        projectFormUuid: null,
+        projectReportFormUuid: null,
+        siteFormUuid: null,
+        siteReportFormUuid: null,
+        nurseryFormUuid: null,
+        nurseryReportFormUuid: null
+      });
+      createdFrameworkIds.push(framework.id);
+      const formUpdateSpy = jest.spyOn(Form, "update");
+      jest.spyOn(framework, "destroy").mockResolvedValue(undefined);
+
+      await service.delete(framework);
+
+      expect(formUpdateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("syncFormsForFramework", () => {
+    it("should attach forms by UUID and detach others for the slug", async () => {
+      const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.syncFormsForFramework("terrafund", {
+        projectFormUuid: "project-form-uuid",
+        projectReportFormUuid: null,
+        siteFormUuid: "site-form-uuid",
+        siteReportFormUuid: null,
+        nurseryFormUuid: null,
+        nurseryReportFormUuid: null
+      });
+
+      expect(formUpdateSpy).toHaveBeenCalledWith(
+        { frameworkKey: "terrafund", model: expect.any(String) },
+        { where: { uuid: "project-form-uuid" } }
+      );
+      expect(formUpdateSpy).toHaveBeenCalledWith(
+        { frameworkKey: "terrafund", model: expect.any(String) },
+        { where: { uuid: "site-form-uuid" } }
+      );
+      const detachCall = formUpdateSpy.mock.calls.find(
+        call =>
+          call[0]?.frameworkKey === null &&
+          call[1]?.where != null &&
+          "uuid" in (call[1].where as Record<string, unknown>)
+      );
+      expect(detachCall).toBeDefined();
+      expect(detachCall?.[1].where).toMatchObject({
+        frameworkKey: "terrafund",
+        uuid: expect.anything()
+      });
+    });
+
+    it("should detach all forms for slug when no current UUIDs", async () => {
+      const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.syncFormsForFramework("ppc", {
+        projectFormUuid: null,
+        projectReportFormUuid: null,
+        siteFormUuid: null,
+        siteReportFormUuid: null,
+        nurseryFormUuid: null,
+        nurseryReportFormUuid: null
+      });
+
+      const detachCall = formUpdateSpy.mock.calls.find(
+        call => call[1]?.where != null && (call[1].where as { uuid?: unknown }).uuid === undefined
+      );
+      expect(detachCall).toBeDefined();
+      expect(detachCall?.[1].where).toEqual({ frameworkKey: "ppc" });
     });
   });
 });

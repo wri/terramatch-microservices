@@ -272,6 +272,9 @@ export class SiteReportFullDto extends SiteReportLightDto {
   @ApiProperty({ nullable: true, type: Number })
   pctSurvivalToDate: number | null;
 
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  anrPractices: string[] | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   socioeconomicBenefits: MediaDto[];
 

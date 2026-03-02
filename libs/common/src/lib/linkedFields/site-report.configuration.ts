@@ -105,6 +105,13 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       property: "maintenanceActivities",
       label: "Maintenance Activities",
       inputType: "long-text"
+    },
+    "site-rep-anr-practices": {
+      property: "anrPractices",
+      label: "ANR Practices",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "anr-practices"
     }
   },
   fileCollections: {

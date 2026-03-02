@@ -408,6 +408,12 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       inputType: "file",
       multiChoice: true
     },
+    "pro-rep-col-management-accounts-upload": {
+      collection: "management_accounts_upload",
+      label: "Management accounts",
+      inputType: "file",
+      multiChoice: true
+    },
     "pro-rep-col-tree-planting-upload": {
       collection: "tree_planting_upload",
       label: "Tree Planting Upload",

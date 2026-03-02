@@ -51,7 +51,8 @@ type ProjectMedia =
   | "documentFiles"
   | "programmeSubmission"
   | "detailedProjectBudget"
-  | "proofOfLandTenureMou";
+  | "proofOfLandTenureMou"
+  | "consortiumPartnershipAgreements";
 
 @Table({
   tableName: "v2_projects",
@@ -80,7 +81,12 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
       multiple: false,
       validation: "general-documents"
     },
-    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" },
+    consortiumPartnershipAgreements: {
+      dbCollection: "consortium_partnership_agreements",
+      multiple: true,
+      validation: "general-documents"
+    }
   };
 
   static get sql() {
@@ -473,6 +479,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(STRING(255))
   landownerAgreement: string | null;
+
+  @AllowNull
+  @Column(INTEGER)
+  nurserySeedlingsGoal: number | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

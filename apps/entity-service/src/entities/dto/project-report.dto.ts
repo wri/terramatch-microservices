@@ -361,6 +361,9 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   financialReportUpload: MediaDto[];
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
+  managementAccountsUpload: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
   treePlantingUpload: MediaDto[];
 
   @ApiProperty({ type: () => MediaDto, isArray: true })

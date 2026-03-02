@@ -625,7 +625,12 @@ export class ProjectProcessor extends EntityProcessor<
       if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
-        .collection(["detailed_project_budget", "proof_of_land_tenure_mou", "consortium_partnership_agreements"])
+        .collection([
+          "detailed_project_budget",
+          "proof_of_land_tenure_mou",
+          "consortium_partnership_agreements",
+          "additional"
+        ])
         .findAll();
       await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
     }

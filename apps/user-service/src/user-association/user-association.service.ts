@@ -15,7 +15,8 @@ import {
   ProjectUser,
   Role,
   User,
-  OrganisationInvite
+  OrganisationInvite,
+  PasswordReset
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes, UserAssociationCreateBody } from "./dto/user-association-create.dto";
@@ -32,7 +33,6 @@ import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
-import { JwtService } from "@nestjs/jwt";
 
 export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
 export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
@@ -51,7 +51,7 @@ export interface UserAssociationProcessor {
 export class UserAssociationService {
   private readonly logger = new TMLogger(UserAssociationService.name);
 
-  constructor(private readonly jwtService: JwtService, @InjectQueue("email") private readonly emailQueue: Queue) {}
+  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   createProcessor(model: AssociableModel, uuid: string): UserAssociationProcessor {
     let _entity: Project | Organisation | null = null;
@@ -237,7 +237,11 @@ export class UserAssociationService {
       roleId: pdRole.id,
       modelType: User.LARAVEL_TYPE
     } as ModelHasRole);
-    const token = await this.jwtService.signAsync({ sub: newUser.uuid }, { expiresIn: "7d" });
+    const token = crypto.randomBytes(32).toString("hex");
+    await PasswordReset.create({
+      userId: newUser.id,
+      token
+    } as PasswordReset);
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
@@ -337,7 +341,7 @@ export class UserAssociationService {
       modelType: User.LARAVEL_TYPE
     } as ModelHasRole);
 
-    const token = await this.jwtService.signAsync({ sub: newUser.uuid }, { expiresIn: "7d" });
+    const token = crypto.randomBytes(32).toString("hex");
     const invite = await OrganisationInvite.create({
       organisationId: organisation.id,
       emailAddress,

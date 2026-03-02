@@ -11,6 +11,7 @@ import { REQUEST } from "@nestjs/core";
 import { OrganisationFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
+import { UserAssociationDto } from "./dto/user-association.dto";
 
 function makeStubProcessor(overrides: Partial<UserAssociationProcessor> = {}): UserAssociationProcessor {
   return {
@@ -208,7 +209,18 @@ describe("UserAssociationController", () => {
 
         stubProcessor = makeStubProcessor({
           approveRejectPolicy: "approveReject",
-          handleUpdate: jest.fn().mockResolvedValue(undefined)
+          handleUpdate: jest.fn().mockImplementation(async (document, userUuid, status) => {
+            document.addData(
+              userUuid,
+              new UserAssociationDto(user, {
+                status,
+                isManager: false,
+                organisationName: org.name ?? "",
+                roleName: user.primaryRole ?? null,
+                associatedType: "organisations"
+              })
+            );
+          })
         });
         userAssociationService.createProcessor.mockReturnValue(stubProcessor);
         (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
@@ -233,7 +245,18 @@ describe("UserAssociationController", () => {
 
         stubProcessor = makeStubProcessor({
           approveRejectPolicy: "approveReject",
-          handleUpdate: jest.fn().mockResolvedValue(undefined)
+          handleUpdate: jest.fn().mockImplementation(async (document, userUuid, status) => {
+            document.addData(
+              userUuid,
+              new UserAssociationDto(user, {
+                status,
+                isManager: false,
+                organisationName: org.name ?? "",
+                roleName: user.primaryRole ?? null,
+                associatedType: "organisations"
+              })
+            );
+          })
         });
         userAssociationService.createProcessor.mockReturnValue(stubProcessor);
         (stubProcessor.getEntity as jest.Mock).mockResolvedValue(org);
@@ -247,6 +270,7 @@ describe("UserAssociationController", () => {
 
         expect(stubProcessor.handleUpdate).toHaveBeenCalledWith(expect.any(Object), user.uuid, "rejected");
         expect(result.data != null).toBe(true);
+        expect((result.data as Resource).id).toBe(user.uuid);
       });
 
       it("should throw NotFoundException when organisation does not exist", async () => {

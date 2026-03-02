@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import {
   ModelHasRole,
   Notification,
@@ -9,6 +15,7 @@ import {
   ProjectUser,
   Role,
   User,
+  OrganisationInvite,
   PasswordReset
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereOptions } from "sequelize";
@@ -22,6 +29,7 @@ import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
 import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/organisation-invite.email";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
@@ -304,6 +312,60 @@ export class UserAssociationService {
     const userIds = users.map(user => user.id);
     await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
     return users.map(user => user.uuid);
+  }
+
+  async inviteOrganisationUser(
+    organisation: Organisation,
+    emailAddress: string,
+    callbackUrl?: string | null
+  ): Promise<OrganisationInvite> {
+    const existingUser = await User.findOne({
+      where: { emailAddress },
+      attributes: ["id"]
+    });
+    if (existingUser != null) {
+      throw new UnprocessableEntityException("A user with this email address already exists");
+    }
+
+    const newUser = await User.create({
+      organisationId: organisation.id,
+      emailAddress,
+      password: crypto.randomBytes(32).toString("hex"),
+      locale: "en-US"
+    } as User);
+
+    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
+    await ModelHasRole.create({
+      modelId: newUser.id,
+      roleId: pdRole.id,
+      modelType: User.LARAVEL_TYPE
+    } as ModelHasRole);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const invite = await OrganisationInvite.create({
+      organisationId: organisation.id,
+      emailAddress,
+      token
+    } as OrganisationInvite);
+    await PasswordReset.create({
+      userId: newUser.id,
+      token
+    } as PasswordReset);
+    try {
+      await new OrganisationInviteEmail({
+        organisationId: organisation.id,
+        emailAddress,
+        token,
+        callbackUrl
+      }).sendLater(this.emailQueue);
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue organisation invite email for organisation ${organisation.id} and email ${emailAddress}`,
+        error
+      );
+    }
+
+    return invite;
   }
 
   async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {

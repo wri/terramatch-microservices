@@ -43,6 +43,7 @@ export * from "./notification.entity";
 export * from "./nursery.entity";
 export * from "./nursery-report.entity";
 export * from "./organisation.entity";
+export * from "./organisation-invite.entity";
 export * from "./organisation-user.entity";
 export * from "./password-reset.entity";
 export * from "./ownership-stake.entity";

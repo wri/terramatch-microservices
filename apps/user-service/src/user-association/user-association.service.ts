@@ -507,10 +507,12 @@ export class UserAssociationService {
       await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
     }
 
+    const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: user.emailAddress,
-      acceptedAt: new Date()
+      acceptedAt: new Date(),
+      token
     } as ProjectInvite);
 
     await new ProjectMonitoringNotificationEmail({

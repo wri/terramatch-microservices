@@ -566,6 +566,7 @@ export class ProjectProcessor extends EntityProcessor<
       attributes.level2Project = pitch.level2Proposed;
       attributes.survivalRate = pitch.projSurvivalRate;
       attributes.communityEngagementPlan = pitch.landholderCommEngage;
+      attributes.sitingStrategy = pitch.projectSiteModel;
       // Fallback to organisation.consortium is temporary. The field will be migrated and removed
       // from orgs in ZZ / AA releases.
       attributes.consortium = pitch.consortium ?? organisation.consortium;
@@ -624,7 +625,12 @@ export class ProjectProcessor extends EntityProcessor<
       if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
-        .collection(["detailed_project_budget", "proof_of_land_tenure_mou", "consortium_partnership_agreements"])
+        .collection([
+          "detailed_project_budget",
+          "proof_of_land_tenure_mou",
+          "consortium_partnership_agreements",
+          "additional"
+        ])
         .findAll();
       await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
     }

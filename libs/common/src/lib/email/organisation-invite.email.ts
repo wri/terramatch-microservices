@@ -53,5 +53,11 @@ export class OrganisationInviteEmail extends EmailSender<OrganisationInviteEmail
       i18nReplacements,
       additionalValues
     });
+
+    this.logger.log(
+      `Organisation invite email sent successfully [emailAddress=${this.data.emailAddress}, organisationId=${
+        this.data.organisationId
+      }, organisationName=${organisation.name ?? ""}]`
+    );
   }
 }

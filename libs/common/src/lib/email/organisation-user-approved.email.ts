@@ -63,5 +63,9 @@ export class OrganisationUserApprovedEmail extends EmailSender<OrganisationUserA
         }
       }
     );
+
+    this.logger.log(
+      `Organisation user approved email sent successfully [userId=${this.data.userId}, emailAddress=${user.emailAddress}, organisationId=${this.data.organisationId}, organisationName=${organisation.name}]`
+    );
   }
 }

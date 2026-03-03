@@ -63,5 +63,9 @@ export class OrganisationUserRejectedEmail extends EmailSender<OrganisationUserR
         }
       }
     );
+
+    this.logger.log(
+      `Organisation user rejected email sent successfully [userId=${this.data.userId}, emailAddress=${user.emailAddress}, organisationId=${this.data.organisationId}, organisationName=${organisation.name}]`
+    );
   }
 }

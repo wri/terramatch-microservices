@@ -632,7 +632,18 @@ export class ProjectProcessor extends EntityProcessor<
           "additional"
         ])
         .findAll();
-      await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
+      await Promise.all(
+        medias.map(media => {
+          if (media.collectionName === "additional") {
+            // The equivalent collection name is different for projects in this case. Explicitly
+            // _not_ saving the original media after this change because we want it to stay the
+            // same on the pitch media - changing it here just makes it use the correct collection
+            // in the duplicated media.
+            media.collectionName = "other_additional_documents";
+          }
+          this.entitiesService.duplicateMedia(media, project);
+        })
+      );
     }
 
     if (application != null) {

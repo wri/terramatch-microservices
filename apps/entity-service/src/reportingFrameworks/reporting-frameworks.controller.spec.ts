@@ -446,10 +446,47 @@ describe("ReportingFrameworksController", () => {
 
       const result = await controller.create(payload);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("create", expect.any(Object));
+      expect(policyService.authorize).toHaveBeenCalledWith(
+        "create",
+        expect.objectContaining({ slug: "terrafund", name: "TerraFund" })
+      );
       expect(reportingFrameworksService.create).toHaveBeenCalledWith(payload.data.attributes);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
       expect(result).toBe(mockDocument);
+    });
+
+    it("should authorize with slug derived from name (e.g. TerraFund 3 → terrafund-3)", async () => {
+      const payload = {
+        data: {
+          type: "reportingFrameworks",
+          attributes: {
+            name: "TerraFund 3",
+            projectFormUuid: null,
+            projectReportFormUuid: null,
+            siteFormUuid: null,
+            siteReportFormUuid: null,
+            nurseryFormUuid: null,
+            nurseryReportFormUuid: null
+          }
+        }
+      };
+      const mockFramework = { slug: "terrafund-3", name: "TerraFund 3", uuid: "mock-uuid" };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      reportingFrameworksService.create.mockResolvedValue(mockFramework as unknown as Framework);
+      const mockDocument = createMock<DocumentBuilder>();
+      mockDocument.serialize.mockReturnValue({
+        data: { id: "terrafund-3", attributes: { name: "TerraFund 3", slug: "terrafund-3" } }
+      } as never);
+      reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
+
+      await controller.create(payload);
+
+      expect(policyService.authorize).toHaveBeenCalledWith(
+        "create",
+        expect.objectContaining({ slug: "terrafund-3", name: "TerraFund 3" })
+      );
+      expect(reportingFrameworksService.create).toHaveBeenCalledWith(payload.data.attributes);
     });
 
     it("should throw UnauthorizedException when create not allowed", async () => {

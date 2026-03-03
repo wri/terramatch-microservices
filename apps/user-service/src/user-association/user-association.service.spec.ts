@@ -559,6 +559,7 @@ describe("UserAssociationService", () => {
       expect(ProjectUser.create).toHaveBeenCalledWith({
         projectId: project.id,
         userId: user.id,
+        status: "active",
         isMonitoring: true
       });
       expect(ProjectInvite.create).toHaveBeenCalled();

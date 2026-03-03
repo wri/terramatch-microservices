@@ -504,7 +504,7 @@ export class UserAssociationService {
 
     const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
     if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "accepted" });
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
     }
 
     await ProjectInvite.create({

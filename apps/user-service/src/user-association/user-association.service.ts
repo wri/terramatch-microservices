@@ -504,20 +504,18 @@ export class UserAssociationService {
 
     const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
     if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: user.emailAddress,
-      token,
       acceptedAt: new Date()
     } as ProjectInvite);
+
     await new ProjectMonitoringNotificationEmail({
       projectId: project.id,
-      userId: user.id,
-      token
+      userId: user.id
     }).sendLater(this.emailQueue);
   }
 }

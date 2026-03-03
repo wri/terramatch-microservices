@@ -7,7 +7,6 @@ import { Project, User } from "@terramatch-microservices/database/entities";
 type ProjectMonitoringNotificationEmailData = {
   projectId: number;
   userId: number;
-  token: string;
 };
 
 const EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS = {

@@ -58,6 +58,10 @@ export class OrganisationRejectedEmail extends EmailSender<OrganisationRejectedE
       { additionalValues }
     );
 
-    this.logger.log(`Sent organisation rejected email to primary owner for organisation ${organisation.id}`);
+    this.logger.log(
+      `Organisation rejected email sent successfully [emailAddress=${primaryOwner.emailAddress}, organisationId=${
+        this.data.organisationId
+      }, organisationName=${organisation.name ?? ""}, rejectedByUserId=${this.data.rejectedByUserId}]`
+    );
   }
 }

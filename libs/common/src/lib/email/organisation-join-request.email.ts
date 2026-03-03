@@ -37,6 +37,10 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
       return;
     }
 
+    const emailAddresses = owners
+      .filter(owner => owner.emailAddress != null)
+      .map(owner => owner.emailAddress as string);
+
     await Promise.all(
       owners
         .filter(owner => owner.emailAddress != null)
@@ -60,6 +64,14 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
             }
           );
         })
+    );
+
+    this.logger.log(
+      `Organisation join request email sent successfully [requestingUserId=${
+        this.data.requestingUserId
+      }, organisationId=${this.data.organisationId}, organisationName=${organisation.name ?? ""}, recipientCount=${
+        emailAddresses.length
+      }, recipients=${emailAddresses.join(", ")}]`
     );
   }
 }

@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
@@ -18,12 +18,10 @@ import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { EntityModel } from "../constants/entities";
-import { FinancialReport } from "./financial-report.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
-import { InternalServerErrorException } from "@nestjs/common";
 
 type FormMedia = "banner";
 

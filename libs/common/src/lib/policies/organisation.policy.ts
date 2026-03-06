@@ -19,6 +19,23 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       this.builder.can("approveReject", Organisation);
     }
 
+    const userForApproveReject = await this.getUser();
+    const primaryOrgForApproveReject = await this.getPrimaryOrganisation();
+    if (
+      primaryOrgForApproveReject != null &&
+      userForApproveReject != null &&
+      userForApproveReject.organisationId === primaryOrgForApproveReject.id
+    ) {
+      this.builder.can("approveReject", Organisation, { id: primaryOrgForApproveReject.id });
+    }
+
+    if (userForApproveReject != null && userForApproveReject.organisationsConfirmed != null) {
+      const confirmedOrgIds = userForApproveReject.organisationsConfirmed.map(({ id }) => id);
+      if (confirmedOrgIds.length > 0) {
+        this.builder.can("approveReject", Organisation, { id: { $in: confirmedOrgIds } });
+      }
+    }
+
     this.builder.can("listing", Organisation, {
       status: APPROVED,
       private: false,

@@ -12,7 +12,8 @@ import {
 import { BIGINT, INTEGER, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { Form } from "./form.entity";
 import { FormQuestion } from "./form-question.entity";
-import { Subquery } from "../util/subquery.builder";
+import { isLiteral, Subquery } from "../util/subquery.builder";
+import { Literal } from "sequelize/types/utils";
 
 @Table({
   tableName: "form_sections",
@@ -31,8 +32,11 @@ export class FormSection extends Model<FormSection> {
 
   static readonly I18N_FIELDS = ["title", "subtitle", "description"] as const;
 
-  static forForm(formUuid: string) {
-    return Subquery.select(FormSection, "id").eq("formId", formUuid).literal;
+  static forForm(formUuid: string | Literal) {
+    const select = Subquery.select(FormSection, "id");
+    if (isLiteral(formUuid)) select.in("formId", formUuid);
+    else select.eq("formId", formUuid);
+    return select.literal;
   }
 
   @PrimaryKey

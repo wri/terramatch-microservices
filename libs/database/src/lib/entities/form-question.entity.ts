@@ -18,9 +18,10 @@ import { FormSection } from "./form-section.entity";
 import { InputType } from "../constants/linked-fields";
 import { Dictionary } from "lodash";
 import { chainScope } from "../util/chain-scope";
+import { Literal } from "sequelize/types/utils";
 
 @Scopes(() => ({
-  form: (formUuid: string) => ({ where: { formSectionId: { [Op.in]: FormSection.forForm(formUuid) } } })
+  form: (formUuid: string | Literal) => ({ where: { formSectionId: { [Op.in]: FormSection.forForm(formUuid) } } })
 }))
 @Table({
   tableName: "form_questions",
@@ -36,7 +37,7 @@ import { chainScope } from "../util/chain-scope";
 export class FormQuestion extends Model<FormQuestion> {
   static readonly I18N_FIELDS = ["label", "description", "placeholder"] as const;
 
-  static forForm(formUuid: string) {
+  static forForm(formUuid: string | Literal) {
     return chainScope(this, "form", formUuid) as typeof FormQuestion;
   }
 

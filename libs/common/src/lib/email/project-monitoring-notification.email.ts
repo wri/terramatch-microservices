@@ -7,13 +7,13 @@ import { Project, User } from "@terramatch-microservices/database/entities";
 type ProjectMonitoringNotificationEmailData = {
   projectId: number;
   userId: number;
-  token: string;
 };
 
 const EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS = {
   body: "v2-project-monitoring-notification.body",
   subjectKey: "v2-project-monitoring-notification.subject",
-  titleKey: "v2-project-monitoring-notification.title"
+  titleKey: "v2-project-monitoring-notification.title",
+  ctaKey: "v2-project-monitoring-notification.cta"
 } as const;
 
 export class ProjectMonitoringNotificationEmail extends EmailSender<ProjectMonitoringNotificationEmailData> {
@@ -47,20 +47,12 @@ export class ProjectMonitoringNotificationEmail extends EmailSender<ProjectMonit
       return;
     }
     const i18nReplacements: Dictionary<string> = {
-      "{name}": project.name as string,
-      "{callbackUrl}": `/reset-password/${this.data.token}`
+      "{name}": project.name as string
     };
     const additionalValues = {
-      link: `/reset-password/${this.data.token}`,
+      link: `/auth/login`,
       transactional: "transactional"
     };
-    await emailService.sendI18nTemplateEmail(
-      user.emailAddress,
-      user.locale,
-      EMAIL_PROJECT_MONITORING_NOTIFICATION_KEYS,
-      { i18nReplacements, additionalValues }
-    );
-
     await emailService.sendI18nTemplateEmail(
       user.emailAddress,
       user.locale,

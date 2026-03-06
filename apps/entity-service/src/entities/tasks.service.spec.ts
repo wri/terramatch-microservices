@@ -6,7 +6,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { PolicyService } from "@terramatch-microservices/common";
 import { TaskQueryDto } from "./dto/task-query.dto";
 import { Task } from "@terramatch-microservices/database/entities";
-import { orderBy, reverse, sortBy, sumBy, uniq } from "lodash";
+import { orderBy, sumBy, uniq } from "lodash";
 import {
   NurseryFactory,
   NurseryReportFactory,
@@ -31,6 +31,7 @@ import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microserv
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
+import { ConfigService } from "@nestjs/config";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -52,6 +53,7 @@ describe("TasksService", () => {
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService,
         TasksService
       ]
@@ -80,9 +82,11 @@ describe("TasksService", () => {
       expect(tasks.length).toBe(expected.length);
       expect(total).toBe(paginationTotal);
 
-      const sorted = sortBy(tasks, sortField);
-      if (!sortUp) reverse(sorted);
-      expect(tasks.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
+      // Sort with id as tie-breaker so assertion is stable when primary sort field has equal values
+      const direction = sortUp ? "asc" : "desc";
+      const expectedSorted = orderBy(expected, [sortField, "id"], [direction, "asc"]);
+      const returnedSorted = orderBy(tasks, [sortField, "id"], [direction, "asc"]);
+      expect(returnedSorted.map(({ id }) => id)).toEqual(expectedSorted.map(({ id }) => id));
     }
 
     it("should return my tasks", async () => {

@@ -62,6 +62,7 @@ type ProjectReportMedia =
   | "trainingCapacityBuildingUpload"
   | "trainingCapacityBuildingPhotos"
   | "financialReportUpload"
+  | "managementAccountsUpload"
   | "treePlantingUpload"
   | "soilWaterConservationUpload"
   | "soilWaterConservationPhotos";
@@ -156,6 +157,11 @@ export class ProjectReport extends Model<ProjectReport> {
       validation: "photos"
     },
     financialReportUpload: { dbCollection: "financial_report_upload", multiple: true, validation: "general-documents" },
+    managementAccountsUpload: {
+      dbCollection: "management_accounts_upload",
+      multiple: true,
+      validation: "general-documents"
+    },
     treePlantingUpload: { dbCollection: "tree_planting_upload", multiple: true, validation: "general-documents" },
     soilWaterConservationUpload: {
       dbCollection: "soil_water_conservation_upload",
@@ -636,8 +642,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(INTEGER.UNSIGNED)
   oldId: number | null;
 
-  @AllowNull
-  @Column(BOOLEAN)
+  @Column({ type: BOOLEAN, defaultValue: false })
   siteAddition: boolean;
 
   @Column({ type: TEXT, defaultValue: "" })

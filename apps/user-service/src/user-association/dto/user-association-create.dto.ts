@@ -12,6 +12,6 @@ export class UserAssociationCreateAttributes {
   isManager: boolean;
 }
 
-export class UserAssociationCreateData extends CreateDataDto("userAssociations", UserAssociationCreateAttributes) {}
+export class UserAssociationCreateData extends CreateDataDto("associatedUsers", UserAssociationCreateAttributes) {}
 
 export class UserAssociationCreateBody extends JsonApiBodyDto(UserAssociationCreateData) {}

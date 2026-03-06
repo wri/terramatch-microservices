@@ -48,11 +48,10 @@ export class ProjectInviteEmail extends EmailSender<ProjectInviteEmailData> {
 
     const i18nReplacements: Dictionary<string> = {
       "{organisationName}": organisation.name as string,
-      "{projectName}": project.name as string,
-      "{to}": this.data.emailAddress
+      "{projectName}": project.name as string
     };
     const additionalValues = {
-      link: `/reset-password/${this.data.token}`,
+      link: `/auth/signup/${this.data.token}`,
       transactional: "transactional"
     };
     await emailService.sendI18nTemplateEmail(this.data.emailAddress, "en-US", EMAIL_PROJECT_INVITE_KEYS, {

@@ -6,21 +6,29 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
-  UnauthorizedException
+  UnauthorizedException,
+  UnprocessableEntityException
 } from "@nestjs/common";
 import { UserAssociationService } from "./user-association.service";
-import { Project } from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { UserAssociationCreateBody } from "./dto/user-association-create.dto";
+import { UserAssociationUpdateBody } from "./dto/user-association-update.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
+import { UserAssociationDeleteQueryDto } from "./dto/user-association-delete-query.dto";
+import { UserAssociationModelParamDto } from "./dto/user-association-model.dto";
+import { UserAssociationUpdateParamDto } from "./dto/user-association-update-param.dto";
+import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
+import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto";
+import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
 
-@Controller("userAssociations/v3/projects")
+@Controller("userAssociations/v3/:model")
 export class UserAssociationController {
   constructor(
     private readonly userAssociationService: UserAssociationService,
@@ -30,73 +38,117 @@ export class UserAssociationController {
   @Get(":uuid")
   @ApiOperation({
     operationId: "getUserAssociation",
-    summary: "Get the users associated with a project"
+    summary: "Get the users associated with a project or organisation"
   })
   @JsonApiResponse([{ data: UserAssociationDto, hasMany: true }])
-  @ExceptionResponse(NotFoundException, { description: "Project not found" })
-  async getUserAssociation(@Param("uuid") uuid: string, @Query() query: UserAssociationQueryDto) {
-    const project = await Project.findOne({
-      where: { uuid },
-      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
-    });
-    if (project == null) {
-      throw new NotFoundException("Project not found");
-    }
-    await this.policyService.authorize("read", project);
-    const projectUsers = await this.userAssociationService.query(project, query);
+  @ExceptionResponse(NotFoundException, { description: "Resource not found" })
+  async getUserAssociation(
+    @Param() { model, uuid }: UserAssociationModelParamDto,
+    @Query() query: UserAssociationQueryDto
+  ) {
+    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const entity = await processor.getEntity();
+    await this.policyService.authorize(processor.readPolicy, entity);
     const document = buildJsonApi(UserAssociationDto, { forceDataArray: true });
-    await this.userAssociationService.addIndex(document, project, projectUsers);
+    await processor.addDtos(document, query);
     return document;
   }
 
   @Post(":uuid")
   @ApiOperation({
     operationId: "createUserAssociation",
-    summary: "Create a new user association for a project"
+    summary: "Create a user association for a project, or request to join an organisation"
   })
   @JsonApiResponse({ data: UserAssociationDto })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
-  @ExceptionResponse(NotFoundException, { description: "Project not found" })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found" })
   @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
-  async createUserAssociation(@Param("uuid") uuid: string, @Body() body: UserAssociationCreateBody) {
-    const project = await Project.findOne({
-      where: { uuid },
-      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
-    });
-    if (project == null) {
-      throw new NotFoundException("Project not found");
-    }
-    await this.policyService.authorize("update", project);
+  async createUserAssociation(
+    @Param() { model, uuid }: UserAssociationModelParamDto,
+    @Body() body?: UserAssociationCreateBody
+  ) {
+    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const entity = await processor.getEntity();
+    await this.policyService.authorize(processor.createPolicy, entity);
     const document = buildJsonApi(UserAssociationDto);
-    const userAssociation = await this.userAssociationService.createUserAssociation(project, body.data.attributes);
-    if (userAssociation != null) {
-      document.addData(userAssociation.uuid as string, new UserAssociationDto(userAssociation));
-    }
+    await processor.handleCreate(document, body, this.policyService.userId as number);
     return document;
+  }
+
+  @Patch(":uuid/:userUuid")
+  @ApiOperation({
+    operationId: "updateUserAssociation",
+    summary: "Approve or reject a user's join request to an organisation"
+  })
+  @JsonApiResponse({ data: UserAssociationDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "User not authorized to approve/reject join requests."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource or user not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request is invalid." })
+  async updateUserAssociation(
+    @Param() { model, uuid, userUuid }: UserAssociationUpdateParamDto,
+    @Body() body: UserAssociationUpdateBody
+  ) {
+    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const entity = await processor.getEntity();
+    await this.policyService.authorize(processor.approveRejectPolicy, entity);
+    const document = buildJsonApi(UserAssociationDto);
+    await processor.handleUpdate(document, userUuid, body.data.attributes.status);
+    return document;
+  }
+
+  @Post(":uuid/invite")
+  @ApiOperation({
+    operationId: "inviteOrganisationUser",
+    summary: "Invite a new user to join an organisation"
+  })
+  @JsonApiResponse({ data: OrganisationInviteDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation not found" })
+  @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
+  @ExceptionResponse(UnprocessableEntityException, {
+    description: "A user with this email already exists."
+  })
+  async inviteOrganisationUser(
+    @Param() { uuid }: OrganisationInviteParamDto,
+    @Body() body: OrganisationInviteRequestDto
+  ) {
+    const processor = this.userAssociationService.createProcessor("organisations", uuid);
+    const organisation = await processor.getEntity();
+    await this.policyService.authorize("update", organisation);
+
+    const invite = await this.userAssociationService.inviteOrganisationUser(
+      organisation as never,
+      body.emailAddress,
+      body.callbackUrl
+    );
+
+    return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
   }
 
   @Delete(":uuid")
   @ApiOperation({
     operationId: "deleteUserAssociation",
-    summary: "Delete a user association for a project"
+    summary: "Delete user associations for a project or organisation"
   })
   @JsonApiResponse({ data: UserAssociationDto })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or resource unavailable to current user."
   })
-  @ExceptionResponse(NotFoundException, { description: "Project not found" })
-  async deleteBulkUserAssociations(@Param("uuid") uuid: string, @Query() { uuids }: { uuids: string[] }) {
-    const project = await Project.findOne({
-      where: { uuid },
-      attributes: ["id", "uuid", "frameworkKey", "organisationId"]
-    });
-    if (project == null) {
-      throw new NotFoundException("Project not found");
-    }
-    await this.policyService.authorize("update", project);
-    await this.userAssociationService.deleteBulkUserAssociations(project.id, uuids);
-    return buildDeletedResponse("userAssociations", uuids);
+  @ExceptionResponse(NotFoundException, { description: "Resource not found" })
+  async deleteUserAssociations(
+    @Param() { model, uuid }: UserAssociationModelParamDto,
+    @Query() query: UserAssociationDeleteQueryDto
+  ) {
+    const processor = this.userAssociationService.createProcessor(model, uuid);
+    const entity = await processor.getEntity();
+    await this.policyService.authorize(processor.updatePolicy, entity);
+    await processor.handleDelete(query.uuids);
+    return buildDeletedResponse("associatedUsers", query.uuids);
   }
 }

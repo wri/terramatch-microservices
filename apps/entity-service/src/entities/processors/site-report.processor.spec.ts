@@ -24,6 +24,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
+import { ConfigService } from "@nestjs/config";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
@@ -42,6 +43,7 @@ describe("SiteReportProcessor", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
         EntitiesService
       ]
     }).compile();

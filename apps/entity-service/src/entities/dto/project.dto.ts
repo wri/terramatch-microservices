@@ -124,7 +124,15 @@ export class ProjectFullDto extends ProjectLightDto {
     project: Project,
     props: HybridSupportProps<
       ProjectFullDto,
-      Omit<Project, "application" | "feedback" | "feedbackFields" | "totalHectaresRestoredGoal" | "treesGrownGoal">
+      Omit<
+        Project,
+        | "application"
+        | "feedback"
+        | "feedbackFields"
+        | "totalHectaresRestoredGoal"
+        | "treesGrownGoal"
+        | "goalTreesRestoredAnr"
+      >
     >
   ) {
     super();
@@ -189,6 +197,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   treesGrownGoal: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  jobsCreatedGoal: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
@@ -288,7 +299,13 @@ export class ProjectFullDto extends ProjectLightDto {
   goalTreesRestoredAnr: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
+  seedsGrownGoal: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
   directSeedingSurvivalRate: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  nurserySeedlingsGoal: number | null;
 
   @ApiProperty({ nullable: true, type: ProjectApplicationDto })
   application: ProjectApplicationDto | null;
@@ -316,6 +333,9 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   proofOfLandTenureMou: MediaDto[];
+
+  @ApiProperty({ type: () => MediaDto, isArray: true })
+  consortiumPartnershipAgreements: MediaDto[];
 
   @ApiProperty({ nullable: true, type: MediaDto })
   detailedProjectBudget: MediaDto | null;

@@ -4,15 +4,13 @@ import { mediaConfiguration, MediaConfiguration } from "@terramatch-microservice
 import { MediaService } from "./media.service";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
-import { createMock, PartialFuncReturn } from "@golevelup/ts-jest";
+import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
 import { MediaFactory, ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { Media, Project, Site } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker/.";
-import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
-
-jest.mock("@aws-sdk/client-s3");
+import { FileService } from "../file/file.service";
 
 jest.mock("sharp", () => {
   const sharp = {
@@ -46,6 +44,7 @@ const createTestFile = (mimetype = "text/plain", ext = "txt", size = 123) =>
 
 describe("MediaService", () => {
   let service: MediaService;
+  let fileService: DeepMocked<FileService>;
   let creator: User;
 
   beforeAll(async () => {
@@ -56,6 +55,7 @@ describe("MediaService", () => {
     const module = await Test.createTestingModule({
       providers: [
         MediaService,
+        { provide: FileService, useValue: (fileService = createMock<FileService>()) },
         {
           provide: ConfigService,
           useValue: createMock<ConfigService>({
@@ -175,13 +175,17 @@ describe("MediaService", () => {
     });
 
     it("should upload media", async () => {
-      const uploadSpy = jest.spyOn((service as any).s3, "send");
       const model = await ProjectFactory.create();
       const file = createTestFile();
       mockConfiguration(Project.MEDIA.file);
       const result = await service.createMedia(model, "projects", creator.id, "file", file);
 
-      expect(uploadSpy).toHaveBeenCalledWith(expect.any(PutObjectCommand));
+      expect(fileService.uploadFile).toHaveBeenCalledWith(
+        file.buffer,
+        "test-bucket",
+        `${result.id}/${file.originalname}`,
+        file.mimetype
+      );
       expect(result.collectionName).toBe("file");
       expect(result.fileName).toBe(file.originalname);
       expect(result.modelType).toBe(Project.LARAVEL_TYPE);
@@ -190,19 +194,33 @@ describe("MediaService", () => {
     });
 
     it("should generate thumbnails", async () => {
-      const uploadSpy = jest.spyOn((service as any).s3, "send");
       const model = await ProjectFactory.create();
       const file = createTestFile("image/jpeg", "jpg");
       mockConfiguration(Project.MEDIA.photos);
       const result = await service.createMedia(model, "projects", creator.id, "photos", file);
 
-      expect(uploadSpy).toHaveBeenCalledTimes(2);
+      expect(fileService.uploadFile).toHaveBeenCalledTimes(2);
+      expect(fileService.uploadFile).toHaveBeenNthCalledWith(
+        1,
+        expect.any(Buffer),
+        "test-bucket",
+        `${result.id}/${file.originalname}`,
+        file.mimetype
+      );
+      const filename = file.originalname.split(".")[0];
+      expect(fileService.uploadFile).toHaveBeenNthCalledWith(
+        2,
+        expect.any(Buffer),
+        "test-bucket",
+        `${result.id}/conversions/${filename}-thumbnail.jpg`,
+        file.mimetype
+      );
       expect(result.generatedConversions).toStrictEqual({ thumbnail: true });
       expect(result.customProperties).toMatchObject({ thumbnailExtension: ".jpg" });
     });
 
     it("should not create media if there's an error", async () => {
-      jest.spyOn((service as any).s3, "send").mockRejectedValueOnce(new Error("test error"));
+      fileService.uploadFile.mockRejectedValueOnce(new Error("test error"));
       const model = await ProjectFactory.create();
       const file = createTestFile("image/jpeg", "jpg");
       mockConfiguration(Project.MEDIA.photos);
@@ -220,10 +238,14 @@ describe("MediaService", () => {
       mockConfiguration(Project.MEDIA.file);
       const media = await service.createMedia(project, "projects", creator.id, "file", file);
 
-      const copySpy = jest.spyOn((service as any).s3, "send");
       const duplicate = await service.duplicateMedia(media, site);
 
-      expect(copySpy).toHaveBeenCalledWith(expect.any(CopyObjectCommand));
+      expect(fileService.copyRemoteFile).toHaveBeenCalledWith(
+        "test-bucket",
+        `${media.id}/${media.fileName}`,
+        `${duplicate.id}/${duplicate.fileName}`,
+        duplicate.mimeType ?? undefined
+      );
       expect(duplicate.collectionName).toBe(media.collectionName);
       expect(duplicate.modelType).toBe(Site.LARAVEL_TYPE);
       expect(duplicate.modelId).toBe(site.id);
@@ -236,10 +258,9 @@ describe("MediaService", () => {
       mockConfiguration(Project.MEDIA.photos);
       const media = await service.createMedia(project, "projects", creator.id, "photos", file);
 
-      const copySpy = jest.spyOn((service as any).s3, "send");
       const duplicate = await service.duplicateMedia(media, site);
 
-      expect(copySpy).toHaveBeenCalledWith(expect.any(CopyObjectCommand));
+      expect(fileService.copyRemoteFile).toHaveBeenCalledTimes(2);
       expect(duplicate.collectionName).toBe(media.collectionName);
       expect(duplicate.modelType).toBe(Site.LARAVEL_TYPE);
       expect(duplicate.modelId).toBe(site.id);
@@ -266,7 +287,6 @@ describe("MediaService", () => {
         const media = await MediaFactory.project().create();
         media.destroy = jest.fn();
         await service.deleteMedia(media);
-        expect(DeleteObjectCommand).toHaveBeenCalled();
         expect(media.destroy).toHaveBeenCalled();
       });
     });

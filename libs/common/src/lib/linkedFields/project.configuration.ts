@@ -330,6 +330,13 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Aggregate associates",
       inputType: "number"
     },
+    "pro-level-0-project": {
+      property: "level0Project",
+      label: "GADM level 0 administrative areas where project will be restoring land",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gadm-level-0"
+    },
     "pro-level-1-project": {
       property: "level1Project",
       label: "GADM level 1 administrative areas where project will be restoring land",
@@ -392,6 +399,11 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "select",
       multiChoice: false,
       optionListKey: "landowner-collection"
+    },
+    "pro-nursery-seedlings-goal": {
+      property: "nurserySeedlingsGoal",
+      label: "Nursery seedlings goal",
+      inputType: "number"
     }
   },
   fileCollections: {
@@ -431,6 +443,12 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     "pro-col-proof-of-land-tenure-mou": {
       collection: "proof_of_land_tenure_mou",
       label: "Documentation on project area’s land tenure",
+      inputType: "file",
+      multiChoice: true
+    },
+    "pro-col-consortium-partnership-agreements": {
+      collection: "consortium_partnership_agreements",
+      label: "Consortium agreements",
       inputType: "file",
       multiChoice: true
     }

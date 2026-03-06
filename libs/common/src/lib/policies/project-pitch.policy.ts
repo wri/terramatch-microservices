@@ -12,8 +12,12 @@ export class ProjectPitchPolicy extends UserPermissionsPolicy {
       if (user?.organisationId != null) {
         const orgUuid = (await Organisation.findOne({ where: { id: user.organisationId }, attributes: ["uuid"] }))
           ?.uuid;
+        const organisationsConfirmed = (await user.organisationsConfirmed).map(({ uuid }) => uuid);
+        if (orgUuid != null) {
+          organisationsConfirmed.push(orgUuid);
+        }
         this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], ProjectPitch, {
-          organisationId: orgUuid
+          organisationId: { $in: organisationsConfirmed }
         });
       }
     }
@@ -25,7 +29,8 @@ export class ProjectPitchPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["organisationId"]
+      attributes: ["organisationId"],
+      include: [{ association: "organisationsConfirmed", attributes: ["uuid"] }]
     }));
   }
 }

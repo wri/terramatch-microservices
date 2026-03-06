@@ -32,6 +32,8 @@ import { BullModule } from "@nestjs/bullmq";
 import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
 import { AuditStatusController } from "./entities/audit-status.controller";
 import { AuditStatusService } from "./entities/audit-status.service";
+import { AggregateReportsController } from "./entities/aggregate-reports.controller";
+import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 
@@ -54,6 +56,7 @@ import { ReportingFrameworksService } from "./reportingFrameworks/reporting-fram
     TreesController,
     DisturbancesController,
     AuditStatusController, // must be before EntitiesController
+    AggregateReportsController, // must be before EntitiesController
     EntitiesController,
     FormDataController, // must be before entity association controller.
     UpdateRequestsController, // must be before entity association controller.
@@ -75,6 +78,7 @@ import { ReportingFrameworksService } from "./reportingFrameworks/reporting-fram
     TasksService,
     DisturbanceService,
     AuditStatusService,
+    AggregateReportsService,
     FormsService,
     FormDataService,
     EntitiesQueueProcessor,

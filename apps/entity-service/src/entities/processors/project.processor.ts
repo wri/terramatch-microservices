@@ -24,7 +24,8 @@ import { Dictionary, groupBy, sumBy } from "lodash";
 import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
+import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -76,14 +77,14 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "proposedNumNurseries",
   "projBoundary",
   "proposedGovPartners",
-  "proposedNumNurseries",
   "states",
   "waterSource",
   "baselineBiodiversity",
   "goalTreesRestoredPlanting",
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
-  "directSeedingSurvivalRate"
+  "directSeedingSurvivalRate",
+  "landownerAgreement"
 ];
 
 export class ProjectProcessor extends EntityProcessor<
@@ -276,7 +277,7 @@ export class ProjectProcessor extends EntityProcessor<
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(project.id),
       combinedWorkdayCount:
         (await this.getWorkdayCount(project.id, true)) + (await this.getSelfReportedWorkdayCount(project.id, true)),
-      totalJobsCreated: await this.getTotalJobs(project.id),
+      totalJobsCreated: await this.getTotalJobs(project.id, project.frameworkKey),
 
       application: project.application == null ? null : populateDto(new ProjectApplicationDto(), project.application),
 
@@ -319,7 +320,17 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
-    return { totalHectaresRestoredGoal, treesGrownGoal };
+    const goalTreesRestoredAnr = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "anr"),
+      "amount"
+    );
+
+    const seedsGrownGoal = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
+      "amount"
+    );
+
+    return { totalHectaresRestoredGoal, treesGrownGoal, goalTreesRestoredAnr, seedsGrownGoal };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
@@ -370,7 +381,22 @@ export class ProjectProcessor extends EntityProcessor<
     );
   }
 
-  protected async getTotalJobs(projectId: number) {
+  protected async getTotalJobs(projectId: number, frameworkKey: FrameworkKey | null) {
+    if (frameworkKey === HBF) {
+      return (
+        (await TrackingEntry.gender().sum("amount", {
+          where: {
+            trackingId: {
+              [Op.in]: Tracking.idsSubquery(ProjectReport.approvedIdsSubquery(projectId), ProjectReport.LARAVEL_TYPE, {
+                domain: "demographics",
+                type: Tracking.WORKDAYS_TYPE,
+                collection: DIRECT
+              })
+            }
+          }
+        })) ?? 0
+      );
+    }
     return (
       (await TrackingEntry.gender().sum("amount", {
         where: {
@@ -535,6 +561,15 @@ export class ProjectProcessor extends EntityProcessor<
       attributes.treesGrownGoal = pitch.totalTrees;
       attributes.landTenureProjectArea = pitch.landTenureProjArea;
       attributes.projImpactBiodiv = pitch.biodiversityImpact;
+      attributes.level0Project = pitch.level0Proposed;
+      attributes.level1Project = pitch.level1Proposed;
+      attributes.level2Project = pitch.level2Proposed;
+      attributes.survivalRate = pitch.projSurvivalRate;
+      attributes.communityEngagementPlan = pitch.landholderCommEngage;
+      attributes.sitingStrategy = pitch.projectSiteModel;
+      // Fallback to organisation.consortium is temporary. The field will be migrated and removed
+      // from orgs in ZZ / AA releases.
+      attributes.consortium = pitch.consortium ?? organisation.consortium;
     }
 
     const project = await Project.create(attributes);
@@ -590,9 +625,25 @@ export class ProjectProcessor extends EntityProcessor<
       if (entriesToCreate.length > 0) await TrackingEntry.bulkCreate(entriesToCreate);
 
       const medias = await Media.for(pitch)
-        .collection(["detailed_project_budget", "proof_of_land_tenure_mou"])
+        .collection([
+          "detailed_project_budget",
+          "proof_of_land_tenure_mou",
+          "consortium_partnership_agreements",
+          "additional"
+        ])
         .findAll();
-      await Promise.all(medias.map(media => this.entitiesService.duplicateMedia(media, project)));
+      await Promise.all(
+        medias.map(media => {
+          if (media.collectionName === "additional") {
+            // The equivalent collection name is different for projects in this case. Explicitly
+            // _not_ saving the original media after this change because we want it to stay the
+            // same on the pitch media - changing it here just makes it use the correct collection
+            // in the duplicated media.
+            media.collectionName = "other_additional_documents";
+          }
+          this.entitiesService.duplicateMedia(media, project);
+        })
+      );
     }
 
     if (application != null) {

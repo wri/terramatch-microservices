@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "user": "nx serve user-service --no-cloud",
     "entity": "nx serve entity-service --no-cloud",
     "research": "nx serve research-service --no-cloud",
     "unified-database": "nx serve unified-database-service --no-cloud",
@@ -44,7 +45,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "commander": "^13.1.0",
-    "csv-stringify": "^6.6.0",
+    "csv": "^6.4.1",
     "d3-delaunay": "^6.0.4",
     "debug": "^4.4.0",
     "geojson": "^0.5.0",

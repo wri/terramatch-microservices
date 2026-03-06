@@ -43,7 +43,7 @@ export const migrateFinancialReports = withoutSqlLogs(async () => {
         order: [["id", "ASC"]]
       });
 
-      if (project?.frameworkKey) {
+      if (project != null && project.frameworkKey != null) {
         report.frameworkKey = project.frameworkKey;
         await report.save();
         updatedCount++;

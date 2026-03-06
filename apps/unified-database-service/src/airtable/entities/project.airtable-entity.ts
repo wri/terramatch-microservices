@@ -103,7 +103,8 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "yearFiveCrownCover",
   "directSeedingSurvivalRate",
   "shortName",
-  "ppcExternalId"
+  "ppcExternalId",
+  "nurserySeedlingsGoal"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

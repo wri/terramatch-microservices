@@ -8,7 +8,8 @@ import {
   Project,
   ProjectReport,
   Site,
-  SiteReport
+  SiteReport,
+  FinancialReport
 } from "@terramatch-microservices/database/entities";
 import { InferAttributes } from "sequelize";
 import { Op } from "sequelize";
@@ -30,6 +31,7 @@ export type FrameworkFormUuids = {
   siteReportFormUuid?: string | null;
   nurseryFormUuid?: string | null;
   nurseryReportFormUuid?: string | null;
+  financialReportFormUuid?: string | null;
 };
 
 const FRAMEWORK_FORM_MAP: ReadonlyArray<{
@@ -41,7 +43,8 @@ const FRAMEWORK_FORM_MAP: ReadonlyArray<{
   { key: "siteFormUuid", model: Site.LARAVEL_TYPE },
   { key: "siteReportFormUuid", model: SiteReport.LARAVEL_TYPE },
   { key: "nurseryFormUuid", model: Nursery.LARAVEL_TYPE },
-  { key: "nurseryReportFormUuid", model: NurseryReport.LARAVEL_TYPE }
+  { key: "nurseryReportFormUuid", model: NurseryReport.LARAVEL_TYPE },
+  { key: "financialReportFormUuid", model: FinancialReport.LARAVEL_TYPE }
 ];
 
 @Injectable()
@@ -83,7 +86,8 @@ export class ReportingFrameworksService {
       siteFormUuid: attributes.siteFormUuid ?? null,
       siteReportFormUuid: attributes.siteReportFormUuid ?? null,
       nurseryFormUuid: attributes.nurseryFormUuid ?? null,
-      nurseryReportFormUuid: attributes.nurseryReportFormUuid ?? null
+      nurseryReportFormUuid: attributes.nurseryReportFormUuid ?? null,
+      financialReportFormUuid: attributes.financialReportFormUuid ?? null
     });
     await this.syncFormsForFramework(slug, attributes);
     return framework;
@@ -101,7 +105,8 @@ export class ReportingFrameworksService {
     if (attributes.nurseryFormUuid !== undefined) payload.nurseryFormUuid = attributes.nurseryFormUuid ?? null;
     if (attributes.nurseryReportFormUuid !== undefined)
       payload.nurseryReportFormUuid = attributes.nurseryReportFormUuid ?? null;
-
+    if (attributes.financialReportFormUuid !== undefined)
+      payload.financialReportFormUuid = attributes.financialReportFormUuid ?? null;
     if (Object.keys(payload).length > 0) {
       await framework.update(payload);
     }
@@ -113,7 +118,8 @@ export class ReportingFrameworksService {
         siteFormUuid: framework.siteFormUuid,
         siteReportFormUuid: framework.siteReportFormUuid,
         nurseryFormUuid: framework.nurseryFormUuid,
-        nurseryReportFormUuid: framework.nurseryReportFormUuid
+        nurseryReportFormUuid: framework.nurseryReportFormUuid,
+        financialReportFormUuid: framework.financialReportFormUuid
       });
     }
     return framework;

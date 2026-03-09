@@ -21,6 +21,8 @@ import { AnrPlotGeometry, SitePolygon } from "@terramatch-microservices/database
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { AnrPlotGeometryService } from "./anr-plot-geometry.service";
 import { AnrPlotGeometryDto } from "./dto/anr-plot-geometry.dto";
+import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { FeatureCollection } from "geojson";
 import "multer";
 
 @Controller("research/v3/sitePolygons")
@@ -46,13 +48,31 @@ export class AnrPlotGeometryController {
   async getPlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("read", AnrPlotGeometry);
 
-    const plot = await this.anrPlotGeometryService.getPlot(sitePolygonUuid);
-    if (plot == null) {
-      throw new NotFoundException(`No ANR plot geometry found for polygon ${sitePolygonUuid}`);
-    }
+    const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 
     const document = buildJsonApi(AnrPlotGeometryDto);
     return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
+  }
+
+  @Get(":sitePolygonUuid/plotGeometry/geojson")
+  @ApiOperation({
+    operationId: "getAnrPlotGeometryGeoJson",
+    summary: "Download ANR monitoring plot grid as GeoJSON",
+    description: `Returns the active ANR monitoring plot grid as a GeoJSON FeatureCollection
+      for the specified site polygon. Reuses the standard GeoJsonExportDto shape,
+      consistent with other geometry export endpoints.`
+  })
+  @JsonApiResponse(GeoJsonExportDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
+  async getPlotGeometryGeoJson(@Param("sitePolygonUuid") sitePolygonUuid: string) {
+    await this.policyService.authorize("read", AnrPlotGeometry);
+
+    const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
+
+    const featureCollection = plot.geojson as unknown as FeatureCollection;
+    const document = buildJsonApi(GeoJsonExportDto);
+    return document.addData(sitePolygonUuid, new GeoJsonExportDto(featureCollection));
   }
 
   @Put(":sitePolygonUuid/plotGeometry")
@@ -108,10 +128,8 @@ export class AnrPlotGeometryController {
   async deletePlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("delete", AnrPlotGeometry);
 
-    const plot = await this.anrPlotGeometryService.getPlot(sitePolygonUuid);
-    if (plot == null) {
-      throw new NotFoundException(`No ANR plot geometry found for polygon ${sitePolygonUuid}`);
-    }
+    // Validate plot exists before attempting deletion
+    await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 
     await this.anrPlotGeometryService.deletePlot(sitePolygonUuid);
 

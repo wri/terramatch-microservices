@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FeatureCollection } from "geojson";
 import { CreationAttributes } from "sequelize";
 import { AnrPlotGeometry } from "@terramatch-microservices/database/entities";
@@ -7,6 +7,19 @@ import { AnrPlotGeometry } from "@terramatch-microservices/database/entities";
 export class AnrPlotGeometryService {
   async getPlot(sitePolygonUuid: string): Promise<AnrPlotGeometry | null> {
     return AnrPlotGeometry.findOne({ where: { sitePolygonUuid } });
+  }
+
+  /**
+   * Fetches an ANR plot geometry and throws NotFoundException if not found.
+   * This is the preferred method for controllers that need to ensure the plot exists.
+   * Follows the pattern used by other services in this codebase (GeoJsonExportService, BoundingBoxService).
+   */
+  async getPlotOrThrow(sitePolygonUuid: string): Promise<AnrPlotGeometry> {
+    const plot = await this.getPlot(sitePolygonUuid);
+    if (plot == null) {
+      throw new NotFoundException(`No ANR plot geometry found for polygon ${sitePolygonUuid}`);
+    }
+    return plot;
   }
 
   async upsertPlot(

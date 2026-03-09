@@ -516,6 +516,18 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       property: "bioeconomyBuyers",
       label: "Buyers of the bioeconomy products",
       inputType: "text"
+    },
+    "org-bioeconomy-product-list": {
+      property: "bioeconomyProductList",
+      label: "Bioeconomy product list",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "org-bioeconomy-description": {
+      property: "bioeconomyDescription",
+      label: "Bioeconomy description",
+      inputType: "long-text"
     }
   },
   fileCollections: {
@@ -634,6 +646,12 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
     "org-carbon-credits-proofs": {
       collection: "carbon_credits_proof",
       label: "Proof of carbon credit issuing in past",
+      inputType: "file",
+      multiChoice: true
+    },
+    "org-additional-financial-documentation": {
+      collection: "additional_financial_documentation",
+      label: "Additional financial documentation",
       inputType: "file",
       multiChoice: true
     }

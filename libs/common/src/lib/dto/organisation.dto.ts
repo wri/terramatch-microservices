@@ -381,6 +381,12 @@ export class OrganisationFullDto extends OrganisationLightDto {
   @ApiProperty({ nullable: true, type: String })
   bioeconomyBuyers: string | null;
 
+  @ApiProperty({ nullable: true, type: String, isArray: true })
+  bioeconomyProductList: string[] | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  bioeconomyDescription: string | null;
+
   @ApiProperty()
   updatedAt: Date;
 }

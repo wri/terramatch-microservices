@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock } from "@golevelup/ts-jest";
 import { NotFoundException } from "@nestjs/common";
 import { AdminUsersService } from "./admin-users.service";
 import { User } from "@terramatch-microservices/database/entities";

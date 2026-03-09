@@ -1,0 +1,113 @@
+import { Test, TestingModule } from "@nestjs/testing";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { Response } from "express";
+import { AdminUsersController } from "./admin-users.controller";
+import { AdminUsersService } from "./admin-users.service";
+import { PolicyService } from "@terramatch-microservices/common";
+import { User } from "@terramatch-microservices/database/entities";
+import { faker } from "@faker-js/faker";
+import { mockUserId } from "@terramatch-microservices/common/util/testing";
+
+describe("AdminUsersController", () => {
+  let controller: AdminUsersController;
+  let policyService: DeepMocked<PolicyService>;
+  let adminUsersService: DeepMocked<AdminUsersService>;
+
+  const mockRes = (): DeepMocked<Response> => {
+    const res = createMock<Response>();
+    res.status.mockReturnThis();
+    res.json.mockReturnThis();
+    return res;
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AdminUsersController],
+      providers: [
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: AdminUsersService, useValue: (adminUsersService = createMock<AdminUsersService>()) }
+      ]
+    }).compile();
+
+    controller = module.get<AdminUsersController>(AdminUsersController);
+    mockUserId(1);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe("resetPassword", () => {
+    const uuid = faker.string.uuid();
+    const validPassword = "NewSecureP4ss";
+
+    it("returns 200 and Password Updated when authorized and user exists", async () => {
+      const user = createMock<User>({ id: 1, uuid });
+      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
+      policyService.authorize.mockResolvedValue(undefined);
+      adminUsersService.resetPasswordByUuid.mockResolvedValue(undefined);
+
+      const res = mockRes();
+      await controller.resetPassword(uuid, { password: validPassword }, res);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("resetPassword", user);
+      expect(adminUsersService.resetPasswordByUuid).toHaveBeenCalledWith(uuid, validPassword);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith("Password Updated");
+    });
+
+    it("throws NotFoundException when user does not exist", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      const res = mockRes();
+      await expect(controller.resetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws UnauthorizedException when policy denies", async () => {
+      const user = createMock<User>({ id: 999, uuid });
+      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      const res = mockRes();
+      await expect(controller.resetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+  });
+
+  describe("verify", () => {
+    const uuid = faker.string.uuid();
+
+    it("returns 200 and User verified. when authorized and user exists", async () => {
+      const user = createMock<User>({ id: 1, uuid });
+      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
+      policyService.authorize.mockResolvedValue(undefined);
+      adminUsersService.verifyByUuid.mockResolvedValue(undefined);
+
+      const res = mockRes();
+      await controller.verify(uuid, res);
+
+      expect(policyService.authorize).toHaveBeenCalledWith("verify", user);
+      expect(adminUsersService.verifyByUuid).toHaveBeenCalledWith(uuid);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith("User verified.");
+    });
+
+    it("throws NotFoundException when user does not exist", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      const res = mockRes();
+      await expect(controller.verify(uuid, res)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws UnauthorizedException when policy denies", async () => {
+      const user = createMock<User>({ id: 999, uuid });
+      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      const res = mockRes();
+      await expect(controller.verify(uuid, res)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+});

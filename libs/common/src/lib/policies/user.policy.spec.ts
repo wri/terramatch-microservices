@@ -51,4 +51,34 @@ describe("UserPolicy", () => {
     mockPermissions();
     await expectCan(service, "update", await UserFactory.build({ id: 123 }));
   });
+
+  it("allows resetPassword any user with users-manage", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "resetPassword", new User());
+  });
+
+  it("allows verify any user with users-manage", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "verify", new User());
+  });
+
+  it("disallows resetPassword other users as non-admin", async () => {
+    mockPermissions();
+    await expectCannot(service, "resetPassword", await UserFactory.build({ id: 999 }));
+  });
+
+  it("disallows verify other users as non-admin", async () => {
+    mockPermissions();
+    await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
+  });
+
+  it("allows resetPassword own user as non-admin", async () => {
+    mockPermissions();
+    await expectCan(service, "resetPassword", await UserFactory.build({ id: 123 }));
+  });
+
+  it("allows verify own user as non-admin", async () => {
+    mockPermissions();
+    await expectCan(service, "verify", await UserFactory.build({ id: 123 }));
+  });
 });

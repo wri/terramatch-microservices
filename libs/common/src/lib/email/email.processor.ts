@@ -19,6 +19,9 @@ import { ProjectMonitoringNotificationEmail } from "./project-monitoring-notific
 import { OrganisationApprovedEmail } from "./organisation-approved.email";
 import { OrganisationRejectedEmail } from "./organisation-rejected.email";
 import { OrganisationJoinRequestEmail } from "./organisation-join-request.email";
+import { OrganisationUserApprovedEmail } from "./organisation-user-approved.email";
+import { OrganisationUserRejectedEmail } from "./organisation-user-rejected.email";
+import { OrganisationInviteEmail } from "./organisation-invite.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -42,7 +45,10 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   ProjectMonitoringNotificationEmail,
   OrganisationApprovedEmail,
   OrganisationRejectedEmail,
-  OrganisationJoinRequestEmail
+  OrganisationJoinRequestEmail,
+  OrganisationUserApprovedEmail,
+  OrganisationUserRejectedEmail,
+  OrganisationInviteEmail
 ];
 
 /**

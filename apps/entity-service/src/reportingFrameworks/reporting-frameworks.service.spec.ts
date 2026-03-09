@@ -341,7 +341,7 @@ describe("ReportingFrameworksService", () => {
       expect(createSpy).toHaveBeenCalledWith({
         name: attributes.name,
         slug: "my-new-framework",
-        accessCode: null,
+        accessCode: "my-new-framework",
         projectFormUuid: null,
         projectReportFormUuid: null,
         financialReportFormUuid: null,
@@ -352,6 +352,69 @@ describe("ReportingFrameworksService", () => {
       });
       expect(result).toEqual(createdFramework);
       expect(formUpdateSpy).toHaveBeenCalled();
+    });
+
+    it("should derive slug without splitting camelCase (e.g. TerraFund 3 → terrafund-3) and default accessCode to slug", async () => {
+      const attributes = {
+        name: "TerraFund 3",
+        projectFormUuid: null as string | null,
+        projectReportFormUuid: null as string | null,
+        siteFormUuid: null as string | null,
+        siteReportFormUuid: null as string | null,
+        nurseryFormUuid: null as string | null,
+        nurseryReportFormUuid: null as string | null
+      };
+      const createdFramework = {
+        id: 1,
+        uuid: "framework-uuid",
+        slug: "terrafund-3",
+        accessCode: "terrafund-3",
+        ...attributes
+      } as unknown as Framework;
+
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
+
+      await service.create(attributes);
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "TerraFund 3",
+          slug: "terrafund-3",
+          accessCode: "terrafund-3"
+        })
+      );
+    });
+
+    it("should use explicit accessCode when provided", async () => {
+      const attributes = {
+        name: "Some Framework",
+        accessCode: "custom-code",
+        projectFormUuid: null as string | null,
+        projectReportFormUuid: null as string | null,
+        siteFormUuid: null as string | null,
+        siteReportFormUuid: null as string | null,
+        nurseryFormUuid: null as string | null,
+        nurseryReportFormUuid: null as string | null
+      };
+      const createdFramework = {
+        id: 1,
+        uuid: "framework-uuid",
+        slug: "some-framework",
+        ...attributes
+      } as unknown as Framework;
+
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue(createdFramework);
+
+      await service.create(attributes);
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          slug: "some-framework",
+          accessCode: "custom-code"
+        })
+      );
     });
   });
 

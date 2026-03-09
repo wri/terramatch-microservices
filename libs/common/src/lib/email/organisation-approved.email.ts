@@ -59,6 +59,10 @@ export class OrganisationApprovedEmail extends EmailSender<OrganisationApprovedE
       { additionalValues }
     );
 
-    this.logger.log(`Sent organisation approved email to primary owner for organisation ${organisation.id}`);
+    this.logger.log(
+      `Organisation approved email sent successfully [emailAddress=${primaryOwner.emailAddress}, organisationId=${
+        this.data.organisationId
+      }, organisationName=${organisation.name ?? ""}, approvedByUserId=${this.data.approvedByUserId}]`
+    );
   }
 }

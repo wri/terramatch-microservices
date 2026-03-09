@@ -17,6 +17,8 @@ import {
   VOLUNTEER_SITE_MONITORING
 } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
+  Form,
+  FormQuestion,
   Project,
   ProjectReport,
   Site,
@@ -24,7 +26,7 @@ import {
   Tracking,
   TrackingEntry
 } from "@terramatch-microservices/database/entities";
-import { Dictionary, isEqualWith, uniq } from "lodash";
+import { Dictionary, intersection, isEqualWith, uniq } from "lodash";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, CreationAttributes } from "sequelize";
 import { DateTime } from "luxon";
@@ -297,13 +299,22 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
 };
 
 const persistWorkdays = async (config: ModelConfigs[SupportedType], reportWorkdays: Record<number, Workday[]>) => {
+  const attributes = intersection(Object.keys((config.model as ModelCtor).getAttributes()), [
+    "id",
+    "uuid",
+    "frameworkKey",
+    "answers",
+    "nothingToReport"
+  ]);
   for (const [reportId, workdays] of Object.entries(reportWorkdays)) {
     const report = (await (config.model as ModelCtor).findOne({
       where: { id: Number(reportId) },
-      attributes: ["id", "uuid"]
+      attributes
     })) as SupportedModel;
     const modelDescription = `${config.model.name} [id=${report.id}, uuid=${report.uuid}]`;
+
     LOGGER.log(`Persisting workdays for ${modelDescription}...`);
+    const collectionsCreated: string[] = [];
     for (const { collection, entries } of workdays) {
       const exists =
         (await Tracking.for(report).domain("demographics").type("workdays").collection(collection).count()) > 0;
@@ -317,6 +328,7 @@ const persistWorkdays = async (config: ModelConfigs[SupportedType], reportWorkda
       }
 
       LOGGER.log(`Creating workdays for ${collection}`);
+      collectionsCreated.push(collection);
       const tracking = await Tracking.create({
         trackableType: config.model.LARAVEL_TYPE,
         trackableId: report.id,
@@ -326,6 +338,30 @@ const persistWorkdays = async (config: ModelConfigs[SupportedType], reportWorkda
       });
       await TrackingEntry.bulkCreate(entries.map(entry => ({ ...entry, trackingId: tracking.id })));
     }
+
+    // Make sure the report is no longer set to "nothing to report"
+    if (attributes.includes("nothingToReport")) {
+      (report as { nothingToReport: boolean }).nothingToReport = false;
+    }
+
+    const questions = await FormQuestion.forForm(Form.uuidFor(report)).findAll({
+      where: {
+        inputType: "workdays",
+        collection: collectionsCreated
+      },
+      attributes: ["showOnParentCondition", "parentId"]
+    });
+    const answers = { ...report.answers };
+    for (const { showOnParentCondition, parentId } of questions) {
+      if (parentId == null) continue;
+
+      // Make sure all relevant demographic questions are unhidden.
+      answers[parentId] = showOnParentCondition ?? true;
+    }
+    report.answers = answers;
+
+    await report.save();
+
     LOGGER.log(`Persistence complete for ${modelDescription}`);
   }
 };

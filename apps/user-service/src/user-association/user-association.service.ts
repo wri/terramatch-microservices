@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import {
   ModelHasRole,
   Notification,
@@ -8,7 +14,9 @@ import {
   ProjectInvite,
   ProjectUser,
   Role,
-  User
+  User,
+  OrganisationInvite,
+  PasswordReset
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes, UserAssociationCreateBody } from "./dto/user-association-create.dto";
@@ -21,10 +29,12 @@ import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
 import { ProjectMonitoringNotificationEmail } from "@terramatch-microservices/common/email/project-monitoring-notification.email";
 import { OrganisationJoinRequestEmail } from "@terramatch-microservices/common/email/organisation-join-request.email";
+import { OrganisationUserApprovedEmail } from "@terramatch-microservices/common/email/organisation-user-approved.email";
+import { OrganisationUserRejectedEmail } from "@terramatch-microservices/common/email/organisation-user-rejected.email";
+import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/organisation-invite.email";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
-import { JwtService } from "@nestjs/jwt";
 
 export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
 export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
@@ -34,16 +44,18 @@ export interface UserAssociationProcessor {
   readonly readPolicy: string;
   readonly createPolicy: string;
   readonly updatePolicy: string;
+  readonly approveRejectPolicy: string;
   addDtos(document: DocumentBuilder, query: UserAssociationQueryDto): Promise<void>;
   handleCreate(document: DocumentBuilder, body: UserAssociationCreateBody | undefined, userId: number): Promise<void>;
   handleDelete(uuids: string[]): Promise<void>;
+  handleUpdate(document: DocumentBuilder, userUuid: string, status: "approved" | "rejected"): Promise<void>;
 }
 
 @Injectable()
 export class UserAssociationService {
   private readonly logger = new TMLogger(UserAssociationService.name);
 
-  constructor(private readonly jwtService: JwtService, @InjectQueue("email") private readonly emailQueue: Queue) {}
+  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   createProcessor(model: AssociableModel, uuid: string): UserAssociationProcessor {
     let _entity: Project | Organisation | null = null;
@@ -71,6 +83,7 @@ export class UserAssociationService {
         readPolicy: "read",
         createPolicy: "update",
         updatePolicy: "update",
+        approveRejectPolicy: "update",
         addDtos: async (document, query) => {
           const project = (await loadEntity()) as Project;
           const projectUsers = await this.query(project, query);
@@ -87,6 +100,9 @@ export class UserAssociationService {
         handleDelete: async uuids => {
           const project = (await loadEntity()) as Project;
           await this.deleteBulkUserAssociations(project.id, uuids);
+        },
+        handleUpdate: async () => {
+          throw new BadRequestException("Update status is not supported for projects");
         }
       };
     }
@@ -96,6 +112,7 @@ export class UserAssociationService {
       readPolicy: "read",
       createPolicy: "joinRequest",
       updatePolicy: "update",
+      approveRejectPolicy: "approveReject",
       addDtos: async (document, query) => {
         const org = (await loadEntity()) as Organisation;
         const orgUsers = await this.queryOrg(org, query);
@@ -124,6 +141,20 @@ export class UserAssociationService {
       handleDelete: async uuids => {
         const org = (await loadEntity()) as Organisation;
         await this.deleteBulkOrgUserAssociations(org.id, uuids);
+      },
+      handleUpdate: async (document, userUuid, status) => {
+        const org = (await loadEntity()) as Organisation;
+        const user = await this.updateOrgUserStatus(org, userUuid, status);
+        document.addData(
+          user.uuid as string,
+          new UserAssociationDto(user, {
+            status,
+            isManager: false,
+            organisationName: org.name ?? "",
+            roleName: user.primaryRole ?? null,
+            associatedType: "organisations"
+          })
+        );
       }
     };
   }
@@ -229,7 +260,11 @@ export class UserAssociationService {
       roleId: pdRole.id,
       modelType: User.LARAVEL_TYPE
     } as ModelHasRole);
-    const token = await this.jwtService.signAsync({ sub: newUser.uuid }, { expiresIn: "7d" });
+    const token = crypto.randomBytes(32).toString("hex");
+    await PasswordReset.create({
+      userId: newUser.id,
+      token
+    } as PasswordReset);
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
@@ -302,6 +337,60 @@ export class UserAssociationService {
     return users.map(user => user.uuid);
   }
 
+  async inviteOrganisationUser(
+    organisation: Organisation,
+    emailAddress: string,
+    callbackUrl?: string | null
+  ): Promise<OrganisationInvite> {
+    const existingUser = await User.findOne({
+      where: { emailAddress },
+      attributes: ["id"]
+    });
+    if (existingUser != null) {
+      throw new UnprocessableEntityException("A user with this email address already exists");
+    }
+
+    const newUser = await User.create({
+      organisationId: organisation.id,
+      emailAddress,
+      password: crypto.randomBytes(32).toString("hex"),
+      locale: "en-US"
+    } as User);
+
+    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
+    await ModelHasRole.create({
+      modelId: newUser.id,
+      roleId: pdRole.id,
+      modelType: User.LARAVEL_TYPE
+    } as ModelHasRole);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const invite = await OrganisationInvite.create({
+      organisationId: organisation.id,
+      emailAddress,
+      token
+    } as OrganisationInvite);
+    await PasswordReset.create({
+      userId: newUser.id,
+      token
+    } as PasswordReset);
+    try {
+      await new OrganisationInviteEmail({
+        organisationId: organisation.id,
+        emailAddress,
+        token,
+        callbackUrl
+      }).sendLater(this.emailQueue);
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue organisation invite email for organisation ${organisation.id} and email ${emailAddress}`,
+        error
+      );
+    }
+
+    return invite;
+  }
+
   async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {
     const user = await User.findOne({
       where: { id: userId },
@@ -344,6 +433,64 @@ export class UserAssociationService {
     return user;
   }
 
+  async updateOrgUserStatus(
+    organisation: Organisation,
+    userUuid: string,
+    status: "approved" | "rejected"
+  ): Promise<User> {
+    const user = await User.findOne({
+      where: { uuid: userUuid },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+
+    if (user == null) {
+      throw new NotFoundException(`User with UUID ${userUuid} not found`);
+    }
+
+    const orgUser = await OrganisationUser.findOne({
+      where: { organisationId: organisation.id, userId: user.id }
+    });
+
+    if (orgUser == null) {
+      throw new BadRequestException("User does not have a relationship with this organisation");
+    }
+
+    const allowedFrom = status === "approved" ? ["requested", "rejected"] : ["requested"];
+    if (!allowedFrom.includes(orgUser.status ?? "")) {
+      throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
+    }
+
+    orgUser.status = status;
+    await orgUser.save();
+
+    if (status === "approved") {
+      user.organisationId = organisation.id;
+      await user.save();
+    }
+
+    try {
+      if (status === "approved") {
+        await new OrganisationUserApprovedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+      } else {
+        await new OrganisationUserRejectedEmail({
+          organisationId: organisation.id,
+          userId: user.id
+        }).sendLater(this.emailQueue);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue organisation user ${status} email for user ${user.id} in organisation ${organisation.id}`,
+        error
+      );
+    }
+
+    return user;
+  }
+
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
       if (user.primaryRole !== "project-manager") throw new BadRequestException("User is not a project manager");
@@ -357,20 +504,20 @@ export class UserAssociationService {
 
     const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
     if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: user.emailAddress,
-      token,
-      acceptedAt: new Date()
+      acceptedAt: new Date(),
+      token
     } as ProjectInvite);
+
     await new ProjectMonitoringNotificationEmail({
       projectId: project.id,
-      userId: user.id,
-      token
+      userId: user.id
     }).sendLater(this.emailQueue);
   }
 }

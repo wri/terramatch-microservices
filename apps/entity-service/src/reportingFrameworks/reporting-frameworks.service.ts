@@ -11,7 +11,6 @@ import {
   SiteReport,
   FinancialReport
 } from "@terramatch-microservices/database/entities";
-import { kebabCase } from "lodash";
 import { InferAttributes } from "sequelize";
 import { Op } from "sequelize";
 import {
@@ -20,6 +19,10 @@ import {
   UpdateReportingFrameworkAttributes
 } from "./dto/reporting-framework.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+
+export function reportingFrameworkSlugFromName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, "-");
+}
 
 export type FrameworkFormUuids = {
   projectFormUuid?: string | null;
@@ -73,11 +76,11 @@ export class ReportingFrameworksService {
    * Caller must have added the permission to permissions.ts and run sync first for it to survive sync.
    */
   async create(attributes: CreateReportingFrameworkAttributes): Promise<Framework> {
-    const slug = kebabCase(attributes.name) as FrameworkKey;
+    const slug = reportingFrameworkSlugFromName(attributes.name) as FrameworkKey;
     const framework = await Framework.create({
       name: attributes.name,
       slug,
-      accessCode: attributes.accessCode ?? null,
+      accessCode: attributes.accessCode ?? slug,
       projectFormUuid: attributes.projectFormUuid ?? null,
       projectReportFormUuid: attributes.projectReportFormUuid ?? null,
       siteFormUuid: attributes.siteFormUuid ?? null,

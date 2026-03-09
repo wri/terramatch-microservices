@@ -4,8 +4,9 @@ import { isBoolean, isObject } from "lodash";
 import { Literal } from "sequelize/types/utils";
 import { isNotNull } from "../types/array";
 
-const isLiteral = (values: string | number | Date | boolean | string[] | number[] | Literal): values is Literal =>
-  isObject(values) && (values as { val: unknown }).val != null;
+export const isLiteral = (
+  values: string | number | Date | boolean | string[] | number[] | Literal
+): values is Literal => isObject(values) && (values as { val: unknown }).val != null;
 
 type AggregateSelection = "MAX";
 type SelectOptions<T extends Model> = {
@@ -134,6 +135,11 @@ class SubqueryBuilder<T extends Model> {
 
   innerJoin(select: Literal, as: string, on: string) {
     this.joins.push(`INNER JOIN (${select.val}) AS \`${as}\` ON ${on}`);
+    return this;
+  }
+
+  andLiteral(clause: Literal) {
+    this.where.push(`${clause.val}`);
     return this;
   }
 }

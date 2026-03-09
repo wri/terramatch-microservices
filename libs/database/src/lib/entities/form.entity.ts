@@ -24,6 +24,7 @@ import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { FinancialReport } from "./financial-report.entity";
+import { Subquery } from "../util/subquery.builder";
 
 type FormMedia = "banner";
 
@@ -73,6 +74,31 @@ export class Form extends Model<Form> {
 
   static for(entity: EntityModel) {
     return chainScope(this, "entity", entity) as typeof Form;
+  }
+
+  static uuidFor(entity: EntityModel) {
+    const select = Subquery.select(Form, "uuid");
+    if (entity instanceof FinancialReport) {
+      if (entity.organisation?.type == null) {
+        throw new InternalServerErrorException("Cannot determine form for financial report without organisation type.");
+      }
+      if (entity.organisation.type === "non-profit-organization") {
+        select.eq("type", "financial-report").andLiteral(literal("LOWER(title) LIKE '%non%profit%'"));
+      } else {
+        select.eq("type", "financial-report").andLiteral(literal("LOWER(title) NOT LIKE '%non%profit%'"));
+      }
+    } else if (entity instanceof DisturbanceReport) {
+      select.eq("type", "disturbance-report");
+    } else if (entity instanceof SrpReport) {
+      select.eq("type", "srp-report");
+    } else {
+      if (entity.frameworkKey == null) {
+        throw new InternalServerErrorException("Cannot determine form for entity without framework key.");
+      }
+      select.eq("model", laravelType(entity)).eq("frameworkKey", entity.frameworkKey);
+    }
+
+    return select.literal;
   }
 
   static readonly I18N_FIELDS = ["title", "subtitle", "description", "submissionMessage"] as const;

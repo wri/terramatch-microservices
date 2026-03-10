@@ -2,15 +2,16 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Response } from "express";
-import { AdminUsersController } from "./admin-users.controller";
+import { UsersController } from "./users.controller";
 import { AdminUsersService } from "./admin-users.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { User } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { UserCreationService } from "./user-creation.service";
 
-describe("AdminUsersController", () => {
-  let controller: AdminUsersController;
+describe("UsersController admin actions", () => {
+  let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let adminUsersService: DeepMocked<AdminUsersService>;
 
@@ -23,14 +24,15 @@ describe("AdminUsersController", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AdminUsersController],
+      controllers: [UsersController],
       providers: [
+        { provide: UserCreationService, useValue: createMock<UserCreationService>() },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: AdminUsersService, useValue: (adminUsersService = createMock<AdminUsersService>()) }
       ]
     }).compile();
 
-    controller = module.get<AdminUsersController>(AdminUsersController);
+    controller = module.get<UsersController>(UsersController);
     mockUserId(1);
   });
 

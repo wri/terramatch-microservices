@@ -19,7 +19,6 @@ describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let userCreationService: DeepMocked<UserCreationService>;
-  let adminUsersService: DeepMocked<import("./admin-users.service").AdminUsersService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -29,7 +28,7 @@ describe("UsersController", () => {
         { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) },
         {
           provide: require("./admin-users.service").AdminUsersService,
-          useValue: (adminUsersService = createMock())
+          useValue: createMock()
         }
       ]
     }).compile();

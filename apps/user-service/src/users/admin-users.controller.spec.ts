@@ -40,7 +40,7 @@ describe("UsersController admin actions", () => {
     jest.restoreAllMocks();
   });
 
-  describe("resetPassword", () => {
+  describe("adminResetPassword", () => {
     const uuid = faker.string.uuid();
     const validPassword = "NewSecureP4ss";
 
@@ -51,7 +51,7 @@ describe("UsersController admin actions", () => {
       adminUsersService.resetPasswordByUuid.mockResolvedValue(undefined);
 
       const res = mockRes();
-      await controller.resetPassword(uuid, { password: validPassword }, res);
+      await controller.adminResetPassword(uuid, { password: validPassword }, res);
 
       expect(policyService.authorize).toHaveBeenCalledWith("resetPassword", user);
       expect(adminUsersService.resetPasswordByUuid).toHaveBeenCalledWith(uuid, validPassword);
@@ -63,7 +63,9 @@ describe("UsersController admin actions", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(null);
 
       const res = mockRes();
-      await expect(controller.resetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(NotFoundException);
+      await expect(controller.adminResetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
+        NotFoundException
+      );
     });
 
     it("throws UnauthorizedException when policy denies", async () => {
@@ -72,13 +74,13 @@ describe("UsersController admin actions", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       const res = mockRes();
-      await expect(controller.resetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
+      await expect(controller.adminResetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
         UnauthorizedException
       );
     });
   });
 
-  describe("verify", () => {
+  describe("adminVerify", () => {
     const uuid = faker.string.uuid();
 
     it("returns 200 and User verified. when authorized and user exists", async () => {
@@ -88,7 +90,7 @@ describe("UsersController admin actions", () => {
       adminUsersService.verifyByUuid.mockResolvedValue(undefined);
 
       const res = mockRes();
-      await controller.verify(uuid, res);
+      await controller.adminVerify(uuid, res);
 
       expect(policyService.authorize).toHaveBeenCalledWith("verify", user);
       expect(adminUsersService.verifyByUuid).toHaveBeenCalledWith(uuid);
@@ -100,7 +102,7 @@ describe("UsersController admin actions", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(null);
 
       const res = mockRes();
-      await expect(controller.verify(uuid, res)).rejects.toThrow(NotFoundException);
+      await expect(controller.adminVerify(uuid, res)).rejects.toThrow(NotFoundException);
     });
 
     it("throws UnauthorizedException when policy denies", async () => {
@@ -109,7 +111,7 @@ describe("UsersController admin actions", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       const res = mockRes();
-      await expect(controller.verify(uuid, res)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.adminVerify(uuid, res)).rejects.toThrow(UnauthorizedException);
     });
   });
 });

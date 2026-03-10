@@ -242,7 +242,7 @@ describe("UserAssociationService", () => {
         expect(service.requestOrgJoin).toHaveBeenCalledWith(org, user.id);
         expect(User.findOne).toHaveBeenCalledWith({
           where: { id: user.id },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
           include: [{ association: "roles", attributes: ["name"] }]
         });
         expect(addDataSpy).toHaveBeenCalled();
@@ -374,7 +374,7 @@ describe("UserAssociationService", () => {
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
         include: [
           {
             association: "roles",
@@ -636,7 +636,7 @@ describe("UserAssociationService", () => {
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
         include: [
           {
             association: "roles",

@@ -123,7 +123,7 @@ export class UserAssociationService {
         await this.requestOrgJoin(org, userId);
         const user = await User.findOne({
           where: { id: userId },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
           include: [{ association: "roles", attributes: ["name"] }]
         });
         if (user == null) throw new UnauthorizedException("Authenticated user not found");
@@ -183,7 +183,7 @@ export class UserAssociationService {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
@@ -283,12 +283,14 @@ export class UserAssociationService {
     return newUser;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   queryOrg(organisation: Organisation, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<OrganisationUser> = {
       where: { organisationId: organisation.id },
       attributes: ["id", "userId", "status"]
     };
+    if (query.status != null) {
+      (findOptions.where as WhereOptions<OrganisationUser>)["status"] = query.status;
+    }
     return OrganisationUser.findAll(findOptions);
   }
 
@@ -299,17 +301,32 @@ export class UserAssociationService {
     query: UserAssociationQueryDto
   ) {
     const orgUsersData = orgUsers.map(orgUser => orgUser.dataValues);
+    let userIds = orgUsersData.map(orgUser => orgUser.userId);
+
+    // For "approved" status, also include owners (users where organisationId = organisation.id)
+    if (query.status === "approved") {
+      const owners = await User.findAll({
+        where: { organisationId: organisation.id },
+        attributes: ["id"]
+      });
+      const ownerIds = owners.map(owner => owner.id);
+      userIds = [...new Set([...userIds, ...ownerIds])];
+    }
+
     const users = await User.findAll({
-      where: { id: { [Op.in]: orgUsersData.map(orgUser => orgUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      where: { id: { [Op.in]: userIds } },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     users.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
+      // If user is an owner (organisationId matches), treat as approved
+      const isOwner = user.organisationId === organisation.id;
+      const status = isOwner ? "approved" : orgUser?.status ?? "";
       document.addData(
         user.uuid as string,
         new UserAssociationDto(user, {
-          status: orgUser?.status ?? "",
+          status,
           isManager: false,
           organisationName: organisation.name ?? "",
           roleName: user.primaryRole ?? null,
@@ -440,7 +457,7 @@ export class UserAssociationService {
   ): Promise<User> {
     const user = await User.findOne({
       where: { uuid: userUuid },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
 

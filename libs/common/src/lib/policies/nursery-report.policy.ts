@@ -11,7 +11,17 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "update",
+          "approve",
+          "uploadFiles",
+          "deleteFiles",
+          "updateFiles",
+          "updateAnswers",
+          "sendReminder"
+        ],
         NurseryReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -59,7 +69,17 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
           ).map(({ id }) => id);
           if (nurseryIds.length > 0) {
             this.builder.can(
-              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+              [
+                "read",
+                "delete",
+                "update",
+                "approve",
+                "uploadFiles",
+                "deleteFiles",
+                "updateFiles",
+                "updateAnswers",
+                "sendReminder"
+              ],
               NurseryReport,
               {
                 nurseryId: { $in: nurseryIds }

@@ -9,11 +9,6 @@ export class AnrPlotGeometryService {
     return AnrPlotGeometry.findOne({ where: { sitePolygonUuid } });
   }
 
-  /**
-   * Fetches an ANR plot geometry and throws NotFoundException if not found.
-   * This is the preferred method for controllers that need to ensure the plot exists.
-   * Follows the pattern used by other services in this codebase (GeoJsonExportService, BoundingBoxService).
-   */
   async getPlotOrThrow(sitePolygonUuid: string): Promise<AnrPlotGeometry> {
     const plot = await this.getPlot(sitePolygonUuid);
     if (plot == null) {

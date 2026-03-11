@@ -128,7 +128,6 @@ export class AnrPlotGeometryController {
   async deletePlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("delete", AnrPlotGeometry);
 
-    // Validate plot exists before attempting deletion
     await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 
     await this.anrPlotGeometryService.deletePlot(sitePolygonUuid);

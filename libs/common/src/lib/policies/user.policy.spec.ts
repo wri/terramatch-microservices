@@ -66,4 +66,16 @@ describe("UserPolicy", () => {
     mockPermissions();
     await expectCan(service, "verify", await UserFactory.build({ id: 123 }));
   });
+
+  it("allows verify any user for verified admin without users-manage", async () => {
+    mockPermissions();
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "verify", new User());
+  });
 });

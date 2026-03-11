@@ -108,11 +108,13 @@ describe("AnrPlotGeometryController", () => {
 
   describe("getPlotGeometry", () => {
     it("should throw UnauthorizedException when policy does not authorize", async () => {
+      anrPlotGeometryService.getPlot.mockResolvedValue(mockPlot as AnrPlotGeometry);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.getPlotGeometry(sitePolygonUuid)).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("read", AnrPlotGeometry);
-      expect(anrPlotGeometryService.getPlotOrThrow).not.toHaveBeenCalled();
+
+      expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalled();
+      expect(policyService.authorize).toHaveBeenCalledWith("read", mockPlot);
     });
 
     it("should throw NotFoundException when no plot exists for site polygon", async () => {
@@ -125,7 +127,9 @@ describe("AnrPlotGeometryController", () => {
       await expect(controller.getPlotGeometry(sitePolygonUuid)).rejects.toThrow(
         `No ANR plot geometry found for polygon ${sitePolygonUuid}`
       );
+
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
+      expect(policyService.authorize).not.toHaveBeenCalled();
     });
 
     it("should return JSON:API document with plot geometry when found", async () => {
@@ -134,8 +138,8 @@ describe("AnrPlotGeometryController", () => {
 
       const result = await controller.getPlotGeometry(sitePolygonUuid);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("read", AnrPlotGeometry);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", mockPlot);
 
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();

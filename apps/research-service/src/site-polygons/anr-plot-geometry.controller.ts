@@ -25,7 +25,7 @@ import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { FeatureCollection } from "geojson";
 import "multer";
 
-@Controller("research/v3/sitePolygons")
+@Controller("research/v3/sitePolygons/:sitePolygonUuid/plotGeometry")
 export class AnrPlotGeometryController {
   private readonly logger = new Logger(AnrPlotGeometryController.name);
 
@@ -35,7 +35,7 @@ export class AnrPlotGeometryController {
     private readonly policyService: PolicyService
   ) {}
 
-  @Get(":sitePolygonUuid/plotGeometry")
+  @Get()
   @ApiOperation({
     operationId: "getAnrPlotGeometry",
     summary: "Get ANR monitoring plot grid for a site polygon",
@@ -46,15 +46,15 @@ export class AnrPlotGeometryController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
   async getPlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
-    await this.policyService.authorize("read", AnrPlotGeometry);
-
     const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
+
+    await this.policyService.authorize("read", plot);
 
     const document = buildJsonApi(AnrPlotGeometryDto);
     return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
   }
 
-  @Get(":sitePolygonUuid/plotGeometry/geojson")
+  @Get("geojson")
   @ApiOperation({
     operationId: "getAnrPlotGeometryGeoJson",
     summary: "Download ANR monitoring plot grid as GeoJSON",
@@ -75,7 +75,7 @@ export class AnrPlotGeometryController {
     return document.addData(sitePolygonUuid, new GeoJsonExportDto(featureCollection));
   }
 
-  @Put(":sitePolygonUuid/plotGeometry")
+  @Put()
   @ApiOperation({
     operationId: "upsertAnrPlotGeometry",
     summary: "Upload or replace ANR monitoring plot grid for a site polygon",
@@ -113,7 +113,7 @@ export class AnrPlotGeometryController {
     return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
   }
 
-  @Delete(":sitePolygonUuid/plotGeometry")
+  @Delete()
   @ApiOperation({
     operationId: "deleteAnrPlotGeometry",
     summary: "Delete ANR monitoring plot grid for a site polygon",

@@ -242,7 +242,7 @@ describe("UserAssociationService", () => {
         expect(service.requestOrgJoin).toHaveBeenCalledWith(org, user.id);
         expect(User.findOne).toHaveBeenCalledWith({
           where: { id: user.id },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
           include: [{ association: "roles", attributes: ["name"] }]
         });
         expect(addDataSpy).toHaveBeenCalled();
@@ -374,7 +374,7 @@ describe("UserAssociationService", () => {
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
         include: [
           {
             association: "roles",
@@ -626,7 +626,11 @@ describe("UserAssociationService", () => {
       user1.roles = [role1];
       user2.roles = [role2];
 
-      jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
+      const ownersMock = [{ id: user1.id }, { id: user2.id }];
+      jest
+        .spyOn(User, "findAll")
+        .mockResolvedValueOnce(ownersMock as User[])
+        .mockResolvedValueOnce([user1, user2] as User[]);
       const document = new DocumentBuilder("associatedUsers");
 
       const addDataSpy = jest.spyOn(document, "addData");
@@ -634,9 +638,23 @@ describe("UserAssociationService", () => {
 
       await service.addOrgUserDtos(document, org, [orgUser1, orgUser2] as OrganisationUser[], {});
 
-      expect(User.findAll).toHaveBeenCalledWith({
+      expect(User.findAll).toHaveBeenNthCalledWith(1, {
+        where: { organisationId: org.id },
+        attributes: ["id"]
+      });
+      expect(User.findAll).toHaveBeenNthCalledWith(2, {
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: [
+          "id",
+          "uuid",
+          "emailAddress",
+          "firstName",
+          "lastName",
+          "organisationId",
+          "phoneNumber",
+          "jobRole",
+          "lastLoggedInAt"
+        ],
         include: [
           {
             association: "roles",

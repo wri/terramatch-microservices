@@ -1,19 +1,26 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  INTEGER,
+  InferAttributes,
+  InferCreationAttributes,
+  JSON,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { SitePolygon } from "./site-polygon.entity";
 
 @Table({ tableName: "anr_plot_geometry", underscored: true, paranoid: true })
-export class AnrPlotGeometry extends Model<AnrPlotGeometry> {
-  static readonly LARAVEL_TYPE = "App\\Models\\V2\\AnrPlotGeometry";
-
+export class AnrPlotGeometry extends Model<InferAttributes<AnrPlotGeometry>, InferCreationAttributes<AnrPlotGeometry>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Column({ type: UUID, field: "site_polygon_uuid" })
   sitePolygonUuid: string;

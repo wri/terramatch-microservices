@@ -23,7 +23,7 @@ import { AnrPlotGeometryService } from "./anr-plot-geometry.service";
 import { AnrPlotGeometryDto } from "./dto/anr-plot-geometry.dto";
 import "multer";
 
-@Controller("research/v3/sitePolygons")
+@Controller("research/v3/sitePolygons/:sitePolygonUuid/plotGeometry")
 export class AnrPlotGeometryController {
   private readonly logger = new Logger(AnrPlotGeometryController.name);
 
@@ -33,7 +33,7 @@ export class AnrPlotGeometryController {
     private readonly policyService: PolicyService
   ) {}
 
-  @Get(":sitePolygonUuid/plotGeometry")
+  @Get()
   @ApiOperation({
     operationId: "getAnrPlotGeometry",
     summary: "Get ANR monitoring plot grid for a site polygon",
@@ -44,18 +44,18 @@ export class AnrPlotGeometryController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
   async getPlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
-    await this.policyService.authorize("read", AnrPlotGeometry);
-
     const plot = await this.anrPlotGeometryService.getPlot(sitePolygonUuid);
     if (plot == null) {
       throw new NotFoundException(`No ANR plot geometry found for polygon ${sitePolygonUuid}`);
     }
 
+    await this.policyService.authorize("read", plot);
+
     const document = buildJsonApi(AnrPlotGeometryDto);
     return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
   }
 
-  @Put(":sitePolygonUuid/plotGeometry")
+  @Put()
   @ApiOperation({
     operationId: "upsertAnrPlotGeometry",
     summary: "Upload or replace ANR monitoring plot grid for a site polygon",
@@ -93,7 +93,7 @@ export class AnrPlotGeometryController {
     return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
   }
 
-  @Delete(":sitePolygonUuid/plotGeometry")
+  @Delete()
   @ApiOperation({
     operationId: "deleteAnrPlotGeometry",
     summary: "Delete ANR monitoring plot grid for a site polygon",

@@ -76,8 +76,9 @@ easier in the REPL env:
 
 # AWS RDS (MariaDB) Access
 
-The [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
-is required for direct access to the databases hosted in AWS.
+The [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and
+[AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+are required for direct access to the databases hosted in AWS.
 
 Update your SSH config (typically under `~/.ssh/config` on Mac or Linux systems) to include
 an entry for connecting to EC2 instances through the session manager.

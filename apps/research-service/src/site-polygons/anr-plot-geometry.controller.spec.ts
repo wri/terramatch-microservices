@@ -108,7 +108,7 @@ describe("AnrPlotGeometryController", () => {
 
   describe("getPlotGeometry", () => {
     it("should throw UnauthorizedException when policy does not authorize", async () => {
-      anrPlotGeometryService.getPlot.mockResolvedValue(mockPlot as AnrPlotGeometry);
+      anrPlotGeometryService.getPlotOrThrow.mockResolvedValue(mockPlot as AnrPlotGeometry);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.getPlotGeometry(sitePolygonUuid)).rejects.toThrow(UnauthorizedException);

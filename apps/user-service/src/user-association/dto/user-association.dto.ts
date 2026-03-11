@@ -32,6 +32,15 @@ export class UserAssociationDto {
   @ApiProperty({ nullable: true, type: String })
   roleName: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  phoneNumber: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  jobRole: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  lastLoggedInAt: string | null;
+
   @ApiProperty()
   associatedType: string;
 }

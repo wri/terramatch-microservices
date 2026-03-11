@@ -33,7 +33,8 @@ type OrganisationMedia =
   | "consortiumPartnershipAgreements"
   | "organogram"
   | "ownershipDocuments"
-  | "carbonCreditsProof";
+  | "carbonCreditsProof"
+  | "additionalFinancialDocumentation";
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true })
 export class Organisation extends Model<Organisation> {
@@ -74,7 +75,12 @@ export class Organisation extends Model<Organisation> {
     },
     organogram: { dbCollection: "organogram", multiple: true, validation: "general-documents" },
     ownershipDocuments: { dbCollection: "ownership_documents", multiple: true, validation: "general-documents" },
-    carbonCreditsProof: { dbCollection: "carbon_credits_proof", multiple: true, validation: "general-documents" }
+    carbonCreditsProof: { dbCollection: "carbon_credits_proof", multiple: true, validation: "general-documents" },
+    additionalFinancialDocumentation: {
+      dbCollection: "additional_financial_documentation",
+      multiple: true,
+      validation: "general-documents"
+    }
   };
 
   static uuidForFundingProgramme(fundingProgrammeUuid: string) {
@@ -554,4 +560,12 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   bioeconomyBuyers: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  bioeconomyProductList: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyDescription: string | null;
 }

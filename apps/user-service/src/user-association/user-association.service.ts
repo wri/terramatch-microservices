@@ -123,7 +123,7 @@ export class UserAssociationService {
         await this.requestOrgJoin(org, userId);
         const user = await User.findOne({
           where: { id: userId },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
           include: [{ association: "roles", attributes: ["name"] }]
         });
         if (user == null) throw new UnauthorizedException("Authenticated user not found");
@@ -183,7 +183,7 @@ export class UserAssociationService {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
@@ -283,12 +283,14 @@ export class UserAssociationService {
     return newUser;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   queryOrg(organisation: Organisation, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<OrganisationUser> = {
       where: { organisationId: organisation.id },
       attributes: ["id", "userId", "status"]
     };
+    if (query.status != null) {
+      (findOptions.where as WhereOptions<OrganisationUser>)["status"] = query.status;
+    }
     return OrganisationUser.findAll(findOptions);
   }
 
@@ -298,30 +300,54 @@ export class UserAssociationService {
     orgUsers: OrganisationUser[],
     query: UserAssociationQueryDto
   ) {
-    const orgUsersData = orgUsers.map(orgUser => orgUser.dataValues);
+    const partnerUserIds = orgUsers.map(orgUser => orgUser.userId);
+    const includeOwners = query.status == null || query.status === "approved";
+
+    let userIds = [...partnerUserIds];
+    if (includeOwners) {
+      const owners = await User.findAll({
+        where: { organisationId: organisation.id },
+        attributes: ["id"]
+      });
+      const ownerIds = owners.map(owner => owner.id);
+      userIds = [...new Set([...userIds, ...ownerIds])];
+    }
+
     const users = await User.findAll({
-      where: { id: { [Op.in]: orgUsersData.map(orgUser => orgUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      where: { id: { [Op.in]: userIds } },
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "lastLoggedInAt"
+      ],
       include: [{ association: "roles", attributes: ["name"] }]
     });
-    users.forEach(user => {
+    const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
+    filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
-      document.addData(
-        user.uuid as string,
-        new UserAssociationDto(user, {
-          status: orgUser?.status ?? "",
-          isManager: false,
-          organisationName: organisation.name ?? "",
-          roleName: user.primaryRole ?? null,
-          associatedType: "organisations"
-        })
-      );
+      const isOwner = user.organisationId === organisation.id;
+      const status = isOwner ? "approved" : orgUser?.status ?? "";
+      const dto = new UserAssociationDto(user, {
+        status,
+        isManager: false,
+        organisationName: organisation.name ?? "",
+        roleName: user.primaryRole ?? null,
+        associatedType: "organisations"
+      });
+      dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
+      document.addData(user.uuid as string, dto);
     });
-    const indexIds = users.map(user => user.uuid as string);
+    const indexIds = filteredUsers.map(user => user.uuid as string);
     document.addIndex({
       resource: "associatedUsers",
       requestPath: `/userAssociations/v3/organisations/${organisation.uuid}${getStableRequestQuery(query)}`,
-      total: users.length,
+      total: filteredUsers.length,
       ids: indexIds
     });
   }
@@ -440,7 +466,7 @@ export class UserAssociationService {
   ): Promise<User> {
     const user = await User.findOne({
       where: { uuid: userUuid },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
 

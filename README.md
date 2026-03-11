@@ -74,6 +74,35 @@ easier in the REPL env:
 - All of lodash accessible through `lodash` (e.g. `lodash.join([1, 2])`)
 - All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
 
+# AWS RDS (MariaDB) Access
+
+The [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+is required for direct access to the databases hosted in AWS.
+
+Update your SSH config (typically under `~/.ssh/config` on Mac or Linux systems) to include
+an entry for connecting to EC2 instances through the session manager.
+
+```
+Host i-*
+    IdentityFile <path to wri-terramatch-new.pem>
+    ProxyCommand sh -c "aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'"
+```
+
+If you do not have `wri-terramatch-new.pem`, please ask a member of the development team for it.
+
+- To get the current instance ID of the bastion host, run `./bin/bastion-instance-id.sh` in this repository
+- To get the current address of the RDS instance you wish to connect to, run `./bin/rds-address.sh <DB name>` in this repository
+  - DB name is one of `prod`, `staging`, `test` or `dev`.
+
+Note: neither of these changes often, so if you want to save the values and use them again in the future, that
+will work fine.
+
+To open a port forwarding connection to the RDS instance through the bastion host:
+
+```
+> ssh -N ubuntu@<bastion host> -L 3311:<rds address>:3306
+```
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The

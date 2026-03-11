@@ -6,7 +6,6 @@ export class UserPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("users-manage")) {
       this.builder.can("read", User);
       this.builder.can("update", User);
-      this.builder.can("resetPassword", User);
       this.builder.can("verify", User);
     } else {
       this.builder.can("read", User, { id: this.userId });
@@ -14,11 +13,9 @@ export class UserPolicy extends UserPermissionsPolicy {
     }
 
     if (await this.isVerifiedAdmin()) {
-      this.builder.can("resetPassword", User);
       this.builder.can("verify", User);
     }
 
-    this.builder.can("resetPassword", User, { id: this.userId });
     this.builder.can("verify", User, { id: this.userId });
   }
 

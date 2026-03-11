@@ -20,7 +20,6 @@ import { BullModule } from "@nestjs/bullmq";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 import { UserAssociationController } from "./user-association/user-association.controller";
 import { UserAssociationService } from "./user-association/user-association.service";
-import { AdminUsersService } from "./users/admin-users.service";
 
 @Module({
   imports: [
@@ -48,8 +47,7 @@ import { AdminUsersService } from "./users/admin-users.service";
     OrganisationsService,
     OrganisationCreationService,
     ActionsService,
-    UserAssociationService,
-    AdminUsersService
+    UserAssociationService
   ]
 })
 export class AppModule {}

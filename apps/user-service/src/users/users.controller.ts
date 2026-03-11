@@ -9,13 +9,11 @@ import {
   Param,
   Patch,
   Post,
-  Res,
   UnauthorizedException
 } from "@nestjs/common";
-import { Response } from "express";
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
-import { ApiOperation, ApiParam, ApiResponse } from "@nestjs/swagger";
+import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -24,7 +22,6 @@ import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserCreateBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
-import { AdminUsersService } from "./admin-users.service";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -48,8 +45,7 @@ const USER_RESPONSE_SHAPE = {
 export class UsersController {
   constructor(
     private readonly policyService: PolicyService,
-    private readonly userCreationService: UserCreationService,
-    private readonly adminUsersService: AdminUsersService
+    private readonly userCreationService: UserCreationService
   ) {}
 
   @Get(":uuid")
@@ -116,21 +112,28 @@ export class UsersController {
   @Patch("verifyUser/:uuid")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    operationId: "adminUsersVerify",
-    description: "Verify a user's email by UUID (admin or self). V2-compatible."
+    operationId: "userVerify",
+    description: "Verify a user's email by UUID (admin or self)."
   })
   @ApiParam({ name: "uuid", description: "User UUID" })
-  @ApiResponse({ status: 200, description: "User verified", schema: { type: "string", example: "User verified." } })
+  @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "Not authorized" })
   @ExceptionResponse(NotFoundException, { description: "No user found" })
-  async adminVerify(@Param("uuid") uuid: string, @Res() res: Response) {
-    const user = await User.findOne({ where: { uuid }, attributes: ["id", "uuid"] });
+  async verifyUser(@Param("uuid") uuid: string) {
+    const user = await User.findOne({
+      include: ["roles", "organisation", "frameworks"],
+      where: { uuid }
+    });
     if (user == null) throw new NotFoundException("No user found.");
 
     await this.policyService.authorize("verify", user);
-    await this.adminUsersService.verifyByUuid(uuid);
 
-    return res.status(HttpStatus.OK).json("User verified.");
+    if (user.emailAddressVerifiedAt == null) {
+      user.emailAddressVerifiedAt = new Date();
+      await user.save();
+    }
+
+    return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {

@@ -10,6 +10,7 @@ import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { User } from "@terramatch-microservices/database/entities";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -25,11 +26,7 @@ describe("UsersController", () => {
       controllers: [UsersController],
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) },
-        {
-          provide: require("./admin-users.service").AdminUsersService,
-          useValue: createMock()
-        }
+        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) }
       ]
     }).compile();
 
@@ -109,6 +106,34 @@ describe("UsersController", () => {
         id: org.uuid,
         meta: { userStatus: "na" }
       });
+    });
+  });
+
+  describe("verifyUser", () => {
+    it("should throw not found if the user is not found", async () => {
+      mockUserId(1);
+      await expect(controller.verifyUser("missing-uuid")).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw unauthorized if policy does not authorize", async () => {
+      const { uuid } = await UserFactory.create();
+      mockUserId(1);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.verifyUser(uuid!)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should verify user and return JSON:API document", async () => {
+      const user = await UserFactory.create({ emailAddressVerifiedAt: null });
+      mockUserId(1);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      const result = serialize(await controller.verifyUser(user.uuid!));
+      const data = result.data as Resource;
+
+      expect(data.id).toBe(user.uuid);
+      const reloaded = await User.findOne({ where: { id: user.id } });
+      expect(reloaded?.emailAddressVerifiedAt).not.toBeNull();
     });
   });
 

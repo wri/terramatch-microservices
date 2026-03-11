@@ -52,19 +52,9 @@ describe("UserPolicy", () => {
     await expectCan(service, "update", await UserFactory.build({ id: 123 }));
   });
 
-  it("allows resetPassword any user with users-manage", async () => {
-    mockPermissions("users-manage");
-    await expectCan(service, "resetPassword", new User());
-  });
-
   it("allows verify any user with users-manage", async () => {
     mockPermissions("users-manage");
     await expectCan(service, "verify", new User());
-  });
-
-  it("disallows resetPassword other users as non-admin", async () => {
-    mockPermissions();
-    await expectCannot(service, "resetPassword", await UserFactory.build({ id: 999 }));
   });
 
   it("disallows verify other users as non-admin", async () => {
@@ -72,25 +62,8 @@ describe("UserPolicy", () => {
     await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
   });
 
-  it("allows resetPassword own user as non-admin", async () => {
-    mockPermissions();
-    await expectCan(service, "resetPassword", await UserFactory.build({ id: 123 }));
-  });
-
   it("allows verify own user as non-admin", async () => {
     mockPermissions();
     await expectCan(service, "verify", await UserFactory.build({ id: 123 }));
-  });
-
-  it("allows resetPassword any user for verified admin without users-manage", async () => {
-    mockPermissions();
-
-    const verifiedAdminUser = new User();
-    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
-
-    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
-
-    await expectCan(service, "resetPassword", new User());
   });
 });

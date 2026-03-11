@@ -9,7 +9,6 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   Res,
   UnauthorizedException
 } from "@nestjs/common";
@@ -114,33 +113,7 @@ export class UsersController {
     const user = await this.userCreationService.createNewUser(payload.data.attributes);
     return await this.addUserResource(buildJsonApi(UserDto), user);
   }
-
-  @Put("admin/reset-password/:uuid")
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    operationId: "adminUsersResetPassword",
-    description: "Reset a user's password by UUID (admin or self). V2-compatible."
-  })
-  @ApiParam({ name: "uuid", description: "User UUID" })
-  @ApiResponse({
-    status: 200,
-    description: "Password updated",
-    schema: { type: "string", example: "Password Updated" }
-  })
-  @ExceptionResponse(UnauthorizedException, { description: "Not authorized" })
-  @ExceptionResponse(NotFoundException, { description: "No user found" })
-  @ExceptionResponse(BadRequestException, { description: "Validation failed (e.g. password too weak)" })
-  async adminResetPassword(@Param("uuid") uuid: string, @Body() dto: { password: string }, @Res() res: Response) {
-    const user = await User.findOne({ where: { uuid }, attributes: ["id", "uuid"] });
-    if (user == null) throw new NotFoundException("No user found.");
-
-    await this.policyService.authorize("resetPassword", user);
-    await this.adminUsersService.resetPasswordByUuid(uuid, dto.password);
-
-    return res.status(HttpStatus.OK).json("Password Updated");
-  }
-
-  @Patch("admin/verify/:uuid")
+  @Patch("verifyUser/:uuid")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: "adminUsersVerify",

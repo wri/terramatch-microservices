@@ -10,7 +10,7 @@ import { faker } from "@faker-js/faker";
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { UserCreationService } from "./user-creation.service";
 
-describe("UsersController admin actions", () => {
+describe("UsersController admin verify action", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let adminUsersService: DeepMocked<AdminUsersService>;
@@ -38,46 +38,6 @@ describe("UsersController admin actions", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-  });
-
-  describe("adminResetPassword", () => {
-    const uuid = faker.string.uuid();
-    const validPassword = "NewSecureP4ss";
-
-    it("returns 200 and Password Updated when authorized and user exists", async () => {
-      const user = createMock<User>({ id: 1, uuid });
-      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
-      policyService.authorize.mockResolvedValue(undefined);
-      adminUsersService.resetPasswordByUuid.mockResolvedValue(undefined);
-
-      const res = mockRes();
-      await controller.adminResetPassword(uuid, { password: validPassword }, res);
-
-      expect(policyService.authorize).toHaveBeenCalledWith("resetPassword", user);
-      expect(adminUsersService.resetPasswordByUuid).toHaveBeenCalledWith(uuid, validPassword);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith("Password Updated");
-    });
-
-    it("throws NotFoundException when user does not exist", async () => {
-      jest.spyOn(User, "findOne").mockResolvedValue(null);
-
-      const res = mockRes();
-      await expect(controller.adminResetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
-        NotFoundException
-      );
-    });
-
-    it("throws UnauthorizedException when policy denies", async () => {
-      const user = createMock<User>({ id: 999, uuid });
-      jest.spyOn(User, "findOne").mockResolvedValue(user as unknown as User);
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
-
-      const res = mockRes();
-      await expect(controller.adminResetPassword(uuid, { password: validPassword }, res)).rejects.toThrow(
-        UnauthorizedException
-      );
-    });
   });
 
   describe("adminVerify", () => {

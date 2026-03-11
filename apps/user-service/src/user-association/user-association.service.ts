@@ -300,11 +300,11 @@ export class UserAssociationService {
     orgUsers: OrganisationUser[],
     query: UserAssociationQueryDto
   ) {
-    const orgUsersData = orgUsers.map(orgUser => orgUser.dataValues);
-    let userIds = orgUsersData.map(orgUser => orgUser.userId);
+    const partnerUserIds = orgUsers.map(orgUser => orgUser.userId);
+    const includeOwners = query.status == null || query.status === "approved";
 
-    // For "approved" status, also include owners (users where organisationId = organisation.id)
-    if (query.status === "approved") {
+    let userIds = [...partnerUserIds];
+    if (includeOwners) {
       const owners = await User.findAll({
         where: { organisationId: organisation.id },
         attributes: ["id"]
@@ -315,30 +315,39 @@ export class UserAssociationService {
 
     const users = await User.findAll({
       where: { id: { [Op.in]: userIds } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "lastLoggedInAt"
+      ],
       include: [{ association: "roles", attributes: ["name"] }]
     });
-    users.forEach(user => {
+    const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
+    filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
-      // If user is an owner (organisationId matches), treat as approved
       const isOwner = user.organisationId === organisation.id;
       const status = isOwner ? "approved" : orgUser?.status ?? "";
-      document.addData(
-        user.uuid as string,
-        new UserAssociationDto(user, {
-          status,
-          isManager: false,
-          organisationName: organisation.name ?? "",
-          roleName: user.primaryRole ?? null,
-          associatedType: "organisations"
-        })
-      );
+      const dto = new UserAssociationDto(user, {
+        status,
+        isManager: false,
+        organisationName: organisation.name ?? "",
+        roleName: user.primaryRole ?? null,
+        associatedType: "organisations"
+      });
+      dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
+      document.addData(user.uuid as string, dto);
     });
-    const indexIds = users.map(user => user.uuid as string);
+    const indexIds = filteredUsers.map(user => user.uuid as string);
     document.addIndex({
       resource: "associatedUsers",
       requestPath: `/userAssociations/v3/organisations/${organisation.uuid}${getStableRequestQuery(query)}`,
-      total: users.length,
+      total: filteredUsers.length,
       ids: indexIds
     });
   }

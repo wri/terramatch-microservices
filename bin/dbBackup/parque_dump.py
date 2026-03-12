@@ -72,8 +72,20 @@ def _export_geoparquet(
     print("Running query and writing GeoParquet...")
     con.execute(f"""
         COPY (
-            SELECT * REPLACE (ST_GeomFromHexWKB(geom) AS geom)
-            FROM mysql_query('mariadb', '{escaped_query}')
+            WITH raw AS (
+                SELECT * REPLACE (ST_GeomFromHexWKB(geom) AS geom)
+                FROM mysql_query('mariadb', '{escaped_query}')
+            )
+            SELECT * EXCLUDE (year_of_analysis, percent_cover, project_phase),
+                   MAX(project_phase) AS project_phase,
+                   MAP(
+                       LIST(year_of_analysis ORDER BY year_of_analysis)
+                           FILTER (WHERE year_of_analysis IS NOT NULL),
+                       LIST(percent_cover ORDER BY year_of_analysis)
+                           FILTER (WHERE year_of_analysis IS NOT NULL)
+                   ) AS ttc
+            FROM raw
+            GROUP BY ALL
         ) TO '{output}' (FORMAT PARQUET)
     """)
 

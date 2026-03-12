@@ -5,16 +5,28 @@ import { NotFoundException } from "@nestjs/common";
 import { VerificationUserService } from "./verification-user.service";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { VerificationFactory } from "@terramatch-microservices/database/factories/verification.factory";
+import { EmailService } from "@terramatch-microservices/common/email/email.service";
+import crypto from "node:crypto";
 
 describe("VerificationUserService", () => {
   let service: VerificationUserService;
+  let emailService: EmailService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [VerificationUserService]
+      providers: [
+        VerificationUserService,
+        {
+          provide: EmailService,
+          useValue: {
+            sendI18nTemplateEmail: jest.fn()
+          }
+        }
+      ]
     }).compile();
 
     service = module.get<VerificationUserService>(VerificationUserService);
+    emailService = module.get<EmailService>(EmailService);
   });
 
   afterEach(() => {
@@ -44,5 +56,44 @@ describe("VerificationUserService", () => {
     expect(user.emailAddressVerifiedAt).toBeDefined();
     expect(destroySpy).toHaveBeenCalled();
     expect(result).toStrictEqual({ uuid: user.uuid, isVerified: true });
+  });
+
+  it("should do nothing when user to resend verification for is not found", async () => {
+    jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+    await expect(service.resendVerificationEmail("missing@example.com")).resolves.toBeUndefined();
+  });
+
+  it("should create a new verification token and send email when user exists", async () => {
+    const user = await UserFactory.create({ emailAddress: "user@example.com" });
+    const callbackUrl = "https://example.com/verify?token=";
+    const tokenBuffer = Buffer.alloc(32, 1);
+
+    jest.spyOn(User, "findOne").mockResolvedValue(user);
+    jest.spyOn(crypto, "randomBytes").mockReturnValue(tokenBuffer);
+    const verificationCreateSpy = jest.spyOn(Verification, "create").mockResolvedValue({} as Verification);
+    const emailSpy = jest
+      .spyOn(emailService, "sendI18nTemplateEmail")
+      .mockResolvedValue(Promise.resolve() as unknown as void);
+
+    await service.resendVerificationEmail(user.emailAddress, callbackUrl);
+
+    expect(verificationCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: user.id,
+        token: tokenBuffer.toString("hex")
+      })
+    );
+    expect(emailSpy).toHaveBeenCalledWith(
+      user.emailAddress,
+      user.locale,
+      expect.any(Object),
+      expect.objectContaining({
+        additionalValues: expect.objectContaining({
+          link: expect.stringContaining(callbackUrl),
+          transactional: "transactional"
+        })
+      })
+    );
   });
 });

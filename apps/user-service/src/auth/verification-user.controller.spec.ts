@@ -51,4 +51,22 @@ describe("VerificationUserController", () => {
 
     await expect(controller.verifyUser({ token: "my token" })).rejects.toThrow(new NotFoundException("User not found"));
   });
+
+  it("should resend verification email and respond with emailAddress", async () => {
+    const emailAddress = faker.internet.email();
+    const callbackUrl = "https://example.com/verify?token=";
+
+    verificationUserService.resendVerificationEmail.mockResolvedValue();
+
+    const result = serialize(await controller.resendVerification({ emailAddress, callbackUrl }));
+
+    expect(verificationUserService.resendVerificationEmail).toHaveBeenCalledWith(emailAddress, callbackUrl);
+    expect(result).toMatchObject({
+      data: {
+        id: "no-uuid",
+        type: "verifications",
+        attributes: { emailAddress }
+      }
+    });
+  });
 });

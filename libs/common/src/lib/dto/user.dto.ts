@@ -17,6 +17,7 @@ export class UserDto {
   constructor(user: User, frameworks: Framework[]) {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
+      organisationName: user.organisation?.name ?? null,
       frameworks: frameworks
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
@@ -47,6 +48,15 @@ export class UserDto {
 
   @ApiProperty({ nullable: true, type: Date })
   emailAddressVerifiedAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "Name of the user's primary organisation, if any." })
+  organisationName: string | null;
+
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @ApiProperty({ nullable: true, type: Date })
+  lastLoggedInAt: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   locale: string | null;

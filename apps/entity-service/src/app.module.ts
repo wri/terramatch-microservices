@@ -36,6 +36,7 @@ import { AggregateReportsController } from "./entities/aggregate-reports.control
 import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
+import { ExportImageService } from "./entities/export-image.service";
 
 @Module({
   imports: [
@@ -82,7 +83,8 @@ import { ReportingFrameworksService } from "./reportingFrameworks/reporting-fram
     FormsService,
     FormDataService,
     EntitiesQueueProcessor,
-    ReportingFrameworksService
+    ReportingFrameworksService,
+    ExportImageService
   ]
 })
 export class AppModule {}

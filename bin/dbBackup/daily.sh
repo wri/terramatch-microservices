@@ -58,6 +58,8 @@ function parquetDumpToS3() {
   rm "$filename"
 }
 
+echo -e "\nBeginning Daily DB Backup for $(date -I)"
+
 echo "Beginning dump: dev"
 mysqlDumpToS3 dev
 echo "Beginning dump: test"
@@ -71,3 +73,5 @@ echo "Beginning GeoParquet generation: staging"
 parquetDumpToS3 staging
 echo "Beginning GeoParquet generation: prod"
 parquetDumpToS3 prod
+
+echo -e "Daily DB Backup for $(date -I) complete\n\n"

@@ -30,19 +30,22 @@ SELECT vp.uuid as project_id, vp.name as project_name, vp.country,
        vp.framework_key, vp.short_name, vp.cohort,
        vs.name as site_name, vs.uuid as site_id,
        sp.poly_name, sp.poly_id, sp.plantstart, sp.practice,
-       sp.target_sys, sp.status, sp.version_name, sp.is_active,
+       sp.target_sys, sp.distr, sp.calc_area,
+       sp.status, sp.version_name, sp.is_active,
        sp.source, sp.deleted_at,
+       tc.project_phase,
+       tc.year_of_analysis,
+       tc.percent_cover,
        HEX(ST_AsBinary(pg.geom)) as geom
 FROM v2_sites vs
 INNER JOIN v2_projects vp ON vp.id = vs.project_id
 INNER JOIN site_polygon sp ON sp.site_id = vs.uuid
 INNER JOIN polygon_geometry pg ON pg.uuid = sp.poly_id
+LEFT JOIN indicator_output_tree_cover tc ON tc.site_polygon_id = sp.id
 WHERE sp.status = 'approved' AND sp.is_active = 1
       AND sp.deleted_at IS NULL AND sp.plantstart IS NOT NULL
-      -- AND vp.cohort LIKE '%terrafund%'
 ORDER BY vp.short_name, vs.name, sp.poly_name\
 """
-
 
 def _export_geoparquet(
     host: str, port: int, user: str, password: str,

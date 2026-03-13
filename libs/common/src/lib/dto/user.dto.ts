@@ -59,6 +59,9 @@ export class UserDto {
   lastLoggedInAt: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
+  jobRole: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   locale: string | null;
 
   @ApiProperty({ type: () => UserFramework, isArray: true })

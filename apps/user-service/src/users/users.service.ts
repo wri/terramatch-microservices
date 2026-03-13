@@ -13,6 +13,10 @@ export class UsersService {
       {
         association: "organisation",
         attributes: ["id", "uuid", "name"]
+      },
+      {
+        association: "roles",
+        attributes: ["name"]
       }
     ];
 

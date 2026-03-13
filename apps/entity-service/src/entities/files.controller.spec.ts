@@ -240,7 +240,7 @@ describe("FilesController", () => {
       );
       expect(policyService.authorize).toHaveBeenCalledWith("updateFiles", { uuid: "model-uuid", id: 1 });
       expect(mediaService.updateMedia).toHaveBeenCalledWith(mockedMedia, {
-        data: { type: "media", id: "media-uuid", attributes: { isPublic: true } }
+        data: { type: "media", id: "media-uuid", attributes: { isPublic: true, profileImageScale: null } }
       });
     });
 

@@ -171,6 +171,7 @@ describe("AuditStatusController", () => {
         new MediaDto({} as Media, {
           url: "",
           thumbUrl: null,
+          profileImageScale: null,
           entityType: "projects",
           entityUuid: project.uuid
         })

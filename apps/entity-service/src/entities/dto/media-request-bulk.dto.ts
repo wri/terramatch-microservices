@@ -27,10 +27,10 @@ export class MediaRequestBulkAttributes {
   @ApiProperty({ type: Boolean, nullable: true, description: "Whether the media is a cover" })
   isCover: boolean | null;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  @ApiProperty({ type: String, nullable: true, description: "The profile image scale" })
-  profileImageScale: string;
+  @ApiProperty({ type: Number, nullable: true, description: "The profile image scale" })
+  profileImageScale: number | null;
 }
 
 export class MediaRequestBulkBody extends JsonApiBulkBodyDto(

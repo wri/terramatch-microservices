@@ -23,8 +23,9 @@ export class MediaRequestAttributes {
   profileImageScale: number | null;
 
   @IsBoolean()
-  @ApiProperty({ description: "Whether the media is a cover" })
-  isCover: boolean;
+  @IsOptional()
+  @ApiProperty({ type: Boolean, nullable: true, description: "Whether the media is a cover" })
+  isCover: boolean | null;
 }
 
 export class MediaRequestBody extends JsonApiBodyDto(

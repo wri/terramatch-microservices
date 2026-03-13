@@ -38,6 +38,10 @@ export class EmailService {
     });
   }
 
+  getFrontEndUrl(): string {
+    return this.configService.get<string>("APP_FRONT_END") ?? "";
+  }
+
   filterEntityEmailRecipients(recipients: User[]) {
     const entityDoNotEmailList = this.configService.get<string>("ENTITY_UPDATE_DO_NOT_EMAIL");
     if (entityDoNotEmailList == null || entityDoNotEmailList.length == 0) return recipients;

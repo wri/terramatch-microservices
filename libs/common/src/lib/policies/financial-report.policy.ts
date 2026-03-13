@@ -5,7 +5,7 @@ import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/datab
 export class FinancialReportPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "delete", "update", "approve", "updateAnswers"], FinancialReport, {
+      this.builder.can(["read", "delete", "update", "approve", "updateAnswers", "sendReminder"], FinancialReport, {
         frameworkKey: { $in: this.frameworks }
       });
     }
@@ -29,7 +29,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("reports-manage")) {
-      this.builder.can(["read", "delete", "update", "approve", "updateAnswers"], FinancialReport);
+      this.builder.can(["read", "delete", "update", "approve", "updateAnswers", "sendReminder"], FinancialReport);
     }
   }
 

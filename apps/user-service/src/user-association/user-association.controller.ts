@@ -28,7 +28,7 @@ import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.
 import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto";
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
 import { ProjectInviteAcceptBodyDto } from "./dto/project-invite-accept-body.dto";
-import { Organisation } from "@terramatch-microservices/database/entities";
+import { ProjectInviteAcceptanceDto } from "./dto/project-invite-acceptance.dto";
 
 @Controller("userAssociations/v3/:model")
 export class UserAssociationController {
@@ -138,7 +138,7 @@ export class UserAssociationController {
     operationId: "acceptProjectInvite",
     summary: "Accept a project invite by token"
   })
-  @JsonApiResponse({ data: UserAssociationDto })
+  @JsonApiResponse({ data: ProjectInviteAcceptanceDto })
   @ExceptionResponse(UnauthorizedException, {
     description: "Authentication failed, or user not found."
   })
@@ -158,23 +158,10 @@ export class UserAssociationController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const { user, project } = await this.userAssociationService.acceptProjectInvite(body.token, userId);
-    const organisation = await Organisation.findOne({
-      where: { id: project.organisationId as number },
-      attributes: ["name"]
-    });
+    const { invite, project } = await this.userAssociationService.acceptProjectInvite(body.token, userId);
 
-    const document = buildJsonApi(UserAssociationDto);
-    document.addData(
-      user.uuid as string,
-      new UserAssociationDto(user, {
-        status: "active",
-        isManager: false,
-        organisationName: organisation?.name ?? "",
-        roleName: user.primaryRole ?? null,
-        associatedType: "projects"
-      })
-    );
+    const document = buildJsonApi(ProjectInviteAcceptanceDto);
+    document.addData(invite.uuid, new ProjectInviteAcceptanceDto(invite, project.name ?? null));
 
     return document;
   }

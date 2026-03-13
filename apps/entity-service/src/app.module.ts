@@ -32,10 +32,13 @@ import { BullModule } from "@nestjs/bullmq";
 import { EntitiesQueueProcessor } from "./entities/queue/entities-queue.processor";
 import { AuditStatusController } from "./entities/audit-status.controller";
 import { AuditStatusService } from "./entities/audit-status.service";
+import { RemindersController } from "./entities/reminders.controller";
+import { RemindersService } from "./entities/reminders.service";
 import { AggregateReportsController } from "./entities/aggregate-reports.controller";
 import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
+import { ExportImageService } from "./entities/export-image.service";
 
 @Module({
   imports: [
@@ -55,6 +58,7 @@ import { ReportingFrameworksService } from "./reportingFrameworks/reporting-fram
     FilesController,
     TreesController,
     DisturbancesController,
+    RemindersController,
     AuditStatusController, // must be before EntitiesController
     AggregateReportsController, // must be before EntitiesController
     EntitiesController,
@@ -78,11 +82,13 @@ import { ReportingFrameworksService } from "./reportingFrameworks/reporting-fram
     TasksService,
     DisturbanceService,
     AuditStatusService,
+    RemindersService,
     AggregateReportsService,
     FormsService,
     FormDataService,
     EntitiesQueueProcessor,
-    ReportingFrameworksService
+    ReportingFrameworksService,
+    ExportImageService
   ]
 })
 export class AppModule {}

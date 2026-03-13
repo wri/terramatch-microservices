@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UnauthorizedException,
   UploadedFile,
   UseInterceptors
@@ -17,7 +18,7 @@ import { PolicyService } from "@terramatch-microservices/common/policies/policy.
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { MediaCollectionEntityDto } from "./dto/media-collection-entity.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { buildDeletedResponse, buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -35,6 +36,8 @@ import { SiteMediaBulkUploadDto } from "./dto/site-media-bulk-upload.dto";
 import { MediaRequestBulkBody } from "./dto/media-request-bulk.dto";
 import { MediaBulkErrorDto } from "./dto/media-bulk-error.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
+import { ExportImageService } from "./export-image.service";
+import { Response } from "express";
 
 @Controller("entities/v3/files")
 export class FilesController {
@@ -43,8 +46,38 @@ export class FilesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly mediaService: MediaService,
-    private readonly entitiesService: EntitiesService
+    private readonly entitiesService: EntitiesService,
+    private readonly exportImageService: ExportImageService
   ) {}
+
+  @Get(":uuid/exportImage")
+  @ApiOperation({
+    operationId: "exportImage",
+    summary: "Export an image with embedded metadata",
+    description:
+      "Downloads the original image file for the given media UUID with EXIF, XMP, and GPS metadata embedded. Authorization is checked against the owning entity."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Image file with embedded metadata",
+    content: { "image/*": { schema: { type: "string", format: "binary" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async exportImage(@Param() { uuid }: SingleMediaDto, @Res() res: Response) {
+    const media = await this.mediaService.getMediaWithUser(uuid);
+    const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
+    await this.policyService.authorize("read", model);
+
+    const { buffer, contentType, filename } = await this.exportImageService.exportImage(media);
+
+    res.set({
+      "Content-Type": contentType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": buffer.length
+    });
+    res.end(buffer);
+  }
 
   @Get(":uuid")
   @ApiOperation({
@@ -57,7 +90,7 @@ export class FilesController {
   async getMedia(@Param() { uuid }: SingleMediaDto) {
     const media = await this.mediaService.getMedia(uuid);
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
-    await this.policyService.authorize("read", media);
+    await this.policyService.authorize("read", model);
     return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
   }
 

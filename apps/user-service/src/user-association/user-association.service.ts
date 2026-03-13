@@ -547,7 +547,10 @@ export class UserAssociationService {
     }).sendLater(this.emailQueue);
   }
 
-  async acceptProjectInvite(token: string, userId: number): Promise<{ user: User; project: Project }> {
+  async acceptProjectInvite(
+    token: string,
+    userId: number
+  ): Promise<{ user: User; project: Project; invite: ProjectInvite }> {
     const user = await User.findOne({
       where: { id: userId },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
@@ -597,6 +600,6 @@ export class UserAssociationService {
     invite.acceptedAt = new Date();
     await invite.save();
 
-    return { user, project };
+    return { user, project, invite };
   }
 }

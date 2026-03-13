@@ -38,8 +38,7 @@ export type MediaAttributes = {
   isCover?: boolean | null;
   lat?: number | null;
   lng?: number | null;
-  // Stored internally as string in customProperties, but callers may pass number | null.
-  profileImageScale?: string | number | null;
+  profileImageScale?: number | null;
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -141,7 +140,7 @@ export class MediaService {
       delete attrs.profileImageScale;
 
       const customProps = { ...(media.customProperties ?? {}) };
-      customProps.profile_image_scale = scale != null ? String(scale) : {};
+      customProps.profile_image_scale = scale ?? null;
 
       attrs.customProperties = customProps;
     }
@@ -193,8 +192,7 @@ export class MediaService {
         isPublic: data.isPublic,
         customProperties: {
           custom_headers: { ACL: "public-read" },
-          profile_image_scale:
-            data.profileImageScale != null ? String(data.profileImageScale) : ({} as unknown as string | object)
+          profile_image_scale: data.profileImageScale ?? null
         },
         generatedConversions: {},
         isCover: data.isCover ?? false,

@@ -125,13 +125,7 @@ export class FilesController {
           this.entitiesService.userId,
           collection,
           file,
-          {
-            ...payloadData.attributes,
-            profileImageScale:
-              payloadData.attributes.profileImageScale != null
-                ? String(payloadData.attributes.profileImageScale)
-                : payloadData.attributes.profileImageScale
-          },
+          payloadData.attributes,
           transaction
         );
         createdMedias.push(media);
@@ -192,11 +186,7 @@ export class FilesController {
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
     const media = await this.mediaService.createMedia(model, entity, this.entitiesService.userId, collection, file, {
-      ...payload.data.attributes,
-      profileImageScale:
-        payload.data.attributes.profileImageScale != null
-          ? String(payload.data.attributes.profileImageScale)
-          : payload.data.attributes.profileImageScale
+      ...payload.data.attributes
     });
 
     if (payload.data.attributes.isCover) {

@@ -127,7 +127,7 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
   fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: Dictionary<object | string>;
+  customProperties: Dictionary<object | string | number | null>;
 
   @JsonColumn()
   generatedConversions: Dictionary<boolean>;

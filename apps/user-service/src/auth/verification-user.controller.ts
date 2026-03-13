@@ -39,7 +39,7 @@ export class VerificationUserController {
   async resendVerification(@Body() { emailAddress, callbackUrl }: ResendVerificationRequest) {
     await this.verificationUserService.resendVerificationEmail(emailAddress, callbackUrl);
     return buildJsonApi(ResendVerificationResponseDto).addData(
-      "no-uuid",
+      emailAddress,
       populateDto(new ResendVerificationResponseDto(), { emailAddress })
     );
   }

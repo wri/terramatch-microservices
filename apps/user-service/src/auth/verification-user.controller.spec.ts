@@ -63,7 +63,7 @@ describe("VerificationUserController", () => {
     expect(verificationUserService.resendVerificationEmail).toHaveBeenCalledWith(emailAddress, callbackUrl);
     expect(result).toMatchObject({
       data: {
-        id: "no-uuid",
+        id: emailAddress,
         type: "verifications",
         attributes: { emailAddress }
       }

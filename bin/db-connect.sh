@@ -14,32 +14,32 @@ usage() {
 }
 
 tm_bastion_host() {
-    "$DIR/bastion-instance-id.sh"
+  "$DIR/bastion-instance-id.sh"
 }
 
 tm_rds_address() {
-    "$DIR/rds-address.sh" "$1"
+  "$DIR/rds-address.sh" "$1"
 }
 
 tm_db_password() {
-    aws secretsmanager get-secret-value --secret-id db-admin-password-"$1" --query "SecretString" --output text
+  aws secretsmanager get-secret-value --secret-id db-admin-password-"$1" --query "SecretString" --output text
 }
 
 wait_for_port() {
-    nc -z localhost "$1"
-    local code=$?
-    local waits=1
-    until [ $code -eq 0 ]; do
-        sleep 1
-        ((waits++))
-        if [ $waits -gt 15 ]; then
-            echo "Timed out waiting for port $1"
-            return $code
-        fi
+  nc -z localhost "$1"
+  local code=$?
+  local waits=1
+  until [ $code -eq 0 ]; do
+    sleep 1
+    ((waits++))
+    if [ $waits -gt 15 ]; then
+      echo "Timed out waiting for port $1"
+      return $code
+    fi
 
-        nc -z localhost "$1"
-        local code=$?
-    done
+    nc -z localhost "$1"
+    code=$?
+done
 }
 
 declare env host address password
@@ -74,9 +74,9 @@ if [[ "$env" = "" ]]; then echo -e "Env missing\n"; usage 1; fi
 if [[ " ${ENVS[*]} " != *" $env "* ]]; then echo -e "Invalid env: $env\n"; usage 1; fi
 
 if ! host=$(tm_bastion_host); then echo "Getting bastion host failed"; exit 1; fi
-if ! address=$(tm_rds_address "$1"); then echo "Getting RDS address failed"; exit 1; fi
+if ! address=$(tm_rds_address "$env"); then echo "Getting RDS address failed"; exit 1; fi
 if [ $forwardOnly = false ]; then
-  if ! password=$(tm_db_password "$1"); then echo "Getting DB password failed"; exit 1; fi
+  if ! password=$(tm_db_password "$env"); then echo "Getting DB password failed"; exit 1; fi
 fi
 
 echo "Connecting to RDS instance $address through bastion host $host"

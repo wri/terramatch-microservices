@@ -125,7 +125,13 @@ export class FilesController {
           this.entitiesService.userId,
           collection,
           file,
-          payloadData.attributes,
+          {
+            ...payloadData.attributes,
+            profileImageScale:
+              payloadData.attributes.profileImageScale != null
+                ? String(payloadData.attributes.profileImageScale)
+                : payloadData.attributes.profileImageScale
+          },
           transaction
         );
         createdMedias.push(media);

@@ -191,7 +191,8 @@ export class OrganisationsService {
                   media =>
                     new EmbeddedMediaDto(media, {
                       url: this.mediaService.getUrl(media),
-                      thumbUrl: this.mediaService.getUrl(media, "thumbnail")
+                      thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+                      profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
                     })
                 )
               : null;
@@ -233,7 +234,8 @@ export class OrganisationsService {
               entityType: "organisations" as const,
               entityUuid: organisation.uuid,
               url: this.mediaService.getUrl(media),
-              thumbUrl: this.mediaService.getUrl(media, "thumbnail")
+              thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
+              profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
             })
           );
         }

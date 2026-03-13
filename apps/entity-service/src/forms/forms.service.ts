@@ -132,6 +132,7 @@ export class FormsService {
               : new MediaDto(banner, {
                   url: this.mediaService.getUrl(banner),
                   thumbUrl: this.mediaService.getUrl(banner, "thumbnail"),
+                  profileImageScale: banner.customProperties?.profile_image_scale as unknown as number | null,
                   entityType: "forms",
                   entityUuid: form.uuid
                 })
@@ -248,6 +249,7 @@ export class FormsService {
             : new MediaDto(bannerMedia, {
                 url: this.mediaService.getUrl(bannerMedia),
                 thumbUrl: this.mediaService.getUrl(bannerMedia, "thumbnail"),
+                profileImageScale: bannerMedia.customProperties?.profile_image_scale as unknown as number | null,
                 entityType: "forms",
                 entityUuid: form.uuid
               }),

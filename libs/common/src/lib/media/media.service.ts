@@ -38,7 +38,8 @@ export type MediaAttributes = {
   isCover?: boolean | null;
   lat?: number | null;
   lng?: number | null;
-  profileImageScale?: string | null;
+  // Stored internally as string in customProperties, but callers may pass number | null.
+  profileImageScale?: string | number | null;
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -190,7 +191,11 @@ export class MediaService {
         mimeType: file.mimetype,
         fileType: this.getMediaType(file, configuration),
         isPublic: data.isPublic,
-        customProperties: { custom_headers: { ACL: "public-read" }, profile_image_scale: data.profileImageScale ?? {} },
+        customProperties: {
+          custom_headers: { ACL: "public-read" },
+          profile_image_scale:
+            data.profileImageScale != null ? String(data.profileImageScale) : ({} as unknown as string | object)
+        },
         generatedConversions: {},
         isCover: data.isCover ?? false,
         lat: data.lat ?? null,

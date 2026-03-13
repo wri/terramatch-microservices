@@ -83,14 +83,15 @@ export class SitePolygonCreationService {
     data: SitePolygon[];
     included: ValidationIncludedData[];
   }> {
-    const { createdPolygons, duplicatePolygons, duplicateValidations } = await this.storeAndValidateGeometries(
-      request.geometries,
-      userId,
-      source,
-      userFullName
-    );
+    const { createdPolygons, duplicatePolygons, duplicateValidations, polygonInputIndices } =
+      await this.storeAndValidateGeometries(request.geometries, userId, source, userFullName);
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
+    allPolygons.sort((a, b) => {
+      const ia = polygonInputIndices.get(a.uuid) ?? Number.MAX_SAFE_INTEGER;
+      const ib = polygonInputIndices.get(b.uuid) ?? Number.MAX_SAFE_INTEGER;
+      return ia - ib;
+    });
 
     return {
       data: allPolygons,
@@ -107,25 +108,33 @@ export class SitePolygonCreationService {
     createdPolygons: SitePolygon[];
     duplicatePolygons: SitePolygon[];
     duplicateValidations: ValidationIncludedData[];
+    polygonInputIndices: Map<string, number>;
   }> {
     const transaction = await PolygonGeometry.sql.transaction();
     const allCreatedSitePolygons: SitePolygon[] = [];
     const allDuplicatePolygons: SitePolygon[] = [];
     const allPolygonUuids: string[] = [];
     const duplicateValidations: ValidationIncludedData[] = [];
+    const allPolygonInputIndices = new Map<string, number>();
 
     try {
+      let globalInputIndex = 0;
+      for (const geomCollection of geometries) {
+        for (const feature of geomCollection.features ?? []) {
+          feature.properties = { ...(feature.properties ?? {}), __inputIndex: globalInputIndex++ };
+        }
+      }
+
       const groupedBySite = this.groupGeometriesBySiteId(geometries);
 
       await this.validateSitesExist(Object.keys(groupedBySite), transaction);
 
       for (const [siteId, siteGeometries] of Object.entries(groupedBySite)) {
-        const { features: mergedFeatures, duplicatePointUuids } = await this.transformPointFeaturesToPolygons(
-          siteGeometries,
-          siteId,
-          userId,
-          transaction
-        );
+        const {
+          features: mergedFeatures,
+          duplicatePointUuids,
+          duplicatePointUuidToInputIndex
+        } = await this.transformPointFeaturesToPolygons(siteGeometries, siteId, userId, transaction);
 
         if (duplicatePointUuids.length > 0) {
           const existingPointSitePolygons = await SitePolygon.findAll({
@@ -135,6 +144,12 @@ export class SitePolygonCreationService {
 
           if (existingPointSitePolygons.length > 0) {
             allDuplicatePolygons.push(...existingPointSitePolygons);
+
+            for (const sp of existingPointSitePolygons) {
+              const inputIndex = duplicatePointUuidToInputIndex.get(sp.pointUuid ?? "") ?? Number.MAX_SAFE_INTEGER;
+              allPolygonInputIndices.set(sp.uuid, inputIndex);
+            }
+
             const duplicatePointValidationMap = new Map<string, ValidationIncludedData>();
 
             for (const duplicateSitePolygon of existingPointSitePolygons) {
@@ -191,11 +206,18 @@ export class SitePolygonCreationService {
             duplicateIndexToUuid = duplicateResult.duplicateIndexToUuid;
           }
 
+          const geomUuidToInputIndex = new Map<string, number>();
           const existingDuplicateUuids: string[] = [];
           const duplicateValidationMap = new Map<string, ValidationIncludedData>();
 
-          for (const [, existingUuid] of duplicateIndexToUuid.entries()) {
+          for (const [localIdx, existingUuid] of duplicateIndexToUuid.entries()) {
             existingDuplicateUuids.push(existingUuid);
+
+            if (!geomUuidToInputIndex.has(existingUuid)) {
+              const inputIndex =
+                (regularFeatures[localIdx]?.properties?.__inputIndex as number) ?? Number.MAX_SAFE_INTEGER;
+              geomUuidToInputIndex.set(existingUuid, inputIndex);
+            }
 
             if (!duplicateValidationMap.has(existingUuid)) {
               duplicateValidationMap.set(existingUuid, {
@@ -231,6 +253,10 @@ export class SitePolygonCreationService {
             allDuplicatePolygons.push(...existingDuplicatePolygons);
 
             for (const duplicatePolygon of existingDuplicatePolygons) {
+              const inputIndex =
+                geomUuidToInputIndex.get(duplicatePolygon.polygonUuid ?? "") ?? Number.MAX_SAFE_INTEGER;
+              allPolygonInputIndices.set(duplicatePolygon.uuid, inputIndex);
+
               const validation = duplicateValidationMap.get(duplicatePolygon.polygonUuid);
               if (validation != null) {
                 const duplicateCriteria = validation.attributes.criteriaList.find(c => c.criteriaId === 16);
@@ -254,27 +280,16 @@ export class SitePolygonCreationService {
 
           const allFeaturesToCreate = [...filteredRegularFeatures, ...voronoiFeatures];
 
-          let createdSitePolygons: SitePolygon[];
           if (allFeaturesToCreate.length > 0) {
-            if (allFeaturesToCreate.length > LARGE_BATCH_THRESHOLD) {
-              createdSitePolygons = await this.processLargeGeometryBatch(
-                allFeaturesToCreate,
-                siteId,
-                userId,
-                source,
-                transaction
-              );
-            } else {
-              createdSitePolygons = await this.createPolygonsBatch(
-                allFeaturesToCreate,
-                siteId,
-                userId,
-                source,
-                transaction
-              );
-            }
+            const { sitePolygons: createdSitePolygons, inputIndices } =
+              allFeaturesToCreate.length > LARGE_BATCH_THRESHOLD
+                ? await this.processLargeGeometryBatch(allFeaturesToCreate, siteId, userId, source, transaction)
+                : await this.createPolygonsBatch(allFeaturesToCreate, siteId, userId, source, transaction);
 
             allCreatedSitePolygons.push(...createdSitePolygons);
+            for (const [uuid, idx] of inputIndices.entries()) {
+              allPolygonInputIndices.set(uuid, idx);
+            }
             allPolygonUuids.push(
               ...createdSitePolygons.map(sp => sp.polygonUuid).filter((u): u is string => u != null)
             );
@@ -297,7 +312,8 @@ export class SitePolygonCreationService {
       return {
         createdPolygons: allCreatedSitePolygons,
         duplicatePolygons: allDuplicatePolygons,
-        duplicateValidations
+        duplicateValidations,
+        polygonInputIndices: allPolygonInputIndices
       };
     } catch (error) {
       await transaction.rollback();
@@ -310,7 +326,11 @@ export class SitePolygonCreationService {
     siteId: string,
     userId: number,
     transaction: Transaction
-  ): Promise<{ features: Feature[]; duplicatePointUuids: string[] }> {
+  ): Promise<{
+    features: Feature[];
+    duplicatePointUuids: string[];
+    duplicatePointUuidToInputIndex: Map<string, number>;
+  }> {
     const points: Feature[] = [];
     for (const feature of features) {
       const geometry = feature.geometry;
@@ -334,7 +354,7 @@ export class SitePolygonCreationService {
     }
 
     if (points.length === 0) {
-      return { features, duplicatePointUuids: [] };
+      return { features, duplicatePointUuids: [], duplicatePointUuidToInputIndex: new Map() };
     }
 
     for (const p of points) {
@@ -358,12 +378,17 @@ export class SitePolygonCreationService {
     const duplicatePointUuids: string[] = [];
     const newPointIndices: number[] = [];
     const pointIndexToUuidMap = new Map<number, string>();
+    const duplicatePointUuidToInputIndex = new Map<string, number>();
 
     for (let i = 0; i < points.length; i++) {
       const existingUuid = pointDuplicateMap.get(i);
       if (existingUuid != null) {
         pointIndexToUuidMap.set(i, existingUuid);
         duplicatePointUuids.push(existingUuid);
+        if (!duplicatePointUuidToInputIndex.has(existingUuid)) {
+          const inputIndex = (points[i]?.properties?.__inputIndex as number) ?? Number.MAX_SAFE_INTEGER;
+          duplicatePointUuidToInputIndex.set(existingUuid, inputIndex);
+        }
       } else {
         newPoints.push(points[i]);
         newPointIndices.push(i);
@@ -397,9 +422,10 @@ export class SitePolygonCreationService {
 
     const voronoiPolys = newPoints.length > 0 ? await this.voronoiService.transformPointsToPolygons(newPoints) : [];
 
-    for (const voronoiPoly of voronoiPolys) {
-      if (voronoiPoly.properties != null) {
-        voronoiPoly.properties._fromVoronoi = true;
+    for (let i = 0; i < voronoiPolys.length; i++) {
+      if (voronoiPolys[i].properties != null) {
+        voronoiPolys[i].properties._fromVoronoi = true;
+        voronoiPolys[i].properties.__inputIndex = newPoints[i]?.properties?.__inputIndex;
       }
     }
 
@@ -407,7 +433,7 @@ export class SitePolygonCreationService {
       const geomType = f.geometry.type as string;
       return geomType !== "Point" && geomType !== "MultiPoint";
     });
-    return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids };
+    return { features: [...nonPoints, ...voronoiPolys], duplicatePointUuids, duplicatePointUuidToInputIndex };
   }
 
   private groupGeometriesBySiteId(geometries: { features: Feature[] }[]): { [siteId: string]: Feature[] } {
@@ -506,16 +532,26 @@ export class SitePolygonCreationService {
     userId: number,
     source: string,
     transaction: Transaction
-  ): Promise<SitePolygon[]> {
+  ): Promise<{ sitePolygons: SitePolygon[]; inputIndices: Map<string, number> }> {
     const allSitePolygons: SitePolygon[] = [];
+    const allInputIndices = new Map<string, number>();
 
     for (let i = 0; i < features.length; i += CHUNK_SIZE) {
       const chunk = features.slice(i, i + CHUNK_SIZE);
-      const chunkSitePolygons = await this.createPolygonsBatch(chunk, siteId, userId, source, transaction);
+      const { sitePolygons: chunkSitePolygons, inputIndices: chunkIndices } = await this.createPolygonsBatch(
+        chunk,
+        siteId,
+        userId,
+        source,
+        transaction
+      );
       allSitePolygons.push(...chunkSitePolygons);
+      for (const [uuid, idx] of chunkIndices.entries()) {
+        allInputIndices.set(uuid, idx);
+      }
     }
 
-    return allSitePolygons;
+    return { sitePolygons: allSitePolygons, inputIndices: allInputIndices };
   }
 
   private async createPolygonsBatch(
@@ -524,7 +560,7 @@ export class SitePolygonCreationService {
     userId: number,
     source: string,
     transaction: Transaction
-  ): Promise<SitePolygon[]> {
+  ): Promise<{ sitePolygons: SitePolygon[]; inputIndices: Map<string, number> }> {
     const unsupportedTypes = new Set<string>();
     for (const feature of features) {
       const geomType = feature.geometry.type as string;
@@ -559,8 +595,9 @@ export class SitePolygonCreationService {
     userId: number,
     source: string,
     transaction: Transaction
-  ): Promise<SitePolygon[]> {
+  ): Promise<{ sitePolygons: SitePolygon[]; inputIndices: Map<string, number> }> {
     const sitePolygons: Partial<SitePolygon>[] = [];
+    const sitePolygonInputIndices: number[] = [];
     const additionalDataRecords: Partial<SitePolygonData>[] = [];
     let polygonIndex = 0;
 
@@ -569,11 +606,15 @@ export class SitePolygonCreationService {
       const geometry = feature.geometry;
       const properties = feature.properties;
       const numPolygons = geometry.type === "MultiPolygon" ? (geometry.coordinates as number[][][][]).length : 1;
+      const { __inputIndex, ...userProperties } = (properties ?? {}) as Record<string, unknown> & {
+        __inputIndex?: number;
+      };
+      const inputIndex = __inputIndex ?? Number.MAX_SAFE_INTEGER;
 
       for (let j = 0; j < numPolygons; j++) {
         const sitePolygonUuid = uuidv4();
 
-        const allProperties = { ...properties };
+        const allProperties = { ...userProperties };
         if (siteId != null) {
           allProperties.siteId = siteId;
           allProperties.site_id = siteId;
@@ -602,6 +643,8 @@ export class SitePolygonCreationService {
           validationStatus: null
         });
 
+        sitePolygonInputIndices.push(inputIndex);
+
         if (Object.keys(additionalData).length > 0) {
           additionalDataRecords.push({
             sitePolygonUuid,
@@ -626,7 +669,12 @@ export class SitePolygonCreationService {
       });
     }
 
-    return createdSitePolygons;
+    const inputIndices = new Map<string, number>();
+    for (let i = 0; i < createdSitePolygons.length; i++) {
+      inputIndices.set(createdSitePolygons[i].uuid, sitePolygonInputIndices[i]);
+    }
+
+    return { sitePolygons: createdSitePolygons, inputIndices };
   }
 
   private async updateSitePolygonNames(

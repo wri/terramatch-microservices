@@ -338,6 +338,24 @@ export class MediaService {
     return media;
   }
 
+  async getMediaWithUser(uuid: string) {
+    const media = await Media.findOne({
+      where: { uuid },
+      include: [{ association: "createdByUser", attributes: ["firstName", "lastName"] }]
+    });
+    if (media == null) throw new NotFoundException();
+    return media;
+  }
+
+  async getMediaBuffer(media: Media): Promise<Buffer> {
+    const stream = await this.fileService.readRemoteFile(this.bucket, `${media.id}/${media.fileName}`);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
   async deleteMediaFromS3(media: Media) {
     this.logger.log(`Deleting media ${media.uuid} from S3`);
     await this.fileService.deleteRemoteFile(this.bucket, `${media.id}/${media.fileName}`);

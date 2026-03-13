@@ -29,7 +29,6 @@ import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto"
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
 import { ProjectInviteAcceptBodyDto } from "./dto/project-invite-accept-body.dto";
 import { ProjectInviteAcceptanceDto } from "./dto/project-invite-acceptance.dto";
-import { Organisation } from "@terramatch-microservices/database/entities";
 
 @Controller("userAssociations/v3/:model")
 export class UserAssociationController {

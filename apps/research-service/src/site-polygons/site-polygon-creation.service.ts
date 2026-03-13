@@ -138,7 +138,7 @@ export class SitePolygonCreationService {
 
         if (duplicatePointUuids.length > 0) {
           const existingPointSitePolygons = await SitePolygon.findAll({
-            where: { pointUuid: { [Op.in]: duplicatePointUuids }, isActive: true, siteUuid: siteId },
+            where: { pointUuid: { [Op.in]: duplicatePointUuids }, isActive: true },
             transaction
           });
 

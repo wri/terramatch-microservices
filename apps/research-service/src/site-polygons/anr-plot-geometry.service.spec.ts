@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { InternalServerErrorException } from "@nestjs/common";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { AnrPlotGeometryService } from "./anr-plot-geometry.service";
 import { AnrPlotGeometry } from "@terramatch-microservices/database/entities";
 import { FeatureCollection } from "geojson";
@@ -81,6 +81,28 @@ describe("AnrPlotGeometryService", () => {
         where: { sitePolygonUuid: "non-existent-uuid" }
       });
       expect(result).toBeNull();
+    });
+  });
+
+  describe("getPlotOrThrow", () => {
+    it("should return plot when found", async () => {
+      (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(mockPlot as AnrPlotGeometry);
+
+      const result = await service.getPlotOrThrow("site-polygon-uuid");
+
+      expect(AnrPlotGeometry.findOne).toHaveBeenCalledWith({
+        where: { sitePolygonUuid: "site-polygon-uuid" }
+      });
+      expect(result).toEqual(mockPlot);
+    });
+
+    it("should throw NotFoundException when plot not found", async () => {
+      (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.getPlotOrThrow("non-existent-uuid")).rejects.toThrow(NotFoundException);
+      await expect(service.getPlotOrThrow("non-existent-uuid")).rejects.toThrow(
+        "No ANR plot geometry found for polygon non-existent-uuid"
+      );
     });
   });
 

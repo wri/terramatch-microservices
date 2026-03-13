@@ -104,6 +104,13 @@ To open a port forwarding connection to the RDS instance through the bastion hos
 > ssh -N ubuntu@<bastion host> -L 3311:<rds address>:3306
 ```
 
+Alternatively, there is a handy script in this repository with some options for simply connecting the forwarded port, or to open
+the local MySQL client pointing to the forwarded port. Running with no args will print usage information.
+
+```
+> ./bin/db-connect.sh
+```
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The

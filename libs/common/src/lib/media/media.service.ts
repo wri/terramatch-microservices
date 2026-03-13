@@ -35,8 +35,10 @@ import { FileService } from "../file/file.service";
 
 export type MediaAttributes = {
   isPublic: boolean;
+  isCover?: boolean | null;
   lat?: number | null;
   lng?: number | null;
+  profileImageScale?: string | null;
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -175,8 +177,9 @@ export class MediaService {
         mimeType: file.mimetype,
         fileType: this.getMediaType(file, configuration),
         isPublic: data.isPublic,
-        customProperties: { custom_headers: { ACL: "public-read" } },
+        customProperties: { custom_headers: { ACL: "public-read" }, profile_image_scale: data.profileImageScale ?? {} },
         generatedConversions: {},
+        isCover: data.isCover ?? false,
         lat: data.lat ?? null,
         lng: data.lng ?? null,
         size: file.size,

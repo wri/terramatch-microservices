@@ -245,6 +245,7 @@ export class EntitiesService {
     return new MediaDto(media, {
       url: this.fullUrl(media),
       thumbUrl: this.thumbnailUrl(media),
+      profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null,
       ...additional
     });
   }

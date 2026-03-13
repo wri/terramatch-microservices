@@ -122,7 +122,8 @@ export class FilesController {
             url: this.mediaService.getUrl(media),
             thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
             entityType: entity,
-            entityUuid: model.uuid
+            entityUuid: model.uuid,
+            profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
           })
         );
       }
@@ -151,21 +152,21 @@ export class FilesController {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const media = await this.mediaService.createMedia(
-      model,
-      entity,
-      this.entitiesService.userId,
-      collection,
-      file,
-      payload.data.attributes
-    );
+    const media = await this.mediaService.createMedia(model, entity, this.entitiesService.userId, collection, file, {
+      ...payload.data.attributes,
+      profileImageScale:
+        payload.data.attributes.profileImageScale != null
+          ? String(payload.data.attributes.profileImageScale)
+          : payload.data.attributes.profileImageScale
+    });
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {
         url: this.mediaService.getUrl(media),
         thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
         entityType: entity,
-        entityUuid: model.uuid
+        entityUuid: model.uuid,
+        profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
       })
     );
   }
@@ -195,7 +196,8 @@ export class FilesController {
         url: this.mediaService.getUrl(updatedMedia),
         thumbUrl: this.mediaService.getUrl(updatedMedia, "thumbnail"),
         entityType: updatedMedia.modelType as EntityType,
-        entityUuid: model.uuid
+        entityUuid: model.uuid,
+        profileImageScale: updatedMedia.customProperties?.profile_image_scale as unknown as number | null
       })
     );
 
@@ -210,7 +212,8 @@ export class FilesController {
             url: this.mediaService.getUrl(media),
             thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
             entityType: media.modelType as EntityType,
-            entityUuid: model.uuid
+            entityUuid: model.uuid,
+            profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
           }),
           true
         );

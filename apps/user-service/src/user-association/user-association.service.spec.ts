@@ -1150,7 +1150,7 @@ describe("UserAssociationService", () => {
       });
       expect(invite.acceptedAt).toBeInstanceOf(Date);
       expect(invite.save).toHaveBeenCalled();
-      expect(result).toEqual({ user, project });
+      expect(result).toEqual({ user, project, invite });
     });
 
     it("should update existing ProjectUser and accept invite", async () => {

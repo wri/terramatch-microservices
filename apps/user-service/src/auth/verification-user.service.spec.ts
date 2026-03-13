@@ -70,7 +70,7 @@ describe("VerificationUserService", () => {
     const tokenBuffer = Buffer.alloc(32, 1);
 
     jest.spyOn(User, "findOne").mockResolvedValue(user);
-    jest.spyOn(crypto, "randomBytes").mockReturnValue(tokenBuffer);
+    (jest.spyOn(crypto, "randomBytes") as jest.SpyInstance<Buffer, [number]>).mockReturnValue(tokenBuffer);
     const verificationCreateSpy = jest.spyOn(Verification, "create").mockResolvedValue({} as Verification);
     const emailSpy = jest
       .spyOn(emailService, "sendI18nTemplateEmail")
@@ -91,6 +91,45 @@ describe("VerificationUserService", () => {
       expect.objectContaining({
         additionalValues: expect.objectContaining({
           link: expect.stringContaining(callbackUrl),
+          transactional: "transactional"
+        })
+      })
+    );
+  });
+
+  it("should skip sending verification email when user has no email address", async () => {
+    const user = await UserFactory.create({ emailAddress: null });
+
+    jest.spyOn(User, "findOne").mockResolvedValue(user);
+    const verificationCreateSpy = jest.spyOn(Verification, "create");
+    const emailSpy = jest.spyOn(emailService, "sendI18nTemplateEmail");
+
+    await service.resendVerificationEmail("missing-email@example.com", "https://example.com/verify?token=");
+
+    expect(verificationCreateSpy).not.toHaveBeenCalled();
+    expect(emailSpy).not.toHaveBeenCalled();
+  });
+
+  it("should use default verify path when callbackUrl is not provided", async () => {
+    const user = await UserFactory.create({ emailAddress: "user2@example.com" });
+    const tokenBuffer = Buffer.alloc(32, 2);
+
+    jest.spyOn(User, "findOne").mockResolvedValue(user);
+    (jest.spyOn(crypto, "randomBytes") as jest.SpyInstance<Buffer, [number]>).mockReturnValue(tokenBuffer);
+    jest.spyOn(Verification, "create").mockResolvedValue({} as Verification);
+    const emailSpy = jest
+      .spyOn(emailService, "sendI18nTemplateEmail")
+      .mockResolvedValue(Promise.resolve() as unknown as void);
+
+    await service.resendVerificationEmail(user.emailAddress);
+
+    expect(emailSpy).toHaveBeenCalledWith(
+      user.emailAddress,
+      user.locale,
+      expect.any(Object),
+      expect.objectContaining({
+        additionalValues: expect.objectContaining({
+          link: expect.stringContaining("/verify?token="),
           transactional: "transactional"
         })
       })

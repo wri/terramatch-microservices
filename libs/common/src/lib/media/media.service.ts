@@ -132,7 +132,7 @@ export class MediaService {
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
-    const attrs: any = { ...updatePayload.data.attributes };
+    const attrs = { ...updatePayload.data.attributes } as Partial<Media>;
 
     // Store profileImageScale in customProperties.profile_image_scale (same pattern as createMedia)
     if ("profileImageScale" in attrs) {
@@ -140,7 +140,7 @@ export class MediaService {
       delete attrs.profileImageScale;
 
       const customProps = { ...(media.customProperties ?? {}) };
-      customProps.profile_image_scale = scale != null ? String(scale) : ({} as unknown as string | object);
+      customProps.profile_image_scale = scale != null ? String(scale) : {};
 
       attrs.customProperties = customProps;
     }

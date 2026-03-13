@@ -58,7 +58,8 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
         const createDto = (media: Media) =>
           new EmbeddedMediaDto(media, {
             url: mediaService.getUrl(media),
-            thumbUrl: mediaService.getUrl(media, "thumbnail")
+            thumbUrl: mediaService.getUrl(media, "thumbnail"),
+            profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
           });
         if (configuration.multiple) {
           answers[questionUuid] = media.length == 0 ? undefined : media.map(createDto);

@@ -46,7 +46,12 @@ describe("FileCollector", () => {
     );
 
     harness.mediaService.getUrl.mockReturnValue("");
-    const createDto = (media: Media) => new EmbeddedMediaDto(media, { url: "", thumbUrl: "" });
+    const createDto = (media: Media) =>
+      new EmbeddedMediaDto(media, {
+        url: "",
+        thumbUrl: "",
+        profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+      });
 
     const site = await SiteFactory.create();
     const siteMedia = await Promise.all([

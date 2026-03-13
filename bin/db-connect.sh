@@ -79,7 +79,7 @@ if [ $forwardOnly = false ]; then
   if ! password=$(tm_db_password "$1"); then echo "Getting DB password failed"; exit 1; fi
 fi
 
-echo "Connection to RDS instance $address through bastion host $host"
+echo "Connecting to RDS instance $address through bastion host $host"
 ssh -N "ubuntu@$host" -L "$port:$address:3306" &
 declare sshPid=$!
 

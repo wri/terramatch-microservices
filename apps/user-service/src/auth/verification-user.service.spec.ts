@@ -70,7 +70,7 @@ describe("VerificationUserService", () => {
     const tokenBuffer = Buffer.alloc(32, 1);
 
     jest.spyOn(User, "findOne").mockResolvedValue(user);
-    (jest.spyOn(crypto, "randomBytes") as jest.SpyInstance<Buffer, [number]>).mockReturnValue(tokenBuffer);
+    jest.spyOn(crypto, "randomBytes").mockImplementation(() => tokenBuffer as unknown as Buffer);
     const verificationCreateSpy = jest.spyOn(Verification, "create").mockResolvedValue({} as Verification);
     const emailSpy = jest
       .spyOn(emailService, "sendI18nTemplateEmail")
@@ -98,7 +98,10 @@ describe("VerificationUserService", () => {
   });
 
   it("should skip sending verification email when user has no email address", async () => {
-    const user = await UserFactory.create({ emailAddress: null });
+    const user = await UserFactory.create();
+    // Simulate missing email address on the persisted user
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (user as any).emailAddress = null;
 
     jest.spyOn(User, "findOne").mockResolvedValue(user);
     const verificationCreateSpy = jest.spyOn(Verification, "create");
@@ -115,7 +118,7 @@ describe("VerificationUserService", () => {
     const tokenBuffer = Buffer.alloc(32, 2);
 
     jest.spyOn(User, "findOne").mockResolvedValue(user);
-    (jest.spyOn(crypto, "randomBytes") as jest.SpyInstance<Buffer, [number]>).mockReturnValue(tokenBuffer);
+    jest.spyOn(crypto, "randomBytes").mockImplementation(() => tokenBuffer as unknown as Buffer);
     jest.spyOn(Verification, "create").mockResolvedValue({} as Verification);
     const emailSpy = jest
       .spyOn(emailService, "sendI18nTemplateEmail")

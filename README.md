@@ -105,10 +105,37 @@ To open a port forwarding connection to the RDS instance through the bastion hos
 ```
 
 Alternatively, there is a handy script in this repository with some options for simply connecting the forwarded port, or to open
-the local MySQL client pointing to the forwarded port. Running with no args will print usage information.
+the local MySQL client pointing to the forwarded port.
 
 ```
-> ./bin/db-connect.sh
+// Get usage info
+> ./bin/db-connect.sh -h
+Port forward an AWS RDS DB connection through the bastion host.
+
+Usage: ./bin/db-connect.sh [-p <local port>] [-f] [-t] env
+  -p: Local port to forward the RDS connection to. Default is 3311
+  -f: Forward the port only. The default behavior launches the MySQL client to connect to the DB.
+  -t: Tabbed output when piping in an SQL script. By default, if a query is being piped in, the results will display in a table
+  env: Environment to connect to. Options are: dev test staging prod
+
+// Get an interactive MySQL client terminal
+> ./bin/db-connect.sh staging
+
+// Simply connect the port forwarding and wait for ctrl-c to end it
+> ./bin/db-connect.sh -f staging
+
+// Pass in a prepared query (Use -t to get tab-delineated output instead of the table)
+❯ echo "select created_at, email_address from users order by created_at DESC limit 1;" | ./bin/db-connect.sh staging
+Connecting to RDS instance wri-terramatch-staging.ckjgcaidltop.eu-west-1.rds.amazonaws.com through bastion host i-0af3d687c74681361
+Connection to localhost port 3311 [tcp/mcns-tel-ret] succeeded!
++---------------------+----------------------------+
+| created_at          | email_address              |
++---------------------+----------------------------+
+| 2026-03-12 19:30:16 | marco.antonio@vizonomy.com |
++---------------------+----------------------------+
+
+// Or send in a more complicated saved query
+> cat complicated_query.sql | ./bin/db-connect.sh -t staging > query_results.tsv
 ```
 
 # Deployment

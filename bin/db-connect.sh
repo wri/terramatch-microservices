@@ -39,7 +39,7 @@ wait_for_port() {
 
     nc -z localhost "$1"
     code=$?
-done
+  done
 }
 
 declare env host address password

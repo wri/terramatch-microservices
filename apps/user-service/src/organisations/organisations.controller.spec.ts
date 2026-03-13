@@ -269,7 +269,8 @@ describe("OrganisationsController", () => {
                       media =>
                         new EmbeddedMediaDto(media, {
                           url: mediaService.getUrl(media),
-                          thumbUrl: mediaService.getUrl(media, "thumbnail")
+                          thumbUrl: mediaService.getUrl(media, "thumbnail"),
+                          profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
                         })
                     )
                   : null;
@@ -467,7 +468,8 @@ describe("OrganisationsController", () => {
                   entityType: "organisations" as const,
                   entityUuid: organisation.uuid,
                   url: mediaService.getUrl(media),
-                  thumbUrl: mediaService.getUrl(media, "thumbnail")
+                  thumbUrl: mediaService.getUrl(media, "thumbnail"),
+                  profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
                 })
               );
             }
@@ -843,7 +845,8 @@ describe("OrganisationsController", () => {
                 entityType: "organisations" as const,
                 entityUuid: organisation.uuid,
                 url: mediaService.getUrl(media),
-                thumbUrl: mediaService.getUrl(media, "thumbnail")
+                thumbUrl: mediaService.getUrl(media, "thumbnail"),
+                profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
               })
             );
           }

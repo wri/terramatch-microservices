@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ENVS=("dev" "test" "staging" "prod")
-DIR=$(dirname "$0")
 
 usage() {
   echo -e "Port forward an AWS RDS DB connection through the bastion host.\n"
@@ -14,11 +13,11 @@ usage() {
 }
 
 tm_bastion_host() {
-  "$DIR/bastion-instance-id.sh"
+  aws ec2 describe-instances --filters "Name=tag:Name,Values=wri-terramatch-staging-geoserver" --query "Reservations[].Instances[].InstanceId" --output text
 }
 
 tm_rds_address() {
-  "$DIR/rds-address.sh" "$1"
+  aws rds describe-db-instances --db-instance-identifier wri-terramatch-"$1" --query "DBInstances[0].[Endpoint.Address]" --output text
 }
 
 tm_db_password() {

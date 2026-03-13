@@ -61,16 +61,15 @@ export class ExportImageService {
       }
     };
 
-    const coordinatesBlock =
-      geotagged && media.lat != null && media.lng != null
-        ? `
+    const coordinatesBlock = geotagged
+      ? `
         <Iptc4xmpExt:LocationCreated>
           <rdf:Description>
-            <exif:GPSLatitude>${safeXml(this.decimalToDms(media.lat))}</exif:GPSLatitude>
-            <exif:GPSLongitude>${safeXml(this.decimalToDms(media.lng))}</exif:GPSLongitude>
+            <exif:GPSLatitude>${safeXml(this.decimalToDms(media.lat ?? 0))}</exif:GPSLatitude>
+            <exif:GPSLongitude>${safeXml(this.decimalToDms(media.lng ?? 0))}</exif:GPSLongitude>
           </rdf:Description>
         </Iptc4xmpExt:LocationCreated>`
-        : "";
+      : "";
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/"

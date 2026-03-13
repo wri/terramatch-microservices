@@ -192,6 +192,13 @@ export class FilesController {
           ? String(payload.data.attributes.profileImageScale)
           : payload.data.attributes.profileImageScale
     });
+
+    if (payload.data.attributes.isCover) {
+      const project = await this.mediaService.getProjectForModel(model);
+      await this.policyService.authorize("read", project);
+      await this.mediaService.unsetMediaCoverForProject(media, project);
+    }
+
     return buildJsonApi(MediaDto).addData(
       media.uuid,
       new MediaDto(media, {

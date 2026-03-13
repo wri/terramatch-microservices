@@ -1,24 +1,24 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import {
-  Framework,
+  FinancialReport,
   Form,
+  Framework,
   Nursery,
   NurseryReport,
   Project,
   ProjectReport,
   Site,
-  SiteReport,
-  FinancialReport
+  SiteReport
 } from "@terramatch-microservices/database/entities";
-import { InferAttributes } from "sequelize";
-import { Op } from "sequelize";
+import { Attributes, Op } from "sequelize";
 import {
   CreateReportingFrameworkAttributes,
   ReportingFrameworkDto,
   UpdateReportingFrameworkAttributes
 } from "./dto/reporting-framework.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 export function reportingFrameworkSlugFromName(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, "-");
@@ -76,6 +76,7 @@ export class ReportingFrameworksService {
    * Caller must have added the permission to permissions.ts and run sync first for it to survive sync.
    */
   async create(attributes: CreateReportingFrameworkAttributes): Promise<Framework> {
+    await this.checkFormUuids(attributes);
     const slug = reportingFrameworkSlugFromName(attributes.name) as FrameworkKey;
     const framework = await Framework.create({
       name: attributes.name,
@@ -94,7 +95,8 @@ export class ReportingFrameworksService {
   }
 
   async update(framework: Framework, attributes: UpdateReportingFrameworkAttributes): Promise<Framework> {
-    const payload: Partial<InferAttributes<Framework>> = {};
+    await this.checkFormUuids(attributes, framework.slug as FrameworkKey);
+    const payload: Partial<Attributes<Framework>> = {};
     if (attributes.name != null && attributes.name !== "") payload.name = attributes.name;
     if (attributes.accessCode !== undefined) payload.accessCode = attributes.accessCode ?? null;
     if (attributes.projectFormUuid !== undefined) payload.projectFormUuid = attributes.projectFormUuid ?? null;
@@ -112,15 +114,7 @@ export class ReportingFrameworksService {
     }
     const slug = framework.slug;
     if (slug != null) {
-      await this.syncFormsForFramework(slug, {
-        projectFormUuid: framework.projectFormUuid,
-        projectReportFormUuid: framework.projectReportFormUuid,
-        siteFormUuid: framework.siteFormUuid,
-        siteReportFormUuid: framework.siteReportFormUuid,
-        nurseryFormUuid: framework.nurseryFormUuid,
-        nurseryReportFormUuid: framework.nurseryReportFormUuid,
-        financialReportFormUuid: framework.financialReportFormUuid
-      });
+      await this.syncFormsForFramework(slug, framework);
     }
     return framework;
   }
@@ -175,10 +169,53 @@ export class ReportingFrameworksService {
       }
     }
 
-    const detachWhere: { frameworkKey: string; uuid?: { [Op.notIn]: string[] } } = { frameworkKey: slug };
-    if (currentUuids.length > 0) {
-      detachWhere.uuid = { [Op.notIn]: currentUuids };
-    }
-    await Form.update({ frameworkKey: null, model: null }, { where: detachWhere });
+    const uuidsClause = currentUuids.length > 0 ? { uuid: { [Op.notIn]: currentUuids } } : {};
+    await Form.update({ frameworkKey: null, model: null }, { where: { frameworkKey: slug, ...uuidsClause } });
+  }
+
+  private async checkFormUuids(
+    {
+      projectFormUuid,
+      projectReportFormUuid,
+      siteFormUuid,
+      siteReportFormUuid,
+      nurseryFormUuid,
+      nurseryReportFormUuid,
+      financialReportFormUuid
+    }: FrameworkFormUuids,
+    frameworkKey?: FrameworkKey
+  ): Promise<void> {
+    const uuids = [
+      projectFormUuid,
+      projectReportFormUuid,
+      siteFormUuid,
+      siteReportFormUuid,
+      nurseryFormUuid,
+      nurseryReportFormUuid,
+      financialReportFormUuid
+    ].filter(isNotNull);
+    const frameworkKeyClause =
+      frameworkKey == null
+        ? { frameworkKey: { [Op.not]: null } }
+        : { frameworkKey: { [Op.and]: [{ [Op.not]: null }, { [Op.not]: frameworkKey }] } };
+    const inUse = await Form.findAll({
+      where: { uuid: { [Op.in]: uuids }, ...frameworkKeyClause },
+      attributes: ["uuid"]
+    });
+    if (inUse.length === 0) return;
+
+    const formNameMapping = {
+      [projectFormUuid ?? ""]: "Project",
+      [projectReportFormUuid ?? ""]: "Project Report",
+      [siteFormUuid ?? ""]: "Site",
+      [siteReportFormUuid ?? ""]: "Site Report",
+      [nurseryFormUuid ?? ""]: "Nursery",
+      [nurseryReportFormUuid ?? ""]: "Nursery Report",
+      [financialReportFormUuid ?? ""]: "Financial Report"
+    };
+    const inUseForms = inUse.map(({ uuid }) => formNameMapping[uuid] ?? undefined).filter(isNotNull);
+    throw new BadRequestException(
+      `The following forms are already in use in another framework: ${inUseForms.join(", ")}.`
+    );
   }
 }

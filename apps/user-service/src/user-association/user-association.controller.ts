@@ -27,6 +27,8 @@ import { UserAssociationUpdateParamDto } from "./dto/user-association-update-par
 import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
 import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto";
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
+import { ProjectInviteAcceptBodyDto } from "./dto/project-invite-accept-body.dto";
+import { ProjectInviteAcceptanceDto } from "./dto/project-invite-acceptance.dto";
 
 @Controller("userAssociations/v3/:model")
 export class UserAssociationController {
@@ -129,6 +131,39 @@ export class UserAssociationController {
     );
 
     return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
+  }
+
+  @Post("invites/accept")
+  @ApiOperation({
+    operationId: "acceptProjectInvite",
+    summary: "Accept a project invite by token"
+  })
+  @JsonApiResponse({ data: ProjectInviteAcceptanceDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or user not found."
+  })
+  @ExceptionResponse(NotFoundException, {
+    description: "Project invite not found or project associated with invite not found."
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Project invite has already been accepted, or this endpoint is only available for projects."
+  })
+  async acceptProjectInvite(@Param("model") model: string, @Body() body: ProjectInviteAcceptBodyDto) {
+    if (model !== "projects") {
+      throw new BadRequestException("This endpoint is only available for projects");
+    }
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const { invite, project } = await this.userAssociationService.acceptProjectInvite(body.token, userId);
+
+    const document = buildJsonApi(ProjectInviteAcceptanceDto);
+    document.addData(invite.uuid, new ProjectInviteAcceptanceDto(invite, project.name ?? null));
+
+    return document;
   }
 
   @Delete(":uuid")

@@ -132,7 +132,20 @@ export class MediaService {
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
-    return await media.update(updatePayload.data.attributes);
+    const attrs: any = { ...updatePayload.data.attributes };
+
+    // Store profileImageScale in customProperties.profile_image_scale (same pattern as createMedia)
+    if ("profileImageScale" in attrs) {
+      const scale = attrs.profileImageScale;
+      delete attrs.profileImageScale;
+
+      const customProps = { ...(media.customProperties ?? {}) };
+      customProps.profile_image_scale = scale != null ? String(scale) : ({} as unknown as string | object);
+
+      attrs.customProperties = customProps;
+    }
+
+    return await media.update(attrs);
   }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some

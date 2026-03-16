@@ -5,6 +5,7 @@ import {
   Seeding,
   Site,
   SiteReport,
+  Tracking,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ReportProcessor } from "./entity-processor";
@@ -16,6 +17,7 @@ import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/s
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { PAID_OTHER, VOLUNTEER_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -182,6 +184,7 @@ export class SiteReportProcessor extends ReportProcessor<
 
     const dto = new SiteReportFullDto(siteReport, {
       ...(await this.getFeedback(siteReport)),
+      ...(await this.getDemographicDescriptions(siteReport)),
       reportTitle,
       projectReportTitle,
       totalTreesPlantedCount,
@@ -283,5 +286,23 @@ export class SiteReportProcessor extends ReportProcessor<
       projectReport.title ?? projectReportTitle,
       siteReport.frameworkKey ?? undefined
     );
+  }
+
+  protected async getDemographicDescriptions(siteReport: SiteReport) {
+    const demographics = await Tracking.for(siteReport)
+      .domain("demographics")
+      .findAll({
+        where: {
+          description: { [Op.not]: null },
+          type: Tracking.WORKDAYS_TYPE,
+          collection: [PAID_OTHER, VOLUNTEER_OTHER]
+        },
+        attributes: ["description"]
+      });
+
+    const demographicDescription = demographics[0]?.description ?? null;
+    const paidOtherActivityDescription = demographicDescription ?? siteReport.paidOtherActivityDescription ?? null;
+
+    return { paidOtherActivityDescription };
   }
 }

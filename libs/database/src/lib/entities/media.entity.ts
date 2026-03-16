@@ -127,7 +127,7 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
   fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: Dictionary<object | string>;
+  customProperties: Dictionary<object | string | number | null>;
 
   @JsonColumn()
   generatedConversions: Dictionary<boolean>;
@@ -163,6 +163,11 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
     } else {
       return null;
     }
+  }
+
+  get profileImageScale(): number | null {
+    const scale = (this.customProperties?.["profile_image_scale"] as number | null | undefined) ?? null;
+    return scale;
   }
 
   /**

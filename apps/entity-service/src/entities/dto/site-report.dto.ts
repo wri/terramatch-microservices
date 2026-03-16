@@ -106,10 +106,12 @@ export class SiteReportLightDto extends EntityDto {
 
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
 
+type SiteReportCalculated = "feedback" | "feedbackFields" | "paidOtherActivityDescription";
+
 export class SiteReportFullDto extends SiteReportLightDto {
   constructor(
     siteReport: SiteReport,
-    props: HybridSupportProps<SiteReportFullDto, Omit<SiteReport, "feedback" | "feedbackFields">>
+    props: HybridSupportProps<SiteReportFullDto, Omit<SiteReport, SiteReportCalculated>>
   ) {
     super();
     populateDto<SiteReportFullDto, SiteReport>(this, siteReport, { lightResource: false, ...props });

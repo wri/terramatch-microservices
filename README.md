@@ -74,6 +74,70 @@ easier in the REPL env:
 - All of lodash accessible through `lodash` (e.g. `lodash.join([1, 2])`)
 - All database models are made accessible in the global context (e.g. `await User.findOne({ emailAddress: "foo@bar.org" })`)
 
+# AWS RDS (MariaDB) Access
+
+The [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and
+[AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+are required for direct access to the databases hosted in AWS.
+
+Update your SSH config (typically under `~/.ssh/config` on Mac or Linux systems) to include
+an entry for connecting to EC2 instances through the session manager.
+
+```
+Host i-*
+    IdentityFile <path to wri-terramatch-new.pem>
+    ProxyCommand sh -c "aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'"
+```
+
+If you do not have `wri-terramatch-new.pem`, please ask a member of the development team for it.
+
+- To get the current instance ID of the bastion host, run `./bin/bastion-instance-id.sh` in this repository
+- To get the current address of the RDS instance you wish to connect to, run `./bin/rds-address.sh <DB name>` in this repository
+  - DB name is one of `prod`, `staging`, `test` or `dev`.
+
+Note: neither of these changes often, so if you want to save the values and use them again in the future, that
+will work fine.
+
+To open a port forwarding connection to the RDS instance through the bastion host:
+
+```
+> ssh -N ubuntu@<bastion host> -L 3311:<rds address>:3306
+```
+
+Alternatively, there is a handy script in this repository with some options for simply connecting the forwarded port, or to open
+the local MySQL client pointing to the forwarded port.
+
+```
+// Get usage info
+> ./bin/db-connect.sh -h
+Port forward an AWS RDS DB connection through the bastion host.
+
+Usage: ./bin/db-connect.sh [-p <local port>] [-f] [-t] env
+  -p: Local port to forward the RDS connection to. Default is 3311
+  -f: Forward the port only. The default behavior launches the MySQL client to connect to the DB.
+  -t: Tabbed output when piping in an SQL script. By default, if a query is being piped in, the results will display in a table
+  env: Environment to connect to. Options are: dev test staging prod
+
+// Get an interactive MySQL client terminal
+> ./bin/db-connect.sh staging
+
+// Simply connect the port forwarding and wait for ctrl-c to end it
+> ./bin/db-connect.sh -f staging
+
+// Pass in a prepared query (Use -t to get tab-delineated output instead of the table)
+❯ echo "select created_at, email_address from users order by created_at DESC limit 1;" | ./bin/db-connect.sh staging
+Connecting to RDS instance wri-terramatch-staging.ckjgcaidltop.eu-west-1.rds.amazonaws.com through bastion host i-0af3d687c74681361
+Connection to localhost port 3311 [tcp/mcns-tel-ret] succeeded!
++---------------------+----------------------------+
+| created_at          | email_address              |
++---------------------+----------------------------+
+| 2026-03-12 19:30:16 | marco.antonio@vizonomy.com |
++---------------------+----------------------------+
+
+// Or send in a more complicated saved query
+> cat complicated_query.sql | ./bin/db-connect.sh -t staging > query_results.tsv
+```
+
 # Deployment
 
 Deployment is handled via manual trigger of GitHub actions. There is one for services, and one for the ApiGateway. The

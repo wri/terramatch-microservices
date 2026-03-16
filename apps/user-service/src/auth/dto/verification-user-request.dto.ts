@@ -2,11 +2,15 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsEmail, IsNotEmpty, IsOptional, IsUrl } from "class-validator";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-export class VerificationUserRequest {
+export class VerificationUserAttributes {
   @IsNotEmpty()
   @ApiProperty()
   token: string;
 }
+
+export class VerificationUserBody extends JsonApiBodyDto(
+  class VerificationUserData extends CreateDataDto("verifications", VerificationUserAttributes) {}
+) {}
 
 export class ResendVerificationAttributes {
   @IsEmail()

@@ -49,8 +49,7 @@ describe("FileCollector", () => {
     const createDto = (media: Media) =>
       new EmbeddedMediaDto(media, {
         url: "",
-        thumbUrl: "",
-        profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+        thumbUrl: ""
       });
 
     const site = await SiteFactory.create();

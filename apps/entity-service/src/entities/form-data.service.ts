@@ -226,8 +226,7 @@ export class FormDataService {
               ? null
               : new EmbeddedMediaDto(coverMedia, {
                   url: this.mediaService.getUrl(coverMedia),
-                  thumbUrl: this.mediaService.getUrl(coverMedia, "thumbnail"),
-                  profileImageScale: coverMedia.customProperties?.profile_image_scale as unknown as number | null
+                  thumbUrl: this.mediaService.getUrl(coverMedia, "thumbnail")
                 }),
           stages
         })

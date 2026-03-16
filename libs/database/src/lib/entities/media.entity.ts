@@ -165,6 +165,11 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
     }
   }
 
+  get profileImageScale(): number | null {
+    const scale = (this.customProperties?.profile_image_scale as number | null | undefined) ?? null;
+    return scale;
+  }
+
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */

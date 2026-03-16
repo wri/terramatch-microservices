@@ -137,7 +137,6 @@ export class MediaService {
     // Store profileImageScale in customProperties.profile_image_scale (same pattern as createMedia)
     if ("profileImageScale" in attrs) {
       const scale = attrs.profileImageScale;
-      delete attrs.profileImageScale;
 
       const customProps = { ...(media.customProperties ?? {}) };
       customProps.profile_image_scale = scale ?? null;

@@ -155,8 +155,7 @@ export class FilesController {
             url: this.mediaService.getUrl(media),
             thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
             entityType: entity,
-            entityUuid: model.uuid,
-            profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+            entityUuid: model.uuid
           })
         );
       }
@@ -201,8 +200,7 @@ export class FilesController {
         url: this.mediaService.getUrl(media),
         thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
         entityType: entity,
-        entityUuid: model.uuid,
-        profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+        entityUuid: model.uuid
       })
     );
   }
@@ -232,8 +230,7 @@ export class FilesController {
         url: this.mediaService.getUrl(updatedMedia),
         thumbUrl: this.mediaService.getUrl(updatedMedia, "thumbnail"),
         entityType: updatedMedia.modelType as EntityType,
-        entityUuid: model.uuid,
-        profileImageScale: updatedMedia.customProperties?.profile_image_scale as unknown as number | null
+        entityUuid: model.uuid
       })
     );
 
@@ -248,8 +245,7 @@ export class FilesController {
             url: this.mediaService.getUrl(media),
             thumbUrl: this.mediaService.getUrl(media, "thumbnail"),
             entityType: media.modelType as EntityType,
-            entityUuid: model.uuid,
-            profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+            entityUuid: model.uuid
           }),
           true
         );

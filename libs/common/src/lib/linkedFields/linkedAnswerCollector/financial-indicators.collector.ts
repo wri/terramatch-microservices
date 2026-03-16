@@ -59,8 +59,7 @@ export function financialIndicatorsCollector(
       const createMediaDto = (media: Media) =>
         new EmbeddedMediaDto(media, {
           url: mediaService.getUrl(media),
-          thumbUrl: mediaService.getUrl(media, "thumbnail"),
-          profileImageScale: media.customProperties?.profile_image_scale as unknown as number | null
+          thumbUrl: mediaService.getUrl(media, "thumbnail")
         });
 
       answers[Object.values(questions)[0]] = financialIndicators.map(financialIndicator => {

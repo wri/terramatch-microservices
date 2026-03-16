@@ -7,7 +7,7 @@ export class VerificationUserResponseDto {
   verified: boolean;
 }
 
-@JsonApiDto({ type: "verifications", id: "uuid" })
+@JsonApiDto({ type: "resendVerifications", id: "uuid" })
 export class ResendVerificationResponseDto {
   @ApiProperty({
     description: "Email address the verification was (or would have been) sent to"

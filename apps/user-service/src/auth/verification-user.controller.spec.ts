@@ -64,7 +64,7 @@ describe("VerificationUserController", () => {
 
     const body = {
       data: {
-        type: "verifications",
+        type: "resendVerifications",
         attributes: { emailAddress, callbackUrl }
       }
     } as {
@@ -80,7 +80,7 @@ describe("VerificationUserController", () => {
     expect(result).toMatchObject({
       data: {
         id: emailAddress,
-        type: "verifications",
+        type: "resendVerifications",
         attributes: { emailAddress }
       }
     });

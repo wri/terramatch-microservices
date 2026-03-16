@@ -91,7 +91,6 @@ describe("AuditStatusService", () => {
       const mediaDto = new MediaDto(media, {
         url: "http://example.com/test.jpg",
         thumbUrl: "http://example.com/thumb.jpg",
-        profileImageScale: null,
         entityType: "projects",
         entityUuid: project.uuid
       });

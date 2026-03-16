@@ -1,16 +1,20 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
+import { ModelHasRole, Organisation, Role, User, Verification } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
-import { UserCreateAttributes } from "./dto/user-create.dto";
+import { UserCreateAttributes, UserCreateBaseAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
 import { omit } from "lodash";
 import bcrypt from "bcryptjs";
+import { validate } from "class-validator";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
+import { plainToInstance } from "class-transformer";
 
 const EMAIL_KEYS = {
   body: "user-verification.body",
@@ -26,8 +30,21 @@ export class UserCreationService {
 
   constructor(private readonly emailService: EmailService) {}
 
-  async createNewUser(request: UserCreateAttributes): Promise<User> {
-    const role = request.role;
+  async createNewUser(isAuthenticated: boolean, request: UserCreateBaseAttributes): Promise<User> {
+    if (isAuthenticated) {
+      return await this.adminUserCreateProcess(request as AdminUserCreateAttributes);
+    }
+    return await this.signUpProcess(request as UserCreateAttributes);
+  }
+
+  private async signUpProcess(request: UserCreateAttributes): Promise<User> {
+    const dto = plainToInstance(UserCreateAttributes, request);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+    const userCreateRequest = request as UserCreateAttributes;
+    const role = userCreateRequest.role;
     if (!this.roles.includes(role)) {
       throw new UnprocessableEntityException("Role not valid");
     }
@@ -43,9 +60,9 @@ export class UserCreationService {
     }
 
     try {
-      const hashPassword = await bcrypt.hash(request.password, 10);
-      const callbackUrl = request.callbackUrl;
-      const newUser = omit(request, ["callbackUrl", "role", "password"]);
+      const hashPassword = await bcrypt.hash(userCreateRequest.password, 10);
+      const callbackUrl = userCreateRequest.callbackUrl;
+      const newUser = omit(userCreateRequest, ["callbackUrl", "role", "password"]);
 
       const user = await User.create({ ...newUser, password: hashPassword } as User);
 
@@ -59,6 +76,45 @@ export class UserCreationService {
       const token = crypto.randomBytes(32).toString("hex");
       await this.saveUserVerification(user.id, token);
       await this.sendEmailVerification(user, token, callbackUrl);
+      return user;
+    } catch (error) {
+      this.logger.error(error);
+      throw new InternalServerErrorException("User creation failed");
+    }
+  }
+
+  private async adminUserCreateProcess(request: AdminUserCreateAttributes): Promise<User> {
+    const dto = plainToInstance(AdminUserCreateAttributes, request);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+    const adminUserCreateRequest = request as AdminUserCreateAttributes;
+    const organisation = await Organisation.findOne({
+      where: { uuid: adminUserCreateRequest.organisationUuid },
+      attributes: ["id"]
+    });
+    if (organisation == null) {
+      throw new NotFoundException("Organisation not found");
+    }
+    const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
+    if (userExists) {
+      throw new UnprocessableEntityException("User already exists");
+    }
+    try {
+      const newUser = omit(adminUserCreateRequest, ["role", "organisationUuid"]);
+      const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
+      const role = adminUserCreateRequest.role;
+      const roleEntity = await Role.findOne({ where: { name: role } });
+      if (roleEntity == null) {
+        throw new NotFoundException("Role not found");
+      }
+
+      await ModelHasRole.findOrCreate({
+        where: { modelId: user.id, roleId: roleEntity.id },
+        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
+      });
+
       return user;
     } catch (error) {
       this.logger.error(error);

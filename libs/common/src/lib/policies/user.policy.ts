@@ -4,8 +4,7 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 export class UserPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("users-manage")) {
-      this.builder.can("read", User);
-      this.builder.can("update", User);
+      this.builder.can(["read", "create", "update"], User);
     } else {
       this.builder.can("read", User, { id: this.userId });
       this.builder.can("update", User, { id: this.userId });

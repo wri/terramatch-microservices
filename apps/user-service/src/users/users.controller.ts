@@ -17,8 +17,8 @@ import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { UserCreateBody } from "./dto/user-create.dto";
+import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
+import { UserCreateBaseBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UsersService } from "./users.service";
@@ -120,15 +120,19 @@ export class UsersController {
   }
 
   @Post()
-  @NoBearerAuth
+  @OptionalBearerAuth
   @ApiOperation({
     operationId: "userCreation",
     description: "Create a new user"
   })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
-  async create(@Body() payload: UserCreateBody) {
-    const user = await this.userCreationService.createNewUser(payload.data.attributes);
+  async create(@Body() payload: UserCreateBaseBody) {
+    const isAuthenticated = authenticatedUserId() != null;
+    if (isAuthenticated) {
+      await this.policyService.authorize("create", User);
+    }
+    const user = await this.userCreationService.createNewUser(isAuthenticated, payload.data.attributes);
     return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 

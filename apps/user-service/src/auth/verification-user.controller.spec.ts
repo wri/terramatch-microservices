@@ -32,7 +32,9 @@ describe("VerificationUserController", () => {
     const uuid = faker.string.uuid();
     verificationUserService.verify.mockResolvedValue({ uuid, isVerified: true });
 
-    const result = serialize(await controller.verifyUser({ token: "my token" }));
+    const result = serialize(
+      await controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    );
     expect(result).toMatchObject({
       data: { id: uuid, type: "verifications", attributes: { verified: true } }
     });
@@ -41,15 +43,17 @@ describe("VerificationUserController", () => {
   it("should throw NotFoundException if verification is not found", async () => {
     verificationUserService.verify.mockRejectedValue(new NotFoundException("Verification not found"));
 
-    await expect(controller.verifyUser({ token: "my token" })).rejects.toThrow(
-      new NotFoundException("Verification not found")
-    );
+    await expect(
+      controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    ).rejects.toThrow(new NotFoundException("Verification not found"));
   });
 
   it("should throw NotFoundException if user is not found", async () => {
     verificationUserService.verify.mockRejectedValue(new NotFoundException("User not found"));
 
-    await expect(controller.verifyUser({ token: "my token" })).rejects.toThrow(new NotFoundException("User not found"));
+    await expect(
+      controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    ).rejects.toThrow(new NotFoundException("User not found"));
   });
 
   it("should resend verification email and respond with emailAddress", async () => {

@@ -18,6 +18,7 @@ export class UserDto {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
       organisationName: user.organisation?.name ?? null,
+      organisationUuid: user.organisation?.uuid ?? null,
       frameworks: frameworks
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
@@ -49,8 +50,14 @@ export class UserDto {
   @ApiProperty({ nullable: true, type: Date })
   emailAddressVerifiedAt: Date | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  phoneNumber: string | null;
+
   @ApiProperty({ nullable: true, type: String, description: "Name of the user's primary organisation, if any." })
   organisationName: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "UUID of the user's primary organisation, if any." })
+  organisationUuid: string | null;
 
   @ApiProperty({ type: Date })
   createdAt: Date;
@@ -60,6 +67,12 @@ export class UserDto {
 
   @ApiProperty({ nullable: true, type: String })
   jobRole: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  country: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  program: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   locale: string | null;

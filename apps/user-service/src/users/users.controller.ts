@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
@@ -105,6 +107,32 @@ export class UsersController {
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
   async create(@Body() payload: UserCreateBody) {
     const user = await this.userCreationService.createNewUser(payload.data.attributes);
+    return await this.addUserResource(buildJsonApi(UserDto), user);
+  }
+  @Patch("verifyUser/:uuid")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    operationId: "userVerify",
+    description: "Verify a user's email by UUID (admin or self)."
+  })
+  @ApiParam({ name: "uuid", description: "User UUID" })
+  @JsonApiResponse(USER_RESPONSE_SHAPE)
+  @ExceptionResponse(UnauthorizedException, { description: "Not authorized" })
+  @ExceptionResponse(NotFoundException, { description: "No user found" })
+  async verifyUser(@Param("uuid") uuid: string) {
+    const user = await User.findOne({
+      include: ["roles", "organisation", "frameworks"],
+      where: { uuid }
+    });
+    if (user == null) throw new NotFoundException("No user found.");
+
+    await this.policyService.authorize("verify", user);
+
+    if (user.emailAddressVerifiedAt == null) {
+      user.emailAddressVerifiedAt = new Date();
+      await user.save();
+    }
+
     return await this.addUserResource(buildJsonApi(UserDto), user);
   }
 

@@ -58,7 +58,19 @@ describe("VerificationUserController", () => {
 
     verificationUserService.resendVerificationEmail.mockResolvedValue();
 
-    const result = serialize(await controller.resendVerification({ emailAddress, callbackUrl }));
+    const body = {
+      data: {
+        type: "verifications",
+        attributes: { emailAddress, callbackUrl }
+      }
+    } as {
+      data: {
+        type: string;
+        attributes: { emailAddress: string; callbackUrl: string };
+      };
+    };
+
+    const result = serialize(await controller.resendVerification(body));
 
     expect(verificationUserService.resendVerificationEmail).toHaveBeenCalledWith(emailAddress, callbackUrl);
     expect(result).toMatchObject({

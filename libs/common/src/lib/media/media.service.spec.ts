@@ -282,6 +282,42 @@ describe("MediaService", () => {
       });
     });
 
+    describe("getMediaWithUser", () => {
+      it("should return media including createdByUser association", async () => {
+        const media = await MediaFactory.project().create();
+        jest.spyOn(Media, "findOne").mockResolvedValue(media);
+        const result = await service.getMediaWithUser(media.uuid);
+        expect(Media.findOne).toHaveBeenCalledWith({
+          where: { uuid: media.uuid },
+          include: [{ association: "createdByUser", attributes: ["firstName", "lastName"] }]
+        });
+        expect(result).not.toBeNull();
+      });
+
+      it("should throw NotFoundException when media is not found", async () => {
+        jest.spyOn(Media, "findOne").mockResolvedValue(null);
+        await expect(service.getMediaWithUser("unknown-uuid")).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe("getMediaBuffer", () => {
+      it("should read the file from S3 and return a buffer", async () => {
+        const media = await MediaFactory.project().create();
+        const chunks = [Buffer.from("chunk1"), Buffer.from("chunk2")];
+        const asyncIterable = {
+          [Symbol.asyncIterator]: async function* () {
+            for (const chunk of chunks) yield chunk;
+          }
+        };
+        fileService.readRemoteFile.mockResolvedValue(asyncIterable as any);
+
+        const result = await service.getMediaBuffer(media);
+
+        expect(fileService.readRemoteFile).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
+        expect(result).toEqual(Buffer.concat(chunks));
+      });
+    });
+
     describe("deleteMedia", () => {
       it("should delete the media successfully", async () => {
         const media = await MediaFactory.project().create();

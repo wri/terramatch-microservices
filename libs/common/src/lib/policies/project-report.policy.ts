@@ -10,7 +10,17 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "update",
+          "approve",
+          "uploadFiles",
+          "deleteFiles",
+          "updateFiles",
+          "updateAnswers",
+          "sendReminder"
+        ],
         ProjectReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -46,7 +56,17 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
         const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(
-            ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+            [
+              "read",
+              "delete",
+              "update",
+              "approve",
+              "uploadFiles",
+              "deleteFiles",
+              "updateFiles",
+              "updateAnswers",
+              "sendReminder"
+            ],
             ProjectReport,
             {
               projectId: { $in: projectIds }

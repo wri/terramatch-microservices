@@ -49,6 +49,10 @@ export class UserCreateAttributes extends UserCreateBaseAttributes {
   @IsNotEmpty()
   @ApiProperty()
   callbackUrl: string;
+
+  @IsOptional()
+  @ApiProperty({ description: "Token for invite-based signup completion", required: false })
+  token?: string;
 }
 
 export class UserCreateBody extends JsonApiBodyDto(

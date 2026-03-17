@@ -10,6 +10,7 @@ import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { UsersService } from "./users.service";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -19,13 +20,14 @@ describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let userCreationService: DeepMocked<UserCreationService>;
-
+  let usersService: DeepMocked<UsersService>;
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) }
+        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) },
+        { provide: UsersService, useValue: (usersService = createMock<UsersService>()) }
       ]
     }).compile();
 

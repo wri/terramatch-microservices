@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "../util/json-api-update-dto";
-import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
 
 export class MediaUpdateAttributes {
   @IsOptional()
@@ -50,11 +50,6 @@ export class MediaUpdateAttributes {
     required: false
   })
   isCover?: boolean;
-
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ type: Number, nullable: true, description: "The profile image scale" })
-  profileImageScale: number | null;
 }
 
 export class MediaUpdateBody extends JsonApiBodyDto(

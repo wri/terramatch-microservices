@@ -16,16 +16,6 @@ export class MediaRequestAttributes {
   @IsOptional()
   @ApiProperty({ type: Number, nullable: true, description: "The longitude of the media" })
   lng: number | null;
-
-  @IsNumber()
-  @IsOptional()
-  @ApiProperty({ type: Number, nullable: true, description: "The profile image scale" })
-  profileImageScale: number | null;
-
-  @IsBoolean()
-  @IsOptional()
-  @ApiProperty({ type: Boolean, nullable: true, description: "Whether the media is a cover" })
-  isCover: boolean | null;
 }
 
 export class MediaRequestBody extends JsonApiBodyDto(

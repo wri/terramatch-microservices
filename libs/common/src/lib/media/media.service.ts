@@ -35,8 +35,10 @@ import { FileService } from "../file/file.service";
 
 export type MediaAttributes = {
   isPublic: boolean;
+  isCover?: boolean | null;
   lat?: number | null;
   lng?: number | null;
+  profileImageScale?: number | null;
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -130,7 +132,19 @@ export class MediaService {
   }
 
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
-    return await media.update(updatePayload.data.attributes);
+    const attrs = { ...updatePayload.data.attributes } as Partial<Media>;
+
+    // Store profileImageScale in customProperties.profile_image_scale (same pattern as createMedia)
+    if ("profileImageScale" in attrs) {
+      const scale = attrs.profileImageScale;
+
+      const customProps = { ...(media.customProperties ?? {}) };
+      customProps.profile_image_scale = scale ?? null;
+
+      attrs.customProperties = customProps;
+    }
+
+    return await media.update(attrs);
   }
 
   // Duplicates the base functionality of Spatie's media.getFullUrl() method, skipping some
@@ -175,8 +189,12 @@ export class MediaService {
         mimeType: file.mimetype,
         fileType: this.getMediaType(file, configuration),
         isPublic: data.isPublic,
-        customProperties: { custom_headers: { ACL: "public-read" } },
+        customProperties: {
+          custom_headers: { ACL: "public-read" },
+          profile_image_scale: data.profileImageScale ?? null
+        },
         generatedConversions: {},
+        isCover: data.isCover ?? false,
         lat: data.lat ?? null,
         lng: data.lng ?? null,
         size: file.size,

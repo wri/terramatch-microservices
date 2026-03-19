@@ -13,3 +13,4 @@ export { fixTaskStatuses } from "./2026-02-20-fixTaskStatuses";
 export { migrateProjectCountry } from "./2026-02-25-migrateProjectCountry";
 export { migrateFinancialReports } from "./2026-03-02-migrateFinancialReports";
 export { fixSiteReportTrees } from "./2026-03-17-fixSiteReportTrees";
+export { migrateConsortium } from "./2026-03-19-migrateConsortium";

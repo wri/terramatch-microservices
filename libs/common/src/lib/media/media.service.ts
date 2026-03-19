@@ -39,6 +39,7 @@ export type MediaAttributes = {
   lat?: number | null;
   lng?: number | null;
   profileImageScale?: number | null;
+  profileImagePosition?: object | null;
 };
 
 const SUPPORTS_THUMBNAIL = ["image/png", "image/jpeg", "image/heif", "image/heic"];
@@ -134,15 +135,20 @@ export class MediaService {
   async updateMedia(media: Media, updatePayload: MediaUpdateBody) {
     const attrs = { ...updatePayload.data.attributes } as Partial<Media>;
 
-    // Store profileImageScale in customProperties.profile_image_scale (same pattern as createMedia)
+    const customProps = {
+      ...(media.customProperties ?? {}),
+      ...(attrs.customProperties ?? {})
+    };
+
     if ("profileImageScale" in attrs) {
-      const scale = attrs.profileImageScale;
-
-      const customProps = { ...(media.customProperties ?? {}) };
-      customProps.profile_image_scale = scale ?? null;
-
-      attrs.customProperties = customProps;
+      customProps.profile_image_scale = attrs.profileImageScale ?? null;
     }
+
+    if ("profileImagePosition" in attrs) {
+      customProps.profile_image_position = attrs.profileImagePosition ?? null;
+    }
+
+    attrs.customProperties = customProps;
 
     return await media.update(attrs);
   }
@@ -191,7 +197,8 @@ export class MediaService {
         isPublic: data.isPublic,
         customProperties: {
           custom_headers: { ACL: "public-read" },
-          profile_image_scale: data.profileImageScale ?? null
+          profile_image_scale: data.profileImageScale ?? null,
+          profile_image_position: data.profileImagePosition ?? null
         },
         generatedConversions: {},
         isCover: data.isCover ?? false,

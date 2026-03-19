@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
-import { IsBoolean, IsNumber, IsOptional } from "class-validator";
+import { IsBoolean, IsNumber, IsObject, IsOptional } from "class-validator";
 
 export class MediaRequestAttributes {
   @IsBoolean()
@@ -26,6 +26,11 @@ export class MediaRequestAttributes {
   @IsOptional()
   @ApiProperty({ type: Boolean, nullable: true, description: "Whether the media is a cover" })
   isCover: boolean | null;
+
+  @IsObject()
+  @IsOptional()
+  @ApiProperty({ type: Object, nullable: true, description: "The profile image position" })
+  profileImagePosition: object | null;
 }
 
 export class MediaRequestBody extends JsonApiBodyDto(

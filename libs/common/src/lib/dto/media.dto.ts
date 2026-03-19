@@ -61,6 +61,9 @@ export class MediaDto extends AssociationDto {
 
   @ApiProperty({ nullable: true, type: Number })
   profileImageScale: number | null;
+
+  @ApiProperty({ nullable: true, type: Object })
+  profileImagePosition: object | null;
 }
 
 export class EmbeddedMediaDto extends OmitType(MediaDto, ["entityType", "entityUuid", "createdByUserName"]) {

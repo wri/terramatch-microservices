@@ -366,6 +366,7 @@ describe("MediaService", () => {
             id: media.uuid,
             attributes: {
               profileImageScale: 1.5,
+              profileImagePosition: { x: 1.5, y: 1.5 },
               description: "new description"
             }
           }
@@ -378,7 +379,8 @@ describe("MediaService", () => {
         expect(updated.customProperties).toEqual(
           expect.objectContaining({
             existing: "value",
-            profile_image_scale: 1.5
+            profile_image_scale: 1.5,
+            profile_image_position: { x: 1.5, y: 1.5 }
           })
         );
         expect(updated.description).toBe("new description");
@@ -394,7 +396,8 @@ describe("MediaService", () => {
             type: "media",
             id: media.uuid,
             attributes: {
-              profileImageScale: null
+              profileImageScale: null,
+              profileImagePosition: { x: 1.5, y: 1.5 }
             }
           }
         } as MediaUpdateBody;
@@ -403,7 +406,8 @@ describe("MediaService", () => {
 
         expect(updated.customProperties).toEqual(
           expect.objectContaining({
-            profile_image_scale: null
+            profile_image_scale: null,
+            profile_image_position: { x: 1.5, y: 1.5 }
           })
         );
       });

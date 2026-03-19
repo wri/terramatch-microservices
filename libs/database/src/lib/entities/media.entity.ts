@@ -170,6 +170,11 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
     return scale;
   }
 
+  get profileImagePosition(): object | null {
+    const position = (this.customProperties?.["profile_image_position"] as object | null | undefined) ?? null;
+    return position;
+  }
+
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */

@@ -281,7 +281,7 @@ export class OverlappingValidator implements PolygonValidator {
         transaction
       );
 
-      return intersectionResults.filter(result => result.intersectionArea > 1e-10);
+      return intersectionResults.filter(result => result.intersectionArea > 1e-13);
     } catch (error) {
       shouldCommit = false;
       await transaction.rollback();

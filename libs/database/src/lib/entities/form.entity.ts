@@ -18,12 +18,12 @@ import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { EntityModel } from "../constants/entities";
-import { FinancialReport } from "./financial-report.entity";
 import { DisturbanceReport } from "./disturbance-report.entity";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
 import { InternalServerErrorException } from "@nestjs/common";
+import { FinancialReport } from "./financial-report.entity";
 import { Subquery } from "../util/subquery.builder";
 
 type FormMedia = "banner";
@@ -31,15 +31,19 @@ type FormMedia = "banner";
 @Scopes(() => ({
   entity: (entity: EntityModel) => {
     if (entity instanceof FinancialReport) {
-      if (entity.organisation?.type == null) {
-        throw new InternalServerErrorException("Cannot determine form for financial report without organisation type.");
-      }
-      if (entity.organisation.type === "non-profit-organization") {
-        return { where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) LIKE '%non%profit%'")] } };
-      } else {
-        return {
-          where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) NOT LIKE '%non%profit%'")] }
-        };
+      if (entity?.frameworkKey == null) {
+        if (entity.organisation?.type == null) {
+          throw new InternalServerErrorException(
+            "Cannot determine form for financial report without organisation type."
+          );
+        }
+        if (entity.organisation.type === "non-profit-organization") {
+          return { where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) LIKE '%non%profit%'")] } };
+        } else {
+          return {
+            where: { [Op.and]: [{ type: "financial-report" }, literal("LOWER(title) NOT LIKE '%non%profit%'")] }
+          };
+        }
       }
     }
     if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };

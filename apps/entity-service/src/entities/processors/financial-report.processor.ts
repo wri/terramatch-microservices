@@ -11,7 +11,7 @@ import {
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 
-const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus"];
+const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$organisation.uuid$"

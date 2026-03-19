@@ -22,6 +22,8 @@ import { OrganisationJoinRequestEmail } from "./organisation-join-request.email"
 import { OrganisationUserApprovedEmail } from "./organisation-user-approved.email";
 import { OrganisationUserRejectedEmail } from "./organisation-user-rejected.email";
 import { OrganisationInviteEmail } from "./organisation-invite.email";
+import { AdminReportReminderEmail } from "./admin-report-reminder.email";
+import { AdminFinancialReportReminderEmail } from "./admin-financial-report-reminder.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -30,6 +32,12 @@ export type SpecificEntityData = {
 
 export type ProjectEmailData = {
   projectIds: number[];
+};
+
+export type AdminReminderEmailData = {
+  type: EntityType;
+  id: number;
+  feedback: string | null;
 };
 
 const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME: string })[] = [
@@ -48,7 +56,9 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   OrganisationJoinRequestEmail,
   OrganisationUserApprovedEmail,
   OrganisationUserRejectedEmail,
-  OrganisationInviteEmail
+  OrganisationInviteEmail,
+  AdminReportReminderEmail,
+  AdminFinancialReportReminderEmail
 ];
 
 /**

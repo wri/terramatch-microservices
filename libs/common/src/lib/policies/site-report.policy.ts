@@ -11,7 +11,17 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "update",
+          "approve",
+          "uploadFiles",
+          "deleteFiles",
+          "updateFiles",
+          "updateAnswers",
+          "sendReminder"
+        ],
         SiteReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -56,7 +66,17 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           ).map(({ id }) => id);
           if (siteIds.length > 0) {
             this.builder.can(
-              ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+              [
+                "read",
+                "delete",
+                "update",
+                "approve",
+                "uploadFiles",
+                "deleteFiles",
+                "updateFiles",
+                "updateAnswers",
+                "sendReminder"
+              ],
               SiteReport,
               {
                 siteId: { $in: siteIds }

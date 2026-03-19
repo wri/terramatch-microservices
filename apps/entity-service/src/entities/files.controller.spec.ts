@@ -13,6 +13,8 @@ import { MediaRequestBody } from "./dto/media-request.dto";
 import { Project } from "@terramatch-microservices/database/entities";
 import { getBaseEntityByLaravelTypeAndId } from "./processors/media-owner-processor";
 import { EntityType } from "@slack/web-api/dist/methods";
+import { ExportImageService } from "./export-image.service";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 
 jest.mock("./processors/media-owner-processor", () => ({
   getBaseEntityByLaravelTypeAndId: jest.fn()
@@ -23,6 +25,7 @@ describe("FilesController", () => {
   let policyService: jest.Mocked<PolicyService>;
   let mediaService: jest.Mocked<MediaService>;
   let entitiesService: jest.Mocked<EntitiesService>;
+  let exportImageService: DeepMocked<ExportImageService>;
   let mockMediaOwnerProcessor: { getBaseEntity: jest.Mock };
 
   beforeEach(async () => {
@@ -35,6 +38,7 @@ describe("FilesController", () => {
     mediaService = {
       getUrl: jest.fn(),
       getMedia: jest.fn(),
+      getMediaWithUser: jest.fn(),
       createMedia: jest.fn(),
       deleteMediaByUuid: jest.fn(),
       deleteMedia: jest.fn(),
@@ -49,17 +53,97 @@ describe("FilesController", () => {
       userId: 1,
       mediaDto: jest.fn()
     } as unknown as jest.Mocked<EntitiesService>;
+    exportImageService = createMock<ExportImageService>();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilesController],
       providers: [
         { provide: PolicyService, useValue: policyService },
         { provide: MediaService, useValue: mediaService },
-        { provide: EntitiesService, useValue: entitiesService }
+        { provide: EntitiesService, useValue: entitiesService },
+        { provide: ExportImageService, useValue: exportImageService }
       ]
     }).compile();
 
     controller = module.get<FilesController>(FilesController);
+  });
+
+  describe("exportImage", () => {
+    const makeRes = () => {
+      const res = { set: jest.fn(), end: jest.fn() };
+      return res as unknown as import("express").Response;
+    };
+
+    it("downloads the image with correct headers when authorized", async () => {
+      const media = {
+        uuid: "media-uuid",
+        modelType: Project.LARAVEL_TYPE,
+        modelId: 1
+      } as unknown as Media;
+      const model = { uuid: "model-uuid", id: 1 };
+      const exportResult = {
+        buffer: Buffer.from("image-data"),
+        contentType: "image/jpeg",
+        filename: "photo.jpg"
+      };
+
+      mediaService.getMediaWithUser.mockResolvedValue(media);
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      policyService.authorize.mockResolvedValue(undefined);
+      exportImageService.exportImage.mockResolvedValue(exportResult);
+
+      const res = makeRes();
+      await controller.exportImage({ uuid: "media-uuid" }, res);
+
+      expect(mediaService.getMediaWithUser).toHaveBeenCalledWith("media-uuid");
+      expect(getBaseEntityByLaravelTypeAndId).toHaveBeenCalledWith(media.modelType, media.modelId);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", model);
+      expect(exportImageService.exportImage).toHaveBeenCalledWith(media);
+      expect(res.set).toHaveBeenCalledWith({
+        "Content-Type": "image/jpeg",
+        "Content-Disposition": `attachment; filename="photo.jpg"`,
+        "Content-Length": exportResult.buffer.length
+      });
+      expect(res.end).toHaveBeenCalledWith(exportResult.buffer);
+    });
+
+    it("throws UnauthorizedException when caller cannot read the owning model", async () => {
+      const media = {
+        uuid: "media-uuid",
+        modelType: Project.LARAVEL_TYPE,
+        modelId: 1
+      } as unknown as Media;
+      const model = { uuid: "model-uuid", id: 1 };
+
+      mediaService.getMediaWithUser.mockResolvedValue(media);
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException("forbidden"));
+
+      await expect(controller.exportImage({ uuid: "media-uuid" }, makeRes())).rejects.toThrow(UnauthorizedException);
+      expect(exportImageService.exportImage).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException when media does not exist", async () => {
+      mediaService.getMediaWithUser.mockRejectedValue(new NotFoundException());
+
+      await expect(controller.exportImage({ uuid: "nonexistent" }, makeRes())).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(exportImageService.exportImage).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundException when owning entity is not found", async () => {
+      const media = {
+        uuid: "media-uuid",
+        modelType: Project.LARAVEL_TYPE,
+        modelId: 99
+      } as unknown as Media;
+
+      mediaService.getMediaWithUser.mockResolvedValue(media);
+      (getBaseEntityByLaravelTypeAndId as jest.Mock).mockRejectedValue(new NotFoundException("Owner not found"));
+
+      await expect(controller.exportImage({ uuid: "media-uuid" }, makeRes())).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+    });
   });
 
   describe("getMedia", () => {
@@ -70,6 +154,7 @@ describe("FilesController", () => {
       const model = { uuid: "model-uuid", id: 1 };
       (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
       await controller.getMedia({ uuid: "media-uuid" });
+      expect(policyService.authorize).toHaveBeenCalledWith("read", model);
       expect(entitiesService.mediaDto).toHaveBeenCalledWith(media, {
         entityType: media.modelType as EntityType,
         entityUuid: model.uuid

@@ -242,7 +242,7 @@ describe("UserAssociationService", () => {
         expect(service.requestOrgJoin).toHaveBeenCalledWith(org, user.id);
         expect(User.findOne).toHaveBeenCalledWith({
           where: { id: user.id },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName"],
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
           include: [{ association: "roles", attributes: ["name"] }]
         });
         expect(addDataSpy).toHaveBeenCalled();
@@ -374,7 +374,7 @@ describe("UserAssociationService", () => {
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
         include: [
           {
             association: "roles",
@@ -626,7 +626,11 @@ describe("UserAssociationService", () => {
       user1.roles = [role1];
       user2.roles = [role2];
 
-      jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
+      const ownersMock = [{ id: user1.id }, { id: user2.id }];
+      jest
+        .spyOn(User, "findAll")
+        .mockResolvedValueOnce(ownersMock as User[])
+        .mockResolvedValueOnce([user1, user2] as User[]);
       const document = new DocumentBuilder("associatedUsers");
 
       const addDataSpy = jest.spyOn(document, "addData");
@@ -634,9 +638,23 @@ describe("UserAssociationService", () => {
 
       await service.addOrgUserDtos(document, org, [orgUser1, orgUser2] as OrganisationUser[], {});
 
-      expect(User.findAll).toHaveBeenCalledWith({
+      expect(User.findAll).toHaveBeenNthCalledWith(1, {
+        where: { organisationId: org.id },
+        attributes: ["id"]
+      });
+      expect(User.findAll).toHaveBeenNthCalledWith(2, {
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId"],
+        attributes: [
+          "id",
+          "uuid",
+          "emailAddress",
+          "firstName",
+          "lastName",
+          "organisationId",
+          "phoneNumber",
+          "jobRole",
+          "lastLoggedInAt"
+        ],
         include: [
           {
             association: "roles",
@@ -1052,6 +1070,120 @@ describe("UserAssociationService", () => {
       );
       expect(emailQueue.add).toHaveBeenCalled();
       expect(result).toBe(invite);
+    });
+  });
+
+  describe("acceptProjectInvite", () => {
+    it("should throw UnauthorizedException when user not found", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      await expect(service.acceptProjectInvite("token", 1)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should throw NotFoundException when invite not found", async () => {
+      const user = await UserFactory.create();
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(null);
+
+      await expect(service.acceptProjectInvite("token", user.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw BadRequestException when invite already accepted", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create();
+      const invite = {
+        id: 1,
+        token: "token",
+        emailAddress: user.emailAddress,
+        acceptedAt: new Date(),
+        project
+      } as ProjectInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(invite);
+
+      await expect(service.acceptProjectInvite("token", user.id)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw NotFoundException when project not found", async () => {
+      const user = await UserFactory.create();
+      const invite = {
+        id: 1,
+        token: "token",
+        emailAddress: user.emailAddress,
+        acceptedAt: null,
+        project: null
+      } as ProjectInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(invite);
+
+      await expect(service.acceptProjectInvite("token", user.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should create ProjectUser and accept invite when user association does not exist", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create();
+      const invite = {
+        id: 1,
+        token: "token",
+        emailAddress: user.emailAddress,
+        acceptedAt: null,
+        project,
+        save: jest.fn().mockResolvedValue({})
+      } as unknown as ProjectInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(invite);
+      jest
+        .spyOn(ProjectUser, "findOrCreate")
+        .mockResolvedValue([
+          { id: 1, projectId: project.id, userId: user.id, isMonitoring: true, status: "active" } as ProjectUser,
+          true
+        ]);
+
+      const result = await service.acceptProjectInvite("token", user.id);
+
+      expect(ProjectUser.findOrCreate).toHaveBeenCalledWith({
+        where: { projectId: project.id, userId: user.id },
+        defaults: { projectId: project.id, userId: user.id, isMonitoring: true, status: "active" }
+      });
+      expect(invite.acceptedAt).toBeInstanceOf(Date);
+      expect(invite.save).toHaveBeenCalled();
+      expect(result).toEqual({ user, project, invite });
+    });
+
+    it("should update existing ProjectUser and accept invite", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create();
+      const projectUser = {
+        id: 1,
+        projectId: project.id,
+        userId: user.id,
+        isMonitoring: false,
+        status: null,
+        save: jest.fn().mockResolvedValue({})
+      } as unknown as ProjectUser;
+      const invite = {
+        id: 1,
+        token: "token",
+        emailAddress: user.emailAddress,
+        acceptedAt: null,
+        project,
+        save: jest.fn().mockResolvedValue({})
+      } as unknown as ProjectInvite;
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(invite);
+      jest.spyOn(ProjectUser, "findOrCreate").mockResolvedValue([projectUser, false]);
+
+      await service.acceptProjectInvite("token", user.id);
+
+      expect(projectUser.isMonitoring).toBe(true);
+      expect(projectUser.status).toBe("active");
+      expect(projectUser.save).toHaveBeenCalled();
+      expect(invite.acceptedAt).toBeInstanceOf(Date);
+      expect(invite.save).toHaveBeenCalled();
     });
   });
 });

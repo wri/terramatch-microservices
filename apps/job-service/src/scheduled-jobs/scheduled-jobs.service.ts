@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ScheduledJob } from "@terramatch-microservices/database/entities";
-import { FRAMEWORK_KEYS_TF } from "@terramatch-microservices/database/constants";
+import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
 import { Op, Transaction } from "sequelize";
 import {
   REPORT_REMINDER,
@@ -77,7 +77,7 @@ export class ScheduledJobsService {
     const currentYear = now.year;
     const years = [currentYear, currentYear + 1] as const;
 
-    const existing = await ScheduledJob.taskDue(FRAMEWORK_KEYS_TF).findAll({
+    const existing = await ScheduledJob.taskDue([LANDSCAPES, ENTERPRISES]).findAll({
       where: { executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
       attributes: ["taskDefinition"]
     });
@@ -87,7 +87,7 @@ export class ScheduledJobsService {
         .map(j => `${(j.taskDefinition as TaskDue).frameworkKey}|${(j.taskDefinition as TaskDue).dueAt}`)
     );
 
-    for (const framework of FRAMEWORK_KEYS_TF) {
+    for (const framework of [LANDSCAPES, ENTERPRISES]) {
       for (const year of years) {
         const month = 1;
         const day = 31;

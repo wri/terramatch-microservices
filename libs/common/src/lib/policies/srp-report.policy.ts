@@ -10,7 +10,18 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "update",
+          "approve",
+          "create",
+          "deleteFiles",
+          "uploadFiles",
+          "updateFiles",
+          "updateAnswers",
+          "sendReminder"
+        ],
         SrpReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -60,7 +71,8 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
               "deleteFiles",
               "uploadFiles",
               "updateFiles",
-              "updateAnswers"
+              "updateAnswers",
+              "sendReminder"
             ],
             SrpReport,
             {

@@ -213,7 +213,11 @@ export class ReportingFrameworksService {
       [nurseryReportFormUuid ?? ""]: "Nursery Report",
       [financialReportFormUuid ?? ""]: "Financial Report"
     };
-    const inUseForms = inUse.map(({ uuid }) => formNameMapping[uuid] ?? undefined).filter(isNotNull);
+    // Iterate over the mapping instead of the inUse array so the order reported is the same as
+    // in the mapping, which matches the UI and will feel more natural for the user.
+    const inUseForms = Object.entries(formNameMapping)
+      .map(([uuid, name]) => (inUse.find(form => form.uuid === uuid) != null ? name : undefined))
+      .filter(isNotNull);
     throw new BadRequestException(
       `The following forms are already in use in another framework: ${inUseForms.join(", ")}.`
     );

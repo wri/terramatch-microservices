@@ -8,6 +8,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { filter, flatten, groupBy, uniq } from "lodash";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const loadApprovedSites = async (projectIds: number[]) =>
   groupBy(
@@ -31,6 +32,9 @@ type ProjectAssociations = {
   sitePolygons: SitePolygon[];
   countryName?: string;
   stateNames: string[];
+  level0Project?: string[];
+  level1Project?: string[];
+  level2Project?: string[];
 };
 
 const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
@@ -104,7 +108,22 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "directSeedingSurvivalRate",
   "shortName",
   "ppcExternalId",
-  "nurserySeedlingsGoal"
+  "nurserySeedlingsGoal",
+  associatedValueColumn("level0Project", "level0Project"),
+  associatedValueColumn("level1Project", "level1Project"),
+  associatedValueColumn("level2Project", "level2Project"),
+  "seedlingsProcurement",
+  "jobsGoalDescription",
+  "volunteersGoalDescription",
+  "communityEngagementPlan",
+  "directBeneficiariesGoalDescription",
+  {
+    airtableColumn: "elpProject",
+    dbColumn: "elpProject",
+    valueMap: async ({ elpProject }) => elpProject === 1
+  },
+  "consortium",
+  "landownerAgreement"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {
@@ -123,10 +142,13 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const stateCountries = filter(
       uniq(flatten(projects.map(({ states }) => states?.map(state => state.split(".")[0]))))
     ) as string[];
-    const stateNames = await this.gadmLevel1Names(stateCountries);
+    const level0Projects = uniq(flatten(projects.map(({ level0Project }) => level0Project))).filter(isNotNull);
+    const stateNames = await this.gadmLevel1Names(uniq([...stateCountries, ...level0Projects]));
+    const level1Projects = uniq(flatten(projects.map(({ level1Project }) => level1Project))).filter(isNotNull);
+    const level2Names = await this.gadmLevel2Names(level1Projects);
 
     return projects.reduce(
-      (associations, { id, country, states }) => ({
+      (associations, { id, country, states, level0Project, level1Project, level2Project }) => ({
         ...associations,
         [id]: {
           sitePolygons: (approvedSites[id] ?? []).reduce(
@@ -134,7 +156,10 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
             [] as SitePolygon[]
           ),
           countryName: country == null ? undefined : countryNames[country],
-          stateNames: filter(states?.map(state => stateNames[state]))
+          stateNames: filter(states?.map(state => stateNames[state])),
+          level0Project: filter(level0Project?.map(code => countryNames[code])),
+          level1Project: filter(level1Project?.map(code => stateNames[code])),
+          level2Project: filter(level2Project?.map(code => level2Names[code]))
         }
       }),
       {} as Record<number, ProjectAssociations>

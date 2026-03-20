@@ -3,8 +3,8 @@ import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { VerificationUserService } from "./verification-user.service";
-import { VerificationUserRequest } from "./dto/verification-user-request.dto";
-import { VerificationUserResponseDto } from "./dto/verification-user-response.dto";
+import { ResendVerificationBody, VerificationUserBody } from "./dto/verification-user-request.dto";
+import { ResendVerificationResponseDto, VerificationUserResponseDto } from "./dto/verification-user-response.dto";
 import { NoBearerAuth } from "@terramatch-microservices/common/guards";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
@@ -20,11 +20,29 @@ export class VerificationUserController {
   })
   @JsonApiResponse(VerificationUserResponseDto, { status: HttpStatus.CREATED })
   @ExceptionResponse(BadRequestException, { description: "Invalid request" })
-  async verifyUser(@Body() { token }: VerificationUserRequest) {
+  async verifyUser(@Body() body: VerificationUserBody) {
+    const { token } = body.data.attributes;
     const { uuid, isVerified } = await this.verificationUserService.verify(token);
     return buildJsonApi(VerificationUserResponseDto).addData(
       uuid ?? "no-uuid",
       populateDto(new VerificationUserResponseDto(), { verified: isVerified })
+    );
+  }
+
+  @Post("resend")
+  @NoBearerAuth
+  @ApiOperation({
+    operationId: "resendUserVerification",
+    description: "Resend a verification email for a user by email address"
+  })
+  @JsonApiResponse(ResendVerificationResponseDto, { status: HttpStatus.OK })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request" })
+  async resendVerification(@Body() payload: ResendVerificationBody) {
+    const { emailAddress, callbackUrl } = payload.data.attributes;
+    await this.verificationUserService.resendVerificationEmail(emailAddress, callbackUrl);
+    return buildJsonApi(ResendVerificationResponseDto).addData(
+      emailAddress,
+      populateDto(new ResendVerificationResponseDto(), { emailAddress })
     );
   }
 }

@@ -39,7 +39,7 @@ describe("AnrPlotGeometryPolicy", () => {
       await expectCan(service, "create", anrPlotGeometry);
     });
 
-    it("allows service accounts with polygons-manage to update and delete only their own anr plot geometries", async () => {
+    it("allows service accounts with polygons-manage to update and delete any anr plot geometries", async () => {
       const user = await UserFactory.create();
       mockUserId(user.id);
       mockPermissions("polygons-manage");
@@ -52,8 +52,8 @@ describe("AnrPlotGeometryPolicy", () => {
 
       await expectCan(service, "update", ownPlotGeometry);
       await expectCan(service, "delete", ownPlotGeometry);
-      await expectCannot(service, "update", otherPlotGeometry);
-      await expectCannot(service, "delete", otherPlotGeometry);
+      await expectCan(service, "update", otherPlotGeometry);
+      await expectCan(service, "delete", otherPlotGeometry);
     });
   });
 

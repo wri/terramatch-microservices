@@ -33,7 +33,7 @@ describe("AnrPlotGeometryPolicy", () => {
       mockPermissions("polygons-manage");
 
       const anrPlotGeometry = new AnrPlotGeometry();
-      anrPlotGeometry.createdBy = 999;
+      anrPlotGeometry.createdBy = user.id + 1;
 
       await expectCan(service, "read", anrPlotGeometry);
       await expectCan(service, "create", anrPlotGeometry);
@@ -48,7 +48,7 @@ describe("AnrPlotGeometryPolicy", () => {
       ownPlotGeometry.createdBy = user.id;
 
       const otherPlotGeometry = new AnrPlotGeometry();
-      otherPlotGeometry.createdBy = 999;
+      otherPlotGeometry.createdBy = user.id + 1;
 
       await expectCan(service, "update", ownPlotGeometry);
       await expectCan(service, "delete", ownPlotGeometry);

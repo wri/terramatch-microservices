@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { User } from "@terramatch-microservices/database/entities";
@@ -16,11 +17,13 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, DocumentBuilder } from "@terramatch-microservices/common/util";
+import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
-import { UserCreateBody } from "./dto/user-create.dto";
+import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
+import { UserCreateBaseBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
+import { UserQueryDto } from "./dto/user-query.dto";
+import { UsersService } from "./users.service";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 export const USER_ORG_RELATIONSHIP = {
@@ -45,8 +48,29 @@ const USER_RESPONSE_SHAPE = {
 export class UsersController {
   constructor(
     private readonly policyService: PolicyService,
-    private readonly userCreationService: UserCreationService
+    private readonly userCreationService: UserCreationService,
+    private readonly usersService: UsersService
   ) {}
+
+  @Get()
+  @ApiOperation({ operationId: "userIndex", description: "Fetch a paginated list of users" })
+  @JsonApiResponse([{ data: UserDto, pagination: "number" }])
+  @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
+  async userIndex(@Query() query: UserQueryDto) {
+    const { users, paginationTotal } = await this.usersService.findMany(query);
+    if (users.length > 0) {
+      await this.policyService.authorize("read", users);
+    }
+
+    const document = buildJsonApi(UserDto, { forceDataArray: true }).addIndex({
+      requestPath: `/users/v3/users${getStableRequestQuery(query)}`,
+      total: paginationTotal,
+      pageNumber: query.page?.number ?? 1
+    });
+
+    await this.usersService.addUsersToDocument(document, users);
+    return document;
+  }
 
   @Get(":uuid")
   @ApiOperation({ operationId: "usersFind", description: "Fetch a user by UUID, or with the 'me' identifier" })
@@ -98,15 +122,19 @@ export class UsersController {
   }
 
   @Post()
-  @NoBearerAuth
+  @OptionalBearerAuth
   @ApiOperation({
     operationId: "userCreation",
     description: "Create a new user"
   })
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
-  async create(@Body() payload: UserCreateBody) {
-    const user = await this.userCreationService.createNewUser(payload.data.attributes);
+  async create(@Body() payload: UserCreateBaseBody) {
+    const isAuthenticated = authenticatedUserId() != null;
+    if (isAuthenticated) {
+      await this.policyService.authorize("create", User);
+    }
+    const user = await this.userCreationService.createNewUser(isAuthenticated, payload.data.attributes);
     return await this.addUserResource(buildJsonApi(UserDto), user);
   }
   @Patch("verifyUser/:uuid")

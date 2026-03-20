@@ -3,22 +3,29 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import {
   LocalizationKey,
   ModelHasRole,
+  Organisation,
+  OrganisationInvite,
+  PasswordReset,
+  ProjectInvite,
+  ProjectUser,
   Role,
   User,
-  Verification,
-  PasswordReset,
-  OrganisationInvite,
-  ProjectInvite,
-  ProjectUser
+  Verification
 } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
 import { UserCreateAttributes } from "./dto/user-create.dto";
-import { InternalServerErrorException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnprocessableEntityException
+} from "@nestjs/common";
 import { RoleFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
+import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
 
 describe("UserCreationService", () => {
   let service: UserCreationService;
@@ -411,6 +418,112 @@ describe("UserCreationService", () => {
       await service.createNewUser(false, request);
 
       expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "project-developer" } });
+    });
+
+    it("should update existing project-user relation if already present", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create();
+      const request = getInviteRequest("new@example.com", "valid-token");
+      const passwordReset = {
+        user,
+        destroy: jest.fn().mockResolvedValue(undefined)
+      } as unknown as PasswordReset;
+      const projectInvite = {
+        emailAddress: user.emailAddress,
+        project,
+        acceptedAt: null,
+        save: jest.fn().mockResolvedValue(undefined)
+      } as unknown as ProjectInvite;
+      const role = RoleFactory.create({ name: "project-developer" });
+      const projectUser = {
+        isMonitoring: false,
+        status: "inactive",
+        save: jest.fn().mockResolvedValue(undefined)
+      } as unknown as ProjectUser;
+
+      jest.spyOn(PasswordReset, "findOne").mockResolvedValue(passwordReset);
+      jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([]);
+      jest.spyOn(ProjectInvite, "findAll").mockResolvedValue([projectInvite]);
+      jest.spyOn(ProjectUser, "findOrCreate").mockResolvedValue([projectUser, false]);
+      jest.spyOn(Role, "findOne").mockResolvedValue(role);
+      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
+      jest.spyOn(user, "save").mockResolvedValue(user);
+
+      await service.createNewUser(false, request);
+
+      expect(projectUser.isMonitoring).toBe(true);
+      expect(projectUser.status).toBe("active");
+      expect(projectUser.save).toHaveBeenCalled();
+    });
+  });
+
+  describe("authenticated/admin user creation", () => {
+    const getAdminRequest = (email: string, role: string) => {
+      const request = new AdminUserCreateAttributes();
+      request.emailAddress = email;
+      request.firstName = "firstName";
+      request.lastName = "lastName";
+      request.jobRole = "developer";
+      request.phoneNumber = "1234567890";
+      request.role = role;
+      request.organisationUuid = "org-uuid";
+      return request;
+    };
+
+    it("should create user for authenticated request", async () => {
+      const request = getAdminRequest("admin-created@example.com", "project-manager");
+      const role = RoleFactory.create({ name: request.role });
+      const createdUser = await UserFactory.create();
+      const organisation = { id: 999 } as Organisation;
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(organisation);
+      jest.spyOn(User, "count").mockResolvedValue(0);
+      jest.spyOn(User, "create").mockResolvedValue(createdUser);
+      jest.spyOn(Role, "findOne").mockResolvedValue(role);
+      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
+
+      const result = await service.createNewUser(true, request);
+
+      expect(Organisation.findOne).toHaveBeenCalledWith({
+        where: { uuid: request.organisationUuid },
+        attributes: ["id"]
+      });
+      expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ organisationId: organisation.id }));
+      expect(result).toBe(createdUser);
+    });
+
+    it("should fail when organisation does not exist", async () => {
+      const request = getAdminRequest("admin-created@example.com", "project-manager");
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
+
+      await expect(service.createNewUser(true, request)).rejects.toThrow(
+        new NotFoundException("Organisation not found")
+      );
+    });
+
+    it("should fail when admin role does not exist", async () => {
+      const request = getAdminRequest("admin-created@example.com", "project-manager");
+      const createdUser = await UserFactory.create();
+      const organisation = { id: 888 } as Organisation;
+
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(organisation);
+      jest.spyOn(User, "count").mockResolvedValue(0);
+      jest.spyOn(User, "create").mockResolvedValue(createdUser);
+      jest.spyOn(Role, "findOne").mockResolvedValue(null);
+
+      await expect(service.createNewUser(true, request)).rejects.toThrow(
+        new InternalServerErrorException("User creation failed")
+      );
+    });
+
+    it("should fail validation for malformed admin payload", async () => {
+      const request = getAdminRequest("invalid-email", "project-manager");
+      request.organisationUuid = "";
+      // @ts-expect-error test invalid payload
+      request.phoneNumber = null;
+
+      await expect(service.createNewUser(true, request)).rejects.toThrow(BadRequestException);
     });
   });
 });

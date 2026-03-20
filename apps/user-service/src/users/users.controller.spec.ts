@@ -21,6 +21,7 @@ describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let userCreationService: DeepMocked<UserCreationService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let usersService: DeepMocked<UsersService>;
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -139,6 +140,31 @@ describe("UsersController", () => {
     });
   });
 
+  describe("userIndex", () => {
+    it("authorizes and enriches the document when users are returned", async () => {
+      const user = await UserFactory.create();
+      const query = { page: { number: 2 } };
+      usersService.findMany.mockResolvedValue({ users: [user], paginationTotal: 1 });
+      usersService.addUsersToDocument.mockImplementation(async document => document);
+
+      await controller.userIndex(query);
+
+      expect(usersService.findMany).toHaveBeenCalledWith(query);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", [user]);
+      expect(usersService.addUsersToDocument).toHaveBeenCalledWith(expect.anything(), [user]);
+    });
+
+    it("does not authorize when no users are returned", async () => {
+      usersService.findMany.mockResolvedValue({ users: [], paginationTotal: 0 });
+      usersService.addUsersToDocument.mockImplementation(async document => document);
+
+      await controller.userIndex({});
+
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(usersService.addUsersToDocument).toHaveBeenCalledWith(expect.anything(), []);
+    });
+  });
+
   describe("update", () => {
     const makeValidBody = (uuid: string, locale?: ValidLocale) => ({
       data: {
@@ -178,6 +204,30 @@ describe("UsersController", () => {
   });
 
   describe("create", () => {
+    it("authorizes creation when request is authenticated", async () => {
+      const user = await UserFactory.create();
+      const attributes = new UserCreateAttributes();
+      mockUserId(1);
+      userCreationService.createNewUser.mockResolvedValue(user);
+
+      await controller.create(createRequest(attributes));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", User);
+      expect(userCreationService.createNewUser).toHaveBeenCalledWith(true, attributes);
+    });
+
+    it("does not authorize creation when request is unauthenticated", async () => {
+      const user = await UserFactory.create();
+      const attributes = new UserCreateAttributes();
+      mockUserId();
+      userCreationService.createNewUser.mockResolvedValue(user);
+
+      await controller.create(createRequest(attributes));
+
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(userCreationService.createNewUser).toHaveBeenCalledWith(false, attributes);
+    });
+
     it("should create a new user", async () => {
       const user = await UserFactory.create();
       const attributes = new UserCreateAttributes();

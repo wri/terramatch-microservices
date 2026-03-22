@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { ScheduledJob } from "@terramatch-microservices/database/entities";
+import { ScheduledJob, Task } from "@terramatch-microservices/database/entities";
 import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
+import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/constants/status";
 import { Op, Transaction } from "sequelize";
 import {
   REPORT_REMINDER,
@@ -14,12 +15,22 @@ import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { DateTime } from "luxon";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
+import {
+  TaskDigestEmail,
+  WeeklyPolygonUpdateEmail
+} from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
+
+const TASK_DIGEST_CHUNK_SIZE = 100;
+const POLYGON_DIGEST_CHUNK_SIZE = 50;
 
 @Injectable()
 export class ScheduledJobsService {
   private readonly logger = new TMLogger(ScheduledJobsService.name);
 
-  constructor(@InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue) {}
+  constructor(
+    @InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue,
+    @InjectQueue("email") private readonly emailQueue: Queue
+  ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processScheduledJobs() {
@@ -102,5 +113,51 @@ export class ScheduledJobsService {
         this.logger.log(`Scheduled TaskDue ${framework} dueAt ${dueAtISO}`);
       }
     }
+  }
+
+  /**
+   * Laravel send-daily-digest-notifications: Monday 17:00 Europe/Sofia.
+   * Multiple job-service replicas may each fire this cron; use a single replica or a distributed
+   * lock if duplicate enqueues must be avoided (Laravel onOneServer).
+   */
+  @Cron("0 17 * * 1", { name: "taskDigestWeekly", timeZone: "Europe/Sofia" })
+  async enqueueTaskDigestEmails(): Promise<void> {
+    this.logger.log("Enqueueing task digest email jobs (incomplete tasks)");
+    let cursor = 0;
+    let total = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const tasks = await Task.findAll({
+        where: {
+          id: { [Op.gt]: cursor },
+          status: { [Op.notIn]: [AWAITING_APPROVAL, APPROVED] }
+        },
+        attributes: ["id"],
+        order: [["id", "ASC"]],
+        limit: TASK_DIGEST_CHUNK_SIZE
+      });
+      if (tasks.length === 0) {
+        hasMore = false;
+        continue;
+      }
+      cursor = tasks[tasks.length - 1].id;
+      const taskIds = tasks.map(({ id }) => id);
+      total += taskIds.length;
+      await this.emailQueue.add(TaskDigestEmail.NAME, { taskIds });
+    }
+    this.logger.log(`Task digest: enqueued chunks covering up to ${total} incomplete tasks`);
+  }
+
+  /** Laravel send-weekly-polygon-update-notifications: Monday 00:00 Europe/Sofia. */
+  @Cron("0 0 * * 1", { name: "weeklyPolygonUpdates", timeZone: "Europe/Sofia" })
+  async enqueueWeeklyPolygonUpdateEmails(): Promise<void> {
+    this.logger.log("Enqueueing weekly polygon update email jobs");
+    const weekAgo = DateTime.now().minus({ days: 7 }).toJSDate();
+    const uuids = await WeeklyPolygonUpdateEmail.loadRecentSitePolygonUuids(weekAgo);
+    for (let i = 0; i < uuids.length; i += POLYGON_DIGEST_CHUNK_SIZE) {
+      const sitePolygonUuids = uuids.slice(i, i + POLYGON_DIGEST_CHUNK_SIZE);
+      await this.emailQueue.add(WeeklyPolygonUpdateEmail.NAME, { sitePolygonUuids });
+    }
+    this.logger.log(`Weekly polygon updates: enqueued ${uuids.length} UUIDs in chunks`);
   }
 }

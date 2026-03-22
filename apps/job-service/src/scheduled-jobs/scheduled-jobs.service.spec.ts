@@ -5,20 +5,25 @@ import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
-import { ScheduledJob } from "@terramatch-microservices/database/entities";
+import { ScheduledJob, Task } from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
+import {
+  TaskDigestEmail,
+  WeeklyPolygonUpdateEmail
+} from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
   let queue: DeepMocked<Queue>;
+  let emailQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) },
-        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
+        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) }
       ]
     }).compile();
 
@@ -113,6 +118,60 @@ describe("ScheduledJobsService", () => {
       expect(enterprisesJan2027Calls).toHaveLength(0);
       scheduleSpy.mockRestore();
       taskDueSpy.mockRestore();
+    });
+  });
+
+  describe("enqueueTaskDigestEmails", () => {
+    it("should not enqueue when no incomplete tasks", async () => {
+      const findAllSpy = jest.spyOn(Task, "findAll").mockResolvedValue([]);
+      await service.enqueueTaskDigestEmails();
+      expect(emailQueue.add).not.toHaveBeenCalled();
+      findAllSpy.mockRestore();
+    });
+
+    it("should enqueue task digest jobs in id chunks", async () => {
+      const findAllSpy = jest
+        .spyOn(Task, "findAll")
+        .mockResolvedValueOnce([{ id: 10 }, { id: 20 }] as Task[])
+        .mockResolvedValueOnce([{ id: 30 }] as Task[])
+        .mockResolvedValueOnce([] as Task[]);
+
+      await service.enqueueTaskDigestEmails();
+
+      expect(emailQueue.add).toHaveBeenCalledWith(TaskDigestEmail.NAME, { taskIds: [10, 20] });
+      expect(emailQueue.add).toHaveBeenCalledWith(TaskDigestEmail.NAME, { taskIds: [30] });
+      findAllSpy.mockRestore();
+    });
+  });
+
+  describe("enqueueWeeklyPolygonUpdateEmails", () => {
+    it("should not enqueue when no polygon UUIDs in window", async () => {
+      const loadSpy = jest.spyOn(WeeklyPolygonUpdateEmail, "loadRecentSitePolygonUuids").mockResolvedValue([]);
+      await service.enqueueWeeklyPolygonUpdateEmails();
+      expect(emailQueue.add).not.toHaveBeenCalled();
+      loadSpy.mockRestore();
+    });
+
+    it("should enqueue polygon digest jobs in uuid chunks", async () => {
+      const uuids = ["uuid-a", "uuid-b"];
+      const loadSpy = jest.spyOn(WeeklyPolygonUpdateEmail, "loadRecentSitePolygonUuids").mockResolvedValue(uuids);
+      await service.enqueueWeeklyPolygonUpdateEmails();
+      expect(emailQueue.add).toHaveBeenCalledWith(WeeklyPolygonUpdateEmail.NAME, { sitePolygonUuids: uuids });
+      loadSpy.mockRestore();
+    });
+
+    it("should split polygon UUIDs into multiple queue jobs when above chunk size", async () => {
+      const uuids = Array.from({ length: 51 }, (_, i) => `uuid-${i}`);
+      const loadSpy = jest.spyOn(WeeklyPolygonUpdateEmail, "loadRecentSitePolygonUuids").mockResolvedValue(uuids);
+      await service.enqueueWeeklyPolygonUpdateEmails();
+      expect(emailQueue.add).toHaveBeenCalledTimes(2);
+      expect(emailQueue.add).toHaveBeenNthCalledWith(1, WeeklyPolygonUpdateEmail.NAME, {
+        sitePolygonUuids: uuids.slice(0, 50)
+      });
+      expect(emailQueue.add).toHaveBeenNthCalledWith(2, WeeklyPolygonUpdateEmail.NAME, {
+        sitePolygonUuids: uuids.slice(50, 51)
+      });
+      loadSpy.mockRestore();
     });
   });
 });

@@ -69,9 +69,9 @@ export class PolygonUpdates extends Model<PolygonUpdates> {
 
   @CreatedAt
   @Column(DATE)
-  createdAt: Date;
+  override createdAt: Date;
 
   @UpdatedAt
   @Column(DATE)
-  updatedAt: Date;
+  override updatedAt: Date;
 }

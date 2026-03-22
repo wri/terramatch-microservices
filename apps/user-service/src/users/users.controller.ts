@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -16,8 +17,16 @@ import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
 import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
+import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  DocumentBuilder,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
 import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
 import { UserCreateBaseBody } from "./dto/user-create.dto";
@@ -111,14 +120,25 @@ export class UsersController {
 
     await this.policyService.authorize("update", user);
 
-    // The only thing allowed to update for now is the locale
-    const { locale } = updatePayload.data.attributes;
-    if (locale != null) {
-      user.locale = locale;
-      await user.save();
-    }
+    const updatedUser = await this.usersService.update(user, updatePayload.data.attributes);
 
-    return await this.addUserResource(buildJsonApi(UserDto), user);
+    return await this.addUserResource(buildJsonApi(UserDto), updatedUser as User);
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({ operationId: "userDelete", summary: "Delete a user by UUID" })
+  @JsonApiDeletedResponse(getDtoType(UserDto), { description: "User was deleted" })
+  @ExceptionResponse(NotFoundException, { description: "User with that UUID not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to delete this user" })
+  async delete(@Param() { uuid }: SingleResourceDto) {
+    const user = await User.findOne({ where: { uuid }, attributes: ["id", "uuid"] });
+    if (user == null) throw new NotFoundException();
+
+    await this.policyService.authorize("delete", user);
+
+    await this.usersService.delete(user);
+
+    return buildDeletedResponse(getDtoType(UserDto), uuid);
   }
 
   @Post()

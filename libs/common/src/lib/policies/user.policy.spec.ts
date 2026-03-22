@@ -78,4 +78,27 @@ describe("UserPolicy", () => {
 
     await expectCan(service, "verify", new User());
   });
+
+  it("allows deleting any user as users-manage", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "delete", new User());
+  });
+
+  it("disallows deleting users as non-admin", async () => {
+    mockPermissions();
+    await expectCannot(service, "delete", new User());
+    await expectCannot(service, "delete", await UserFactory.build({ id: 123 }));
+  });
+
+  it("allows deleting any user for verified admin without users-manage", async () => {
+    mockPermissions();
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "delete", new User());
+  });
 });

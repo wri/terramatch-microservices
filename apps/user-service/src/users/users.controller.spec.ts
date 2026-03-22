@@ -140,6 +140,39 @@ describe("UsersController", () => {
     });
   });
 
+  describe("delete", () => {
+    it("should throw not found if the user is not found", async () => {
+      await expect(controller.delete({ uuid: "00000000-0000-4000-8000-000000000000" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw unauthorized if policy does not authorize", async () => {
+      const { uuid } = await UserFactory.create();
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.delete({ uuid: uuid! })).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should soft-delete the user and return a JSON:API deleted document", async () => {
+      const user = await UserFactory.create();
+      policyService.authorize.mockResolvedValue(undefined);
+      usersService.delete.mockImplementation(async u => {
+        await u.destroy();
+      });
+
+      const result = serialize(await controller.delete({ uuid: user.uuid! }));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: user.id }));
+      expect(usersService.delete).toHaveBeenCalledWith(expect.objectContaining({ id: user.id }));
+      expect(result.meta.resourceType).toBe("users");
+      expect(result.meta.resourceIds).toEqual([user.uuid]);
+
+      const reloaded = await User.findOne({ where: { id: user.id }, paranoid: false });
+      expect(reloaded?.deletedAt).not.toBeNull();
+    });
+  });
+
   describe("userIndex", () => {
     it("authorizes and enriches the document when users are returned", async () => {
       const user = await UserFactory.create();

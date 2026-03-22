@@ -5,6 +5,9 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UserDto } from "@terramatch-microservices/common/dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { UserUpdateAttributes } from "./dto/user-update.dto";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 
 @Injectable()
 export class UsersService {
@@ -70,5 +73,40 @@ export class UsersService {
       document.addData(user.uuid ?? "no-uuid", new UserDto(user, []));
     }
     return document;
+  }
+
+  async update(user: User, update: UserUpdateAttributes) {
+    user.organisationId = update.organisationUuid
+      ? (await Organisation.findOne({ where: { uuid: update.organisationUuid } }))?.id ?? null
+      : null;
+    if (update.firstName != null) {
+      user.firstName = update.firstName ?? null;
+    }
+    if (update.lastName != null) {
+      user.lastName = update.lastName ?? null;
+    }
+    if (update.emailAddress != null) {
+      user.emailAddress = update.emailAddress ?? null;
+    }
+    if (update.jobRole != null) {
+      user.jobRole = update.jobRole ?? null;
+    }
+    if (update.phoneNumber != null) {
+      user.phoneNumber = update.phoneNumber ?? null;
+    }
+    if (update.country != null) {
+      user.country = update.country ?? null;
+    }
+    if (update.program != null) {
+      user.program = update.program ?? null;
+    }
+    if (update.locale != null) {
+      user.locale = update.locale as ValidLocale;
+    }
+    return await user.save();
+  }
+
+  async delete(user: User): Promise<void> {
+    await user.destroy();
   }
 }

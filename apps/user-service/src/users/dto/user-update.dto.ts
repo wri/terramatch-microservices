@@ -31,6 +31,9 @@ export class UserUpdateAttributes {
   @IsEnum(VALID_LOCALES)
   @ApiProperty({ description: "New default locale for the given user", nullable: true, enum: VALID_LOCALES })
   locale?: ValidLocale | null;
+
+  @ApiProperty()
+  primaryRole: string;
 }
 
 export class UserUpdateBody extends JsonApiBodyDto(

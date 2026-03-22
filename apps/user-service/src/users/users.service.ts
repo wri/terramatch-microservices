@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
-import { User } from "@terramatch-microservices/database/entities";
+import { ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UserDto } from "@terramatch-microservices/common/dto";
@@ -76,9 +76,15 @@ export class UsersService {
   }
 
   async update(user: User, update: UserUpdateAttributes) {
-    user.organisationId = update.organisationUuid
-      ? (await Organisation.findOne({ where: { uuid: update.organisationUuid } }))?.id ?? null
-      : null;
+    if (update.organisationUuid != null) {
+      const organisationUuid = update.organisationUuid;
+      const organisation = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
+      if (organisation == null) {
+        throw new NotFoundException("Organisation not found");
+      }
+      user.organisationId = organisation.id;
+      console.log("organisation", organisation);
+    }
     if (update.firstName != null) {
       user.firstName = update.firstName ?? null;
     }
@@ -103,7 +109,20 @@ export class UsersService {
     if (update.locale != null) {
       user.locale = update.locale as ValidLocale;
     }
-    return await user.save();
+    user = await user.save();
+    if (update.primaryRole != null) {
+      await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
+      const roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
+      if (roleEntity == null) {
+        throw new NotFoundException("Role not found");
+      }
+      await ModelHasRole.findOrCreate({
+        where: { modelId: user.id, roleId: roleEntity.id },
+        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
+      });
+      await user.reload();
+    }
+    return user;
   }
 
   async delete(user: User): Promise<void> {

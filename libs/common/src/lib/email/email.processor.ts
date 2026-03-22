@@ -6,7 +6,11 @@ import { NotImplementedException } from "@nestjs/common";
 import * as Sentry from "@sentry/node";
 import { TMLogger } from "../util/tm-logger";
 import { EntityStatusUpdateEmail } from "./entity-status-update.email";
-import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
+import {
+  TaskDigestEmail,
+  TerrafundReportReminderEmail,
+  WeeklyPolygonUpdateEmail
+} from "./terrafund-report-reminder.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
 import { AdminUserCreationEmail } from "./admin-user-creation.email";
 import { ProjectManagerEmail } from "./project-manager.email";
@@ -58,7 +62,9 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   OrganisationUserRejectedEmail,
   OrganisationInviteEmail,
   AdminReportReminderEmail,
-  AdminFinancialReportReminderEmail
+  AdminFinancialReportReminderEmail,
+  TaskDigestEmail,
+  WeeklyPolygonUpdateEmail
 ];
 
 /**

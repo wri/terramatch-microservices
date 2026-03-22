@@ -17,7 +17,8 @@ describe("ScheduledJobsService", () => {
     const module = await Test.createTestingModule({
       providers: [
         ScheduledJobsService,
-        { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) }
+        { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) },
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
       ]
     }).compile();
 

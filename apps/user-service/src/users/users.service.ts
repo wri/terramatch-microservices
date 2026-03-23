@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
-import { ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
+import { Framework, FrameworkUser, ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UserDto } from "@terramatch-microservices/common/dto";
@@ -70,7 +70,7 @@ export class UsersService {
 
   async addUsersToDocument(document: DocumentBuilder, users: User[]) {
     for (const user of users) {
-      document.addData(user.uuid ?? "no-uuid", new UserDto(user, []));
+      document.addData(user.uuid ?? "no-uuid", new UserDto(user, [], []));
     }
     return document;
   }
@@ -108,6 +108,18 @@ export class UsersService {
     }
     if (update.locale != null) {
       user.locale = update.locale as ValidLocale;
+    }
+    if (update.directFrameworks != null) {
+      await FrameworkUser.destroy({ where: { userId: user.id } });
+      for (const framework of update.directFrameworks ?? []) {
+        const frameworkEntity = await Framework.findOne({ where: { slug: framework } });
+        if (frameworkEntity == null) {
+          throw new NotFoundException("Framework not found");
+        }
+        await FrameworkUser.findOrCreate({
+          where: { frameworkId: frameworkEntity.id, userId: user.id }
+        });
+      }
     }
     user = await user.save();
     if (update.primaryRole != null) {

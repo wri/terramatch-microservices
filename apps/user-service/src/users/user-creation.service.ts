@@ -14,7 +14,9 @@ import {
   Organisation,
   OrganisationInvite,
   ProjectInvite,
-  ProjectUser
+  ProjectUser,
+  FrameworkUser,
+  Framework
 } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { UserCreateAttributes, UserCreateBaseAttributes } from "./dto/user-create.dto";
@@ -119,7 +121,7 @@ export class UserCreationService {
       throw new UnprocessableEntityException("User already exists");
     }
     try {
-      const newUser = omit(adminUserCreateRequest, ["role", "organisationUuid"]);
+      const newUser = omit(adminUserCreateRequest, ["role", "organisationUuid", "directFrameworks"]);
       const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
       const role = adminUserCreateRequest.role;
       const roleEntity = await Role.findOne({ where: { name: role } });
@@ -132,7 +134,21 @@ export class UserCreationService {
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
       });
 
-      return user;
+      for (const framework of adminUserCreateRequest.directFrameworks ?? []) {
+        const frameworkEntity = await Framework.findOne({ where: { slug: framework } });
+        if (frameworkEntity == null) {
+          throw new NotFoundException("Framework not found");
+        }
+        await FrameworkUser.findOrCreate({
+          where: { frameworkId: frameworkEntity.id, userId: user.id }
+        });
+      }
+
+      const reloadedUser = await user.reload({
+        include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }, { association: "frameworks" }]
+      });
+
+      return reloadedUser;
     } catch (error) {
       this.logger.error(error);
       throw new InternalServerErrorException("User creation failed");

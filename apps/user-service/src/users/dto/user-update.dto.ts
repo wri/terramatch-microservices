@@ -1,4 +1,4 @@
-import { IsEnum } from "class-validator";
+import { IsArray, IsEnum, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -34,6 +34,11 @@ export class UserUpdateAttributes {
 
   @ApiProperty()
   primaryRole: string;
+
+  @ApiProperty({ isArray: true, type: String })
+  @IsArray()
+  @IsString({ each: true })
+  directFrameworks: string[];
 }
 
 export class UserUpdateBody extends JsonApiBodyDto(

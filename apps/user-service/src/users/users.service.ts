@@ -77,7 +77,6 @@ export class UsersService {
 
   async update(user: User, update: UserUpdateAttributes) {
     if (update.organisationUuid != null) {
-      const organisationUuid = update.organisationUuid;
       const organisation = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
       if (organisation == null) {
         throw new NotFoundException("Organisation not found");

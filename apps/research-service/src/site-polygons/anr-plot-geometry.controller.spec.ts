@@ -10,15 +10,6 @@ import { serialize } from "@terramatch-microservices/common/util/testing";
 import { FeatureCollection } from "geojson";
 import { Readable } from "stream";
 
-jest.mock("@terramatch-microservices/database/entities", () => {
-  const original = jest.requireActual("@terramatch-microservices/database/entities");
-  return {
-    ...original,
-    SitePolygon: { findOne: jest.fn() },
-    AnrPlotGeometry: {}
-  };
-});
-
 describe("AnrPlotGeometryController", () => {
   let controller: AnrPlotGeometryController;
   let anrPlotGeometryService: DeepMocked<AnrPlotGeometryService>;
@@ -39,7 +30,9 @@ describe("AnrPlotGeometryController", () => {
   const mockSitePolygon = {
     id: 1,
     uuid: sitePolygonUuid,
-    siteUuid: "site-uuid"
+    siteUuid: "site-uuid",
+    status: "approved" as const,
+    practice: ["assisted-natural-regeneration"]
   };
 
   const featureCollection: FeatureCollection = {
@@ -96,6 +89,8 @@ describe("AnrPlotGeometryController", () => {
       writable: true,
       configurable: true
     });
+
+    anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots.mockResolvedValue(mockSitePolygon as SitePolygon);
   });
 
   afterEach(() => {
@@ -113,6 +108,7 @@ describe("AnrPlotGeometryController", () => {
 
       await expect(controller.getPlotGeometry(sitePolygonUuid)).rejects.toThrow(UnauthorizedException);
 
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("read", mockPlot);
     });
@@ -128,6 +124,7 @@ describe("AnrPlotGeometryController", () => {
         `No ANR plot geometry found for polygon ${sitePolygonUuid}`
       );
 
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
       expect(policyService.authorize).not.toHaveBeenCalled();
     });
@@ -138,6 +135,7 @@ describe("AnrPlotGeometryController", () => {
 
       const result = await controller.getPlotGeometry(sitePolygonUuid);
 
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", mockPlot);
 
@@ -161,6 +159,7 @@ describe("AnrPlotGeometryController", () => {
 
       await expect(controller.getPlotGeometryGeoJson(sitePolygonUuid)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("read", AnrPlotGeometry);
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).not.toHaveBeenCalled();
       expect(anrPlotGeometryService.getPlotOrThrow).not.toHaveBeenCalled();
     });
 
@@ -171,6 +170,7 @@ describe("AnrPlotGeometryController", () => {
       );
 
       await expect(controller.getPlotGeometryGeoJson(sitePolygonUuid)).rejects.toThrow(NotFoundException);
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
     });
 
@@ -181,6 +181,7 @@ describe("AnrPlotGeometryController", () => {
       const result = await controller.getPlotGeometryGeoJson(sitePolygonUuid);
 
       expect(policyService.authorize).toHaveBeenCalledWith("read", AnrPlotGeometry);
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
 
       const serialized = serialize(result);
@@ -203,7 +204,7 @@ describe("AnrPlotGeometryController", () => {
 
       await expect(controller.upsertPlotGeometry(sitePolygonUuid, file)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("create", AnrPlotGeometry);
-      expect(SitePolygon.findOne).not.toHaveBeenCalled();
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).not.toHaveBeenCalled();
     });
 
     it("should throw UnauthorizedException when userId is null", async () => {
@@ -217,11 +218,14 @@ describe("AnrPlotGeometryController", () => {
 
       await expect(controller.upsertPlotGeometry(sitePolygonUuid, file)).rejects.toThrow(UnauthorizedException);
       await expect(controller.upsertPlotGeometry(sitePolygonUuid, file)).rejects.toThrow("User must be authenticated");
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when site polygon does not exist", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(null);
+      anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots.mockRejectedValue(
+        new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`)
+      );
       const file = createMockFile();
 
       await expect(controller.upsertPlotGeometry(sitePolygonUuid, file)).rejects.toThrow(NotFoundException);
@@ -229,13 +233,12 @@ describe("AnrPlotGeometryController", () => {
         `Site polygon not found: ${sitePolygonUuid}`
       );
 
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({ where: { uuid: sitePolygonUuid } });
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(geometryFileProcessingService.parseGeometryFile).not.toHaveBeenCalled();
     });
 
     it("should throw BadRequestException when file parsing fails", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon as SitePolygon);
       geometryFileProcessingService.parseGeometryFile.mockRejectedValue(
         new BadRequestException("Invalid file format or no features found")
       );
@@ -249,14 +252,13 @@ describe("AnrPlotGeometryController", () => {
 
     it("should parse file, upsert plot and return JSON:API document", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon as SitePolygon);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       anrPlotGeometryService.upsertPlot.mockResolvedValue(mockPlot as AnrPlotGeometry);
 
       const file = createMockFile();
       const result = await controller.upsertPlotGeometry(sitePolygonUuid, file);
 
-      expect(SitePolygon.findOne).toHaveBeenCalledWith({ where: { uuid: sitePolygonUuid } });
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
       expect(anrPlotGeometryService.upsertPlot).toHaveBeenCalledWith(sitePolygonUuid, featureCollection, 1);
 
@@ -275,6 +277,7 @@ describe("AnrPlotGeometryController", () => {
 
       await expect(controller.deletePlotGeometry(sitePolygonUuid)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("delete", AnrPlotGeometry);
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).not.toHaveBeenCalled();
       expect(anrPlotGeometryService.getPlotOrThrow).not.toHaveBeenCalled();
     });
 
@@ -288,6 +291,7 @@ describe("AnrPlotGeometryController", () => {
       await expect(controller.deletePlotGeometry(sitePolygonUuid)).rejects.toThrow(
         `No ANR plot geometry found for polygon ${sitePolygonUuid}`
       );
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.deletePlot).not.toHaveBeenCalled();
     });
@@ -300,6 +304,7 @@ describe("AnrPlotGeometryController", () => {
       const result = await controller.deletePlotGeometry(sitePolygonUuid);
 
       expect(policyService.authorize).toHaveBeenCalledWith("delete", AnrPlotGeometry);
+      expect(anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.getPlotOrThrow).toHaveBeenCalledWith(sitePolygonUuid);
       expect(anrPlotGeometryService.deletePlot).toHaveBeenCalledWith(sitePolygonUuid);
 

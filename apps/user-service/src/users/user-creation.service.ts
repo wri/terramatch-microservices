@@ -4,7 +4,16 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { ModelHasRole, Role, User, Verification } from "@terramatch-microservices/database/entities";
+import {
+  ModelHasRole,
+  Role,
+  User,
+  Verification,
+  PasswordReset,
+  OrganisationInvite,
+  ProjectInvite,
+  ProjectUser
+} from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
@@ -27,6 +36,13 @@ export class UserCreationService {
   constructor(private readonly emailService: EmailService) {}
 
   async createNewUser(request: UserCreateAttributes): Promise<User> {
+    if (request.token != null) {
+      return this.completeInviteSignup(request);
+    }
+    return this.createRegularUser(request);
+  }
+
+  private async createRegularUser(request: UserCreateAttributes): Promise<User> {
     const role = request.role;
     if (!this.roles.includes(role)) {
       throw new UnprocessableEntityException("Role not valid");
@@ -45,7 +61,7 @@ export class UserCreationService {
     try {
       const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
-      const newUser = omit(request, ["callbackUrl", "role", "password"]);
+      const newUser = omit(request, ["callbackUrl", "role", "password", "token"]);
 
       const user = await User.create({ ...newUser, password: hashPassword } as User);
 
@@ -64,6 +80,97 @@ export class UserCreationService {
       this.logger.error(error);
       throw new InternalServerErrorException("User creation failed");
     }
+  }
+
+  private async completeInviteSignup(request: UserCreateAttributes): Promise<User> {
+    const token = request.token;
+    const passwordReset = await PasswordReset.findOne({
+      where: { token },
+      include: [{ association: "user" }]
+    });
+
+    if (passwordReset == null || passwordReset.user == null) {
+      throw new NotFoundException("Invalid signup token");
+    }
+
+    const user = passwordReset.user;
+
+    const organisationInvites = await OrganisationInvite.findAll({
+      where: { emailAddress: user.emailAddress, acceptedAt: null }
+    });
+
+    if (organisationInvites.length > 0) {
+      for (const invite of organisationInvites) {
+        invite.emailAddress = request.emailAddress;
+        if (invite.acceptedAt == null) {
+          invite.acceptedAt = new Date();
+        }
+        await invite.save();
+      }
+    } else {
+      const projectInvites = await ProjectInvite.findAll({
+        where: { emailAddress: user.emailAddress },
+        include: [{ association: "project" }]
+      });
+
+      const projectIdsToAssociate: number[] = [];
+
+      for (const invite of projectInvites) {
+        invite.emailAddress = request.emailAddress;
+        if (invite.acceptedAt == null) {
+          invite.acceptedAt = new Date();
+        }
+        await invite.save();
+
+        if (invite.project != null) {
+          projectIdsToAssociate.push(invite.project.id);
+        }
+      }
+
+      for (const projectId of projectIdsToAssociate) {
+        const [projectUser, created] = await ProjectUser.findOrCreate({
+          where: { projectId, userId: user.id },
+          defaults: {
+            projectId,
+            userId: user.id,
+            isMonitoring: true,
+            status: "active"
+          }
+        });
+
+        if (!created) {
+          projectUser.isMonitoring = true;
+          projectUser.status = "active";
+          await projectUser.save();
+        }
+      }
+    }
+
+    const hashPassword = await bcrypt.hash(request.password, 10);
+    user.firstName = request.firstName;
+    user.lastName = request.lastName;
+    user.jobRole = request.jobRole;
+    user.phoneNumber = request.phoneNumber;
+    user.emailAddress = request.emailAddress;
+    user.password = hashPassword;
+    user.emailAddressVerifiedAt = new Date();
+
+    const role = "project-developer";
+    const roleEntity = await Role.findOne({ where: { name: role } });
+    if (roleEntity == null) {
+      throw new NotFoundException("Role not found");
+    }
+
+    await ModelHasRole.findOrCreate({
+      where: { modelId: user.id, roleId: roleEntity.id },
+      defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
+    });
+
+    await user.save();
+
+    await passwordReset.destroy();
+
+    return user;
   }
 
   private async sendEmailVerification({ emailAddress, locale }: User, token: string, callbackUrl: string) {

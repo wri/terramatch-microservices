@@ -1,8 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReportingFrameworksService } from "./reporting-frameworks.service";
 import { Framework, Form, Project, FrameworkUser } from "@terramatch-microservices/database/entities";
-import { NotFoundException } from "@nestjs/common";
-import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { EntityFormFactory, FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ReportingFrameworkDto } from "./dto/reporting-framework.dto";
 
@@ -314,6 +314,21 @@ describe("ReportingFrameworksService", () => {
   });
 
   describe("create", () => {
+    it("should throw when one of the forms is already in use", async () => {
+      const projectForm = await EntityFormFactory.project().create({ frameworkKey: "ppc" });
+      const siteForm = await EntityFormFactory.site().create({ frameworkKey: "ppc" });
+      const attributes = {
+        name: "Terra Fund",
+        projectFormUuid: projectForm.uuid,
+        siteFormUuid: siteForm.uuid,
+        nurseryFormUuid: "nursery-form-uuid"
+      };
+
+      await expect(service.create(attributes)).rejects.toThrow(
+        new BadRequestException("The following forms are already in use in another framework: Project, Site.")
+      );
+    });
+
     it("should create framework with slug from name and call syncForms", async () => {
       const attributes = {
         name: "My New Framework",
@@ -419,6 +434,16 @@ describe("ReportingFrameworksService", () => {
   });
 
   describe("update", () => {
+    it("should throw when one of the forms is already in use", async () => {
+      const projectForm = await EntityFormFactory.project().create({ frameworkKey: "ppc" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      createdFrameworkIds.push(framework.id);
+
+      await expect(service.update(framework, { projectFormUuid: projectForm.uuid })).rejects.toThrow(
+        new BadRequestException("The following forms are already in use in another framework: Project.")
+      );
+    });
+
     it("should update framework when payload has attributes", async () => {
       const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);

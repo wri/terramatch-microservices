@@ -19,10 +19,10 @@ export class UserDto {
       uuid: user.uuid ?? "",
       organisationName: user.organisation?.name ?? null,
       organisationUuid: user.organisation?.uuid ?? null,
-      frameworks: frameworks
+      frameworks: (frameworks ?? [])
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
-      directFrameworks: directFrameworks
+      directFrameworks: (directFrameworks ?? [])
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
     });

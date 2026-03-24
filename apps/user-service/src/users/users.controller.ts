@@ -187,7 +187,7 @@ export class UsersController {
   private async addUserResource(document: DocumentBuilder, user: User) {
     const userResource = document.addData(
       user.uuid ?? "no-uuid",
-      new UserDto(user, user.frameworks ?? [], (await user.myFrameworks()) ?? [])
+      new UserDto(user, user.frameworks, await user.myFrameworks())
     );
 
     const org = await user.primaryOrganisation();

@@ -1,10 +1,18 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { UsersService } from "./users.service";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { User } from "@terramatch-microservices/database/entities";
+import {
+  Framework,
+  FrameworkUser,
+  ModelHasRole,
+  Organisation,
+  Role,
+  User
+} from "@terramatch-microservices/database/entities";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { UserUpdateAttributes } from "./dto/user-update.dto";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -187,6 +195,145 @@ describe("UsersService", () => {
       await service.addUsersToDocument(document, users);
 
       expect(document.addData).toHaveBeenCalledWith("no-uuid", expect.anything());
+    });
+  });
+
+  describe("update", () => {
+    const createUserMock = () => {
+      const user = {
+        id: 99,
+        organisationId: null as number | null,
+        firstName: "Old",
+        lastName: "Name",
+        emailAddress: "old@example.com",
+        jobRole: "old-job" as string | null,
+        phoneNumber: "111" as string | null,
+        country: "US" as string | null,
+        program: "p1" as string | null,
+        locale: "en-US" as const,
+        save: jest.fn(),
+        reload: jest.fn()
+      };
+      user.save.mockResolvedValue(user);
+      user.reload.mockResolvedValue(user);
+      return user as unknown as User;
+    };
+
+    beforeEach(() => {
+      jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("should persist scalar field changes and return the user", async () => {
+      const user = createUserMock();
+      const update: UserUpdateAttributes = {
+        firstName: "New",
+        lastName: "Person",
+        emailAddress: "new@example.com",
+        jobRole: "engineer",
+        phoneNumber: "555",
+        country: "CA",
+        program: "p2",
+        locale: "fr-FR"
+      };
+
+      const result = await service.update(user, update);
+
+      expect(user.firstName).toBe("New");
+      expect(user.lastName).toBe("Person");
+      expect(user.emailAddress).toBe("new@example.com");
+      expect(user.jobRole).toBe("engineer");
+      expect(user.phoneNumber).toBe("555");
+      expect(user.country).toBe("CA");
+      expect(user.program).toBe("p2");
+      expect(user.locale).toBe("fr-FR");
+      expect(user.save).toHaveBeenCalledTimes(1);
+      expect(result).toBe(user);
+    });
+
+    it("should throw when organisation uuid does not exist", async () => {
+      const user = createUserMock();
+      jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
+
+      await expect(service.update(user, { organisationUuid: "00000000-0000-0000-0000-000000000001" })).rejects.toThrow(
+        new NotFoundException("Organisation not found")
+      );
+
+      expect(Organisation.findOne).toHaveBeenCalledWith({
+        where: { uuid: "00000000-0000-0000-0000-000000000001" }
+      });
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
+    it("should set organisationId when organisation exists", async () => {
+      const user = createUserMock();
+      jest.spyOn(Organisation, "findOne").mockResolvedValue({ id: 7 } as Organisation);
+
+      await service.update(user, { organisationUuid: "org-uuid" });
+
+      expect(user.organisationId).toBe(7);
+      expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should replace direct frameworks when directFrameworks is provided", async () => {
+      const user = createUserMock();
+      const destroySpy = jest.spyOn(FrameworkUser, "destroy").mockResolvedValue(0);
+      jest
+        .spyOn(Framework, "findOne")
+        .mockResolvedValueOnce({ id: 10 } as Framework)
+        .mockResolvedValueOnce({ id: 20 } as Framework);
+      const findOrCreateSpy = jest.spyOn(FrameworkUser, "findOrCreate").mockResolvedValue([{} as FrameworkUser, true]);
+
+      await service.update(user, { directFrameworks: ["fw-a", "fw-b"] });
+
+      expect(destroySpy).toHaveBeenCalledWith({ where: { userId: 99 } });
+      expect(Framework.findOne).toHaveBeenNthCalledWith(1, { where: { slug: "fw-a" } });
+      expect(Framework.findOne).toHaveBeenNthCalledWith(2, { where: { slug: "fw-b" } });
+      expect(findOrCreateSpy).toHaveBeenNthCalledWith(1, {
+        where: { frameworkId: 10, userId: 99 }
+      });
+      expect(findOrCreateSpy).toHaveBeenNthCalledWith(2, {
+        where: { frameworkId: 20, userId: 99 }
+      });
+    });
+
+    it("should throw when a direct framework slug is unknown", async () => {
+      const user = createUserMock();
+      jest.spyOn(FrameworkUser, "destroy").mockResolvedValue(0);
+      jest.spyOn(Framework, "findOne").mockResolvedValue(null);
+
+      await expect(service.update(user, { directFrameworks: ["missing"] })).rejects.toThrow(
+        new NotFoundException("Framework not found")
+      );
+    });
+
+    it("should replace primary role when primaryRole is provided", async () => {
+      const user = createUserMock();
+      const destroySpy = jest.spyOn(ModelHasRole, "destroy").mockResolvedValue(0);
+      jest.spyOn(Role, "findOne").mockResolvedValue({ id: 5 } as Role);
+      const findOrCreateSpy = jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
+
+      const result = await service.update(user, { primaryRole: "admin" });
+
+      expect(destroySpy).toHaveBeenCalledWith({
+        where: { modelId: 99, modelType: User.LARAVEL_TYPE }
+      });
+      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "admin" } });
+      expect(findOrCreateSpy).toHaveBeenCalledWith({
+        where: { modelId: 99, roleId: 5 },
+        defaults: { modelId: 99, roleId: 5, modelType: User.LARAVEL_TYPE } as ModelHasRole
+      });
+      expect(user.reload).toHaveBeenCalled();
+      expect(result).toBe(user);
+    });
+
+    it("should throw when primary role does not exist", async () => {
+      const user = createUserMock();
+      jest.spyOn(ModelHasRole, "destroy").mockResolvedValue(0);
+      jest.spyOn(Role, "findOne").mockResolvedValue(null);
+
+      await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow(
+        new NotFoundException("Role not found")
+      );
     });
   });
 });

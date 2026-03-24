@@ -21,9 +21,10 @@ describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let userCreationService: DeepMocked<UserCreationService>;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let usersService: DeepMocked<UsersService>;
+  let realUsersService: UsersService;
   beforeEach(async () => {
+    realUsersService = new UsersService();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
@@ -34,6 +35,10 @@ describe("UsersController", () => {
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
+    usersService.update.mockImplementation((user, attrs) => realUsersService.update(user, attrs));
+    usersService.delete.mockImplementation(async u => {
+      await realUsersService.delete(u);
+    });
   });
 
   afterEach(() => {

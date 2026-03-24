@@ -22,7 +22,12 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { RoleFactory, UserFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import {
+  RoleFactory,
+  UserFactory,
+  ProjectFactory,
+  FrameworkFactory
+} from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
 import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
@@ -459,6 +464,9 @@ describe("UserCreationService", () => {
 
   describe("authenticated/admin user creation", () => {
     const getAdminRequest = (email: string, role: string) => {
+      const frameworkSlug = "ppc";
+      RoleFactory.create({ name: role });
+      FrameworkFactory.create({ slug: frameworkSlug });
       const request = new AdminUserCreateAttributes();
       request.emailAddress = email;
       request.firstName = "firstName";
@@ -467,6 +475,7 @@ describe("UserCreationService", () => {
       request.phoneNumber = "1234567890";
       request.role = role;
       request.organisationUuid = "org-uuid";
+      request.directFrameworks = [frameworkSlug];
       return request;
     };
 

@@ -33,12 +33,12 @@ export class UserUpdateAttributes {
   locale?: ValidLocale | null;
 
   @ApiProperty()
-  primaryRole: string;
+  primaryRole?: string | null;
 
   @ApiProperty({ isArray: true, type: String })
   @IsArray()
   @IsString({ each: true })
-  directFrameworks: string[];
+  directFrameworks?: string[] | null;
 }
 
 export class UserUpdateBody extends JsonApiBodyDto(

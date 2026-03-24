@@ -1,19 +1,49 @@
-import { BadRequestException, Controller, Get, HttpStatus, NotFoundException, Param, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Header,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ProjectPitchService } from "./project-pitch.service";
 import { ProjectPitchDto } from "./dto/project-pitch.dto";
 import { ProjectPitchParamDto } from "./dto/project-pitch-param.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
+import { EntityCsvExportService } from "./entity-csv-export.service";
 
 @Controller("entities/v3/projectPitches")
 export class ProjectPitchesController {
   constructor(
     private readonly projectPitchService: ProjectPitchService,
-    private readonly policyService: PolicyService
+    private readonly policyService: PolicyService,
+    private readonly entityCsvExportService: EntityCsvExportService
   ) {}
+
+  @Get("export")
+  @ApiOperation({
+    operationId: "projectPitchExportCsv",
+    summary: "Export project pitches as CSV (capped row count)."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  @Header("Content-Type", "text/csv")
+  @Header("Content-Disposition", 'attachment; filename="project-pitches-export.csv"')
+  async projectPitchExportCsv(@Query() params: ProjectPitchQueryDto) {
+    return await this.entityCsvExportService.exportProjectPitchesCsv(params);
+  }
 
   @Get()
   @ApiOperation({

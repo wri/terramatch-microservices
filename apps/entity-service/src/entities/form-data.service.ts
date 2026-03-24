@@ -41,6 +41,9 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FundingProgrammeDto, StageDto } from "../fundingProgrammes/dto/funding-programme.dto";
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
+import { SubmissionExportQueryDto } from "./dto/submission-export-query.dto";
 
 @Injectable()
 export class FormDataService {
@@ -327,6 +330,71 @@ export class FormDataService {
     }
 
     await Promise.all([answersModel, ...Object.values(models)].map(model => model.save()));
+  }
+
+  async findSubmissionsForExport(query: SubmissionExportQueryDto) {
+    const builder = new PaginatedQueryBuilder(FormSubmission, MAX_CSV_EXPORT_ROWS, [
+      { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
+      {
+        association: "organisation",
+        attributes: [
+          "uuid",
+          "name",
+          "type",
+          "phone",
+          "hqStreet1",
+          "hqStreet2",
+          "hqCity",
+          "hqState",
+          "hqZipcode",
+          "webUrl",
+          "facebookUrl",
+          "instagramUrl",
+          "linkedinUrl",
+          "twitterUrl"
+        ]
+      },
+      { association: "stage", attributes: ["name"] }
+    ]);
+
+    const permissions = await this.policyService.getPermissions();
+    if (permissions.find(p => p.startsWith("framework-")) == null) {
+      const orgUuids = await User.orgUuids(authenticatedUserId());
+      builder.where({ organisationUuid: { [Op.in]: orgUuids } });
+    }
+
+    if (query.organisationUuid != null) {
+      builder.where({ organisationUuid: query.organisationUuid });
+    }
+    if (query.fundingProgrammeUuid != null) {
+      builder.where({ "$application.funding_programme_uuid$": query.fundingProgrammeUuid });
+    }
+    if (query.status != null) {
+      builder.where({ status: query.status });
+    }
+    if (query.search != null) {
+      const term = `%${query.search}%`;
+      builder.where({
+        [Op.or]: [
+          { name: { [Op.like]: term } },
+          { "$organisation.name$": { [Op.like]: term } },
+          { "$projectPitch.project_name$": { [Op.like]: term } }
+        ]
+      });
+    }
+
+    if (query.sort?.field != null) {
+      const allowed = ["createdAt", "updatedAt", "status", "name"];
+      if (allowed.includes(query.sort.field)) {
+        builder.order([query.sort.field, query.sort.direction ?? "DESC"]);
+      } else if (query.sort.field !== "id") {
+        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
+      }
+    } else {
+      builder.order(["createdAt", "DESC"]);
+    }
+
+    return { submissions: await builder.execute() };
   }
 
   private calculateProgress(answers: Dictionary<unknown>, questions: FormQuestion[]) {

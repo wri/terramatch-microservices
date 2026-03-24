@@ -6,19 +6,22 @@ import { ProjectPitchService } from "./project-pitch.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
+import { EntityCsvExportService } from "./entity-csv-export.service";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("ProjectPitchesController", () => {
   let controller: ProjectPitchesController;
   let projectPitchService: DeepMocked<ProjectPitchService>;
   let policyService: DeepMocked<PolicyService>;
+  let entityCsvExportService: DeepMocked<EntityCsvExportService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [ProjectPitchesController],
       providers: [
         { provide: ProjectPitchService, useValue: (projectPitchService = createMock<ProjectPitchService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: EntityCsvExportService, useValue: (entityCsvExportService = createMock<EntityCsvExportService>()) }
       ]
     }).compile();
 
@@ -109,6 +112,15 @@ describe("ProjectPitchesController", () => {
 
         await expect(controller.projectPitchGet({ uuid: "1" })).rejects.toThrow(Error);
       });
+    });
+  });
+
+  describe("Project pitch CSV export", () => {
+    it("returns CSV from EntityCsvExportService", async () => {
+      entityCsvExportService.exportProjectPitchesCsv.mockResolvedValue("uuid,Project Name\n1,Test");
+      const result = await controller.projectPitchExportCsv(new ProjectPitchQueryDto());
+      expect(result).toBe("uuid,Project Name\n1,Test");
+      expect(entityCsvExportService.exportProjectPitchesCsv).toHaveBeenCalledWith(expect.any(ProjectPitchQueryDto));
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   NotFoundException,
   Param,
   Patch,
@@ -21,7 +22,7 @@ import { OrganisationFullDto, OrganisationLightDto, UserDto } from "@terramatch-
 import { PolicyService } from "@terramatch-microservices/common";
 import { USER_ORG_RELATIONSHIP } from "../users/users.controller";
 import { OrganisationCreationService } from "./organisation-creation.service";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -84,6 +85,29 @@ export class OrganisationsController {
         pageNumber: query.page?.number ?? 1
       })
     );
+  }
+
+  @Get("export")
+  @ApiOperation({
+    operationId: "organisationExportCsv",
+    summary: "Export organisations as CSV (capped row count)."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Organisation export not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
+  @Header("Content-Type", "text/csv")
+  @Header("Content-Disposition", 'attachment; filename="organisations-export.csv"')
+  async exportCsv(@Query() query: OrganisationIndexQueryDto) {
+    const { organisations } = await this.organisationsService.findManyForExport(query);
+    if (organisations.length > 0) {
+      const action = query.view === "public" ? "listing" : "read";
+      await this.policyService.authorize(action, organisations);
+    }
+    return this.organisationsService.buildOrganisationsCsv(organisations);
   }
 
   @Get(":uuid")

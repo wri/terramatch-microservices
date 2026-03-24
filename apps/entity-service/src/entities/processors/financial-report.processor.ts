@@ -80,6 +80,44 @@ export class FinancialReportProcessor extends ReportProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  async findManyForExport(query: EntityQueryDto, maxRows: number) {
+    const builder = this.entitiesService.buildExportQuery(FinancialReport, maxRows, [
+      { association: "organisation", attributes: ["uuid", "name", "type"] }
+    ]);
+
+    if (query.sort?.field != null) {
+      if (
+        ["createdAt", "updatedAt", "submittedAt", "dueAt", "status", "updateRequestStatus", "yearOfReport"].includes(
+          query.sort.field
+        )
+      ) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field !== "id") {
+        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
+      }
+    }
+
+    SIMPLE_FILTERS.forEach(term => {
+      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+      if (query[term] != null) {
+        builder.where({ [field]: query[term] });
+      }
+    });
+
+    if (query.search != null) {
+      builder.where({
+        [Op.or]: [
+          { "$organisation.name$": { [Op.like]: `%${query.search}%` } },
+          { title: { [Op.like]: `%${query.search}%` } }
+        ]
+      });
+    }
+
+    return { models: await builder.execute() };
+  }
+
   async getFullDto(financialReport: FinancialReport) {
     const fundingTypes = await this.getFundingTypes(financialReport);
     const financialIndicators = await this.getFinancialIndicatorsWithMedia(financialReport);

@@ -82,7 +82,6 @@ export class UsersService {
         throw new NotFoundException("Organisation not found");
       }
       user.organisationId = organisation.id;
-      console.log("organisation", organisation);
     }
     if (update.firstName != null) {
       user.firstName = update.firstName ?? null;

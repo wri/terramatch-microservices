@@ -219,10 +219,6 @@ describe("UsersService", () => {
       return user as unknown as User;
     };
 
-    beforeEach(() => {
-      jest.spyOn(console, "log").mockImplementation(() => {});
-    });
-
     it("should persist scalar field changes and return the user", async () => {
       const user = createUserMock();
       const update: UserUpdateAttributes = {

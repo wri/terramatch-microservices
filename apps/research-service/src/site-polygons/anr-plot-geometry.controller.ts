@@ -17,7 +17,7 @@ import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-micr
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
-import { AnrPlotGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
+import { AnrPlotGeometry } from "@terramatch-microservices/database/entities";
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { AnrPlotGeometryService } from "./anr-plot-geometry.service";
 import { AnrPlotGeometryDto } from "./dto/anr-plot-geometry.dto";
@@ -45,7 +45,10 @@ export class AnrPlotGeometryController {
   @JsonApiResponse(AnrPlotGeometryDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
+  @ExceptionResponse(BadRequestException, { description: "Site polygon is not eligible for ANR monitoring plots." })
   async getPlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
+    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
+
     const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 
     await this.policyService.authorize("read", plot);
@@ -65,8 +68,11 @@ export class AnrPlotGeometryController {
   @JsonApiResponse(GeoJsonExportDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
+  @ExceptionResponse(BadRequestException, { description: "Site polygon is not eligible for ANR monitoring plots." })
   async getPlotGeometryGeoJson(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("read", AnrPlotGeometry);
+
+    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
     const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 
@@ -88,7 +94,9 @@ export class AnrPlotGeometryController {
   @JsonApiResponse(AnrPlotGeometryDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed or insufficient permissions." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
-  @ExceptionResponse(BadRequestException, { description: "Invalid file format or no features found." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid file format, no features found, or site polygon not eligible for ANR monitoring plots."
+  })
   async upsertPlotGeometry(
     @Param("sitePolygonUuid") sitePolygonUuid: string,
     @UploadedFile() file: Express.Multer.File
@@ -100,10 +108,7 @@ export class AnrPlotGeometryController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    const sitePolygon = await SitePolygon.findOne({ where: { uuid: sitePolygonUuid } });
-    if (sitePolygon == null) {
-      throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
-    }
+    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
     const featureCollection = await this.geometryFileProcessingService.parseGeometryFile(file);
 
@@ -125,8 +130,11 @@ export class AnrPlotGeometryController {
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed or insufficient permissions." })
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
+  @ExceptionResponse(BadRequestException, { description: "Site polygon is not eligible for ANR monitoring plots." })
   async deletePlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("delete", AnrPlotGeometry);
+
+    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
     await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
 

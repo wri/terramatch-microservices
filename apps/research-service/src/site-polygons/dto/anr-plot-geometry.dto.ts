@@ -1,15 +1,19 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { AnrPlotGeometry } from "@terramatch-microservices/database/entities";
 import { FeatureCollection, Geometry } from "geojson";
 
 @JsonApiDto({ type: "anrPlotGeometries" })
 export class AnrPlotGeometryDto {
-  constructor(record: AnrPlotGeometry) {
-    this.sitePolygonUuid = record.sitePolygonUuid;
-    this.geojson = record.geojson as FeatureCollection;
-    this.plotCount = record.plotCount;
-    this.createdBy = record.createdBy;
+  constructor(record: AnrPlotGeometry, sitePolygonUuid: string) {
+    populateDto<AnrPlotGeometryDto, AnrPlotGeometry>(this, record, {
+      sitePolygonUuid
+    });
+    this.geojson = record.geojson as FeatureCollection<
+      Geometry,
+      { plot_id?: number; area_m2?: number; select?: string | null } | null
+    >;
   }
 
   @ApiProperty({

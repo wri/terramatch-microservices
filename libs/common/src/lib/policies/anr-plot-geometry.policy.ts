@@ -24,12 +24,12 @@ export class AnrPlotGeometryPolicy extends UserPermissionsPolicy {
       if (siteUuids.length > 0) {
         const sitePolygons = await SitePolygon.findAll({
           where: { siteUuid: { [Op.in]: siteUuids } },
-          attributes: ["uuid"]
+          attributes: ["id"]
         });
-        const sitePolygonUuids = sitePolygons.map(sitePolygon => sitePolygon.uuid);
-        if (sitePolygonUuids.length > 0) {
+        const sitePolygonIds = sitePolygons.map(sitePolygon => sitePolygon.id);
+        if (sitePolygonIds.length > 0) {
           this.builder.can(["read", "manage", "delete"], AnrPlotGeometry, {
-            sitePolygonUuid: { $in: sitePolygonUuids }
+            sitePolygonId: { $in: sitePolygonIds }
           });
         }
       }
@@ -44,12 +44,12 @@ export class AnrPlotGeometryPolicy extends UserPermissionsPolicy {
       if (siteUuids.length > 0) {
         const sitePolygons = await SitePolygon.findAll({
           where: { siteUuid: { [Op.in]: siteUuids } },
-          attributes: ["uuid"]
+          attributes: ["id"]
         });
-        const sitePolygonUuids = sitePolygons.map(sitePolygon => sitePolygon.uuid);
-        if (sitePolygonUuids.length > 0) {
+        const sitePolygonIds = sitePolygons.map(sitePolygon => sitePolygon.id);
+        if (sitePolygonIds.length > 0) {
           this.builder.can(["read", "manage", "delete"], AnrPlotGeometry, {
-            sitePolygonUuid: { $in: sitePolygonUuids }
+            sitePolygonId: { $in: sitePolygonIds }
           });
         }
       }
@@ -67,12 +67,12 @@ export class AnrPlotGeometryPolicy extends UserPermissionsPolicy {
           if (siteUuids.length > 0) {
             const sitePolygons = await SitePolygon.findAll({
               where: { siteUuid: { [Op.in]: siteUuids } },
-              attributes: ["uuid"]
+              attributes: ["id"]
             });
-            const sitePolygonUuids = sitePolygons.map(sitePolygon => sitePolygon.uuid);
-            if (sitePolygonUuids.length > 0) {
+            const sitePolygonIds = sitePolygons.map(sitePolygon => sitePolygon.id);
+            if (sitePolygonIds.length > 0) {
               this.builder.can(["read", "manage", "delete"], AnrPlotGeometry, {
-                sitePolygonUuid: { $in: sitePolygonUuids }
+                sitePolygonId: { $in: sitePolygonIds }
               });
             }
           }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { FeatureCollection } from "geojson";
 import { CreationAttributes } from "sequelize";
 import { AnrPlotGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
@@ -28,33 +28,29 @@ export class AnrPlotGeometryService {
     return sitePolygon;
   }
 
-  async getPlot(sitePolygonUuid: string): Promise<AnrPlotGeometry | null> {
-    return AnrPlotGeometry.findOne({ where: { sitePolygonUuid } });
+  async getPlot(sitePolygonId: number): Promise<AnrPlotGeometry | null> {
+    return AnrPlotGeometry.findOne({ where: { sitePolygonId } });
   }
 
-  async getPlotOrThrow(sitePolygonUuid: string): Promise<AnrPlotGeometry> {
-    const plot = await this.getPlot(sitePolygonUuid);
+  async requirePlot(sitePolygonId: number): Promise<AnrPlotGeometry> {
+    const plot = await this.getPlot(sitePolygonId);
     if (plot == null) {
-      throw new NotFoundException(`No ANR plot geometry found for polygon ${sitePolygonUuid}`);
+      throw new NotFoundException(`No ANR plot geometry found for site polygon id ${sitePolygonId}`);
     }
     return plot;
   }
 
   async upsertPlot(
-    sitePolygonUuid: string,
+    sitePolygonId: number,
     featureCollection: FeatureCollection,
     userId: number
   ): Promise<AnrPlotGeometry> {
-    if (AnrPlotGeometry.sequelize == null) {
-      throw new InternalServerErrorException("Database connection not available");
-    }
-
-    return AnrPlotGeometry.sequelize.transaction(async transaction => {
-      await AnrPlotGeometry.destroy({ where: { sitePolygonUuid }, transaction });
+    return AnrPlotGeometry.sql.transaction(async transaction => {
+      await AnrPlotGeometry.destroy({ where: { sitePolygonId }, transaction });
 
       return AnrPlotGeometry.create(
         {
-          sitePolygonUuid,
+          sitePolygonId,
           geojson: featureCollection as object,
           plotCount: featureCollection.features.length,
           createdBy: userId
@@ -64,7 +60,7 @@ export class AnrPlotGeometryService {
     });
   }
 
-  async deletePlot(sitePolygonUuid: string): Promise<void> {
-    await AnrPlotGeometry.destroy({ where: { sitePolygonUuid } });
+  async deletePlot(sitePolygonId: number): Promise<void> {
+    await AnrPlotGeometry.destroy({ where: { sitePolygonId } });
   }
 }

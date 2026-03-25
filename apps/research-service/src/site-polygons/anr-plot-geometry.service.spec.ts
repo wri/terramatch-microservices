@@ -1,22 +1,30 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AnrPlotGeometryService } from "./anr-plot-geometry.service";
 import { AnrPlotGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { FeatureCollection } from "geojson";
 
 jest.mock("@terramatch-microservices/database/entities", () => {
   const mockTransaction = {};
-  return {
-    AnrPlotGeometry: {
-      findOne: jest.fn(),
-      destroy: jest.fn(),
-      create: jest.fn(),
-      sequelize: {
-        transaction: jest
-          .fn()
-          .mockImplementation((callback: (t: typeof mockTransaction) => Promise<unknown>) => callback(mockTransaction))
-      }
+  const mockTransactionFn = jest
+    .fn()
+    .mockImplementation((callback: (t: typeof mockTransaction) => Promise<unknown>) => callback(mockTransaction));
+
+  const AnrPlotGeometry = {
+    findOne: jest.fn(),
+    destroy: jest.fn(),
+    create: jest.fn()
+  };
+
+  Object.defineProperty(AnrPlotGeometry, "sql", {
+    get() {
+      return { transaction: mockTransactionFn };
     },
+    configurable: true
+  });
+
+  return {
+    AnrPlotGeometry,
     SitePolygon: {
       findOne: jest.fn()
     }
@@ -26,10 +34,12 @@ jest.mock("@terramatch-microservices/database/entities", () => {
 describe("AnrPlotGeometryService", () => {
   let service: AnrPlotGeometryService;
 
-  const mockPlot: Pick<AnrPlotGeometry, "id" | "uuid" | "sitePolygonUuid" | "geojson" | "plotCount" | "createdBy"> = {
+  const sitePolygonId = 42;
+
+  const mockPlot: Pick<AnrPlotGeometry, "id" | "uuid" | "sitePolygonId" | "geojson" | "plotCount" | "createdBy"> = {
     id: 1,
     uuid: "plot-uuid-123",
-    sitePolygonUuid: "site-polygon-uuid",
+    sitePolygonId,
     geojson: { type: "FeatureCollection", features: [] },
     plotCount: 5,
     createdBy: 10
@@ -143,10 +153,10 @@ describe("AnrPlotGeometryService", () => {
     it("should return plot when found for site polygon", async () => {
       (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(mockPlot as AnrPlotGeometry);
 
-      const result = await service.getPlot("site-polygon-uuid");
+      const result = await service.getPlot(sitePolygonId);
 
       expect(AnrPlotGeometry.findOne).toHaveBeenCalledWith({
-        where: { sitePolygonUuid: "site-polygon-uuid" }
+        where: { sitePolygonId }
       });
       expect(result).toEqual(mockPlot);
     });
@@ -154,23 +164,23 @@ describe("AnrPlotGeometryService", () => {
     it("should return null when no plot exists for site polygon", async () => {
       (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(null);
 
-      const result = await service.getPlot("non-existent-uuid");
+      const result = await service.getPlot(999);
 
       expect(AnrPlotGeometry.findOne).toHaveBeenCalledWith({
-        where: { sitePolygonUuid: "non-existent-uuid" }
+        where: { sitePolygonId: 999 }
       });
       expect(result).toBeNull();
     });
   });
 
-  describe("getPlotOrThrow", () => {
+  describe("requirePlot", () => {
     it("should return plot when found", async () => {
       (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(mockPlot as AnrPlotGeometry);
 
-      const result = await service.getPlotOrThrow("site-polygon-uuid");
+      const result = await service.requirePlot(sitePolygonId);
 
       expect(AnrPlotGeometry.findOne).toHaveBeenCalledWith({
-        where: { sitePolygonUuid: "site-polygon-uuid" }
+        where: { sitePolygonId }
       });
       expect(result).toEqual(mockPlot);
     });
@@ -178,67 +188,44 @@ describe("AnrPlotGeometryService", () => {
     it("should throw NotFoundException when plot not found", async () => {
       (AnrPlotGeometry.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.getPlotOrThrow("non-existent-uuid")).rejects.toThrow(NotFoundException);
-      await expect(service.getPlotOrThrow("non-existent-uuid")).rejects.toThrow(
-        "No ANR plot geometry found for polygon non-existent-uuid"
-      );
+      await expect(service.requirePlot(999)).rejects.toThrow(NotFoundException);
+      await expect(service.requirePlot(999)).rejects.toThrow("No ANR plot geometry found for site polygon id 999");
     });
   });
 
   describe("upsertPlot", () => {
-    it("should throw InternalServerErrorException when sequelize is null", async () => {
-      const originalSequelize = AnrPlotGeometry.sequelize;
-      Object.defineProperty(AnrPlotGeometry, "sequelize", {
-        value: null,
-        writable: true,
-        configurable: true
-      });
-
-      await expect(service.upsertPlot("site-polygon-uuid", featureCollection, 1)).rejects.toThrow(
-        InternalServerErrorException
-      );
-      await expect(service.upsertPlot("site-polygon-uuid", featureCollection, 1)).rejects.toThrow(
-        "Database connection not available"
-      );
-
-      Object.defineProperty(AnrPlotGeometry, "sequelize", {
-        value: originalSequelize,
-        writable: true,
-        configurable: true
-      });
-    });
-
     it("should destroy existing plot and create new one within transaction", async () => {
       (AnrPlotGeometry.destroy as jest.Mock).mockResolvedValue(1);
       (AnrPlotGeometry.create as jest.Mock).mockResolvedValue(mockPlot);
 
-      const result = await service.upsertPlot("site-polygon-uuid", featureCollection, 10);
+      const result = await service.upsertPlot(sitePolygonId, featureCollection, 10);
 
-      expect(AnrPlotGeometry.sequelize?.transaction).toHaveBeenCalled();
-      expect(AnrPlotGeometry.destroy).toHaveBeenCalledWith({
-        where: { sitePolygonUuid: "site-polygon-uuid" },
-        transaction: {}
-      });
+      expect(AnrPlotGeometry.sql.transaction).toHaveBeenCalled();
+      expect(AnrPlotGeometry.destroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { sitePolygonId }
+        })
+      );
       expect(AnrPlotGeometry.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          sitePolygonUuid: "site-polygon-uuid",
+          sitePolygonId,
           plotCount: 1,
           createdBy: 10
         }),
-        { transaction: {} }
+        expect.objectContaining({ transaction: expect.anything() })
       );
       expect(result).toEqual(mockPlot);
     });
   });
 
   describe("deletePlot", () => {
-    it("should call destroy with site polygon uuid", async () => {
+    it("should call destroy with site polygon id", async () => {
       (AnrPlotGeometry.destroy as jest.Mock).mockResolvedValue(1);
 
-      await service.deletePlot("site-polygon-uuid");
+      await service.deletePlot(sitePolygonId);
 
       expect(AnrPlotGeometry.destroy).toHaveBeenCalledWith({
-        where: { sitePolygonUuid: "site-polygon-uuid" }
+        where: { sitePolygonId }
       });
     });
   });

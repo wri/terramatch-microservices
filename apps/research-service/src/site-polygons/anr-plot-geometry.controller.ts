@@ -47,14 +47,14 @@ export class AnrPlotGeometryController {
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
   @ExceptionResponse(BadRequestException, { description: "Site polygon is not eligible for ANR monitoring plots." })
   async getPlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
-    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
+    const sitePolygon = await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
-    const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
+    const plot = await this.anrPlotGeometryService.requirePlot(sitePolygon.id);
 
     await this.policyService.authorize("read", plot);
 
     const document = buildJsonApi(AnrPlotGeometryDto);
-    return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
+    return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot, sitePolygonUuid));
   }
 
   @Get("geojson")
@@ -70,11 +70,11 @@ export class AnrPlotGeometryController {
   @ExceptionResponse(NotFoundException, { description: "No plot geometry found for this polygon." })
   @ExceptionResponse(BadRequestException, { description: "Site polygon is not eligible for ANR monitoring plots." })
   async getPlotGeometryGeoJson(@Param("sitePolygonUuid") sitePolygonUuid: string) {
-    await this.policyService.authorize("read", AnrPlotGeometry);
+    const sitePolygon = await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
-    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
+    const plot = await this.anrPlotGeometryService.requirePlot(sitePolygon.id);
 
-    const plot = await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
+    await this.policyService.authorize("read", plot);
 
     const featureCollection = plot.geojson as unknown as FeatureCollection;
     const document = buildJsonApi(GeoJsonExportDto);
@@ -108,14 +108,14 @@ export class AnrPlotGeometryController {
       throw new UnauthorizedException("User must be authenticated");
     }
 
-    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
+    const sitePolygon = await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
     const featureCollection = await this.geometryFileProcessingService.parseGeometryFile(file);
 
-    const plot = await this.anrPlotGeometryService.upsertPlot(sitePolygonUuid, featureCollection, userId);
+    const plot = await this.anrPlotGeometryService.upsertPlot(sitePolygon.id, featureCollection, userId);
 
     const document = buildJsonApi(AnrPlotGeometryDto);
-    return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot));
+    return document.addData(sitePolygonUuid, new AnrPlotGeometryDto(plot, sitePolygonUuid));
   }
 
   @Delete()
@@ -134,11 +134,11 @@ export class AnrPlotGeometryController {
   async deletePlotGeometry(@Param("sitePolygonUuid") sitePolygonUuid: string) {
     await this.policyService.authorize("delete", AnrPlotGeometry);
 
-    await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
+    const sitePolygon = await this.anrPlotGeometryService.requireSitePolygonEligibleForAnrPlots(sitePolygonUuid);
 
-    await this.anrPlotGeometryService.getPlotOrThrow(sitePolygonUuid);
+    await this.anrPlotGeometryService.requirePlot(sitePolygon.id);
 
-    await this.anrPlotGeometryService.deletePlot(sitePolygonUuid);
+    await this.anrPlotGeometryService.deletePlot(sitePolygon.id);
 
     return buildDeletedResponse(getDtoType(AnrPlotGeometryDto), sitePolygonUuid);
   }

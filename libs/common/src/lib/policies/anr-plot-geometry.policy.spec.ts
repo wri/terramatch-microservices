@@ -65,7 +65,7 @@ describe("AnrPlotGeometryPolicy", () => {
       mockUserId(123);
       mockPermissions("framework-ppc");
       const anrPlotGeometry = new AnrPlotGeometry();
-      anrPlotGeometry.sitePolygonUuid = sitePolygon.uuid;
+      anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
       await expectCan(service, "manage", anrPlotGeometry);
     });
@@ -80,7 +80,7 @@ describe("AnrPlotGeometryPolicy", () => {
       mockUserId(user.id);
       mockPermissions("manage-own");
       const anrPlotGeometry = new AnrPlotGeometry();
-      anrPlotGeometry.sitePolygonUuid = sitePolygon.uuid;
+      anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
       await expectCan(service, "manage", anrPlotGeometry);
     });
@@ -95,7 +95,7 @@ describe("AnrPlotGeometryPolicy", () => {
       mockUserId(user.id);
       mockPermissions("projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
-      anrPlotGeometry.sitePolygonUuid = sitePolygon.uuid;
+      anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
       await expectCan(service, "manage", anrPlotGeometry);
     });
@@ -110,7 +110,7 @@ describe("AnrPlotGeometryPolicy", () => {
       mockUserId(user.id);
       mockPermissions("projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
-      anrPlotGeometry.sitePolygonUuid = sitePolygon.uuid;
+      anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
       await expectCannot(service, "manage", anrPlotGeometry);
     });

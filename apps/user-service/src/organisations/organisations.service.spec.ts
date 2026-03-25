@@ -29,6 +29,7 @@ describe("OrganisationsService", () => {
   let service: OrganisationsService;
   let policyService: DeepMocked<PolicyService>;
   let mediaService: DeepMocked<MediaService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {

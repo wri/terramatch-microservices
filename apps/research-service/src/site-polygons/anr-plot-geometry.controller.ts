@@ -88,6 +88,8 @@ export class AnrPlotGeometryController {
     description: `Uploads a GeoJSON FeatureCollection as the ANR monitoring plot grid for
       the specified site polygon. If a plot already exists it is soft-deleted and replaced
       atomically. Supported formats: GeoJSON (.geojson), KML (.kml), Shapefile (.zip).
+      Feature properties must use camelCase only: plotId, areaM2, and optionally select
+      (snake_case or other keys are rejected).
       Admin only (polygons-manage permission required).`
   })
   @UseInterceptors(FileInterceptor("file"))

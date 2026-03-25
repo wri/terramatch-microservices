@@ -41,7 +41,7 @@ describe("AnrPlotGeometryController", () => {
       {
         type: "Feature",
         geometry: { type: "Point", coordinates: [0, 0] },
-        properties: { plot_id: 1 }
+        properties: { plotId: 1, areaM2: 2 }
       }
     ]
   };

@@ -51,7 +51,7 @@ describe("AnrPlotGeometryService", () => {
       {
         type: "Feature",
         geometry: { type: "Point", coordinates: [0, 0] },
-        properties: { plot_id: 1 }
+        properties: { plotId: 1, areaM2: 2 }
       }
     ]
   };
@@ -194,6 +194,42 @@ describe("AnrPlotGeometryService", () => {
   });
 
   describe("upsertPlot", () => {
+    it("should throw BadRequestException when feature properties use snake_case", async () => {
+      const badCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [0, 0] },
+            properties: { plot_id: 1 }
+          }
+        ]
+      };
+
+      await expect(service.upsertPlot(sitePolygonId, badCollection, 1)).rejects.toThrow(BadRequestException);
+      await expect(service.upsertPlot(sitePolygonId, badCollection, 1)).rejects.toThrow("camelCase");
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when feature properties include unknown keys", async () => {
+      const badCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [0, 0] },
+            properties: { plotId: 1, extraField: "nope" }
+          }
+        ]
+      };
+
+      await expect(service.upsertPlot(sitePolygonId, badCollection, 1)).rejects.toThrow(BadRequestException);
+      await expect(service.upsertPlot(sitePolygonId, badCollection, 1)).rejects.toThrow(
+        "Invalid ANR plot property key"
+      );
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
     it("should destroy existing plot and create new one within transaction", async () => {
       (AnrPlotGeometry.destroy as jest.Mock).mockResolvedValue(1);
       (AnrPlotGeometry.create as jest.Mock).mockResolvedValue(mockPlot);

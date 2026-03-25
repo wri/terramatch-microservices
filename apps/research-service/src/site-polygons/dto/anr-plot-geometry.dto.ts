@@ -12,7 +12,7 @@ export class AnrPlotGeometryDto {
     });
     this.geojson = record.geojson as FeatureCollection<
       Geometry,
-      { plot_id?: number; area_m2?: number; select?: string | null } | null
+      { plotId?: number; areaM2?: number; select?: string | null } | null
     >;
   }
 
@@ -37,8 +37,8 @@ export class AnrPlotGeometryDto {
             properties: {
               type: "object",
               properties: {
-                plot_id: { type: "integer", example: 37 },
-                area_m2: { type: "integer", example: 897 },
+                plotId: { type: "integer", example: 37 },
+                areaM2: { type: "integer", example: 897 },
                 select: { type: "string", nullable: true, example: "Yes" }
               }
             }
@@ -47,7 +47,7 @@ export class AnrPlotGeometryDto {
       }
     }
   })
-  geojson: FeatureCollection<Geometry, { plot_id?: number; area_m2?: number; select?: string | null } | null>;
+  geojson: FeatureCollection<Geometry, { plotId?: number; areaM2?: number; select?: string | null } | null>;
 
   @ApiProperty({
     description: "Cached count of plot features in the FeatureCollection",

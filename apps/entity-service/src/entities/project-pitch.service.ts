@@ -61,7 +61,7 @@ export class ProjectPitchService {
   async getProjectPitchesForExport(query: ProjectPitchQueryDto) {
     const organisationAssociation: Includeable = {
       association: "organisation",
-      attributes: ["uuid", "name"]
+      attributes: ["name"]
     };
     const builder = new PaginatedQueryBuilder(ProjectPitch, MAX_CSV_EXPORT_ROWS, [organisationAssociation]);
 

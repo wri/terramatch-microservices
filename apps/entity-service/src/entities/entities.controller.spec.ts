@@ -223,16 +223,4 @@ describe("EntitiesController", () => {
       expect(result.meta.resourceType).toBe("projects");
     });
   });
-
-  describe("entityExportCsv", () => {
-    it("delegates to EntityCsvExportService", async () => {
-      entityCsvExportService.exportEntityCsv.mockResolvedValue("a,b\n1,2");
-      const result = await controller.entityExportCsv({ entity: "financialReports" }, new EntityQueryDto());
-      expect(result).toBe("a,b\n1,2");
-      expect(entityCsvExportService.exportEntityCsv).toHaveBeenCalledWith(
-        "financialReports",
-        expect.any(EntityQueryDto)
-      );
-    });
-  });
 });

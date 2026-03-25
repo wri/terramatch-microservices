@@ -40,12 +40,16 @@ const SRP_REPORT_CSV_COLUMNS: Record<string, string> = {
 };
 
 const PROJECT_PITCH_CSV_COLUMNS: Record<string, string> = {
-  projectName: "Project Name",
   organisationName: "Organisation Name",
-  projectCountry: "Project Country",
-  status: "Status",
-  totalHectares: "Total Hectares",
+  capacityBuildingNeeds: "Capacity Building Needs",
   totalTrees: "Total Trees",
+  totalHectares: "Total Hectares",
+  restorationInterventionTypes: "Restoration Intervention Types",
+  projectCountyDistrict: "Project Country/District",
+  projectCountry: "Project Country",
+  projectObjectives: "Project Objectives",
+  projectName: "Project Name",
+  deletedAt: "Deleted At",
   createdAt: "Created At",
   updatedAt: "Updated At"
 };
@@ -81,16 +85,6 @@ export class EntityCsvExportService {
 
   isExportableEntityType(entity: string): entity is CsvExportableEntityType {
     return (EXPORTABLE_ENTITY_TYPES as readonly string[]).includes(entity);
-  }
-
-  async exportEntityCsv(entity: ProcessableEntity, query: EntityQueryDto): Promise<string> {
-    if (!this.isExportableEntityType(entity)) {
-      throw new BadRequestException(`CSV export is not supported for entity type: ${entity}`);
-    }
-    if (entity === "financialReports") {
-      return await this.exportFinancialReportsCsv(query);
-    }
-    return await this.exportSrpReportsCsv(query);
   }
 
   async exportFinancialReportsCsv(query: EntityQueryDto): Promise<string> {
@@ -149,16 +143,17 @@ export class EntityCsvExportService {
       await this.entitiesService.authorize("read", data);
     }
     const rows = data.map(pitch => {
-      const dto = new ProjectPitchDto(pitch);
       return {
-        uuid: dto.uuid,
-        projectName: dto.projectName,
-        organisationId: dto.organisationId,
         organisationName: pitch.organisation?.name ?? "",
-        projectCountry: dto.projectCountry,
-        status: dto.status,
-        totalHectares: dto.totalHectares,
-        totalTrees: dto.totalTrees,
+        capacityBuildingNeeds: pitch.capacityBuildingNeeds,
+        totalTrees: pitch.totalTrees,
+        totalHectares: pitch.totalHectares,
+        restorationInterventionTypes: pitch.restorationInterventionTypes,
+        projectCountyDistrict: pitch.projectCountyDistrict,
+        projectCountry: pitch.projectCountry,
+        projectObjectives: pitch.projectObjectives,
+        projectName: pitch.projectName,
+        deletedAt: pitch.deletedAt,
         createdAt: pitch.createdAt,
         updatedAt: pitch.updatedAt
       };

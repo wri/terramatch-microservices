@@ -247,6 +247,8 @@ export class ProjectProcessor extends EntityProcessor<
     const regeneratedTreesCount = sumBy(assistedNaturalRegenerationList, "treeCount");
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesRegeneratingSpeciesCount =
+      (await TreeSpecies.visible().collection("anr").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
@@ -263,6 +265,7 @@ export class ProjectProcessor extends EntityProcessor<
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
+      treesRegeneratingSpeciesCount,
       treesPlantedCount,
       seedsPlantedCount,
       treesRestoredPpc:

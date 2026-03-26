@@ -38,6 +38,11 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
       multiChoice: true,
       optionListKey: "land-tenures"
     },
+    "site-land-tenure-approach": {
+      property: "landTenureApproach",
+      label: "Land tenure approach",
+      inputType: "long-text"
+    },
     "site-landscape-community-contribution": {
       property: "landscapeCommunityContribution",
       label: "Landscape community contribution",

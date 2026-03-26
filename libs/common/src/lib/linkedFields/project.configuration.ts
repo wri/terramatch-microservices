@@ -32,7 +32,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Land tenure",
       inputType: "select-image",
       multiChoice: true,
-      optionListKey: "land-tenures"
+      optionListKey: "land-tenures-brazil"
     },
     "pro-country": {
       property: "country",
@@ -350,11 +350,6 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "select",
       multiChoice: true,
       optionListKey: "gadm-level-2"
-    },
-    "pro-land-tenure-approach": {
-      property: "landTenureApproach",
-      label: "Land tenure approach",
-      inputType: "long-text"
     },
     "pro-seedlings-procurement": {
       property: "seedlingsProcurement",

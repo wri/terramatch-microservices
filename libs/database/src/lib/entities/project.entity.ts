@@ -446,10 +446,6 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   level2Project: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  landTenureApproach: string | null;
-
-  @AllowNull
   @Column(STRING(255))
   seedlingsProcurement: string | null;
 

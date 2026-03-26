@@ -40,7 +40,18 @@ describe("AnrPlotGeometryController", () => {
     features: [
       {
         type: "Feature",
-        geometry: { type: "Point", coordinates: [0, 0] },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0.001, 0],
+              [0.001, 0.001],
+              [0, 0.001],
+              [0, 0]
+            ]
+          ]
+        },
         properties: { plotId: 1, areaM2: 2 }
       }
     ]

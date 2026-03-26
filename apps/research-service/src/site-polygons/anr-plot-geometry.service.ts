@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { FeatureCollection } from "geojson";
+import { FeatureCollection, Geometry } from "geojson";
 import { CreationAttributes } from "sequelize";
 import { AnrPlotGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 
@@ -9,13 +9,29 @@ const ANR_PLOT_FEATURE_PROPERTY_KEYS = new Set(["plotId", "areaM2", "select"]);
 
 @Injectable()
 export class AnrPlotGeometryService {
+  private assertPolygonGeometry(geometry: Geometry, featureIndex: number): void {
+    if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") return;
+    throw new BadRequestException(
+      `ANR plot feature at index ${featureIndex} has unsupported geometry type "${geometry.type}". Allowed: Polygon, MultiPolygon.`
+    );
+  }
+
   private assertAnrPlotFeatureCollection(featureCollection: FeatureCollection): void {
     featureCollection.features.forEach((feature, index) => {
+      if (feature.geometry == null) {
+        throw new BadRequestException(`ANR plot feature at index ${index} is missing geometry.`);
+      }
+      this.assertPolygonGeometry(feature.geometry, index);
+
       const props = feature.properties as unknown;
-      if (props == null) return;
+      if (props == null) {
+        throw new BadRequestException(
+          `ANR plot feature at index ${index} has invalid properties (expected an object).`
+        );
+      }
       if (typeof props !== "object" || Array.isArray(props)) {
         throw new BadRequestException(
-          `ANR plot GeoJSON feature at index ${index} has invalid properties (expected an object or null).`
+          `ANR plot GeoJSON feature at index ${index} has invalid properties (expected an object).`
         );
       }
       const raw = props as Record<string, unknown>;
@@ -28,12 +44,11 @@ export class AnrPlotGeometryService {
         }
         throw new BadRequestException(`Invalid ANR plot property key "${key}". Allowed: plotId, areaM2, select.`);
       }
-      if ("plotId" in raw && raw.plotId !== undefined) {
-        if (typeof raw.plotId !== "number" || !Number.isFinite(raw.plotId)) {
-          throw new BadRequestException(
-            `ANR plot feature at index ${index}: plotId must be a finite number when provided.`
-          );
-        }
+      if (!("plotId" in raw) || raw.plotId == null) {
+        throw new BadRequestException(`ANR plot feature at index ${index}: plotId is required.`);
+      }
+      if (typeof raw.plotId !== "number" || !Number.isFinite(raw.plotId) || raw.plotId <= 0) {
+        throw new BadRequestException(`ANR plot feature at index ${index}: plotId must be a positive finite number.`);
       }
       if ("areaM2" in raw && raw.areaM2 !== undefined) {
         if (typeof raw.areaM2 !== "number" || !Number.isFinite(raw.areaM2)) {

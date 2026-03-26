@@ -355,7 +355,7 @@ describe("ProjectProcessor", () => {
     });
 
     describe("plantingStatus", () => {
-      it("uses plantingStatus from the most recent approved project report (by dueAt)", async () => {
+      it("uses plantingStatus from the most recent report with planting progress data (by dueAt)", async () => {
         const { id: projectId, uuid } = await ProjectFactory.create();
 
         await ProjectReportFactory.create({
@@ -385,12 +385,12 @@ describe("ProjectProcessor", () => {
 
         const project = await processor.findOne(uuid);
         const { dto: fullDto } = await processor.getFullDto(project!);
-        expect(fullDto.plantingStatus).toBe("in-progress");
+        expect(fullDto.plantingStatus).toBe("replacement-planting");
 
         policyService.getPermissions.mockResolvedValue(["projects-read"]);
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
-        expect(lightDto.plantingStatus).toBe("in-progress");
+        expect(lightDto.plantingStatus).toBe("replacement-planting");
       });
 
       it("returns null when no approved reports and project has no plantingStatus", async () => {

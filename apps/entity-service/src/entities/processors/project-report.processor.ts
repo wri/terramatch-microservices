@@ -44,6 +44,20 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
+function resolvePlantingStatus(
+  plantingStatus: string | null | undefined,
+  landscapeCommunityContribution: string | null | undefined,
+  communityProgress: string | null | undefined
+) {
+  if (plantingStatus != null) return plantingStatus;
+
+  const candidate = landscapeCommunityContribution ?? communityProgress;
+  if (candidate == null) return null;
+  const normalized = candidate.trim().toLowerCase();
+  if (["yes", "true", "completed"].includes(normalized)) return "completed";
+  return null;
+}
+
 export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
@@ -151,6 +165,13 @@ export class ProjectReportProcessor extends ReportProcessor<
 
   async getFullDto(projectReport: ProjectReport) {
     const reportTitle = await this.getReportTitle(projectReport);
+    const landscapeCommunityContribution =
+      projectReport.landscapeCommunityContribution ?? projectReport.communityProgress ?? null;
+    const plantingStatus = resolvePlantingStatus(
+      projectReport.plantingStatus,
+      projectReport.landscapeCommunityContribution,
+      projectReport.communityProgress
+    );
 
     const dto = new ProjectReportFullDto(projectReport, {
       ...(await this.getFeedback(projectReport)),
@@ -165,8 +186,24 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.uuid
       ) as ProjectReportMedia)
     });
+    dto.landscapeCommunityContribution = landscapeCommunityContribution;
+    dto.plantingStatus = plantingStatus;
 
     await this.entitiesService.removeHiddenValues(projectReport, dto);
+    // Keep overview compatibility for consumers that still read landscapeCommunityContribution.
+    if (dto.landscapeCommunityContribution == null && projectReport.communityProgress != null) {
+      dto.landscapeCommunityContribution = projectReport.communityProgress;
+    }
+    if (dto.plantingStatus == null) {
+      dto.plantingStatus = resolvePlantingStatus(
+        projectReport.plantingStatus,
+        projectReport.landscapeCommunityContribution,
+        projectReport.communityProgress
+      );
+    }
+    if (dto.landscapeCommunityContribution == null && dto.plantingStatus === "completed") {
+      dto.landscapeCommunityContribution = "completed";
+    }
 
     return { id: projectReport.uuid, dto };
   }

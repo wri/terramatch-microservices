@@ -55,10 +55,20 @@ describe("AggregateReportsService", () => {
       } as unknown as ReturnType<typeof SiteReport.approved>);
       jest.spyOn(Site, "approvedIdsSubquery").mockReturnValue(undefined as never);
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockReturnValue({
-          siteReports: jest.fn().mockReturnValue({
-            findAll: jest.fn().mockResolvedValue([])
-          })
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "anr") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([{ speciesableId: reportInstance.id, total: 10 }])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({
+              findAll: jest.fn().mockResolvedValue([])
+            })
+          };
         })
       } as unknown as ReturnType<typeof TreeSpecies.visible>);
       jest.spyOn(Seeding, "visible").mockReturnValue({
@@ -147,8 +157,21 @@ describe("AggregateReportsService", () => {
       } as unknown as ReturnType<typeof SiteReport.approved>);
       jest.spyOn(Site, "approvedIdsSubquery").mockReturnValue(undefined as never);
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockReturnValue({
-          siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "anr") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([
+                  { speciesableId: reportNullDue.id, total: 10 },
+                  { speciesableId: reportWithDue.id, total: 5 }
+                ])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+          };
         })
       } as unknown as ReturnType<typeof TreeSpecies.visible>);
       jest.spyOn(Seeding, "visible").mockReturnValue({
@@ -235,13 +258,31 @@ describe("AggregateReportsService", () => {
         sites: mockSites
       } as unknown as ReturnType<typeof SiteReport.approved>);
 
-      const mockTreeFindAll = jest.fn().mockResolvedValue([
+      const mockTreePlantedFindAll = jest.fn().mockResolvedValue([
         { speciesableId: 10, total: 100 },
         { speciesableId: 11, total: 50 }
       ]);
+      const mockAnrFindAll = jest.fn().mockResolvedValue([
+        { speciesableId: 10, total: 5 },
+        { speciesableId: 11, total: 3 }
+      ]);
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockReturnValue({
-          siteReports: jest.fn().mockReturnValue({ findAll: mockTreeFindAll })
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "tree-planted") {
+            return {
+              siteReports: jest.fn().mockReturnValue({ findAll: mockTreePlantedFindAll })
+            };
+          }
+
+          if (collectionKey === "anr") {
+            return {
+              siteReports: jest.fn().mockReturnValue({ findAll: mockAnrFindAll })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+          };
         })
       } as unknown as ReturnType<typeof TreeSpecies.visible>);
 
@@ -306,8 +347,21 @@ describe("AggregateReportsService", () => {
       } as unknown as ReturnType<typeof SiteReport.approved>);
       jest.spyOn(Site, "approvedIdsSubquery").mockReturnValue(undefined as never);
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockReturnValue({
-          siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "anr") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([
+                  { speciesableId: report1.id, total: 5 },
+                  { speciesableId: report2.id, total: 10 }
+                ])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+          };
         })
       } as unknown as ReturnType<typeof TreeSpecies.visible>);
       jest.spyOn(Seeding, "visible").mockReturnValue({

@@ -90,7 +90,7 @@ describe("UsersController", () => {
       });
     });
 
-    it('should return "na" for userStatus if there is no many to many relationship', async () => {
+    it('should return "approved" for userStatus if user belongs to org without many-to-many relationship', async () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$set("organisation", org);
@@ -104,7 +104,7 @@ describe("UsersController", () => {
       expect(relationship).toMatchObject({
         type: "organisations",
         id: org.uuid,
-        meta: { userStatus: "na" }
+        meta: { userStatus: "approved" }
       });
     });
   });

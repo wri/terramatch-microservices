@@ -483,8 +483,9 @@ describe("ProjectReportProcessor", () => {
       };
       jest
         .spyOn(processorWithEntitiesService.entitiesService, "removeHiddenValues")
-        .mockImplementation(async (_model, dto: { landscapeCommunityContribution: string | null }) => {
-          dto.landscapeCommunityContribution = null;
+        .mockImplementation(async (_model, dto) => {
+          const maybeDto = dto as { landscapeCommunityContribution?: string | null };
+          maybeDto.landscapeCommunityContribution = null;
         });
 
       const report = await processor.findOne(uuid);

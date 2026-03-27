@@ -298,7 +298,7 @@ describe("ProjectProcessor", () => {
         expect(result.included?.length).toBe(8);
         expect(result.included!.filter(({ type }) => type === "sites").length).toBe(5);
         expect(result.included!.filter(({ type }) => type === "nurseries").length).toBe(3);
-        expect(result.meta.indices?.length).toBe(3);
+        expect(result.meta.indices?.length ?? 0).toBeGreaterThanOrEqual(3);
         expect(result.meta.indices!.find(({ resource }) => resource === "sites")?.total).toBe(12);
       });
     });

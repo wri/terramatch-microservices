@@ -93,7 +93,8 @@ describe("MediaService", () => {
     });
 
     it("should throw an error if the model is not part of a project", async () => {
-      const model = await SiteFactory.create({ projectId: undefined });
+      const model = await SiteFactory.create();
+      model.projectId = undefined as unknown as number;
       await expect(service.getProjectForModel(model)).rejects.toThrow("Media is not part of a project.");
     });
   });

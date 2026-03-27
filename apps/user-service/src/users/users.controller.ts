@@ -193,7 +193,8 @@ export class UsersController {
     const org = await user.primaryOrganisation();
     if (org != null) {
       const orgResource = document.addData(org.uuid, new OrganisationLightDto(org));
-      const userStatus = org.OrganisationUser?.status ?? "na";
+      const isOwner = user.organisationId === org.id;
+      const userStatus = isOwner ? "approved" : org.OrganisationUser?.status ?? "na";
       userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }
 

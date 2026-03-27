@@ -20,6 +20,10 @@ export class UsersService {
       {
         association: "roles",
         attributes: ["name"]
+      },
+      {
+        association: "frameworks",
+        attributes: ["id", "name", "slug"]
       }
     ];
 
@@ -70,7 +74,7 @@ export class UsersService {
 
   async addUsersToDocument(document: DocumentBuilder, users: User[]) {
     for (const user of users) {
-      document.addData(user.uuid ?? "no-uuid", new UserDto(user, [], []));
+      document.addData(user.uuid ?? "no-uuid", new UserDto(user, user.frameworks, await user.myFrameworks()));
     }
     return document;
   }

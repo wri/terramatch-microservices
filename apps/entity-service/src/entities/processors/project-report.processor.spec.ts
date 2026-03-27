@@ -437,6 +437,59 @@ describe("ProjectReportProcessor", () => {
         projectUuid: project.uuid
       });
     });
+
+    it("resolves planting status as completed from community progress answer", async () => {
+      const project = await ProjectFactory.create();
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        plantingStatus: null,
+        landscapeCommunityContribution: null,
+        communityProgress: "Yes"
+      });
+
+      const report = await processor.findOne(uuid);
+      const { dto } = await processor.getFullDto(report!);
+
+      expect(dto.plantingStatus).toBe("completed");
+      expect(dto.landscapeCommunityContribution).toBe("Yes");
+    });
+
+    it("keeps null planting status for non-completed community progress text", async () => {
+      const project = await ProjectFactory.create();
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        plantingStatus: null,
+        landscapeCommunityContribution: null,
+        communityProgress: "Planting still in progress"
+      });
+
+      const report = await processor.findOne(uuid);
+      const { dto } = await processor.getFullDto(report!);
+
+      expect(dto.plantingStatus).toBeNull();
+      expect(dto.landscapeCommunityContribution).toBe("Planting still in progress");
+    });
+
+    it("falls back to completed contribution text when hidden values clear contribution", async () => {
+      const project = await ProjectFactory.create();
+      const { uuid } = await ProjectReportFactory.create({
+        projectId: project.id,
+        plantingStatus: "completed",
+        landscapeCommunityContribution: null,
+        communityProgress: null
+      });
+      jest
+        .spyOn((processor as any).entitiesService, "removeHiddenValues")
+        .mockImplementation(async (_model, dto: any) => {
+          dto.landscapeCommunityContribution = null;
+        });
+
+      const report = await processor.findOne(uuid);
+      const { dto } = await processor.getFullDto(report!);
+
+      expect(dto.plantingStatus).toBe("completed");
+      expect(dto.landscapeCommunityContribution).toBe("completed");
+    });
   });
 
   describe("processSideload", () => {

@@ -207,9 +207,10 @@ describe("OrganisationCreationService", () => {
     });
 
     it("should create only a draft organisation when draft status is provided", async () => {
+      const draftName = `draft-org-${faker.string.uuid()}`;
       const attributes: OrganisationCreateAttributes = {
         status: "draft",
-        name: faker.company.name()
+        name: draftName
       };
 
       const { user, organisation } = await service.createOrganisation(attributes);

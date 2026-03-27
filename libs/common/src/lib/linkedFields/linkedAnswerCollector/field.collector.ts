@@ -15,6 +15,28 @@ import { WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { TrackingDomain } from "@terramatch-microservices/database/types/tracking";
 
+function normalizePlantingStatusValue(answer: unknown) {
+  if (answer == null || answer === "") return null;
+  if (answer === true) return "completed";
+
+  if (!isString(answer)) return answer;
+
+  const normalized = answer.trim().toLowerCase();
+  if (["completed", "yes", "true"].includes(normalized)) {
+    return "completed";
+  }
+
+  if (["no", "false"].includes(normalized)) {
+    return null;
+  }
+
+  return answer;
+}
+
+function isCompletedPlantingAnswer(answer: unknown) {
+  return normalizePlantingStatusValue(answer) === "completed";
+}
+
 export function fieldCollector(logger: LoggerService): FieldResourceCollector {
   const propertyQuestions: Dictionary<string> = {};
   const virtualQuestions: Dictionary<{ props: VirtualLinkedFieldProps; modelType: FormModelType }> = {};
@@ -92,7 +114,29 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
     async syncField(model: FormModel, question: FormQuestion, field: LinkedField, answers: Dictionary<unknown>) {
       const answer = answers[question.uuid];
       if (isPropertyField(field)) {
-        model[field.property] = answer;
+        const property = String(field.property);
+        if (property === "plantingStatus") {
+          Object.assign(model, { plantingStatus: normalizePlantingStatusValue(answer) });
+          return;
+        }
+
+        if (
+          ["communityProgress", "landscapeCommunityContribution"].includes(property) &&
+          isCompletedPlantingAnswer(answer)
+        ) {
+          Object.assign(model, { plantingStatus: "completed", [property]: null });
+          return;
+        }
+
+        if (property === "communityProgress" && isString(answer) && answer.trim() !== "") {
+          Object.assign(model, {
+            communityProgress: answer,
+            landscapeCommunityContribution: answer
+          });
+          return;
+        }
+
+        Object.assign(model, { [property]: answer });
         return;
       }
 

@@ -25,6 +25,7 @@ import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
+import { PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
@@ -49,6 +50,21 @@ const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$organisation.uuid$",
   organisationType: "$organisation.type$"
 };
+
+function resolveReportPlantingStatus(
+  report?: {
+    plantingStatus?: string | null;
+    landscapeCommunityContribution?: string | null;
+    communityProgress?: string | null;
+  } | null
+): PlantingStatus | null {
+  if (report?.plantingStatus != null) return report.plantingStatus as PlantingStatus;
+  const candidate = report?.landscapeCommunityContribution ?? report?.communityProgress ?? null;
+  if (candidate == null) return null;
+  const normalized = candidate.trim().toLowerCase();
+  if (["yes", "true", "completed"].includes(normalized)) return "completed" as PlantingStatus;
+  return null;
+}
 
 type SharedPitchAttributes = keyof Attributes<Project> & keyof Attributes<ProjectPitch>;
 const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
@@ -206,7 +222,7 @@ export class ProjectProcessor extends EntityProcessor<
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
-    const plantingStatus = lastReport?.plantingStatus ?? null;
+    const plantingStatus = resolveReportPlantingStatus(lastReport);
 
     const dto = new ProjectLightDto(project, {
       totalHectaresRestoredSum,
@@ -252,7 +268,7 @@ export class ProjectProcessor extends EntityProcessor<
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
-    const plantingStatus = lastReport?.plantingStatus ?? null;
+    const plantingStatus = resolveReportPlantingStatus(lastReport);
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
@@ -424,10 +440,18 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   protected async getLastReport(projectId: number) {
-    return await ProjectReport.approved()
-      .project(projectId)
+    return await ProjectReport.project(projectId)
       .lastReport()
-      .findOne({ attributes: ["plantingStatus"] });
+      .findOne({
+        where: {
+          [Op.or]: [
+            { plantingStatus: { [Op.ne]: null } },
+            { landscapeCommunityContribution: { [Op.ne]: null } },
+            { communityProgress: { [Op.ne]: null } }
+          ]
+        },
+        attributes: ["plantingStatus", "landscapeCommunityContribution", "communityProgress"]
+      });
   }
 
   protected async getLastReportSurvivalRate(projectId: number) {

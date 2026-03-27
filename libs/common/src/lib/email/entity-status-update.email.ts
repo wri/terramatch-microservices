@@ -85,8 +85,7 @@ export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
     if (isReport(entity)) i18nReplacements["{parentEntityName}"] = this.getParentName(entity) ?? "";
 
     const additionalValues = {
-      link: getViewLinkPath(entity),
-      transactional: "transactional"
+      link: getViewLinkPath(entity)
     };
 
     // Group the users by locale and then send the email to each locale group.

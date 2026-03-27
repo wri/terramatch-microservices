@@ -90,8 +90,7 @@ describe("VerificationUserService", () => {
       expect.any(Object),
       expect.objectContaining({
         additionalValues: expect.objectContaining({
-          link: expect.stringContaining(callbackUrl),
-          transactional: "transactional"
+          link: expect.stringContaining(callbackUrl)
         })
       })
     );
@@ -132,8 +131,7 @@ describe("VerificationUserService", () => {
       expect.any(Object),
       expect.objectContaining({
         additionalValues: expect.objectContaining({
-          link: expect.stringContaining("/verify?token="),
-          transactional: "transactional"
+          link: expect.stringContaining("/verify?token=")
         })
       })
     );

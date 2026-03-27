@@ -43,10 +43,6 @@ export class OrganisationRejectedEmail extends EmailSender<OrganisationRejectedE
       return;
     }
 
-    const additionalValues = {
-      transactional: "transactional"
-    };
-
     await emailService.sendI18nTemplateEmail(
       primaryOwner.emailAddress,
       primaryOwner.locale,
@@ -55,7 +51,7 @@ export class OrganisationRejectedEmail extends EmailSender<OrganisationRejectedE
         title: "organisation-rejected.title",
         body: "organisation-rejected.body"
       },
-      { additionalValues }
+      {}
     );
 
     this.logger.log(

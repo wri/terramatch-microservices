@@ -57,11 +57,7 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
               title: "organisation-user-join-requested.title",
               body: "organisation-user-join-requested.body"
             },
-            {
-              additionalValues: {
-                transactional: "transactional"
-              }
-            }
+            {}
           );
         })
     );

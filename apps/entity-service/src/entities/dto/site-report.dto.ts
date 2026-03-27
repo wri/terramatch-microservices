@@ -250,6 +250,13 @@ export class SiteReportFullDto extends SiteReportLightDto {
   @ApiProperty({ nullable: true, type: Number })
   totalTreesPlantedCount: number | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Sum of tree species amounts for collection 'anr' on this site report (disaggregated ANR reporting)"
+  })
+  totalTreesRegeneratingSpeciesCount: number | null;
+
   @ApiProperty({ nullable: true, type: Number })
   totalSeedsPlantedCount: number | null;
 

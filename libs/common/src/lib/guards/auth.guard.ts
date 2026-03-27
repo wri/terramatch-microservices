@@ -7,6 +7,9 @@ import { RequestContext } from "nestjs-request-context";
 const NO_BEARER_AUTH = "noBearerAuth";
 export const NoBearerAuth = SetMetadata(NO_BEARER_AUTH, true);
 
+const OPTIONAL_BEARER_AUTH = "optionalBearerAuth";
+export const OptionalBearerAuth = SetMetadata(OPTIONAL_BEARER_AUTH, true);
+
 export const authenticatedUserId = () => RequestContext.currentContext?.req?.authenticatedUserId as number | undefined;
 
 @Injectable()
@@ -20,12 +23,23 @@ export class AuthGuard implements CanActivate {
     ]);
     if (skipAuth) return true;
 
+    const optionalAuth = this.reflector.getAllAndOverride<boolean>(OPTIONAL_BEARER_AUTH, [
+      context.getHandler(),
+      context.getClass()
+    ]);
+
     const request = context.switchToHttp().getRequest();
     const [type, token] = request.headers.authorization?.split(" ") ?? [];
-    if (type !== "Bearer" || token == null) throw new UnauthorizedException();
+    if (type !== "Bearer" || token == null) {
+      if (optionalAuth) return true;
+      throw new UnauthorizedException();
+    }
 
     const userId = this.isJwtToken(token) ? await this.getJwtUserId(token) : await this.getApiKeyUserId(token);
-    if (userId == null) throw new UnauthorizedException();
+    if (userId == null) {
+      if (optionalAuth) return true;
+      throw new UnauthorizedException();
+    }
 
     // Most requests won't need the actual user object; instead, the roles and permissions
     // are fetched from other (smaller) tables, and only the user id is needed.

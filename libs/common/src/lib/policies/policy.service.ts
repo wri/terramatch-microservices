@@ -1,6 +1,7 @@
 import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
+  AnrPlotGeometry,
   Application,
   AuditStatus,
   Tracking,
@@ -54,6 +55,7 @@ import { FormQuestionOptionPolicy } from "./form-question-option.policy";
 import { FrameworkPolicy } from "./framework.policy";
 import { FundingProgrammePolicy } from "./funding-programme.policy";
 import { ImpactStoryPolicy } from "./impact-story.policy";
+import { AnrPlotGeometryPolicy } from "./anr-plot-geometry.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
@@ -74,6 +76,7 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [AnrPlotGeometry, AnrPlotGeometryPolicy],
   [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
   [Disturbance, DisturbancePolicy],

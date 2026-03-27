@@ -4,19 +4,14 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 export class UserPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("users-manage")) {
-      this.builder.can("read", User);
-      this.builder.can("update", User);
-      this.builder.can("verify", User);
-    } else {
-      this.builder.can("read", User, { id: this.userId });
-      this.builder.can("update", User, { id: this.userId });
+      this.builder.can(["read", "readAll", "create", "update", "verify", "delete"], User);
     }
 
     if (await this.isVerifiedAdmin()) {
-      this.builder.can("verify", User);
+      this.builder.can(["readAll", "update", "verify", "delete"], User);
     }
 
-    this.builder.can("verify", User, { id: this.userId });
+    this.builder.can(["read", "update", "verify"], User, { id: this.userId });
   }
 
   protected _isVerifiedAdmin?: boolean;

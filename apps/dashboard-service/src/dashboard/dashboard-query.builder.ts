@@ -42,7 +42,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
 
   queryFilters(filters: DashboardQueryDto) {
     const where: WhereOptions = {
-      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises"] }
+      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] }
     };
     const organisationWhere: WhereOptions = {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
@@ -69,7 +69,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
         .join(" OR ");
       this.where(Sequelize.literal(`(${cohortConditions})`));
     } else {
-      const defaultCohorts = ["terrafund", "terrafund-landscapes", "terrafund-enterprises-rolling"];
+      const defaultCohorts = ["terrafund", "terrafund-cohort-1", "terrafund-cohort-2", "terrafund-cohort-3"];
       const defaultCohortConditions = defaultCohorts
         .map(cohort => {
           const escapedCohort = this.sql.escape(`"${cohort}"`);

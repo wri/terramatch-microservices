@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
@@ -10,16 +10,22 @@ import {
   User,
   Verification,
   PasswordReset,
+  Organisation,
   OrganisationInvite,
   ProjectInvite,
-  ProjectUser
+  ProjectUser,
+  FrameworkUser,
+  Framework
 } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
-import { UserCreateAttributes } from "./dto/user-create.dto";
+import { UserCreateAttributes, UserCreateBaseAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
 import { omit } from "lodash";
 import bcrypt from "bcryptjs";
+import { validate } from "class-validator";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
+import { plainToInstance } from "class-transformer";
 
 const EMAIL_KEYS = {
   body: "user-verification.body",
@@ -35,14 +41,26 @@ export class UserCreationService {
 
   constructor(private readonly emailService: EmailService) {}
 
-  async createNewUser(request: UserCreateAttributes): Promise<User> {
+  async createNewUser(isAuthenticated: boolean, request: UserCreateBaseAttributes): Promise<User> {
+    if (isAuthenticated) {
+      return await this.adminUserCreateProcess(request as AdminUserCreateAttributes);
+    }
+    return await this.unauthenticatedUserCreateProcess(request as UserCreateAttributes);
+  }
+
+  private async unauthenticatedUserCreateProcess(request: UserCreateAttributes): Promise<User> {
     if (request.token != null) {
       return this.completeInviteSignup(request);
     }
-    return this.createRegularUser(request);
+    return await this.signUpProcess(request);
   }
 
-  private async createRegularUser(request: UserCreateAttributes): Promise<User> {
+  private async signUpProcess(request: UserCreateAttributes): Promise<User> {
+    const dto = plainToInstance(UserCreateAttributes, request);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
     const role = request.role;
     if (!this.roles.includes(role)) {
       throw new UnprocessableEntityException("Role not valid");
@@ -50,7 +68,7 @@ export class UserCreationService {
 
     const roleEntity = await Role.findOne({ where: { name: role } });
     if (roleEntity == null) {
-      throw new NotFoundException("Role not found");
+      throw new BadRequestException("Role not found");
     }
 
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
@@ -61,7 +79,7 @@ export class UserCreationService {
     try {
       const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
-      const newUser = omit(request, ["callbackUrl", "role", "password", "token"]);
+      const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
       const user = await User.create({ ...newUser, password: hashPassword } as User);
 
@@ -82,6 +100,55 @@ export class UserCreationService {
     }
   }
 
+  private async adminUserCreateProcess(request: AdminUserCreateAttributes): Promise<User> {
+    const dto = plainToInstance(AdminUserCreateAttributes, request);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+    const organisation = await Organisation.findOne({
+      where: { uuid: request.organisationUuid },
+      attributes: ["id"]
+    });
+    if (organisation == null) {
+      throw new BadRequestException("Organisation not found");
+    }
+    const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
+    if (userExists) {
+      throw new UnprocessableEntityException("User already exists");
+    }
+    const roleEntity = await Role.findOne({ where: { name: request.role } });
+    if (roleEntity == null) {
+      throw new BadRequestException("Role not found");
+    }
+    const frameworkEntities = await Framework.findAll({ where: { slug: request.directFrameworks } });
+    if (frameworkEntities.length !== request.directFrameworks.length) {
+      throw new BadRequestException("One or more frameworks not found");
+    }
+    try {
+      const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
+      const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
+      await ModelHasRole.findOrCreate({
+        where: { modelId: user.id, roleId: roleEntity.id },
+        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
+      });
+
+      if (frameworkEntities.length > 0) {
+        await FrameworkUser.bulkCreate(
+          frameworkEntities.map(framework => ({ userId: user.id, frameworkId: framework.id })) as FrameworkUser[]
+        );
+      }
+
+      const reloadedUser = await user.reload({
+        include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }, { association: "frameworks" }]
+      });
+      return reloadedUser;
+    } catch (error) {
+      this.logger.error(error);
+      throw new InternalServerErrorException("User creation failed");
+    }
+  }
+
   private async completeInviteSignup(request: UserCreateAttributes): Promise<User> {
     const token = request.token;
     const passwordReset = await PasswordReset.findOne({
@@ -90,7 +157,7 @@ export class UserCreationService {
     });
 
     if (passwordReset == null || passwordReset.user == null) {
-      throw new NotFoundException("Invalid signup token");
+      throw new BadRequestException("Invalid signup token");
     }
 
     const user = passwordReset.user;
@@ -158,7 +225,7 @@ export class UserCreationService {
     const role = "project-developer";
     const roleEntity = await Role.findOne({ where: { name: role } });
     if (roleEntity == null) {
-      throw new NotFoundException("Role not found");
+      throw new BadRequestException("Role not found");
     }
 
     await ModelHasRole.findOrCreate({

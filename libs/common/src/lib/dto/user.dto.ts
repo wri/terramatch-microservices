@@ -14,10 +14,15 @@ class UserFramework {
 
 @JsonApiDto({ type: "users" })
 export class UserDto {
-  constructor(user: User, frameworks: Framework[]) {
+  constructor(user: User, directFrameworks: Framework[], frameworks: Framework[]) {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
-      frameworks: frameworks
+      organisationName: user.organisation?.name ?? null,
+      organisationUuid: user.organisation?.uuid ?? null,
+      frameworks: (frameworks ?? [])
+        .filter(({ slug }) => slug != null)
+        .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
+      directFrameworks: (directFrameworks ?? [])
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
     });
@@ -49,8 +54,35 @@ export class UserDto {
   emailAddressVerifiedAt: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
+  phoneNumber: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "Name of the user's primary organisation, if any." })
+  organisationName: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: "UUID of the user's primary organisation, if any." })
+  organisationUuid: string | null;
+
+  @ApiProperty({ type: Date })
+  createdAt: Date;
+
+  @ApiProperty({ nullable: true, type: Date })
+  lastLoggedInAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  jobRole: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  country: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  program: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
   locale: string | null;
 
   @ApiProperty({ type: () => UserFramework, isArray: true })
   frameworks: UserFramework[];
+
+  @ApiProperty({ type: () => UserFramework, isArray: true })
+  directFrameworks: UserFramework[];
 }

@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { CreateDataDto, JsonApiBulkBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
-import { IsBoolean, IsNumber, IsOptional, IsString, IsUrl } from "class-validator";
+import { IsBoolean, IsNumber, IsObject, IsOptional, IsString, IsUrl } from "class-validator";
 
 export class MediaRequestBulkAttributes {
   @IsString()
@@ -21,6 +21,21 @@ export class MediaRequestBulkAttributes {
   @IsOptional()
   @ApiProperty({ type: Number, nullable: true, description: "The longitude of the media" })
   lng: number | null;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ type: Boolean, nullable: true, description: "Whether the media is a cover" })
+  isCover: boolean | null;
+
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ type: Number, nullable: true, description: "The profile image scale" })
+  profileImageScale: number | null;
+
+  @IsObject()
+  @IsOptional()
+  @ApiProperty({ type: Object, nullable: true, description: "The profile image position" })
+  profileImagePosition: object | null;
 }
 
 export class MediaRequestBulkBody extends JsonApiBulkBodyDto(

@@ -612,6 +612,12 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       label: "Proof of land tenure MOU",
       inputType: "file",
       multiChoice: true
+    },
+    "pro-pit-consortium-partnership-agreements": {
+      collection: "consortium_partnership_agreements",
+      label: "Consortium agreements",
+      inputType: "file",
+      multiChoice: true
     }
   },
   relations: {

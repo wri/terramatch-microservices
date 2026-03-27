@@ -180,6 +180,8 @@ export class SiteReportProcessor extends ReportProcessor<
       (await TreeSpecies.visible().collection("non-tree").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
+    const totalTreesRegeneratingSpeciesCount =
+      (await TreeSpecies.visible().collection("anr").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
 
     const dto = new SiteReportFullDto(siteReport, {
@@ -188,6 +190,7 @@ export class SiteReportProcessor extends ReportProcessor<
       reportTitle,
       projectReportTitle,
       totalTreesPlantedCount,
+      totalTreesRegeneratingSpeciesCount,
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,

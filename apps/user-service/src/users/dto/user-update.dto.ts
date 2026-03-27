@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsString } from "class-validator";
+import { IsArray, IsEnum, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -32,10 +32,12 @@ export class UserUpdateAttributes {
   @ApiProperty({ description: "New default locale for the given user", nullable: true, enum: VALID_LOCALES })
   locale?: ValidLocale | null;
 
-  @ApiProperty()
+  @ApiProperty({ description: "Primary role", nullable: true, required: false })
+  @IsOptional()
   primaryRole?: string | null;
 
-  @ApiProperty({ isArray: true, type: String })
+  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   directFrameworks?: string[] | null;

@@ -478,9 +478,12 @@ describe("ProjectReportProcessor", () => {
         landscapeCommunityContribution: null,
         communityProgress: null
       });
+      const processorWithEntitiesService = processor as ProjectReportProcessor & {
+        entitiesService: Pick<EntitiesService, "removeHiddenValues">;
+      };
       jest
-        .spyOn((processor as any).entitiesService, "removeHiddenValues")
-        .mockImplementation(async (_model, dto: any) => {
+        .spyOn(processorWithEntitiesService.entitiesService, "removeHiddenValues")
+        .mockImplementation(async (_model, dto: { landscapeCommunityContribution: string | null }) => {
           dto.landscapeCommunityContribution = null;
         });
 

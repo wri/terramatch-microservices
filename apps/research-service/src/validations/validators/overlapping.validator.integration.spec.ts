@@ -120,12 +120,12 @@ describe("OverlappingValidator - Integration Tests", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).not.toBeNull();
-      expect(result.extraInfo!.length).toBeGreaterThanOrEqual(1);
 
       const overlapInfo = result.extraInfo;
       if (overlapInfo == null) {
         throw new Error("Expected overlap info to be present");
       }
+      expect(overlapInfo.length).toBeGreaterThanOrEqual(1);
 
       const polyUuids = overlapInfo.map(info => info.poly_uuid);
       expect(polyUuids.some(uuid => [testPolygonUuids[1], testPolygonUuids[2]].includes(uuid))).toBe(true);

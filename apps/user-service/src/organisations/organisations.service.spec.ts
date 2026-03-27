@@ -20,6 +20,7 @@ import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { OrganisationFullDto } from "@terramatch-microservices/common/dto";
@@ -28,6 +29,8 @@ describe("OrganisationsService", () => {
   let service: OrganisationsService;
   let policyService: DeepMocked<PolicyService>;
   let mediaService: DeepMocked<MediaService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -35,6 +38,7 @@ describe("OrganisationsService", () => {
         OrganisationsService,
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) },
         { provide: getQueueToken("email"), useValue: {} }
       ]
     }).compile();

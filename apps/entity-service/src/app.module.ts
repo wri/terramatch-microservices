@@ -39,6 +39,9 @@ import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 import { ExportImageService } from "./entities/export-image.service";
+import { EntityCsvExportService } from "./entities/entity-csv-export.service";
+import { FinancialReportController } from "./entities/financial-report.controller";
+import { SrpReportController } from "./entities/srp-report.controller";
 
 @Module({
   imports: [
@@ -61,6 +64,8 @@ import { ExportImageService } from "./entities/export-image.service";
     RemindersController,
     AuditStatusController, // must be before EntitiesController
     AggregateReportsController, // must be before EntitiesController
+    FinancialReportController, // must be before EntitiesController
+    SrpReportController, // must be before EntitiesController
     EntitiesController,
     FormDataController, // must be before entity association controller.
     UpdateRequestsController, // must be before entity association controller.
@@ -88,7 +93,8 @@ import { ExportImageService } from "./entities/export-image.service";
     FormDataService,
     EntitiesQueueProcessor,
     ReportingFrameworksService,
-    ExportImageService
+    ExportImageService,
+    EntityCsvExportService
   ]
 })
 export class AppModule {}

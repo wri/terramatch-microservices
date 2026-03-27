@@ -333,11 +333,11 @@ describe("UserCreationService", () => {
       return request;
     };
 
-    it("should throw NotFoundException when token is invalid", async () => {
+    it("should throw BadRequestException when token is invalid", async () => {
       const request = getInviteRequest("test@example.com", "invalid-token");
       jest.spyOn(PasswordReset, "findOne").mockResolvedValue(null);
 
-      await expect(service.createNewUser(false, request)).rejects.toThrow(NotFoundException);
+      await expect(service.createNewUser(false, request)).rejects.toThrow(BadRequestException);
     });
 
     it("should complete invite signup with organisation invite", async () => {

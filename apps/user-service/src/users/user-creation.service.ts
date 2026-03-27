@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
@@ -69,7 +68,7 @@ export class UserCreationService {
 
     const roleEntity = await Role.findOne({ where: { name: role } });
     if (roleEntity == null) {
-      throw new NotFoundException("Role not found");
+      throw new BadRequestException("Role not found");
     }
 
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
@@ -112,7 +111,7 @@ export class UserCreationService {
       attributes: ["id"]
     });
     if (organisation == null) {
-      throw new NotFoundException("Organisation not found");
+      throw new BadRequestException("Organisation not found");
     }
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
     if (userExists) {
@@ -120,11 +119,11 @@ export class UserCreationService {
     }
     const roleEntity = await Role.findOne({ where: { name: request.role } });
     if (roleEntity == null) {
-      throw new NotFoundException("Role not found");
+      throw new BadRequestException("Role not found");
     }
     const frameworkEntities = await Framework.findAll({ where: { slug: request.directFrameworks } });
     if (frameworkEntities.length !== request.directFrameworks.length) {
-      throw new NotFoundException("One or more frameworks not found");
+      throw new BadRequestException("One or more frameworks not found");
     }
     try {
       const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
@@ -158,7 +157,7 @@ export class UserCreationService {
     });
 
     if (passwordReset == null || passwordReset.user == null) {
-      throw new NotFoundException("Invalid signup token");
+      throw new BadRequestException("Invalid signup token");
     }
 
     const user = passwordReset.user;
@@ -226,7 +225,7 @@ export class UserCreationService {
     const role = "project-developer";
     const roleEntity = await Role.findOne({ where: { name: role } });
     if (roleEntity == null) {
-      throw new NotFoundException("Role not found");
+      throw new BadRequestException("Role not found");
     }
 
     await ModelHasRole.findOrCreate({

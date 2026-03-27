@@ -117,8 +117,8 @@ describe("EntityProcessor", () => {
 
       it("Sets completion and submission date", async () => {
         const report = await NurseryReportFactory.create({
-          completion: undefined,
-          submittedAt: undefined,
+          completion: 0,
+          submittedAt: null,
           nothingToReport: undefined
         });
         const processor = createProcessor("nurseryReports");

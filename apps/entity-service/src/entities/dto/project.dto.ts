@@ -225,6 +225,11 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty()
   regeneratedTreesCount: number;
 
+  @ApiProperty({
+    description: "Sum of tree species amounts for collection 'anr' across approved site reports for this project"
+  })
+  treesRegeneratingSpeciesCount: number;
+
   @ApiProperty()
   workdayCount: number;
 

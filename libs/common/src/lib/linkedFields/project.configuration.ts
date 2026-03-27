@@ -460,6 +460,12 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
+    "pro-rel-non-tree-species": {
+      label: "Non-Tree Species",
+      resource: "treeSpecies",
+      inputType: "treeSpecies",
+      collection: "non-tree"
+    },
     "pro-all-jobs": {
       label: "All Jobs",
       resource: "demographics",

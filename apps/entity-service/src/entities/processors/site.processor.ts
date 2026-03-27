@@ -236,6 +236,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const treesPlantedCount =
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesRegeneratingSpeciesCount =
+      (await TreeSpecies.visible().collection("anr").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const treesPlantedPolygonsCount = (await SitePolygon.approved().active().sites([site.uuid]).sum("numTrees")) ?? 0;
     const hectaresRestoredPolygonsCount =
@@ -264,6 +266,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       regeneratedTreesCount,
+      treesRegeneratingSpeciesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,
       lastReportedSurvivalRate: lastReportSurvivalRate?.pctSurvivalToDate ?? null,

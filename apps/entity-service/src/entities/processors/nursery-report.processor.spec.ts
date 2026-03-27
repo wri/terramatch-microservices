@@ -442,7 +442,7 @@ describe("NurseryReportProcessor", () => {
       const { uuid } = await NurseryReportFactory.create({
         nurseryId: nursery.id,
         taskId: undefined,
-        dueAt: undefined
+        dueAt: null
       });
 
       const nurseryReport = await processor.findOne(uuid);

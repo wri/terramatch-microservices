@@ -44,6 +44,20 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
+function resolvePlantingStatus(
+  plantingStatus: string | null | undefined,
+  landscapeCommunityContribution: string | null | undefined,
+  communityProgress: string | null | undefined
+) {
+  if (plantingStatus != null) return plantingStatus;
+
+  const candidate = landscapeCommunityContribution ?? communityProgress;
+  if (candidate == null) return null;
+  const normalized = candidate.trim().toLowerCase();
+  if (["yes", "true", "completed"].includes(normalized)) return "completed";
+  return null;
+}
+
 export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,
   ProjectReportLightDto,
@@ -151,6 +165,13 @@ export class ProjectReportProcessor extends ReportProcessor<
 
   async getFullDto(projectReport: ProjectReport) {
     const reportTitle = await this.getReportTitle(projectReport);
+    const landscapeCommunityContribution =
+      projectReport.landscapeCommunityContribution ?? projectReport.communityProgress ?? null;
+    const plantingStatus = resolvePlantingStatus(
+      projectReport.plantingStatus,
+      projectReport.landscapeCommunityContribution,
+      projectReport.communityProgress
+    );
 
     const dto = new ProjectReportFullDto(projectReport, {
       ...(await this.getFeedback(projectReport)),
@@ -165,8 +186,24 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.uuid
       ) as ProjectReportMedia)
     });
+    dto.landscapeCommunityContribution = landscapeCommunityContribution;
+    dto.plantingStatus = plantingStatus;
 
     await this.entitiesService.removeHiddenValues(projectReport, dto);
+    // Keep overview compatibility for consumers that still read landscapeCommunityContribution.
+    if (dto.landscapeCommunityContribution == null && projectReport.communityProgress != null) {
+      dto.landscapeCommunityContribution = projectReport.communityProgress;
+    }
+    if (dto.plantingStatus == null) {
+      dto.plantingStatus = resolvePlantingStatus(
+        projectReport.plantingStatus,
+        projectReport.landscapeCommunityContribution,
+        projectReport.communityProgress
+      );
+    }
+    if (dto.landscapeCommunityContribution == null && dto.plantingStatus === "completed") {
+      dto.landscapeCommunityContribution = "completed";
+    }
 
     return { id: projectReport.uuid, dto };
   }
@@ -177,6 +214,7 @@ export class ProjectReportProcessor extends ReportProcessor<
         seedsPlantedCount: 0,
         treesPlantedCount: 0,
         regeneratedTreesCount: 0,
+        treesRegeneratingSpeciesCount: 0,
         nonTreeTotal: 0,
         taskTotalWorkdays: 0,
         siteReportsCount: 0,
@@ -190,6 +228,8 @@ export class ProjectReportProcessor extends ReportProcessor<
       treesPlantedCount:
         (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       regeneratedTreesCount: await SiteReport.approved().task(taskId).sum("numTreesRegenerating"),
+      treesRegeneratingSpeciesCount:
+        (await TreeSpecies.visible().collection("anr").siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       nonTreeTotal: (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReportId, siteReportsIdsTask),
       siteReportsCount: await SiteReport.task(taskId).count(),

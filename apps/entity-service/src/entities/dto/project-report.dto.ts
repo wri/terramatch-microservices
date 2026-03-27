@@ -173,6 +173,11 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty()
   regeneratedTreesCount: number;
 
+  @ApiProperty({
+    description: "Sum of tree species amounts for collection 'anr' across approved site reports for this project report"
+  })
+  treesRegeneratingSpeciesCount: number;
+
   @ApiProperty({ nullable: true, type: String })
   topThreeSuccesses: string | null;
 

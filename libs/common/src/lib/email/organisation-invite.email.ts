@@ -46,8 +46,7 @@ export class OrganisationInviteEmail extends EmailSender<OrganisationInviteEmail
       "{organisationName}": organisation.name ?? ""
     };
     const additionalValues = {
-      link,
-      transactional: "transactional"
+      link
     };
     await emailService.sendI18nTemplateEmail(this.data.emailAddress, "en-US", EMAIL_ORGANISATION_INVITE_KEYS, {
       i18nReplacements,

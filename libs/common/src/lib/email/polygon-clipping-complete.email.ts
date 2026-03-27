@@ -86,8 +86,7 @@ export class PolygonClippingCompleteEmail extends EmailSender<PolygonClippingCom
     };
 
     const additionalValues = {
-      link: `/site/${site.uuid}`,
-      transactional: "transactional"
+      link: `/site/${site.uuid}`
     };
 
     await emailService.sendI18nTemplateEmail(

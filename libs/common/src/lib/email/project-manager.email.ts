@@ -34,8 +34,7 @@ export class ProjectManagerEmail extends EmailSender<SpecificEntityData> {
       cta: `project-manager${keySuffix}.cta`
     };
     const additionalValues = {
-      link,
-      transactional: "transactional"
+      link
     };
 
     // Group the users by locale and then send the email to each locale group.

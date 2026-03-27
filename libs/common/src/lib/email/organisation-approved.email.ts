@@ -43,8 +43,7 @@ export class OrganisationApprovedEmail extends EmailSender<OrganisationApprovedE
     }
 
     const additionalValues = {
-      link: "/auth/login",
-      transactional: "transactional"
+      link: "/auth/login"
     };
 
     await emailService.sendI18nTemplateEmail(

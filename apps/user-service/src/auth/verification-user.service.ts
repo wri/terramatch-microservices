@@ -59,7 +59,7 @@ export class VerificationUserService {
         : `/verify?token=${encodeURIComponent(token)}`;
 
     await this.emailService.sendI18nTemplateEmail(user.emailAddress, user.locale, EMAIL_KEYS, {
-      additionalValues: { link, transactional: "transactional" }
+      additionalValues: { link }
     });
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
 import { Framework, FrameworkUser, ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -81,14 +81,48 @@ export class UsersService {
   }
 
   async update(user: User, update: UserUpdateAttributes) {
+    let organisationEntity: Organisation | null = null;
+    let frameworkEntities: Framework[] = [];
+    let roleEntity: Role | null = null;
     if (update.organisationUuid != null) {
-      const organisation = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
-      if (organisation == null) {
-        throw new NotFoundException("Organisation not found");
+      organisationEntity = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
+      if (organisationEntity == null) {
+        throw new BadRequestException("Organisation not found");
       }
-      user.organisationId = organisation.id;
+    }
+    if (update.directFrameworks != null) {
+      frameworkEntities = await Framework.findAll({ where: { slug: update.directFrameworks } });
+      if (frameworkEntities.length !== update.directFrameworks.length) {
+        throw new BadRequestException("One or more frameworks not found");
+      }
+    }
+    if (update.primaryRole != null) {
+      roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
+      if (roleEntity == null) {
+        throw new BadRequestException("Role not found");
+      }
     }
 
+    if (update.directFrameworks != null) {
+      const userPreviousFrameworks = user.frameworks ?? [];
+      const frameworksToDelete = userPreviousFrameworks.filter(
+        framework => !frameworkEntities.some(entity => entity.id === framework.id)
+      );
+      const frameworksToAdd = frameworkEntities.filter(
+        framework => !userPreviousFrameworks.some(previousFramework => previousFramework.id === framework.id)
+      );
+
+      if (frameworksToDelete.length > 0) {
+        await FrameworkUser.destroy({
+          where: { userId: user.id, frameworkId: { [Op.in]: frameworksToDelete.map(framework => framework.id) } }
+        });
+      }
+      for (const framework of frameworksToAdd) {
+        await FrameworkUser.findOrCreate({ where: { userId: user.id, frameworkId: framework.id } });
+      }
+    }
+
+    user.organisationId = organisationEntity?.id ?? user.organisationId;
     user.firstName = update.firstName ?? user.firstName;
     user.lastName = update.lastName ?? user.lastName;
     user.emailAddress = update.emailAddress ?? user.emailAddress;
@@ -98,28 +132,13 @@ export class UsersService {
     user.program = update.program ?? user.program;
     user.locale = (update.locale as ValidLocale | undefined) ?? user.locale;
 
-    if (update.directFrameworks != null) {
-      await FrameworkUser.destroy({ where: { userId: user.id } });
-      for (const slug of update.directFrameworks) {
-        const framework = await Framework.findOne({ where: { slug } });
-        if (framework == null) {
-          throw new NotFoundException("Framework not found");
-        }
-        await FrameworkUser.findOrCreate({
-          where: { frameworkId: framework.id, userId: user.id }
-        });
-      }
-    }
     user = await user.save();
-    if (update.primaryRole != null) {
-      const roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
-      if (roleEntity == null) {
-        throw new NotFoundException("Role not found");
-      }
+
+    if (roleEntity != null) {
       await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
       await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: roleEntity.id },
-        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
+        where: { modelId: user.id, roleId: roleEntity?.id },
+        defaults: { modelId: user.id, roleId: roleEntity?.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
       });
       await user.reload();
     }

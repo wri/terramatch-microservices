@@ -521,9 +521,7 @@ describe("UserCreationService", () => {
       jest.spyOn(User, "create").mockResolvedValue(createdUser);
       jest.spyOn(Role, "findOne").mockResolvedValue(null);
 
-      await expect(service.createNewUser(true, request)).rejects.toThrow(
-        new InternalServerErrorException("User creation failed")
-      );
+      await expect(service.createNewUser(true, request)).rejects.toThrow(new BadRequestException("Role not found"));
     });
 
     it("should fail validation for malformed admin payload", async () => {

@@ -202,6 +202,7 @@ describe("UsersService", () => {
     const createUserMock = () => {
       const user = {
         id: 99,
+        frameworks: [] as Framework[],
         organisationId: null as number | null,
         firstName: "Old",
         lastName: "Name",
@@ -272,18 +273,13 @@ describe("UsersService", () => {
 
     it("should replace direct frameworks when directFrameworks is provided", async () => {
       const user = createUserMock();
-      const destroySpy = jest.spyOn(FrameworkUser, "destroy").mockResolvedValue(0);
-      jest
-        .spyOn(Framework, "findOne")
-        .mockResolvedValueOnce({ id: 10 } as Framework)
-        .mockResolvedValueOnce({ id: 20 } as Framework);
+      jest.spyOn(FrameworkUser, "destroy").mockResolvedValue(0);
+      jest.spyOn(Framework, "findAll").mockResolvedValue([{ id: 10 } as Framework, { id: 20 } as Framework]);
       const findOrCreateSpy = jest.spyOn(FrameworkUser, "findOrCreate").mockResolvedValue([{} as FrameworkUser, true]);
 
       await service.update(user, { directFrameworks: ["fw-a", "fw-b"] });
 
-      expect(destroySpy).toHaveBeenCalledWith({ where: { userId: 99 } });
-      expect(Framework.findOne).toHaveBeenNthCalledWith(1, { where: { slug: "fw-a" } });
-      expect(Framework.findOne).toHaveBeenNthCalledWith(2, { where: { slug: "fw-b" } });
+      expect(Framework.findAll).toHaveBeenCalledWith({ where: { slug: ["fw-a", "fw-b"] } });
       expect(findOrCreateSpy).toHaveBeenNthCalledWith(1, {
         where: { frameworkId: 10, userId: 99 }
       });
@@ -294,11 +290,10 @@ describe("UsersService", () => {
 
     it("should throw when a direct framework slug is unknown", async () => {
       const user = createUserMock();
-      jest.spyOn(FrameworkUser, "destroy").mockResolvedValue(0);
-      jest.spyOn(Framework, "findOne").mockResolvedValue(null);
+      jest.spyOn(Framework, "findAll").mockResolvedValue([]);
 
       await expect(service.update(user, { directFrameworks: ["missing"] })).rejects.toThrow(
-        new NotFoundException("Framework not found")
+        new BadRequestException("One or more frameworks not found")
       );
     });
 
@@ -330,6 +325,28 @@ describe("UsersService", () => {
       await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow(
         new NotFoundException("Role not found")
       );
+    });
+  });
+
+  describe("delete", () => {
+    it("should call destroy on the given user", async () => {
+      const user = {
+        destroy: jest.fn().mockResolvedValue(undefined)
+      } as unknown as User;
+
+      await service.delete(user);
+
+      expect(user.destroy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should propagate errors thrown by destroy", async () => {
+      const destroyError = new Error("delete failed");
+      const user = {
+        destroy: jest.fn().mockRejectedValue(destroyError)
+      } as unknown as User;
+
+      await expect(service.delete(user)).rejects.toThrow(destroyError);
+      expect(user.destroy).toHaveBeenCalledTimes(1);
     });
   });
 });

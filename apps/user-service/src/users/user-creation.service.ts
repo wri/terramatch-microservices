@@ -118,34 +118,31 @@ export class UserCreationService {
     if (userExists) {
       throw new UnprocessableEntityException("User already exists");
     }
+    const roleEntity = await Role.findOne({ where: { name: request.role } });
+    if (roleEntity == null) {
+      throw new NotFoundException("Role not found");
+    }
+    const frameworkEntities = await Framework.findAll({ where: { slug: request.directFrameworks } });
+    if (frameworkEntities.length !== request.directFrameworks.length) {
+      throw new NotFoundException("One or more frameworks not found");
+    }
     try {
       const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
       const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
-      const role = request.role;
-      const roleEntity = await Role.findOne({ where: { name: role } });
-      if (roleEntity == null) {
-        throw new NotFoundException("Role not found");
-      }
-
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
       });
 
-      for (const framework of request.directFrameworks ?? []) {
-        const frameworkEntity = await Framework.findOne({ where: { slug: framework } });
-        if (frameworkEntity == null) {
-          throw new NotFoundException("Framework not found");
-        }
-        await FrameworkUser.findOrCreate({
-          where: { frameworkId: frameworkEntity.id, userId: user.id }
-        });
+      if (frameworkEntities.length > 0) {
+        await FrameworkUser.bulkCreate(
+          frameworkEntities.map(framework => ({ userId: user.id, frameworkId: framework.id })) as FrameworkUser[]
+        );
       }
 
       const reloadedUser = await user.reload({
         include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }, { association: "frameworks" }]
       });
-
       return reloadedUser;
     } catch (error) {
       this.logger.error(error);

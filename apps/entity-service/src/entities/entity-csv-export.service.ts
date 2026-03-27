@@ -1,31 +1,31 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
-import { EntitiesService, ProcessableEntity } from "./entities.service";
+import { EntitiesService } from "./entities.service";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { ProjectPitchService } from "./project-pitch.service";
 import { FormDataService } from "./form-data.service";
 import { SubmissionExportQueryDto } from "./dto/submission-export-query.dto";
-import { FinancialReportProcessor } from "./processors/financial-report.processor";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
-import { ProjectPitchDto } from "./dto/project-pitch.dto";
+import { FinancialReport } from "@terramatch-microservices/database/entities";
 
 const EXPORTABLE_ENTITY_TYPES = ["financialReports", "srpReports"] as const;
 export type CsvExportableEntityType = (typeof EXPORTABLE_ENTITY_TYPES)[number];
 
 const FINANCIAL_REPORT_CSV_COLUMNS: Record<string, string> = {
+  id: "ID",
   uuid: "UUID",
-  status: "Status",
-  updateRequestStatus: "Update Request Status",
+  organisationId: "Organisation ID",
   organisationName: "Organisation Name",
-  organisationUuid: "Organisation UUID",
+  status: "Status",
   yearOfReport: "Year of Report",
-  frameworkKey: "Framework",
-  dueAt: "Due At",
+  currency: "Currency",
+  financialStartMonth: "Financial Start Month",
   submittedAt: "Submitted At",
   createdAt: "Created At",
-  updatedAt: "Updated At"
+  updatedAt: "Updated At",
+  financialIndicators: "Financial Indicators"
 };
 
 const SRP_REPORT_CSV_COLUMNS: Record<string, string> = {
@@ -87,25 +87,28 @@ export class EntityCsvExportService {
     return (EXPORTABLE_ENTITY_TYPES as readonly string[]).includes(entity);
   }
 
-  async exportFinancialReportsCsv(query: EntityQueryDto): Promise<string> {
-    const processor = this.entitiesService.createEntityProcessor("financialReports") as FinancialReportProcessor;
-    const { models } = await processor.findManyForExport(query, MAX_CSV_EXPORT_ROWS);
-    if (models.length > 0) {
-      await this.entitiesService.authorize("read", models);
-    }
-    const dtoResults = await processor.getLightDtos(models);
-    const rows = dtoResults.map(({ dto }) => ({
-      uuid: dto.uuid,
-      status: dto.status,
-      updateRequestStatus: dto.updateRequestStatus,
-      organisationName: dto.organisationName,
-      organisationUuid: dto.organisationUuid,
-      yearOfReport: dto.yearOfReport,
-      frameworkKey: dto.frameworkKey,
-      dueAt: dto.dueAt,
-      submittedAt: dto.submittedAt,
-      createdAt: dto.createdAt,
-      updatedAt: dto.updatedAt
+  async exportFinancialReportsCsv(): Promise<string> {
+    const models = await FinancialReport.findAll({
+      include: [
+        {
+          association: "organisation",
+          attributes: ["uuid", "name", "type"]
+        }
+      ]
+    });
+
+    const rows = models.map(model => ({
+      uuid: model.uuid,
+      status: model.status,
+      organisationId: model.organisationId,
+      organisationName: model.organisationName,
+      yearOfReport: model.yearOfReport,
+      currency: model.currency,
+      financialStartMonth: model.finStartMonth,
+      submittedAt: model.submittedAt,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
+      financialIndicators: model.financialIndicators
     }));
     return this.csvExportService.stringify(rows, FINANCIAL_REPORT_CSV_COLUMNS);
   }

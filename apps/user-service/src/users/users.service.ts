@@ -112,11 +112,11 @@ export class UsersService {
     }
     user = await user.save();
     if (update.primaryRole != null) {
-      await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
       const roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
       if (roleEntity == null) {
         throw new BadRequestException("Role not found");
       }
+      await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole

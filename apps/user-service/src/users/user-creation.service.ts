@@ -62,8 +62,7 @@ export class UserCreationService {
     if (errors.length > 0) {
       throw new BadRequestException(errors);
     }
-    const userCreateRequest = request as UserCreateAttributes;
-    const role = userCreateRequest.role;
+    const role = request.role;
     if (!this.roles.includes(role)) {
       throw new UnprocessableEntityException("Role not valid");
     }
@@ -79,9 +78,9 @@ export class UserCreationService {
     }
 
     try {
-      const hashPassword = await bcrypt.hash(userCreateRequest.password, 10);
-      const callbackUrl = userCreateRequest.callbackUrl;
-      const newUser = omit(userCreateRequest, ["callbackUrl", "role", "password"]);
+      const hashPassword = await bcrypt.hash(request.password, 10);
+      const callbackUrl = request.callbackUrl;
+      const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
       const user = await User.create({ ...newUser, password: hashPassword } as User);
 
@@ -108,9 +107,8 @@ export class UserCreationService {
     if (errors.length > 0) {
       throw new BadRequestException(errors);
     }
-    const adminUserCreateRequest = request as AdminUserCreateAttributes;
     const organisation = await Organisation.findOne({
-      where: { uuid: adminUserCreateRequest.organisationUuid },
+      where: { uuid: request.organisationUuid },
       attributes: ["id"]
     });
     if (organisation == null) {
@@ -121,9 +119,9 @@ export class UserCreationService {
       throw new UnprocessableEntityException("User already exists");
     }
     try {
-      const newUser = omit(adminUserCreateRequest, ["role", "organisationUuid", "directFrameworks"]);
+      const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
       const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
-      const role = adminUserCreateRequest.role;
+      const role = request.role;
       const roleEntity = await Role.findOne({ where: { name: role } });
       if (roleEntity == null) {
         throw new NotFoundException("Role not found");
@@ -134,7 +132,7 @@ export class UserCreationService {
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
       });
 
-      for (const framework of adminUserCreateRequest.directFrameworks ?? []) {
+      for (const framework of request.directFrameworks ?? []) {
         const frameworkEntity = await Framework.findOne({ where: { slug: framework } });
         if (frameworkEntity == null) {
           throw new NotFoundException("Framework not found");

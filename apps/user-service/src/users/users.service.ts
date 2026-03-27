@@ -79,52 +79,43 @@ export class UsersService {
     if (update.organisationUuid != null) {
       const organisation = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
       if (organisation == null) {
-        throw new NotFoundException("Organisation not found");
+        throw new BadRequestException("Organisation not found");
       }
       user.organisationId = organisation.id;
     }
-    if (update.firstName != null) {
-      user.firstName = update.firstName ?? null;
-    }
-    if (update.lastName != null) {
-      user.lastName = update.lastName ?? null;
-    }
-    if (update.emailAddress != null) {
-      user.emailAddress = update.emailAddress ?? null;
-    }
-    if (update.jobRole != null) {
-      user.jobRole = update.jobRole ?? null;
-    }
-    if (update.phoneNumber != null) {
-      user.phoneNumber = update.phoneNumber ?? null;
-    }
-    if (update.country != null) {
-      user.country = update.country ?? null;
-    }
-    if (update.program != null) {
-      user.program = update.program ?? null;
-    }
-    if (update.locale != null) {
-      user.locale = update.locale as ValidLocale;
-    }
+
+    user.firstName = update.firstName ?? user.firstName;
+    user.lastName = update.lastName ?? user.lastName;
+    user.emailAddress = update.emailAddress ?? user.emailAddress;
+    user.jobRole = update.jobRole ?? user.jobRole;
+    user.phoneNumber = update.phoneNumber ?? user.phoneNumber;
+    user.country = update.country ?? user.country;
+    user.program = update.program ?? user.program;
+    user.locale = update.locale as ValidLocale;
+
     if (update.directFrameworks != null) {
-      await FrameworkUser.destroy({ where: { userId: user.id } });
-      for (const framework of update.directFrameworks ?? []) {
-        const frameworkEntity = await Framework.findOne({ where: { slug: framework } });
-        if (frameworkEntity == null) {
-          throw new NotFoundException("Framework not found");
-        }
-        await FrameworkUser.findOrCreate({
-          where: { frameworkId: frameworkEntity.id, userId: user.id }
-        });
+      const requestedFrameworks = await Framework.findAll({ where: { slug: { [Op.in]: update.directFrameworks } } });
+      if (requestedFrameworks.length !== update.directFrameworks.length) {
+        throw new BadRequestException("One or more frameworks not found");
       }
+      const existingRoles = user.roles;
+      const rolesToAdd = requestedFrameworks.filter(framework => !existingRoles.some(role => role.id === framework.id));
+      const rolesToRemove = existingRoles.filter(
+        role => !requestedFrameworks.some(framework => role.id === framework.id)
+      );
+      await FrameworkUser.bulkCreate(
+        rolesToAdd.map(framework => ({ frameworkId: framework.id, userId: user.id } as FrameworkUser))
+      );
+      await FrameworkUser.destroy({
+        where: { frameworkId: { [Op.in]: rolesToRemove.map(role => role.id) }, userId: user.id }
+      });
     }
     user = await user.save();
     if (update.primaryRole != null) {
       await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
       const roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
       if (roleEntity == null) {
-        throw new NotFoundException("Role not found");
+        throw new BadRequestException("Role not found");
       }
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },

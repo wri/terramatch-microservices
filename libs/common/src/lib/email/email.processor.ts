@@ -6,11 +6,8 @@ import { NotImplementedException } from "@nestjs/common";
 import * as Sentry from "@sentry/node";
 import { TMLogger } from "../util/tm-logger";
 import { EntityStatusUpdateEmail } from "./entity-status-update.email";
-import {
-  TaskDigestEmail,
-  TerrafundReportReminderEmail,
-  WeeklyPolygonUpdateEmail
-} from "./terrafund-report-reminder.email";
+import { TaskDigestEmail, TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
+import { WeeklyPolygonUpdateEmail } from "./weekly-polygon-update.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
 import { AdminUserCreationEmail } from "./admin-user-creation.email";
 import { ProjectManagerEmail } from "./project-manager.email";

@@ -3,14 +3,12 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
-  CreatedAt,
   ForeignKey,
   Model,
   PrimaryKey,
-  Table,
-  UpdatedAt
+  Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, TEXT, UUID } from "sequelize";
+import { BIGINT, STRING, TEXT, UUID } from "sequelize";
 import { User } from "./user.entity";
 
 export type PolygonUpdateType = "update" | "status";
@@ -66,12 +64,4 @@ export class PolygonUpdates extends Model<PolygonUpdates> {
   @AllowNull
   @Column(STRING)
   newStatus: string | null;
-
-  @CreatedAt
-  @Column(DATE)
-  override createdAt: Date;
-
-  @UpdatedAt
-  @Column(DATE)
-  override updatedAt: Date;
 }

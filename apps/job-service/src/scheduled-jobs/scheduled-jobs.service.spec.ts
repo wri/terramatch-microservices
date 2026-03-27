@@ -4,14 +4,13 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
+import { Transaction } from "sequelize";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
 import { ScheduledJob, Task } from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
-import {
-  TaskDigestEmail,
-  WeeklyPolygonUpdateEmail
-} from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
+import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
+import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
@@ -122,29 +121,93 @@ describe("ScheduledJobsService", () => {
   });
 
   describe("enqueueTaskDigestEmails", () => {
-    it("should not enqueue when no incomplete tasks", async () => {
-      const findAllSpy = jest.spyOn(Task, "findAll").mockResolvedValue([]);
-      await service.enqueueTaskDigestEmails();
-      expect(emailQueue.add).not.toHaveBeenCalled();
-      findAllSpy.mockRestore();
+    let transactionSpy: jest.SpyInstance;
+    let querySpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      const sequelize = Task.sequelize;
+      if (sequelize == null) {
+        throw new Error("Task.sequelize is not initialized");
+      }
+      const mockTransaction = async (arg?: unknown) => {
+        if (typeof arg === "function") {
+          return await (arg as (t: Transaction) => Promise<void>)({} as Transaction);
+        }
+        return {} as Transaction;
+      };
+      const mockQuery = async (sql: string | { query: string }) => {
+        const q = typeof sql === "string" ? sql : sql.query;
+        if (q.includes("GET_LOCK")) {
+          return [{ got: 1 }];
+        }
+        if (q.includes("RELEASE_LOCK")) {
+          return [{ rel: 1 }];
+        }
+        return [];
+      };
+      transactionSpy = jest.spyOn(sequelize, "transaction").mockImplementation(mockTransaction as never);
+      querySpy = jest.spyOn(sequelize, "query").mockImplementation(mockQuery as never);
     });
 
-    it("should enqueue task digest jobs in id chunks", async () => {
-      const findAllSpy = jest
-        .spyOn(Task, "findAll")
-        .mockResolvedValueOnce([{ id: 10 }, { id: 20 }] as Task[])
-        .mockResolvedValueOnce([{ id: 30 }] as Task[])
-        .mockResolvedValueOnce([] as Task[]);
+    afterEach(() => {
+      transactionSpy.mockRestore();
+      querySpy.mockRestore();
+    });
+
+    it("should not enqueue when no incomplete tasks", async () => {
+      const countSpy = jest.spyOn(Task, "count").mockResolvedValue(0);
+      await service.enqueueTaskDigestEmails();
+      expect(emailQueue.add).not.toHaveBeenCalled();
+      countSpy.mockRestore();
+    });
+
+    it("should enqueue task digest jobs using paginated batches", async () => {
+      const countSpy = jest.spyOn(Task, "count").mockResolvedValue(3);
+      const findAllSpy = jest.spyOn(Task, "findAll").mockResolvedValue([{ id: 10 }, { id: 20 }, { id: 30 }] as Task[]);
 
       await service.enqueueTaskDigestEmails();
 
-      expect(emailQueue.add).toHaveBeenCalledWith(TaskDigestEmail.NAME, { taskIds: [10, 20] });
-      expect(emailQueue.add).toHaveBeenCalledWith(TaskDigestEmail.NAME, { taskIds: [30] });
+      expect(emailQueue.add).toHaveBeenCalledTimes(1);
+      expect(emailQueue.add).toHaveBeenCalledWith(TaskDigestEmail.NAME, { taskIds: [10, 20, 30] });
+      countSpy.mockRestore();
       findAllSpy.mockRestore();
     });
   });
 
   describe("enqueueWeeklyPolygonUpdateEmails", () => {
+    let transactionSpy: jest.SpyInstance;
+    let querySpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      const sequelize = Task.sequelize;
+      if (sequelize == null) {
+        throw new Error("Task.sequelize is not initialized");
+      }
+      const mockTransaction = async (arg?: unknown) => {
+        if (typeof arg === "function") {
+          return await (arg as (t: Transaction) => Promise<void>)({} as Transaction);
+        }
+        return {} as Transaction;
+      };
+      const mockQuery = async (sql: string | { query: string }) => {
+        const q = typeof sql === "string" ? sql : sql.query;
+        if (q.includes("GET_LOCK")) {
+          return [{ got: 1 }];
+        }
+        if (q.includes("RELEASE_LOCK")) {
+          return [{ rel: 1 }];
+        }
+        return [];
+      };
+      transactionSpy = jest.spyOn(sequelize, "transaction").mockImplementation(mockTransaction as never);
+      querySpy = jest.spyOn(sequelize, "query").mockImplementation(mockQuery as never);
+    });
+
+    afterEach(() => {
+      transactionSpy.mockRestore();
+      querySpy.mockRestore();
+    });
+
     it("should not enqueue when no polygon UUIDs in window", async () => {
       const loadSpy = jest.spyOn(WeeklyPolygonUpdateEmail, "loadRecentSitePolygonUuids").mockResolvedValue([]);
       await service.enqueueWeeklyPolygonUpdateEmails();

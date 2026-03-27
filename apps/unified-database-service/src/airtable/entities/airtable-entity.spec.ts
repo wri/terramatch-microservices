@@ -566,13 +566,17 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new OrganisationEntity(dataApi), organisations, ({ uuid, name, status }) => ({
-        fields: {
-          uuid,
-          name,
-          status
-        }
-      }));
+      await testAirtableUpdates(
+        new OrganisationEntity(dataApi),
+        sortBy(organisations, ["uuid"]),
+        ({ uuid, name, status }) => ({
+          fields: {
+            uuid,
+            name,
+            status
+          }
+        })
+      );
     });
   });
 

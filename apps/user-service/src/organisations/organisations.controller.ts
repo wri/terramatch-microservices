@@ -102,11 +102,8 @@ export class OrganisationsController {
   @Header("Content-Type", "text/csv")
   @Header("Content-Disposition", 'attachment; filename="organisations-export.csv"')
   async exportCsv(@Query() query: OrganisationIndexQueryDto) {
+    await this.policyService.authorize("export", Organisation);
     const { organisations } = await this.organisationsService.findManyForExport(query);
-    if (organisations.length > 0) {
-      const action = query.view === "public" ? "listing" : "read";
-      await this.policyService.authorize(action, organisations);
-    }
     return this.organisationsService.buildOrganisationsCsv(organisations);
   }
 

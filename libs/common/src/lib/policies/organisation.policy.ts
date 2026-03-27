@@ -16,7 +16,7 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     }
 
     if ((await this.isVerifiedAdmin()) || this.frameworks.length > 0) {
-      this.builder.can("approveReject", Organisation);
+      this.builder.can(["approveReject", "export"], Organisation);
     }
 
     const userForApproveReject = await this.getUser();

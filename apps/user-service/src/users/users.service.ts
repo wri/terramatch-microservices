@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, NotFoundException, Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
 import { Framework, FrameworkUser, ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -74,7 +74,8 @@ export class UsersService {
 
   async addUsersToDocument(document: DocumentBuilder, users: User[]) {
     for (const user of users) {
-      document.addData(user.uuid ?? "no-uuid", new UserDto(user, user.frameworks, await user.myFrameworks()));
+      const userFrameworks = typeof user.myFrameworks === "function" ? await user.myFrameworks() : [];
+      document.addData(user.uuid ?? "no-uuid", new UserDto(user, user.frameworks, userFrameworks));
     }
     return document;
   }
@@ -83,7 +84,7 @@ export class UsersService {
     if (update.organisationUuid != null) {
       const organisation = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
       if (organisation == null) {
-        throw new BadRequestException("Organisation not found");
+        throw new NotFoundException("Organisation not found");
       }
       user.organisationId = organisation.id;
     }
@@ -95,30 +96,25 @@ export class UsersService {
     user.phoneNumber = update.phoneNumber ?? user.phoneNumber;
     user.country = update.country ?? user.country;
     user.program = update.program ?? user.program;
-    user.locale = update.locale as ValidLocale;
+    user.locale = (update.locale as ValidLocale | undefined) ?? user.locale;
 
     if (update.directFrameworks != null) {
-      const requestedFrameworks = await Framework.findAll({ where: { slug: { [Op.in]: update.directFrameworks } } });
-      if (requestedFrameworks.length !== update.directFrameworks.length) {
-        throw new BadRequestException("One or more frameworks not found");
+      await FrameworkUser.destroy({ where: { userId: user.id } });
+      for (const slug of update.directFrameworks) {
+        const framework = await Framework.findOne({ where: { slug } });
+        if (framework == null) {
+          throw new NotFoundException("Framework not found");
+        }
+        await FrameworkUser.findOrCreate({
+          where: { frameworkId: framework.id, userId: user.id }
+        });
       }
-      const existingRoles = user.roles;
-      const rolesToAdd = requestedFrameworks.filter(framework => !existingRoles.some(role => role.id === framework.id));
-      const rolesToRemove = existingRoles.filter(
-        role => !requestedFrameworks.some(framework => role.id === framework.id)
-      );
-      await FrameworkUser.bulkCreate(
-        rolesToAdd.map(framework => ({ frameworkId: framework.id, userId: user.id } as FrameworkUser))
-      );
-      await FrameworkUser.destroy({
-        where: { frameworkId: { [Op.in]: rolesToRemove.map(role => role.id) }, userId: user.id }
-      });
     }
     user = await user.save();
     if (update.primaryRole != null) {
       const roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
       if (roleEntity == null) {
-        throw new BadRequestException("Role not found");
+        throw new NotFoundException("Role not found");
       }
       await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
       await ModelHasRole.findOrCreate({

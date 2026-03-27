@@ -69,7 +69,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
         .join(" OR ");
       this.where(Sequelize.literal(`(${cohortConditions})`));
     } else {
-      const defaultCohorts = ["terrafund", "terrafund-landscapes", "terrafund-enterprises-rolling", "terrafund-3"];
+      const defaultCohorts = ["terrafund", "terrafund-cohort-1", "terrafund-cohort-2", "terrafund-cohort-3"];
       const defaultCohortConditions = defaultCohorts
         .map(cohort => {
           const escapedCohort = this.sql.escape(`"${cohort}"`);

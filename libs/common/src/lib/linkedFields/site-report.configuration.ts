@@ -187,6 +187,12 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       inputType: "treeSpecies",
       collection: "non-tree"
     },
+    "site-rep-rel-anr-tree-species": {
+      label: "Regenerating Species",
+      resource: "treeSpecies",
+      inputType: "treeSpecies",
+      collection: "anr"
+    },
     "site-rep-rel-disturbances": {
       label: "Disturbances",
       resource: "disturbances",

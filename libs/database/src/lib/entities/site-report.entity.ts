@@ -86,7 +86,7 @@ type SiteReportMedia =
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
 export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly UNSUBMITTED_STATUSES = ["due", "started"];
@@ -419,6 +419,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "non-tree" }
   })
   nonTrees: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "anr" }
+  })
+  anrTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",

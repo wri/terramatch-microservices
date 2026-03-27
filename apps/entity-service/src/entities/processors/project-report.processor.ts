@@ -214,6 +214,7 @@ export class ProjectReportProcessor extends ReportProcessor<
         seedsPlantedCount: 0,
         treesPlantedCount: 0,
         regeneratedTreesCount: 0,
+        treesRegeneratingSpeciesCount: 0,
         nonTreeTotal: 0,
         taskTotalWorkdays: 0,
         siteReportsCount: 0,
@@ -227,6 +228,8 @@ export class ProjectReportProcessor extends ReportProcessor<
       treesPlantedCount:
         (await TreeSpecies.visible().collection("tree-planted").siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       regeneratedTreesCount: await SiteReport.approved().task(taskId).sum("numTreesRegenerating"),
+      treesRegeneratingSpeciesCount:
+        (await TreeSpecies.visible().collection("anr").siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       nonTreeTotal: (await Seeding.visible().siteReports(siteReportsIdsTask).sum("amount")) ?? 0,
       taskTotalWorkdays: await this.getTaskTotalWorkdays(projectReportId, siteReportsIdsTask),
       siteReportsCount: await SiteReport.task(taskId).count(),

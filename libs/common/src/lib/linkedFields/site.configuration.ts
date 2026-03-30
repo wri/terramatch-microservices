@@ -87,7 +87,7 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
     "site-description-siting-strategy": {
       property: "descriptionSitingStrategy",
       label: "Description siting strategy",
-      inputType: "text"
+      inputType: "long-text"
     },
     "site-col-siting-strategy": {
       property: "sitingStrategy",

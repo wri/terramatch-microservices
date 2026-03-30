@@ -215,7 +215,10 @@ export class OrganisationsController {
     const document = buildJsonApi(OrganisationLightDto);
     const orgResource = document.addData(organisation.uuid, new OrganisationLightDto(organisation));
     if (user != null) {
-      const userResource = document.addData(user.uuid ?? "no-uuid", new UserDto(user, await user.myFrameworks()));
+      const userResource = document.addData(
+        user.uuid ?? "no-uuid",
+        new UserDto(user, user.frameworks, await user.myFrameworks())
+      );
       userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
     }
     return document;

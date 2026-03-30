@@ -61,7 +61,7 @@ type ProjectMedia =
   hooks: { afterCreate: statusUpdateSequelizeHook }
 })
 export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted"];
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\Project";
 
   static readonly MEDIA: Record<ProjectMedia, MediaConfiguration> = {
@@ -504,6 +504,13 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     scope: { speciesable_type: Project.LARAVEL_TYPE, collection: "tree-planted" }
   })
   treesPlanted: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesable_type: Project.LARAVEL_TYPE, collection: "non-tree" }
+  })
+  nonTrees: TreeSpecies[] | null;
 
   @HasMany(() => ProjectReport)
   reports: ProjectReport[] | null;

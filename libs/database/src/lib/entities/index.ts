@@ -81,3 +81,4 @@ export * from "./disturbance-report.entity";
 export * from "./disturbance-report-entry.entity";
 export * from "./audit.entity";
 export * from "./failed-job.entity";
+export * from "./anr-plot-geometry.entity";

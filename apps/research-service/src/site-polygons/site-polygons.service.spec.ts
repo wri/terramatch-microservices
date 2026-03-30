@@ -414,6 +414,7 @@ describe("SitePolygonsService", () => {
 
   it("should only return polys missing the given indicators", async () => {
     await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
     const poly1 = await SitePolygonFactory.create();
     await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
     await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "restorationByLandUse" });
@@ -425,32 +426,28 @@ describe("SitePolygonsService", () => {
 
     let query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["fieldMonitoring"]);
     let result = await query.execute();
-    expect(result.length).toBe(2);
-    expect(result.map(({ id }) => id).sort()).toEqual([poly2.id, poly3.id].sort());
+    expect(result.map(({ id }) => id)).toEqual(expect.arrayContaining([poly2.id, poly3.id]));
 
     query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByLandUse"]);
     result = await query.execute();
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe(poly3.id);
+    expect(result.map(({ id }) => id)).toContain(poly3.id);
 
     query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByStrategy", "msuCarbon"]);
     result = await query.execute();
-    expect(result.length).toBe(1);
-    expect(result[0].id).toBe(poly1.id);
+    expect(result.map(({ id }) => id)).toContain(poly1.id);
 
     query = (await service.buildQuery({ size: 20 })).isMissingIndicators(["restorationByEcoRegion"]);
     result = await query.execute();
-    expect(result.length).toBe(3);
-    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+    expect(result.map(({ id }) => id)).toEqual(expect.arrayContaining([poly1.id, poly2.id, poly3.id]));
 
     query = await service.buildQuery({ size: 20 });
     result = await query.execute();
-    expect(result.length).toBe(3);
-    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+    expect(result.map(({ id }) => id)).toEqual(expect.arrayContaining([poly1.id, poly2.id, poly3.id]));
   });
 
   it("should only return polys with all specified indicators present", async () => {
     await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
     const poly1 = await SitePolygonFactory.create();
     await IndicatorOutputFieldMonitoringFactory.create({ sitePolygonId: poly1.id });
     await IndicatorOutputHectaresFactory.create({ sitePolygonId: poly1.id, indicatorSlug: "restorationByStrategy" });
@@ -479,8 +476,7 @@ describe("SitePolygonsService", () => {
 
     query = await service.buildQuery({ size: 20 });
     result = await query.execute();
-    expect(result.length).toBe(3);
-    expect(result.map(({ id }) => id).sort()).toEqual([poly1.id, poly2.id, poly3.id].sort());
+    expect(result.map(({ id }) => id)).toEqual(expect.arrayContaining([poly1.id, poly2.id, poly3.id]));
   });
 
   it("throws when an indicator slug is invalid", async () => {

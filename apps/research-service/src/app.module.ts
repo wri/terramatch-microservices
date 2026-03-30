@@ -34,6 +34,8 @@ import { ProjectPolygonsController } from "./project-polygons/project-polygons.c
 import { ProjectPolygonsService } from "./project-polygons/project-polygons.service";
 import { ProjectPolygonCreationService } from "./project-polygons/project-polygon-creation.service";
 import { ProjectPolygonGeometryService } from "./project-polygons/project-polygon-geometry.service";
+import { AnrPlotGeometryController } from "./site-polygons/anr-plot-geometry.controller";
+import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.service";
 
 @Module({
   imports: [
@@ -65,7 +67,8 @@ import { ProjectPolygonGeometryService } from "./project-polygons/project-polygo
     ValidationController,
     PolygonClippingController,
     IndicatorsController,
-    ProjectPolygonsController
+    ProjectPolygonsController,
+    AnrPlotGeometryController
   ],
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
@@ -89,7 +92,8 @@ import { ProjectPolygonGeometryService } from "./project-polygons/project-polygo
     GeoJsonExportService,
     ProjectPolygonsService,
     ProjectPolygonCreationService,
-    ProjectPolygonGeometryService
+    ProjectPolygonGeometryService,
+    AnrPlotGeometryService
   ]
 })
 export class AppModule {}

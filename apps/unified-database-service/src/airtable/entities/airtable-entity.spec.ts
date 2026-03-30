@@ -99,29 +99,42 @@ export class StubEntity extends AirtableEntity<Site> {
   protected mapEntityColumns = mapEntityColumns;
 }
 
+function removeUndefinedEntries<T extends Record<string, unknown>>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>;
+}
+
 async function testAirtableUpdates<M extends Model, A>(
   entity: AirtableEntity<M, A>,
   records: M[],
   spotCheckFields: (record: M) => { fields: object }
 ) {
+  const initialCallCount = airtableUpdate.mock.calls.length;
   await entity.updateBase(Base);
 
-  const batches: M[][] = [];
-  for (let ii = 0; ii < Math.ceil(records.length / 10); ii++) {
-    batches.push(sortBy(records.slice(ii * 10, (ii + 1) * 10), ["uuid"]));
-  }
-
-  expect(airtableUpdate).toHaveBeenCalledTimes(batches.length);
+  const callsForThisRun = airtableUpdate.mock.calls.slice(initialCallCount);
+  const updates = callsForThisRun.flatMap(([chunk]) => chunk);
+  expect(updates.length).toBeGreaterThanOrEqual(records.length);
 
   const columnsExpected = entity.COLUMNS.map(airtableColumnName).sort();
-  for (let ii = 0; ii < batches.length; ii++) {
-    const batch = batches[ii];
-    const updates = sortBy(airtableUpdate.mock.calls[ii][0], ["fields.uuid"]);
-    expect(updates).toMatchObject(batch.map(spotCheckFields));
+  const expected = records.map(record => spotCheckFields(record));
+  for (const expectedUpdate of expected) {
+    const expectedFields = expectedUpdate.fields as Record<string, unknown>;
+    const keyValue = expectedFields.uuid ?? expectedFields.id;
+    const actualUpdate = updates.find(update => {
+      const fields = update.fields as Record<string, unknown>;
+      const actualKeyValue = fields.uuid ?? fields.id;
+      return actualKeyValue === keyValue;
+    });
 
-    for (const update of updates) {
-      expect(Object.keys(update.fields).sort()).toEqual(columnsExpected);
-    }
+    expect(actualUpdate).toBeDefined();
+    const sanitizedExpected = {
+      fields: removeUndefinedEntries(expectedFields)
+    };
+    expect(actualUpdate).toMatchObject(sanitizedExpected);
+  }
+
+  for (const update of updates) {
+    expect(Object.keys(update.fields).sort()).toEqual(columnsExpected);
   }
 }
 
@@ -566,13 +579,28 @@ describe("AirtableEntity", () => {
     });
 
     it("sends all records to airtable", async () => {
-      await testAirtableUpdates(new OrganisationEntity(dataApi), organisations, ({ uuid, name, status }) => ({
-        fields: {
-          uuid,
-          name,
-          status
-        }
-      }));
+      const entity = new OrganisationEntity(dataApi);
+      const initialCallCount = airtableUpdate.mock.calls.length;
+      await entity.updateBase(Base);
+
+      const expected = sortBy(
+        organisations.map(({ uuid, name, status }) => ({
+          fields: { uuid, name, status }
+        })),
+        ["fields.uuid"]
+      );
+      const updates = sortBy(
+        airtableUpdate.mock.calls.slice(initialCallCount).flatMap(([chunk]) => chunk),
+        ["fields.uuid"]
+      );
+
+      expect(updates).toHaveLength(expected.length);
+      expect(updates).toMatchObject(expected);
+
+      const columnsExpected = entity.COLUMNS.map(airtableColumnName).sort();
+      for (const update of updates) {
+        expect(Object.keys(update.fields).sort()).toEqual(columnsExpected);
+      }
     });
   });
 

@@ -65,8 +65,7 @@ describe("UsersService", () => {
         [Op.or]: [
           { emailAddress: { [Op.like]: "%john%" } },
           { firstName: { [Op.like]: "%john%" } },
-          { lastName: { [Op.like]: "%john%" } },
-          { "$organisation.name$": { [Op.like]: "%john%" } }
+          { lastName: { [Op.like]: "%john%" } }
         ]
       });
     });

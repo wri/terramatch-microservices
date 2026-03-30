@@ -32,6 +32,7 @@ export class UserUpdateAttributes {
   @ApiProperty({ description: "New default locale for the given user", nullable: true, enum: VALID_LOCALES })
   locale?: ValidLocale | null;
 
+  @IsString()
   @ApiProperty({ description: "Primary role", nullable: true, required: false })
   @IsOptional()
   primaryRole?: string | null;

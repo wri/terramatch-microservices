@@ -106,12 +106,15 @@ export class UserCreationService {
     if (errors.length > 0) {
       throw new BadRequestException(errors);
     }
-    const organisation = await Organisation.findOne({
-      where: { uuid: request.organisationUuid },
-      attributes: ["id"]
-    });
-    if (organisation == null) {
-      throw new BadRequestException("Organisation not found");
+    let organisation: Organisation | null = null;
+    if (request.organisationUuid != null) {
+      organisation = await Organisation.findOne({
+        where: { uuid: request.organisationUuid },
+        attributes: ["id"]
+      });
+      if (organisation == null) {
+        throw new BadRequestException("Organisation not found");
+      }
     }
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
     if (userExists) {
@@ -127,7 +130,7 @@ export class UserCreationService {
     }
     try {
       const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
-      const user = await User.create({ ...newUser, organisationId: organisation.id } as User);
+      const user = await User.create({ ...newUser, organisationId: organisation?.id ?? null } as User);
       await ModelHasRole.findOrCreate({
         where: { modelId: user.id, roleId: roleEntity.id },
         defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
@@ -216,8 +219,8 @@ export class UserCreationService {
     const hashPassword = await bcrypt.hash(request.password, 10);
     user.firstName = request.firstName;
     user.lastName = request.lastName;
-    user.jobRole = request.jobRole;
-    user.phoneNumber = request.phoneNumber;
+    user.jobRole = request.jobRole ?? null;
+    user.phoneNumber = request.phoneNumber ?? null;
     user.emailAddress = request.emailAddress;
     user.password = hashPassword;
     user.emailAddressVerifiedAt = new Date();

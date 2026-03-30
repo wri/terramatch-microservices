@@ -135,6 +135,9 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenures: string[] | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  landTenureApproach: string | null;
+
   @ApiProperty({ nullable: true, type: Number })
   survivalRatePlanted: number | null;
 

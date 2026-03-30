@@ -29,7 +29,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-land-tenure-proj-area": {
       property: "landTenureProjectArea",
-      label: "Land tenure",
+      label: "Land tenure project area",
       inputType: "select-image",
       multiChoice: true,
       optionListKey: "land-tenures-brazil"

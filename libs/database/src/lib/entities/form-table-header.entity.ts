@@ -11,7 +11,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, INTEGER, SMALLINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormQuestion } from "./form-question.entity";
-import { kebabCase } from "lodash";
+import { isEmpty, kebabCase } from "lodash";
 
 const generateSlug = async (value: string, formQuestionId: number) => {
   for (let ii = 0; ; ii++) {
@@ -27,15 +27,17 @@ const generateSlug = async (value: string, formQuestionId: number) => {
 
   hooks: {
     beforeCreate: async (header: FormTableHeader) => {
-      if (header.label != null) header.slug = await generateSlug(header.label, header.formQuestionId);
+      if (!isEmpty(header.label)) header.slug = await generateSlug(header.label as string, header.formQuestionId);
     },
     beforeUpdate: async (header: FormTableHeader) => {
-      if (header.slug == null && header.label != null)
-        header.slug = await generateSlug(header.label, header.formQuestionId);
+      if (header.slug == null && !isEmpty(header.label)) {
+        header.slug = await generateSlug(header.label as string, header.formQuestionId);
+      }
     },
     beforeSave: async (header: FormTableHeader) => {
-      if (header.slug == null && header.label != null)
-        header.slug = await generateSlug(header.label, header.formQuestionId);
+      if (header.slug == null && !isEmpty(header.label)) {
+        header.slug = await generateSlug(header.label as string, header.formQuestionId);
+      }
     }
   }
 })

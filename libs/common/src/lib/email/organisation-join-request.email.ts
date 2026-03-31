@@ -49,16 +49,11 @@ export class OrganisationJoinRequestEmail extends EmailSender<OrganisationJoinRe
             return Promise.resolve();
           }
 
-          return emailService.sendI18nTemplateEmail(
-            owner.emailAddress,
-            owner.locale,
-            {
-              subject: "organisation-user-join-requested.subject",
-              title: "organisation-user-join-requested.title",
-              body: "organisation-user-join-requested.body"
-            },
-            {}
-          );
+          return emailService.sendI18nTemplateEmail(owner.emailAddress, owner.locale, {
+            subject: "organisation-user-join-requested.subject",
+            title: "organisation-user-join-requested.title",
+            body: "organisation-user-join-requested.body"
+          });
         })
     );
 

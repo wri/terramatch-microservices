@@ -11,8 +11,34 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, INTEGER, SMALLINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormQuestion } from "./form-question.entity";
+import { kebabCase } from "lodash";
 
-@Table({ tableName: "form_table_headers", underscored: true, paranoid: true })
+const generateSlug = async (value: string, formQuestionId: number) => {
+  for (let ii = 0; ; ii++) {
+    const slug = `${kebabCase(value)}${ii === 0 ? "" : `_${ii}`}`;
+    if ((await FormTableHeader.count({ where: { formQuestionId, slug } })) === 0) return slug;
+  }
+};
+
+@Table({
+  tableName: "form_table_headers",
+  underscored: true,
+  paranoid: true,
+
+  hooks: {
+    beforeCreate: async (header: FormTableHeader) => {
+      if (header.label != null) header.slug = await generateSlug(header.label, header.formQuestionId);
+    },
+    beforeUpdate: async (header: FormTableHeader) => {
+      if (header.slug == null && header.label != null)
+        header.slug = await generateSlug(header.label, header.formQuestionId);
+    },
+    beforeSave: async (header: FormTableHeader) => {
+      if (header.slug == null && header.label != null)
+        header.slug = await generateSlug(header.label, header.formQuestionId);
+    }
+  }
+})
 export class FormTableHeader extends Model<FormTableHeader> {
   static readonly I18N_FIELDS = ["label"] as const;
 

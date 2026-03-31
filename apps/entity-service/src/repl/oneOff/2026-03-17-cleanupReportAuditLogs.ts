@@ -11,6 +11,8 @@ import {
 import { Op, WhereOptions } from "sequelize";
 import { chunk, groupBy } from "lodash";
 import { Model, ModelCtor } from "sequelize-typescript";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 const EMBEDDED_REPORT_KEYS = ["projectReports", "siteReports", "nurseryReports"] as const;
 type EmbeddedReportType = (typeof EMBEDDED_REPORT_KEYS)[number];
@@ -179,22 +181,10 @@ export const cleanupReportAuditLogs = withoutSqlLogs(async (opts: CleanupOptions
     });
   }
 
-  let cursor = 0;
   let processed = 0;
-
-  let hasMore = true;
-  while (hasMore) {
-    const audits = await Audit.findAll({
-      where: { [Op.and]: [...baseFilters, { id: { [Op.gt]: cursor } }] },
-      order: [["id", "ASC"]],
-      limit: batchSize
-    });
-    if (audits.length === 0) {
-      hasMore = false;
-      continue;
-    }
-
-    cursor = audits[audits.length - 1].id;
+  const builder = new PaginatedQueryBuilder(Audit, batchSize).where({ [Op.and]: baseFilters }).order(["id", "ASC"]);
+  for await (const audits of batchFindAll(builder)) {
+    if (audits.length === 0) continue;
     processed += audits.length;
 
     const uuidsByType = await loadUuidsForBatch(audits);

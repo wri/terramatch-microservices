@@ -48,6 +48,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
 
 type SiteMedia =
   | "media"
@@ -64,7 +65,12 @@ type SiteMedia =
   nonDraft: { where: { status: { [Op.ne]: STARTED } } },
   project: (id: number) => ({ where: { projectId: id } })
 }))
-@Table({ tableName: "v2_sites", underscored: true, paranoid: true, hooks: { afterCreate: statusUpdateSequelizeHook } })
+@Table({
+  tableName: "v2_sites",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
+})
 export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<Site>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
   static readonly APPROVED_STATUSES = [APPROVED] as EntityStatus[];

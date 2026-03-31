@@ -47,6 +47,7 @@ import { Task } from "./task.entity";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
 
 type NurseryReportMedia = "media" | "file" | "otherAdditionalDocuments" | "treeSeedlingContributions" | "photos";
 
@@ -60,7 +61,7 @@ type NurseryReportMedia = "media" | "file" | "otherAdditionalDocuments" | "treeS
   tableName: "v2_nursery_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
 })
 export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCreationAttributes<NurseryReport>> {
   static readonly TREE_ASSOCIATIONS = ["seedlings"];

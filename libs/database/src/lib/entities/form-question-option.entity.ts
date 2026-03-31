@@ -2,10 +2,11 @@ import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, 
 import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { removeMedia } from "../hooks/remove-media";
 
 type FormQuestionOptionMedia = "image";
 
-@Table({ tableName: "form_question_options", underscored: true, paranoid: true })
+@Table({ tableName: "form_question_options", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class FormQuestionOption extends Model<FormQuestionOption> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormQuestionOption";
 

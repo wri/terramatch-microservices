@@ -5,6 +5,7 @@ import { OrganisationStatus } from "../constants/status";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Application } from "./application.entity";
 import { Subquery } from "../util/subquery.builder";
+import { removeMedia } from "../hooks/remove-media";
 
 type OrganisationMedia =
   | "logo"
@@ -36,7 +37,7 @@ type OrganisationMedia =
   | "carbonCreditsProof"
   | "additionalFinancialDocumentation";
 
-@Table({ tableName: "organisations", underscored: true, paranoid: true })
+@Table({ tableName: "organisations", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class Organisation extends Model<Organisation> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
 

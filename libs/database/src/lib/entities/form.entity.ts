@@ -25,6 +25,7 @@ import { SrpReport } from "./srp-report.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { FinancialReport } from "./financial-report.entity";
 import { Subquery } from "../util/subquery.builder";
+import { removeMedia } from "../hooks/remove-media";
 
 type FormMedia = "banner";
 
@@ -62,7 +63,8 @@ type FormMedia = "banner";
       // hooks off.
       await FormQuestion.forForm(form.uuid).destroy({ hooks: false });
       await FormSection.destroy({ where: { formId: form.uuid }, hooks: false });
-    }
+    },
+    afterDestroy: removeMedia
   }
 })
 export class Form extends Model<Form> {

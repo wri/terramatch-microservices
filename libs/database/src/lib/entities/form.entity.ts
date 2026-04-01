@@ -63,6 +63,9 @@ type FormMedia = "banner";
       const questionIds = (await FormQuestion.forForm(form.uuid).findAll({ attributes: ["id"] })).map(({ id }) => id);
       await FormQuestion.forForm(form.uuid).destroy();
       await FormSection.destroy({ where: { formId: form.uuid } });
+      if (form.stageId != null) {
+        await Stage.destroy({ where: { id: form.stageId } });
+      }
 
       await removeQuestionDependencies(questionIds);
 

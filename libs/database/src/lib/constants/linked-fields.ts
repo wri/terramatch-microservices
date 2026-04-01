@@ -87,7 +87,9 @@ export const RELATION_INPUT_TYPES = [
   "treesHistorical",
   "treeSpecies",
   "volunteers",
-  "workdays"
+  "workdays",
+  "elpBeneficiaries",
+  "livelihoodActivities"
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 

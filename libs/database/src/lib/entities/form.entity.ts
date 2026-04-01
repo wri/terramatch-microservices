@@ -26,6 +26,7 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { FinancialReport } from "./financial-report.entity";
 import { Subquery } from "../util/subquery.builder";
 import { removeMedia } from "../hooks/remove-media";
+import { removeQuestionDependencies } from "../hooks/remove-question-dependencies";
 
 type FormMedia = "banner";
 
@@ -58,13 +59,15 @@ type FormMedia = "banner";
   underscored: true,
   paranoid: true,
   hooks: {
-    async beforeDestroy(form: Form) {
-      // Handle deleting all questions and sections in 2 queries and avoid N+1 cascading by forcing
-      // hooks off.
-      await FormQuestion.forForm(form.uuid).destroy({ hooks: false });
-      await FormSection.destroy({ where: { formId: form.uuid }, hooks: false });
-    },
-    afterDestroy: removeMedia
+    async afterDestroy(form: Form) {
+      const questionIds = (await FormQuestion.forForm(form.uuid).findAll({ attributes: ["id"] })).map(({ id }) => id);
+      await FormQuestion.forForm(form.uuid).destroy();
+      await FormSection.destroy({ where: { formId: form.uuid } });
+
+      await removeQuestionDependencies(questionIds);
+
+      await removeMedia(form);
+    }
   }
 })
 export class Form extends Model<Form> {

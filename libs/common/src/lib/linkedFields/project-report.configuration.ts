@@ -294,7 +294,8 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "beneficiariesTrainingNonYouth",
       label: "Non Youth Trained",
       inputType: "number"
-    }
+    },
+    "pro-rep-elp-description": { property: "elpDescription", label: "ELP description", inputType: "long-text" }
   },
   fileCollections: {
     "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },

@@ -73,6 +73,8 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   static readonly TRAINING_BENEFICIARIES_TYPE = "training-beneficiaries";
   static readonly INDIRECT_BENEFICIARIES_TYPE = "indirect-beneficiaries";
   static readonly ASSOCIATES_TYPES = "associates";
+  static readonly ELP_BENEFICIARIES_TYPE = "elp-beneficiaries";
+  static readonly LIVELIHOOD_ACTIVITIES_TYPE = "livelihood-activities";
   static readonly DEMOGRAPHICS_TYPES = [
     Tracking.WORKDAYS_TYPE,
     Tracking.RESTORATION_PARTNERS_TYPE,
@@ -82,7 +84,9 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     Tracking.ALL_BENEFICIARIES_TYPE,
     Tracking.TRAINING_BENEFICIARIES_TYPE,
     Tracking.INDIRECT_BENEFICIARIES_TYPE,
-    Tracking.ASSOCIATES_TYPES
+    Tracking.ASSOCIATES_TYPES,
+    Tracking.ELP_BENEFICIARIES_TYPE,
+    Tracking.LIVELIHOOD_ACTIVITIES_TYPE
   ] as const;
 
   static readonly HECTARES_GOAL_TYPE = "hectares-goal";

@@ -21,7 +21,8 @@ const generateSlug = async (label: string, formQuestionId: number) => {
 
   hooks: {
     beforeCreate: async (option: FormQuestionOption) => {
-      if (!isEmpty(option.label)) option.slug = await generateSlug(option.label as string, option.formQuestionId);
+      if (option.slug == null && !isEmpty(option.label))
+        option.slug = await generateSlug(option.label as string, option.formQuestionId);
     },
     beforeUpdate: async (option: FormQuestionOption) => {
       if (option.slug == null && !isEmpty(option.label)) {

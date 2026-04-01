@@ -27,7 +27,8 @@ const generateSlug = async (value: string, formQuestionId: number) => {
 
   hooks: {
     beforeCreate: async (header: FormTableHeader) => {
-      if (!isEmpty(header.label)) header.slug = await generateSlug(header.label as string, header.formQuestionId);
+      if (header.slug == null && !isEmpty(header.label))
+        header.slug = await generateSlug(header.label as string, header.formQuestionId);
     },
     beforeUpdate: async (header: FormTableHeader) => {
       if (header.slug == null && !isEmpty(header.label)) {

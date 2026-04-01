@@ -480,6 +480,14 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(INTEGER)
   nurserySeedlingsGoal: number | null;
 
+  @AllowNull
+  @JsonColumn()
+  bioeconomyProductList: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyProductDescription: string | null;
+
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
 

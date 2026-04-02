@@ -1,0 +1,56 @@
+<featureType>
+  <id>FeatureTypeInfoImpl--7559e60b:19c336f1e70:-7fe0</id>
+  <name>polygon_geometry</name>
+  <nativeName>polygon_geometry</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--7559e60b:19c336f1e70:-7fe2</id>
+  </namespace>
+  <title>polygon_geometry</title>
+  <keywords>
+    <string>features</string>
+    <string>polygon_geometry</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-154.5632760264181</minx>
+    <maxx>798434.3514305379</maxx>
+    <miny>-39.07335575477471</miny>
+    <maxy>9878692.718330739</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-154.5632760264181</minx>
+    <maxx>798434.3514305379</maxx>
+    <miny>-39.07335575477471</miny>
+    <maxy>9878692.718330739</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">false</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--7559e60b:19c336f1e70:-7fe1</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <padWithZeros>false</padWithZeros>
+  <forcedDecimal>false</forcedDecimal>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

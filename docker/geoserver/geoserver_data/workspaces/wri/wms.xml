@@ -1,0 +1,66 @@
+<wms>
+  <id>WMSInfoImpl--716ccaac:19c4cf4775f:-8000</id>
+  <workspace>
+    <id>WorkspaceInfoImpl--7559e60b:19c336f1e70:-7fe3</id>
+  </workspace>
+  <enabled>true</enabled>
+  <name>WMS</name>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <versions>
+    <org.geotools.util.Version>
+      <version>1.1.1</version>
+    </org.geotools.util.Version>
+    <org.geotools.util.Version>
+      <version>1.3.0</version>
+    </org.geotools.util.Version>
+  </versions>
+  <citeCompliant>false</citeCompliant>
+  <schemaBaseURL>http://schemas.opengis.net</schemaBaseURL>
+  <verbose>false</verbose>
+  <metadata>
+    <entry key="disableDatelineWrappingHeuristic">false</entry>
+    <entry key="kmlSuperoverlayMode">auto</entry>
+    <entry key="kmlReflectorMode">refresh</entry>
+    <entry key="rootLayerInCapabilities">true</entry>
+    <entry key="kmlPlacemark">false</entry>
+    <entry key="svgAntiAlias">false</entry>
+    <entry key="kmlKmscore">40</entry>
+    <entry key="mapWrapping">true</entry>
+    <entry key="pngCompression">25</entry>
+    <entry key="jpegCompression">25</entry>
+    <entry key="advancedProjectionDensification">false</entry>
+    <entry key="advancedProjectionHandling">true</entry>
+    <entry key="kmlAttr">true</entry>
+    <entry key="MarkFactoryList"></entry>
+    <entry key="scalehintMapunitsPixel">false</entry>
+  </metadata>
+  <bboxForEachCRS>false</bboxForEachCRS>
+  <watermark>
+    <enabled>false</enabled>
+    <position>BOT_RIGHT</position>
+    <transparency>100</transparency>
+  </watermark>
+  <interpolation>Nearest</interpolation>
+  <getFeatureInfoMimeTypeCheckingEnabled>false</getFeatureInfoMimeTypeCheckingEnabled>
+  <getMapMimeTypeCheckingEnabled>false</getMapMimeTypeCheckingEnabled>
+  <dynamicStylingDisabled>false</dynamicStylingDisabled>
+  <featuresReprojectionDisabled>false</featuresReprojectionDisabled>
+  <maxBuffer>0</maxBuffer>
+  <maxRequestMemory>0</maxRequestMemory>
+  <maxRenderingTime>0</maxRenderingTime>
+  <maxRenderingErrors>0</maxRenderingErrors>
+  <internationalRootLayerTitle/>
+  <internationalRootLayerAbstract/>
+  <maxRequestedDimensionValues>100</maxRequestedDimensionValues>
+  <cacheConfiguration>
+    <enabled>false</enabled>
+    <maxEntries>1000</maxEntries>
+    <maxEntrySize>51200</maxEntrySize>
+  </cacheConfiguration>
+  <remoteStyleMaxRequestTime>60000</remoteStyleMaxRequestTime>
+  <remoteStyleTimeout>30000</remoteStyleTimeout>
+  <defaultGroupStyleEnabled>true</defaultGroupStyleEnabled>
+  <transformFeatureInfoDisabled>false</transformFeatureInfoDisabled>
+  <autoEscapeTemplateValues>false</autoEscapeTemplateValues>
+</wms>

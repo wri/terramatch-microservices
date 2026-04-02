@@ -40,7 +40,7 @@ jobs:
 
       - name: Bring up DB Docker Container
         run: |
-          docker-compose up -d
+          docker-compose up -d mariadb
           ./docker/test-connection.sh
 
       # First run just the small database test to get the test database synced to the current schema

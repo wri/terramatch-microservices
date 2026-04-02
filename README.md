@@ -18,11 +18,11 @@ Repository for the Microservices API backend of the TerraMatch service
   - `docker compose up -d`
   - This repository does not include useful seeders. Instead, we currently rely on copies of a database from a cloud environment for realistic data. Ask a team member if you need access to a recent copy of one of these databases.
     ```
-    $ dc exec -T mariadb mysql -u root -proot wri_restoration_marketplace_api < 2026-04-02-staging.sql
+    $ docker compose exec -T mariadb mysql -u root -proot wri_restoration_marketplace_api < 2026-04-02-staging.sql
     ```
   - Command line SQL access is available as well
     ```
-    $ dc exec mariadb mysql -u wri -pwri wri_restoration_marketplace_api < 2026-04-02-staging.sql
+    $ docker compose exec mariadb mysql -u wri -pwri wri_restoration_marketplace_api < 2026-04-02-staging.sql
     ```
 - To build and start a single service:
   - `nx serve user-service`

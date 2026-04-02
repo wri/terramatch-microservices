@@ -133,6 +133,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (query.search != null) {
       builder.where({
         [Op.or]: [
+          { title: { [Op.like]: `%${query.search}%` } },
           { "$project.name$": { [Op.like]: `%${query.search}%` } },
           { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } }
         ]

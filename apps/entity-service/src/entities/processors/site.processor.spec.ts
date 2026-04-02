@@ -231,6 +231,17 @@ describe("SiteProcessor", () => {
         projectUuid: project.uuid
       });
     });
+
+    it("should include landTenureApproach in SiteFullDto when set", async () => {
+      const project = await ProjectFactory.create();
+      const { uuid } = await SiteFactory.create({
+        projectId: project.id,
+        landTenureApproach: "Lease agreements with smallholders"
+      });
+      const site = await processor.findOne(uuid);
+      const { dto } = await processor.getFullDto(site!);
+      expect(dto.landTenureApproach).toBe("Lease agreements with smallholders");
+    });
   });
 
   describe("delete", () => {

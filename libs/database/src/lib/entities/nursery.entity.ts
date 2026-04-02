@@ -42,6 +42,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 
@@ -54,7 +56,13 @@ type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
   tableName: "v2_nurseries",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (nursery: Nursery) => {
+      await removeMedia(nursery);
+      await removeActions(nursery);
+    }
+  }
 })
 export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttributes<Nursery>> {
   static readonly APPROVED_STATUSES = [APPROVED];

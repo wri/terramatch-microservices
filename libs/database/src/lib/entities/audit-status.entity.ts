@@ -30,6 +30,7 @@ import { AuditStatusType, AUDIT_STATUS_TYPES } from "../constants";
 import { DateTime } from "luxon";
 import { FinancialReport } from "./financial-report.entity";
 import { SrpReport } from "./srp-report.entity";
+import { removeMedia } from "../hooks/remove-media";
 
 type AuditStatusMedia = "attachments";
 
@@ -49,7 +50,8 @@ type AuditStatusMedia = "attachments";
   underscored: true,
   paranoid: true,
   // @Index doesn't work with underscored column names in all contexts
-  indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }]
+  indexes: [{ name: "audit_statuses_auditable_type_auditable_id_index", fields: ["auditable_type", "auditable_id"] }],
+  hooks: { afterDestroy: removeMedia }
 })
 export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreationAttributes<AuditStatus>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\AuditStatus\\AuditStatus";

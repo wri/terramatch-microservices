@@ -1,4 +1,4 @@
-import { AuthGuard, NoBearerAuth } from "./auth.guard";
+import { AuthGuard, NoBearerAuth, OptionalBearerAuth } from "./auth.guard";
 import { Test } from "@nestjs/testing";
 import { APP_GUARD } from "@nestjs/core";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -18,6 +18,12 @@ class TestController {
   @Get("/no-auth")
   noAuth() {
     return "no-auth";
+  }
+
+  @OptionalBearerAuth
+  @Get("/optional-auth")
+  optionalAuth() {
+    return "optional-auth";
   }
 }
 
@@ -78,5 +84,28 @@ describe("AuthGuard", () => {
       .get("/test")
       .set("Authorization", "Bearer foobar")
       .expect(HttpStatus.UNAUTHORIZED);
+  });
+
+  it("should allow missing auth on an endpoint with @OptionalBearerAuth", async () => {
+    await request(app.getHttpServer()).get("/test/optional-auth").expect(HttpStatus.OK);
+  });
+
+  it("should allow invalid auth on an endpoint with @OptionalBearerAuth", async () => {
+    jwtService.verifyAsync.mockRejectedValue(new Error("Invalid token"));
+
+    await request(app.getHttpServer())
+      .get("/test/optional-auth")
+      .set("Authorization", "Bearer invalid-token")
+      .expect(HttpStatus.OK);
+  });
+
+  it("should allow valid auth on an endpoint with @OptionalBearerAuth", async () => {
+    const token = "valid-token";
+    jwtService.verifyAsync.mockResolvedValue({ sub: "fakeuserid" });
+
+    await request(app.getHttpServer())
+      .get("/test/optional-auth")
+      .set("Authorization", `Bearer ${token}`)
+      .expect(HttpStatus.OK);
   });
 });

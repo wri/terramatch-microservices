@@ -236,11 +236,21 @@ describe("FilesController", () => {
       (getBaseEntityByLaravelTypeAndId as jest.Mock).mockResolvedValue(model);
       await controller.mediaUpdate(
         { uuid: "media-uuid" },
-        { data: { type: "media", id: "media-uuid", attributes: { isPublic: true } } }
+        {
+          data: {
+            type: "media",
+            id: "media-uuid",
+            attributes: { isPublic: true, profileImageScale: null, profileImagePosition: null }
+          }
+        }
       );
       expect(policyService.authorize).toHaveBeenCalledWith("updateFiles", { uuid: "model-uuid", id: 1 });
       expect(mediaService.updateMedia).toHaveBeenCalledWith(mockedMedia, {
-        data: { type: "media", id: "media-uuid", attributes: { isPublic: true } }
+        data: {
+          type: "media",
+          id: "media-uuid",
+          attributes: { isPublic: true, profileImageScale: null, profileImagePosition: null }
+        }
       });
     });
 
@@ -254,7 +264,13 @@ describe("FilesController", () => {
       mediaService.unsetMediaCoverForProject.mockResolvedValue([mockedMedia2]);
       await controller.mediaUpdate(
         { uuid: "media-uuid" },
-        { data: { type: "media", id: "media-uuid", attributes: { isCover: true } } }
+        {
+          data: {
+            type: "media",
+            id: "media-uuid",
+            attributes: { isCover: true, profileImageScale: null, profileImagePosition: null }
+          }
+        }
       );
       expect(mediaService.unsetMediaCoverForProject).toHaveBeenCalledWith(mockedMedia, { id: 1 } as Project);
     });

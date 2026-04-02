@@ -220,6 +220,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   landTenures: string[] | null;
 
   @AllowNull
+  @Column(TEXT)
+  landTenureApproach: string | null;
+
+  @AllowNull
   @Column(INTEGER.UNSIGNED)
   survivalRatePlanted: number | null;
 

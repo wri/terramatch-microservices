@@ -351,11 +351,6 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       multiChoice: true,
       optionListKey: "gadm-level-2"
     },
-    "pro-land-tenure-approach": {
-      property: "landTenureApproach",
-      label: "Land tenure approach",
-      inputType: "long-text"
-    },
     "pro-seedlings-procurement": {
       property: "seedlingsProcurement",
       label: "Seedlings procurement",
@@ -459,6 +454,12 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
+    },
+    "pro-rel-non-tree-species": {
+      label: "Non-Tree Species",
+      resource: "treeSpecies",
+      inputType: "treeSpecies",
+      collection: "non-tree"
     },
     "pro-all-jobs": {
       label: "All Jobs",

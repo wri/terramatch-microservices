@@ -11,6 +11,7 @@ import { faker } from "@faker-js/faker/.";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { FileService } from "../file/file.service";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 
 jest.mock("sharp", () => {
   const sharp = {
@@ -92,7 +93,8 @@ describe("MediaService", () => {
     });
 
     it("should throw an error if the model is not part of a project", async () => {
-      const model = await SiteFactory.create({ projectId: undefined });
+      const model = await SiteFactory.create();
+      model.projectId = undefined as unknown as number;
       await expect(service.getProjectForModel(model)).rejects.toThrow("Media is not part of a project.");
     });
   });
@@ -350,6 +352,65 @@ describe("MediaService", () => {
         const returnedMedias = await service.getMedias(medias.map(media => media.uuid));
         expect(Media.findAll).toHaveBeenCalledWith({ where: { uuid: { [Op.in]: medias.map(media => media.uuid) } } });
         expect(returnedMedias).toHaveLength(3);
+      });
+    });
+
+    describe("updateMedia", () => {
+      it("updates profileImageScale into customProperties.profile_image_scale", async () => {
+        const media = await MediaFactory.project().create({
+          customProperties: { existing: "value" }
+        });
+
+        const payload = {
+          data: {
+            type: "media",
+            id: media.uuid,
+            attributes: {
+              profileImageScale: 1.5,
+              profileImagePosition: { x: 1.5, y: 1.5 },
+              description: "new description"
+            }
+          }
+        } as MediaUpdateBody;
+
+        const updated = await service.updateMedia(media, payload);
+
+        expect(Object.prototype.hasOwnProperty.call(updated, "profileImageScale")).toBe(false);
+
+        expect(updated.customProperties).toEqual(
+          expect.objectContaining({
+            existing: "value",
+            profile_image_scale: 1.5,
+            profile_image_position: { x: 1.5, y: 1.5 }
+          })
+        );
+        expect(updated.description).toBe("new description");
+      });
+
+      it("sets profile_image_scale to null when profileImageScale is null", async () => {
+        const media = await MediaFactory.project().create({
+          customProperties: {}
+        });
+
+        const payload = {
+          data: {
+            type: "media",
+            id: media.uuid,
+            attributes: {
+              profileImageScale: null,
+              profileImagePosition: { x: 1.5, y: 1.5 }
+            }
+          }
+        } as MediaUpdateBody;
+
+        const updated = await service.updateMedia(media, payload);
+
+        expect(updated.customProperties).toEqual(
+          expect.objectContaining({
+            profile_image_scale: null,
+            profile_image_position: { x: 1.5, y: 1.5 }
+          })
+        );
       });
     });
   });

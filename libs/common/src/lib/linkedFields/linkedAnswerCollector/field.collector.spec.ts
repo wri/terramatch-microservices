@@ -117,6 +117,84 @@ describe("FieldCollector", () => {
     expect(site.history).toBe("site history");
   });
 
+  it("normalizes planting status answers to completed", async () => {
+    const report = await ProjectReportFactory.create({ plantingStatus: null });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "select",
+      linkedFieldKey: "pro-rep-planting-status"
+    });
+
+    await collector.syncField(report, question, getField("pro-rep-planting-status"), {
+      [question.uuid]: "Yes"
+    });
+
+    expect(report.plantingStatus).toBe("completed");
+  });
+
+  it("normalizes boolean planting status answers to completed", async () => {
+    const report = await ProjectReportFactory.create({ plantingStatus: null });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "select",
+      linkedFieldKey: "pro-rep-planting-status"
+    });
+
+    await collector.syncField(report, question, getField("pro-rep-planting-status"), {
+      [question.uuid]: true
+    });
+
+    expect(report.plantingStatus).toBe("completed");
+  });
+
+  it("clears planting status for negative answers", async () => {
+    const report = await ProjectReportFactory.create({ plantingStatus: "in-progress" });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "select",
+      linkedFieldKey: "pro-rep-planting-status"
+    });
+
+    await collector.syncField(report, question, getField("pro-rep-planting-status"), {
+      [question.uuid]: "No"
+    });
+
+    expect(report.plantingStatus).toBeNull();
+  });
+
+  it("mirrors community progress into landscapeCommunityContribution when provided", async () => {
+    const report = await ProjectReportFactory.create({
+      plantingStatus: null,
+      landscapeCommunityContribution: null
+    });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "long-text",
+      linkedFieldKey: "pro-rep-community-progress"
+    });
+
+    await collector.syncField(report, question, getField("pro-rep-community-progress"), {
+      [question.uuid]: "Some progress text"
+    });
+
+    expect(report.communityProgress).toBe("Some progress text");
+    expect(report.landscapeCommunityContribution).toBe("Some progress text");
+  });
+
+  it("sets plantingStatus completed when completed answer arrives through community progress", async () => {
+    const report = await ProjectReportFactory.create({
+      plantingStatus: null,
+      landscapeCommunityContribution: "existing value"
+    });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "long-text",
+      linkedFieldKey: "pro-rep-community-progress"
+    });
+
+    await collector.syncField(report, question, getField("pro-rep-community-progress"), {
+      [question.uuid]: "completed"
+    });
+
+    expect(report.plantingStatus).toBe("completed");
+    expect(report.landscapeCommunityContribution).toBe("existing value");
+  });
+
   describe("demographicsAggregate sync", () => {
     let pitch: ProjectPitch;
     let question: FormQuestion;

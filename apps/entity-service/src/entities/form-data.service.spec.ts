@@ -16,6 +16,7 @@ import {
   MediaFactory,
   OrganisationFactory,
   ProjectPitchFactory,
+  ProjectReportFactory,
   SiteFactory,
   SiteReportFactory,
   StageFactory,
@@ -27,6 +28,7 @@ import {
   I18nTranslation,
   Organisation,
   Project,
+  ProjectReport,
   Site,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -160,6 +162,27 @@ describe("FormDataService", () => {
       expect(site.name).toBe("Site Name");
       expect(site.answers).toStrictEqual({ [conditional.uuid]: true });
       expect(collector.treeSpecies.syncRelation).toHaveBeenCalledTimes(1);
+    });
+
+    it("normalizes completed planting answers to plantingStatus completed", async () => {
+      const report = await ProjectReportFactory.create({ plantingStatus: null });
+      const form = await FormFactory.create({
+        frameworkKey: report.frameworkKey ?? "ppc",
+        model: ProjectReport.LARAVEL_TYPE,
+        type: "project-report"
+      });
+      const section = await FormSectionFactory.form(form).create();
+      const plantingStatusQuestion = await FormQuestionFactory.section(section).create({
+        inputType: "select",
+        linkedFieldKey: "pro-rep-planting-status"
+      });
+
+      policyService.hasAccess.mockResolvedValue(true);
+      await service.storeEntityAnswers(report, await form.reload(), {
+        [plantingStatusQuestion.uuid]: "Yes"
+      });
+
+      expect(report.plantingStatus).toBe("completed");
     });
 
     it("does additional report processing", async () => {

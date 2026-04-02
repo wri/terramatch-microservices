@@ -65,6 +65,13 @@ type ProjectMedia =
     afterDestroy: async (project: Project) => {
       await removeMedia(project);
       await removeActions(project);
+
+      await ProjectReport.destroy({ where: { projectId: project.id } });
+      // Load these before deleting them individually so that their after destroy hooks fire. This is N+1 behavior,
+      // but this happens very rarely and this is cleaner than duplicating all those hooks here.
+      const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+      const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+      await Promise.all([...sites, ...nurseries].map(entity => entity.destroy()));
     }
   }
 })

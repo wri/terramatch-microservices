@@ -61,6 +61,7 @@ type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
     afterDestroy: async (nursery: Nursery) => {
       await removeMedia(nursery);
       await removeActions(nursery);
+      await NurseryReport.destroy({ where: { nurseryId: nursery.id } });
     }
   }
 })

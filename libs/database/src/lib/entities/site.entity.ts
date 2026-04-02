@@ -75,6 +75,7 @@ type SiteMedia =
     afterDestroy: async (site: Site) => {
       await removeMedia(site);
       await removeActions(site);
+      await SiteReport.destroy({ where: { siteId: site.id } });
     }
   }
 })

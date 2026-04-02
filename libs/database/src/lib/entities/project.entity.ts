@@ -41,6 +41,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { InternalServerErrorException } from "@nestjs/common";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
 
 type ProjectMedia =
   | "media"
@@ -58,7 +59,7 @@ type ProjectMedia =
   tableName: "v2_projects",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
 })
 export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];

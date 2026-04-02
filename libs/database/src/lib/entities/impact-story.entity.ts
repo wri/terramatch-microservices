@@ -3,10 +3,11 @@ import { BIGINT, DATE, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { MediaConfiguration } from "../constants/media-owners";
+import { removeMedia } from "../hooks/remove-media";
 
 type ImpactStoryMedia = "thumbnail";
 
-@Table({ tableName: "impact_stories", underscored: true, paranoid: true })
+@Table({ tableName: "impact_stories", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class ImpactStory extends Model<ImpactStory> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ImpactStory";
 

@@ -14,6 +14,19 @@ Repository for the Microservices API backend of the TerraMatch service
 
 - Copy `.env.local.sample` to `.env`
   - On Linux systems, the DOCKER_HOST value should be `unix:///var/run/docker.sock` instead of what's in the sample.
+- Run the local docker container, which is responsible for hosting the development database and running some mocked cloud services:
+  - `docker compose up -d`
+  - This repository does not include useful seeders. Instead, we currently rely on copies of a database from a cloud environment for realistic data. Ask a team member if you need access to a recent copy of one of these databases.
+    ```
+    $ dc exec -T mariadb mysql -u root -proot wri_restoration_marketplace_api < 2026-04-02-staging.sql
+    ```
+  - Command line SQL access is available as well
+    ```
+    $ dc exec mariadb mysql -u wri -pwri wri_restoration_marketplace_api < 2026-04-02-staging.sql
+    ```
+- To build and start a single service:
+  - `nx serve user-service`
+  - The service will be available at `http://localhost:3306`
 - To run all services:
   - `nx run-many -t serve`
   - The default maximum number of services it can run in parallel is 3. To run all of the services at once, use something like
@@ -200,7 +213,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
 # Database work
 
-For now, Laravel is the source of truth for all things related to the DB schema. As such, TypeORM is not allowed to modify the
+For now, Laravel is the source of truth for all things related to the DB schema. As such, Sequelize is not allowed to modify the
 schema, and is expected to interface with exactly the schema that is managed by Laravel. This note is included in user.entity.ts,
 and should hold true for all models created in this codebase until this codebase can take over as the source of truth for DB
 schema:
@@ -212,9 +225,6 @@ schema:
 //   by checking what schema gets generated in the test database against the real DB during unit
 //   test runs (the only time we let TypeORM modify the DB schema).
 ```
-
-This codebase connects to the database running in the `wri-terramatch-api` docker container. The docker-compose
-file included in this repo is used only for setting up the database needed for running unit tests in Github Actions.
 
 # Testing
 

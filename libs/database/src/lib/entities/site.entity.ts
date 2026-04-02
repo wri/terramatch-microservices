@@ -49,6 +49,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type SiteMedia =
   | "media"
@@ -69,7 +70,13 @@ type SiteMedia =
   tableName: "v2_sites",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (site: Site) => {
+      await removeMedia(site);
+      await removeActions(site);
+    }
+  }
 })
 export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<Site>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];

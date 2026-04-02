@@ -35,6 +35,7 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -84,7 +85,13 @@ type ProjectReportMedia =
   tableName: "v2_project_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (report: ProjectReport) => {
+      await removeMedia(report);
+      await removeActions(report);
+    }
+  }
 })
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];

@@ -75,7 +75,8 @@ type SiteMedia =
     afterDestroy: async (site: Site) => {
       await removeMedia(site);
       await removeActions(site);
-      await SiteReport.destroy({ where: { siteId: site.id } });
+      const reports = await SiteReport.findAll({ where: { siteId: site.id }, attributes: ["id"] });
+      await Promise.all(reports.map(report => report.destroy()));
     }
   }
 })

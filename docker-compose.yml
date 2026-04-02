@@ -3,13 +3,14 @@ services:
     build:
       context: "."
       dockerfile: "docker/mariadb.Dockerfile"
+      network: host
     ports:
       - "3360:3306"
     networks:
       - "default"
     environment:
       MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "terramatch_microservices_test"
+      MYSQL_DATABASE: "wri_restoration_marketplace_api"
       MYSQL_USER: "wri"
       MYSQL_PASSWORD: "wri"
 networks:

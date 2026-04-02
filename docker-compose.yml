@@ -54,6 +54,7 @@ services:
       SKIP_DEMO_DATA: "true"
     volumes:
       - ./docker/geoserver/geoserver_data:/opt/geoserver_data
+    platform: linux/amd64
     depends_on:
       - "mariadb"
 networks:

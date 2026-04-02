@@ -162,6 +162,7 @@ export abstract class EntityProcessor<
         } else {
           await updateRequest.update({ status: AWAITING_APPROVAL });
         }
+        if (isReport(model)) model.submittedAt = new Date();
       } else {
         model.status = update.status as ModelType["status"];
       }

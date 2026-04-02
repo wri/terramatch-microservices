@@ -35,8 +35,7 @@ export class UsersService {
         [Op.or]: [
           { emailAddress: { [Op.like]: search } },
           { firstName: { [Op.like]: search } },
-          { lastName: { [Op.like]: search } },
-          { "$organisation.name$": { [Op.like]: search } }
+          { lastName: { [Op.like]: search } }
         ]
       });
     }
@@ -53,7 +52,14 @@ export class UsersService {
       const sortField = query.sort.field;
       const direction = query.sort.direction ?? "DESC";
 
-      const directFields = ["createdAt", "firstName", "lastName", "emailAddress", "lastLoggedInAt"];
+      const directFields = [
+        "createdAt",
+        "firstName",
+        "lastName",
+        "emailAddress",
+        "lastLoggedInAt",
+        "emailAddressVerifiedAt"
+      ];
 
       if (directFields.includes(sortField)) {
         builder.order([sortField, direction]);

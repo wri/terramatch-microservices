@@ -15,21 +15,21 @@ export class UserCreateBaseAttributes {
   @ApiProperty()
   emailAddress: string;
 
-  @IsNotEmpty()
-  @ApiProperty()
-  phoneNumber: string;
-
-  @IsNotEmpty()
-  @ApiProperty()
-  jobRole: string;
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  phoneNumber?: string;
 
   @IsOptional()
-  @ApiProperty()
-  country: string;
+  @ApiProperty({ nullable: true })
+  jobRole?: string;
 
   @IsOptional()
-  @ApiProperty()
-  program: string;
+  @ApiProperty({ nullable: true })
+  country?: string;
+
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  program?: string;
 }
 
 export class UserCreateBaseBody extends JsonApiBodyDto(

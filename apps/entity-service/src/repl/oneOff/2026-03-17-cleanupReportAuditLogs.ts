@@ -181,7 +181,6 @@ export const cleanupReportAuditLogs = withoutSqlLogs(async (opts: CleanupOptions
 
   let cursor = 0;
   let processed = 0;
-
   let hasMore = true;
   while (hasMore) {
     const audits = await Audit.findAll({

@@ -66,7 +66,6 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
     const i18nKeys: Dictionary<string> = {};
     const i18nReplacements: Dictionary<string> = {};
     const additionalValues: Dictionary<string> = {
-      transactional: "transactional",
       link: `/applications/${applicationUuid}`
     };
     switch (status) {

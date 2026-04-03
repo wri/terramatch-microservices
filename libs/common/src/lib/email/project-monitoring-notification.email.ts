@@ -50,8 +50,7 @@ export class ProjectMonitoringNotificationEmail extends EmailSender<ProjectMonit
       "{name}": project.name as string
     };
     const additionalValues = {
-      link: `/auth/login`,
-      transactional: "transactional"
+      link: `/auth/login`
     };
     await emailService.sendI18nTemplateEmail(
       user.emailAddress,

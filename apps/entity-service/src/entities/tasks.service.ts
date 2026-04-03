@@ -170,32 +170,33 @@ export class TasksService {
     task.status = AWAITING_APPROVAL;
   }
 
-  async approveBulkReports(attributes: TaskUpdateAttributes, task: Task): Promise<void> {
+  async approveBulkReports(
+    { siteReportApprovalUuids, nurseryReportApprovalUuids, feedback }: TaskUpdateAttributes,
+    task: Task
+  ): Promise<void> {
     const user = await User.findOne({
       where: { id: this.entitiesService.userId },
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const taskId = task.id;
 
-    await this.updateReportsStatus(SiteReport, attributes.siteReportNothingToReportUuids ?? [], APPROVED, taskId);
-    await this.updateReportsStatus(NurseryReport, attributes.nurseryReportNothingToReportUuids ?? [], APPROVED, taskId);
+    await this.updateReportsStatus(SiteReport, siteReportApprovalUuids ?? [], APPROVED, taskId);
+    await this.updateReportsStatus(NurseryReport, nurseryReportApprovalUuids ?? [], APPROVED, taskId);
 
     await this.loadReports(task);
 
     const siteReports = filter(
-      (attributes.siteReportNothingToReportUuids ?? []).map(uuid =>
-        task.siteReports?.find(siteReport => siteReport.uuid === uuid)
-      )
+      (siteReportApprovalUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
     ) as SiteReport[];
     const nurseryReports = filter(
-      (attributes.nurseryReportNothingToReportUuids ?? []).map(uuid =>
+      (nurseryReportApprovalUuids ?? []).map(uuid =>
         task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid)
       )
     ) as NurseryReport[];
 
     const auditStatusRecords = [
-      ...this.createAuditStatusRecords(siteReports, user, attributes.feedback ?? ""),
-      ...this.createAuditStatusRecords(nurseryReports, user, attributes.feedback ?? "")
+      ...this.createAuditStatusRecords(siteReports, user, feedback ?? ""),
+      ...this.createAuditStatusRecords(nurseryReports, user, feedback ?? "")
     ] as Array<Attributes<AuditStatus>>;
 
     if (auditStatusRecords.length > 0) {

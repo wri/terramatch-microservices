@@ -378,8 +378,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport.uuid],
-            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
+            siteReportApprovalUuids: [siteReport.uuid],
+            nurseryReportApprovalUuids: [nurseryReport.uuid],
             feedback: "Looks good"
           }
         }
@@ -403,8 +403,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [],
-            nurseryReportNothingToReportUuids: [],
+            siteReportApprovalUuids: [],
+            nurseryReportApprovalUuids: [],
             feedback: "Empty arrays"
           }
         }
@@ -424,8 +424,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: null,
-            nurseryReportNothingToReportUuids: null,
+            siteReportApprovalUuids: null,
+            nurseryReportApprovalUuids: null,
             feedback: "Null arrays"
           }
         }
@@ -452,8 +452,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport.uuid],
-            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
+            siteReportApprovalUuids: [siteReport.uuid],
+            nurseryReportApprovalUuids: [nurseryReport.uuid],
             feedback: "Test feedback"
           }
         }
@@ -495,8 +495,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport1.uuid],
-            nurseryReportNothingToReportUuids: [],
+            siteReportApprovalUuids: [siteReport1.uuid],
+            nurseryReportApprovalUuids: [],
             feedback: "Filtered approval"
           }
         }
@@ -529,8 +529,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [],
-            nurseryReportNothingToReportUuids: [nurseryReport2.uuid],
+            siteReportApprovalUuids: [],
+            nurseryReportApprovalUuids: [nurseryReport2.uuid],
             feedback: "Nursery filtered approval"
           }
         }

@@ -547,4 +547,51 @@ describe("TasksService", () => {
       loadReportsSpy.mockRestore();
     });
   });
+
+  describe("nothingToReportBulk", () => {
+    it("should update the included reports", async () => {
+      const task = await TaskFactory.create();
+      const siteReports = await SiteReportFactory.createMany(2, { taskId: task.id, submittedAt: null });
+      const nurseryReports = await NurseryReportFactory.createMany(2, { taskId: task.id, submittedAt: null });
+
+      task.siteReports = siteReports;
+      task.nurseryReports = nurseryReports;
+      jest.spyOn(service, "loadReports" as keyof TasksService).mockResolvedValue(undefined);
+
+      await service.nothingToReportBulk(
+        {
+          siteReportNothingToReportUuids: [siteReports[0].uuid],
+          nurseryReportNothingToReportUuids: [nurseryReports[0].uuid]
+        },
+        task
+      );
+
+      await Promise.all([...siteReports, ...nurseryReports].map(report => report.reload()));
+
+      expect(siteReports[0]).toMatchObject({
+        nothingToReport: true,
+        status: "awaiting-approval",
+        completion: 100,
+        submittedAt: expect.any(Date)
+      });
+      expect(siteReports[1]).toMatchObject({
+        nothingToReport: null,
+        status: "due",
+        completion: 0,
+        submittedAt: null
+      });
+      expect(nurseryReports[0]).toMatchObject({
+        nothingToReport: true,
+        status: "awaiting-approval",
+        completion: 100,
+        submittedAt: expect.any(Date)
+      });
+      expect(nurseryReports[1]).toMatchObject({
+        nothingToReport: null,
+        status: "due",
+        completion: 0,
+        submittedAt: null
+      });
+    });
+  });
 });

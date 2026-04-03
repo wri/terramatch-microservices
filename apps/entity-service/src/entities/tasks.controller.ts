@@ -107,10 +107,18 @@ export class TasksController {
     const task = await this.tasksService.getTask(uuid);
     await this.policyService.authorize("update", task);
 
-    const { nurseryReportApprovalUuids, siteReportApprovalUuids, status } = updatePayload.data.attributes;
+    const {
+      nurseryReportApprovalUuids,
+      nurseryReportNothingToReportUuids,
+      siteReportApprovalUuids,
+      siteReportNothingToReportUuids,
+      status
+    } = updatePayload.data.attributes;
 
     if (nurseryReportApprovalUuids != null || siteReportApprovalUuids != null) {
       await this.tasksService.approveBulkReports(updatePayload.data.attributes, task);
+    } else if (nurseryReportNothingToReportUuids != null || siteReportNothingToReportUuids != null) {
+      await this.tasksService.nothingToReportBulk(updatePayload.data.attributes, task);
     } else if (status != null) {
       if (status === "awaiting-approval") {
         await this.tasksService.submitForApproval(task);

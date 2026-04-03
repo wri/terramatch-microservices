@@ -204,6 +204,39 @@ export class TasksService {
     }
   }
 
+  async nothingToReportBulk(
+    { siteReportNothingToReportUuids, nurseryReportNothingToReportUuids }: TaskUpdateAttributes,
+    task: Task
+  ) {
+    await this.loadReports(task);
+
+    const siteReports = filter(
+      (siteReportNothingToReportUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
+    ) as SiteReport[];
+    const nurseryReports = filter(
+      (nurseryReportNothingToReportUuids ?? []).map(uuid =>
+        task.nurseryReports?.find(nurseryReport => nurseryReport.uuid === uuid)
+      )
+    ) as NurseryReport[];
+
+    // These need to all be processed individually so that the state machine checks trigger, as well
+    // as follow on status events
+    await Promise.all(
+      [...siteReports, ...nurseryReports].map(async report => {
+        if (report.nothingToReport) return;
+
+        report.nothingToReport = true;
+        report.status = "awaiting-approval";
+        if (report.submittedAt == null) {
+          report.completion = 100;
+          report.submittedAt = new Date();
+        }
+
+        await report.save();
+      })
+    );
+  }
+
   private async updateReportsStatus<T extends ReportModel>(
     modelClass: ModelCtor<T>,
     uuids: string[],
@@ -230,6 +263,7 @@ export class TasksService {
       comment: feedback ?? null
     }));
   }
+
   private async loadReports(task: Task) {
     if (task.projectReport != null) return;
 
@@ -237,10 +271,7 @@ export class TasksService {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       const { models } = await processor.findMany({ taskId: task.id });
       if (entityType === "projectReports") {
-        if (models.length > 1) {
-          this.logger.error(`More than one project report found for task ${task.id}`);
-          models.length = 1;
-        }
+        if (models.length > 1) this.logger.error(`More than one project report found for task ${task.id}`);
         task.projectReport = models[0] as ProjectReport;
       } else {
         task[entityType] = models;

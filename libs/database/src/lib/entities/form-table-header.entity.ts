@@ -20,26 +20,21 @@ const generateSlug = async (value: string, formQuestionId: number) => {
   }
 };
 
+const generateSlugHook = async (header: FormTableHeader) => {
+  if (isEmpty(header.slug) && !isEmpty(header.label)) {
+    header.slug = await generateSlug(header.label as string, header.formQuestionId);
+  }
+};
+
 @Table({
   tableName: "form_table_headers",
   underscored: true,
   paranoid: true,
 
   hooks: {
-    beforeCreate: async (header: FormTableHeader) => {
-      if (header.slug == null && !isEmpty(header.label))
-        header.slug = await generateSlug(header.label as string, header.formQuestionId);
-    },
-    beforeUpdate: async (header: FormTableHeader) => {
-      if (header.slug == null && !isEmpty(header.label)) {
-        header.slug = await generateSlug(header.label as string, header.formQuestionId);
-      }
-    },
-    beforeSave: async (header: FormTableHeader) => {
-      if (header.slug == null && !isEmpty(header.label)) {
-        header.slug = await generateSlug(header.label as string, header.formQuestionId);
-      }
-    }
+    beforeCreate: generateSlugHook,
+    beforeUpdate: generateSlugHook,
+    beforeSave: generateSlugHook
   }
 })
 export class FormTableHeader extends Model<FormTableHeader> {

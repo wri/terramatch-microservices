@@ -11,6 +11,7 @@ import { faker } from "@faker-js/faker/.";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { FileService } from "../file/file.service";
+import { MediaUpdateBody } from "../dto/media-update.dto";
 
 jest.mock("sharp", () => {
   const sharp = {
@@ -282,6 +283,42 @@ describe("MediaService", () => {
       });
     });
 
+    describe("getMediaWithUser", () => {
+      it("should return media including createdByUser association", async () => {
+        const media = await MediaFactory.project().create();
+        jest.spyOn(Media, "findOne").mockResolvedValue(media);
+        const result = await service.getMediaWithUser(media.uuid);
+        expect(Media.findOne).toHaveBeenCalledWith({
+          where: { uuid: media.uuid },
+          include: [{ association: "createdByUser", attributes: ["firstName", "lastName"] }]
+        });
+        expect(result).not.toBeNull();
+      });
+
+      it("should throw NotFoundException when media is not found", async () => {
+        jest.spyOn(Media, "findOne").mockResolvedValue(null);
+        await expect(service.getMediaWithUser("unknown-uuid")).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe("getMediaBuffer", () => {
+      it("should read the file from S3 and return a buffer", async () => {
+        const media = await MediaFactory.project().create();
+        const chunks = [Buffer.from("chunk1"), Buffer.from("chunk2")];
+        const asyncIterable = {
+          [Symbol.asyncIterator]: async function* () {
+            for (const chunk of chunks) yield chunk;
+          }
+        };
+        fileService.readRemoteFile.mockResolvedValue(asyncIterable as any);
+
+        const result = await service.getMediaBuffer(media);
+
+        expect(fileService.readRemoteFile).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
+        expect(result).toEqual(Buffer.concat(chunks));
+      });
+    });
+
     describe("deleteMedia", () => {
       it("should delete the media successfully", async () => {
         const media = await MediaFactory.project().create();
@@ -314,6 +351,65 @@ describe("MediaService", () => {
         const returnedMedias = await service.getMedias(medias.map(media => media.uuid));
         expect(Media.findAll).toHaveBeenCalledWith({ where: { uuid: { [Op.in]: medias.map(media => media.uuid) } } });
         expect(returnedMedias).toHaveLength(3);
+      });
+    });
+
+    describe("updateMedia", () => {
+      it("updates profileImageScale into customProperties.profile_image_scale", async () => {
+        const media = await MediaFactory.project().create({
+          customProperties: { existing: "value" }
+        });
+
+        const payload = {
+          data: {
+            type: "media",
+            id: media.uuid,
+            attributes: {
+              profileImageScale: 1.5,
+              profileImagePosition: { x: 1.5, y: 1.5 },
+              description: "new description"
+            }
+          }
+        } as MediaUpdateBody;
+
+        const updated = await service.updateMedia(media, payload);
+
+        expect(Object.prototype.hasOwnProperty.call(updated, "profileImageScale")).toBe(false);
+
+        expect(updated.customProperties).toEqual(
+          expect.objectContaining({
+            existing: "value",
+            profile_image_scale: 1.5,
+            profile_image_position: { x: 1.5, y: 1.5 }
+          })
+        );
+        expect(updated.description).toBe("new description");
+      });
+
+      it("sets profile_image_scale to null when profileImageScale is null", async () => {
+        const media = await MediaFactory.project().create({
+          customProperties: {}
+        });
+
+        const payload = {
+          data: {
+            type: "media",
+            id: media.uuid,
+            attributes: {
+              profileImageScale: null,
+              profileImagePosition: { x: 1.5, y: 1.5 }
+            }
+          }
+        } as MediaUpdateBody;
+
+        const updated = await service.updateMedia(media, payload);
+
+        expect(updated.customProperties).toEqual(
+          expect.objectContaining({
+            profile_image_scale: null,
+            profile_image_position: { x: 1.5, y: 1.5 }
+          })
+        );
       });
     });
   });

@@ -37,7 +37,8 @@ type ProjectPitchMedia =
   | "additional"
   | "restorationPhotos"
   | "detailedProjectBudget"
-  | "proofOfLandTenureMou";
+  | "proofOfLandTenureMou"
+  | "consortiumPartnershipAgreements";
 
 @Scopes(() => ({
   application: (applicationId: number) => ({
@@ -57,7 +58,12 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
       multiple: false,
       validation: "spreadsheet"
     },
-    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" }
+    proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" },
+    consortiumPartnershipAgreements: {
+      dbCollection: "consortium_partnership_agreements",
+      multiple: true,
+      validation: "general-documents"
+    }
   };
 
   static application(applicationId: number) {

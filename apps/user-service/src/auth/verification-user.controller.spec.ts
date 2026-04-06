@@ -32,7 +32,9 @@ describe("VerificationUserController", () => {
     const uuid = faker.string.uuid();
     verificationUserService.verify.mockResolvedValue({ uuid, isVerified: true });
 
-    const result = serialize(await controller.verifyUser({ token: "my token" }));
+    const result = serialize(
+      await controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    );
     expect(result).toMatchObject({
       data: { id: uuid, type: "verifications", attributes: { verified: true } }
     });
@@ -41,14 +43,46 @@ describe("VerificationUserController", () => {
   it("should throw NotFoundException if verification is not found", async () => {
     verificationUserService.verify.mockRejectedValue(new NotFoundException("Verification not found"));
 
-    await expect(controller.verifyUser({ token: "my token" })).rejects.toThrow(
-      new NotFoundException("Verification not found")
-    );
+    await expect(
+      controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    ).rejects.toThrow(new NotFoundException("Verification not found"));
   });
 
   it("should throw NotFoundException if user is not found", async () => {
     verificationUserService.verify.mockRejectedValue(new NotFoundException("User not found"));
 
-    await expect(controller.verifyUser({ token: "my token" })).rejects.toThrow(new NotFoundException("User not found"));
+    await expect(
+      controller.verifyUser({ data: { attributes: { token: "my token" }, type: "verifications" } })
+    ).rejects.toThrow(new NotFoundException("User not found"));
+  });
+
+  it("should resend verification email and respond with emailAddress", async () => {
+    const emailAddress = faker.internet.email();
+    const callbackUrl = "https://example.com/verify?token=";
+
+    verificationUserService.resendVerificationEmail.mockResolvedValue();
+
+    const body = {
+      data: {
+        type: "resendVerifications",
+        attributes: { emailAddress, callbackUrl }
+      }
+    } as {
+      data: {
+        type: string;
+        attributes: { emailAddress: string; callbackUrl: string };
+      };
+    };
+
+    const result = serialize(await controller.resendVerification(body));
+
+    expect(verificationUserService.resendVerificationEmail).toHaveBeenCalledWith(emailAddress, callbackUrl);
+    expect(result).toMatchObject({
+      data: {
+        id: emailAddress,
+        type: "resendVerifications",
+        attributes: { emailAddress }
+      }
+    });
   });
 });

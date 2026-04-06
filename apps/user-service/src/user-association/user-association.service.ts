@@ -546,4 +546,60 @@ export class UserAssociationService {
       userId: user.id
     }).sendLater(this.emailQueue);
   }
+
+  async acceptProjectInvite(
+    token: string,
+    userId: number
+  ): Promise<{ user: User; project: Project; invite: ProjectInvite }> {
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+
+    if (user == null) {
+      throw new UnauthorizedException("Authenticated user not found");
+    }
+
+    const invite = await ProjectInvite.findOne({
+      where: { token, emailAddress: user.emailAddress },
+      include: [{ association: "project", attributes: ["id", "uuid", "name", "organisationId"] }]
+    });
+
+    if (invite == null) {
+      throw new NotFoundException("Project invite not found");
+    }
+
+    if (invite.acceptedAt != null) {
+      throw new BadRequestException("Project invite has already been accepted");
+    }
+
+    const project = invite.project;
+    if (project == null) {
+      throw new NotFoundException("Project associated with invite not found");
+    }
+
+    const [projectUser, created] = await ProjectUser.findOrCreate({
+      where: { projectId: project.id, userId: user.id },
+      defaults: {
+        projectId: project.id,
+        userId: user.id,
+        isMonitoring: true,
+        status: "active"
+      }
+    });
+
+    if (!created) {
+      projectUser.isMonitoring = true;
+      if (projectUser.status == null) {
+        projectUser.status = "active";
+      }
+      await projectUser.save();
+    }
+
+    invite.acceptedAt = new Date();
+    await invite.save();
+
+    return { user, project, invite };
+  }
 }

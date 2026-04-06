@@ -2,13 +2,11 @@
 import { Command, Option } from "commander";
 import { replCommand } from "./repl/command";
 import { printVerboseHook } from "./utils";
-import { migrationsCommand } from "./migrations/command";
 
 const program = new Command();
 program.name("TerraMatch v3 CLI");
 
 program.addCommand(replCommand());
-program.addCommand(migrationsCommand());
 
 program.addOption(new Option("-v, --verbose", "output debug logs").default(false));
 program.hook("preAction", printVerboseHook);

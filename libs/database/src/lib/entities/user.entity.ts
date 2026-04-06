@@ -26,10 +26,18 @@ import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
 import { FrameworkKey } from "../constants";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<User> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
+
+  static get sql() {
+    if (User.sequelize == null) {
+      throw new InternalServerErrorException("User table not connected to Sequelize");
+    }
+    return User.sequelize;
+  }
 
   static async findLocale(userId?: number) {
     return userId == null ? undefined : (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;

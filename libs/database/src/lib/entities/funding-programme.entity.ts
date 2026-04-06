@@ -27,10 +27,11 @@ import { I18nItem } from "./i18n-item.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { COMING_SOON, FundingProgrammeStatus } from "../constants/status";
 import { Stage } from "./stage.entity";
+import { removeMedia } from "../hooks/remove-media";
 
 type FundingProgrammeMedia = "cover";
 
-@Table({ tableName: "funding_programmes", underscored: true, paranoid: true })
+@Table({ tableName: "funding_programmes", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class FundingProgramme extends Model<
   InferAttributes<FundingProgramme>,
   InferCreationAttributes<FundingProgramme>

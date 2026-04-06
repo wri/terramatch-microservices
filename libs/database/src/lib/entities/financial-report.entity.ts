@@ -21,6 +21,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Organisation } from "./organisation.entity";
 import { FinancialIndicator } from "./financial-indicator.entity";
 import { Dictionary } from "lodash";
+import { removeActions } from "../hooks/remove-actions";
 
 @Scopes(() => ({
   organisation: (id: number) => ({ where: { organisationId: id } })
@@ -29,7 +30,7 @@ import { Dictionary } from "lodash";
   tableName: "financial_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeActions }
 })
 export class FinancialReport extends Model<FinancialReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\FinancialReport";

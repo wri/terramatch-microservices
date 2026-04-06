@@ -294,7 +294,8 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "beneficiariesTrainingNonYouth",
       label: "Non Youth Trained",
       inputType: "number"
-    }
+    },
+    "pro-rep-elp-description": { property: "elpDescription", label: "ELP description", inputType: "long-text" }
   },
   fileCollections: {
     "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
@@ -654,6 +655,18 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       label: "Associates",
       resource: "demographics",
       inputType: "associates",
+      collection: "all"
+    },
+    "pro-rep-elp-beneficiaries": {
+      label: "ELP Beneficiaries",
+      resource: "demographics",
+      inputType: "elpBeneficiaries",
+      collection: "elp"
+    },
+    "pro-rep-livelihood-activities": {
+      label: "Livelihood Activities",
+      resource: "demographics",
+      inputType: "livelihoodActivities",
       collection: "all"
     }
   }

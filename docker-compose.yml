@@ -3,14 +3,59 @@ services:
     build:
       context: "."
       dockerfile: "docker/mariadb.Dockerfile"
+      network: host
     ports:
       - "3360:3306"
     networks:
       - "default"
     environment:
       MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "terramatch_microservices_test"
+      MYSQL_DATABASE: "wri_restoration_marketplace_api"
       MYSQL_USER: "wri"
       MYSQL_PASSWORD: "wri"
+  mailcatcher:
+    image: "chatwork/mailcatcher"
+    networks:
+      - "default"
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+  minio:
+    image: "minio/minio"
+    command: server /data
+    ports:
+      - "9000:9000"
+    environment:
+      MINIO_ROOT_USER: "AKIABUVWH1HUD7YQZQAR"
+      MINIO_ROOT_PASSWORD: "PVMlDMep3/jLSz9GxPV3mTvH4JZynkf2BFeTu+i8"
+    volumes:
+      - ./data:/data
+    networks:
+      - "default"
+  redis:
+    image: "redis:7.2-bookworm"
+    networks:
+      - "default"
+    ports:
+      - "6379:6379"
+    environment:
+      REDIS_PASSWORD: "test_redis"
+  geoserver:
+    build:
+      context: "."
+      dockerfile: "docker/geoserver.Dockerfile"
+    networks:
+      - "default"
+    ports:
+      - "8081:8080"
+    environment:
+      INSTALL_EXTENSIONS: true
+      STABLE_EXTENSIONS: "mysql,vectortiles"
+      SKIP_DEMO_DATA: "true"
+    volumes:
+      - ./docker/geoserver/geoserver_data:/opt/geoserver_data
+    platform: linux/amd64
+    depends_on:
+      - "mariadb"
 networks:
   default:

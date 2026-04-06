@@ -10,6 +10,7 @@ import { ResetPasswordService } from "./auth/reset-password.service";
 import { VerificationUserController } from "./auth/verification-user.controller";
 import { VerificationUserService } from "./auth/verification-user.service";
 import { UserCreationService } from "./users/user-creation.service";
+import { UsersService } from "./users/users.service";
 import { HealthModule } from "@terramatch-microservices/common/health/health.module";
 import { OrganisationsController } from "./organisations/organisations.controller";
 import { OrganisationsService } from "./organisations/organisations.service";
@@ -44,6 +45,7 @@ import { UserAssociationService } from "./user-association/user-association.serv
     ResetPasswordService,
     VerificationUserService,
     UserCreationService,
+    UsersService,
     OrganisationsService,
     OrganisationCreationService,
     ActionsService,

@@ -34,6 +34,8 @@ import { getStateMachine, StateMachineColumn } from "../util/model-column-state-
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -83,13 +85,26 @@ type ProjectReportMedia =
   tableName: "v2_project_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (report: ProjectReport) => {
+      await removeMedia(report);
+      await removeActions(report);
+    }
+  }
 })
 export class ProjectReport extends Model<ProjectReport> {
   static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Projects\\ProjectReport";
+
+  static get sql() {
+    if (ProjectReport.sequelize == null) {
+      throw new Error("Sequelize instance not available");
+    }
+    return ProjectReport.sequelize;
+  }
 
   static readonly MEDIA: Record<ProjectReportMedia, MediaConfiguration> = {
     socioeconomicBenefits: { dbCollection: "socioeconomic_benefits", multiple: true, validation: "general-documents" },
@@ -229,6 +244,25 @@ export class ProjectReport extends Model<ProjectReport> {
 
   static task(taskId: number) {
     return chainScope(this, "task", taskId) as typeof ProjectReport;
+  }
+
+  static projectUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
+    return ProjectReport.sql.literal(
+      `(
+        SELECT p.uuid
+        FROM v2_projects p
+        WHERE p.deleted_at IS NULL
+          AND (
+            SELECT pr.planting_status
+            FROM v2_project_reports pr
+            WHERE pr.project_id = p.id
+              AND pr.deleted_at IS NULL
+              AND pr.status = 'approved'
+            ORDER BY pr.due_at DESC
+            LIMIT 1
+          ) = ${ProjectReport.sql.escape(plantingStatus)}
+      )`
+    );
   }
 
   @PrimaryKey
@@ -707,26 +741,7 @@ export class ProjectReport extends Model<ProjectReport> {
   })
   nurserySeedlings: TreeSpecies[] | null;
 
-  static projectUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
-    if (ProjectReport.sequelize == null) {
-      throw new Error("Sequelize instance not available");
-    }
-    const sql = ProjectReport.sequelize;
-    return sql.literal(
-      `(
-        SELECT p.uuid
-        FROM v2_projects p
-        WHERE p.deleted_at IS NULL
-          AND (
-            SELECT pr.planting_status
-            FROM v2_project_reports pr
-            WHERE pr.project_id = p.id
-              AND pr.deleted_at IS NULL
-              AND pr.status = 'approved'
-            ORDER BY pr.due_at DESC
-            LIMIT 1
-          ) = ${sql.escape(plantingStatus)}
-      )`
-    );
-  }
+  @AllowNull
+  @Column(TEXT)
+  elpDescription: string | null;
 }

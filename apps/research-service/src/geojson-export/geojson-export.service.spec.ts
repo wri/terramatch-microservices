@@ -10,6 +10,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
+import { PPC } from "@terramatch-microservices/database/constants";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
@@ -194,7 +195,7 @@ describe("GeoJsonExportService", () => {
         expect(mockPolygonGeometry.getGeoJSON).toHaveBeenCalledWith(polygonUuid);
         expect(mockSitePolygon.findOne).toHaveBeenCalledWith({
           where: { polygonUuid },
-          include: [{ model: Site, attributes: ["uuid", "name"] }]
+          include: [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }]
         });
       });
 
@@ -237,6 +238,57 @@ describe("GeoJsonExportService", () => {
 
         expect(result.features[0].properties).not.toHaveProperty("customField1");
         expect(mockSitePolygonData.findOne).not.toHaveBeenCalled();
+      });
+
+      it("should include ppcExternalId for PPC framework sites", async () => {
+        const query: GeoJsonQueryDto = {
+          uuid: polygonUuid,
+          includeExtendedData: false
+        };
+
+        const ppcSitePolygon = {
+          ...mockSitePolygonInstance,
+          site: {
+            uuid: siteUuid,
+            name: "Test Site",
+            frameworkKey: PPC,
+            ppcExternalId: 42_001
+          }
+        } as unknown as SitePolygon;
+
+        mockPolygonGeometry.getGeoJSON.mockResolvedValue(mockGeoJsonString);
+        mockSitePolygon.findOne.mockResolvedValue(ppcSitePolygon);
+
+        const result = await service.getGeoJson(query);
+
+        expect(result.features[0].properties).toMatchObject({
+          siteId: siteUuid,
+          ppcExternalId: 42_001
+        });
+      });
+
+      it("should omit ppcExternalId when site is not PPC", async () => {
+        const query: GeoJsonQueryDto = {
+          uuid: polygonUuid,
+          includeExtendedData: false
+        };
+
+        const tfSitePolygon = {
+          ...mockSitePolygonInstance,
+          site: {
+            uuid: siteUuid,
+            name: "Test Site",
+            frameworkKey: "terrafund-3",
+            ppcExternalId: 99_999
+          }
+        } as unknown as SitePolygon;
+
+        mockPolygonGeometry.getGeoJSON.mockResolvedValue(mockGeoJsonString);
+        mockSitePolygon.findOne.mockResolvedValue(tfSitePolygon);
+
+        const result = await service.getGeoJson(query);
+
+        expect(result.features[0].properties).not.toHaveProperty("ppcExternalId");
       });
 
       it("should throw NotFoundException when polygon geometry is not found", async () => {
@@ -408,7 +460,7 @@ describe("GeoJsonExportService", () => {
         });
         expect(mockSitePolygon.findAll).toHaveBeenCalledWith({
           where: { siteUuid, isActive: true },
-          include: [{ model: Site, attributes: ["uuid", "name"] }]
+          include: [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }]
         });
         expect(mockPolygonGeometry.getGeoJSONBatch).toHaveBeenCalledWith([polygonUuid1, polygonUuid2]);
       });
@@ -704,6 +756,43 @@ describe("GeoJsonExportService", () => {
           attributes: ["uuid"]
         });
         expect(mockPolygonGeometry.getGeoJSONBatch).toHaveBeenCalledWith([polygonUuid1, polygonUuid2, polygonUuid3]);
+        expect(mockSitePolygon.findAll).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({ isActive: true }),
+            include: [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }]
+          })
+        );
+      });
+
+      it("should include ppcExternalId on project export when site framework is PPC", async () => {
+        const query: GeoJsonQueryDto = {
+          projectUuid,
+          includeExtendedData: false
+        };
+
+        const ppcPolygon1 = {
+          ...mockSitePolygon1,
+          site: {
+            uuid: siteUuid1,
+            name: "Site 1",
+            frameworkKey: PPC,
+            ppcExternalId: 77_001
+          }
+        } as unknown as SitePolygon;
+
+        mockProjectEntity.findOne.mockResolvedValue(mockProject as never);
+        mockSite.findAll.mockResolvedValue(mockSites as never);
+        mockSitePolygon.findAll.mockResolvedValue([ppcPolygon1]);
+        mockPolygonGeometry.getGeoJSONBatch.mockResolvedValue([
+          { uuid: polygonUuid1, geoJson: JSON.stringify(mockGeometry1) }
+        ]);
+
+        const result = await service.getGeoJson(query);
+
+        expect(result.features[0].properties).toMatchObject({
+          siteId: siteUuid1,
+          ppcExternalId: 77_001
+        });
       });
 
       it("should include extended data for project polygons when includeExtendedData is true", async () => {

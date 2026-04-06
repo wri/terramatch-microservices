@@ -99,6 +99,11 @@ export class SiteFullDto extends SiteLightDto {
   @ApiProperty()
   regeneratedTreesCount: number;
 
+  @ApiProperty({
+    description: "Sum of tree species amounts for collection 'anr' across approved site reports for this site"
+  })
+  treesRegeneratingSpeciesCount: number;
+
   @ApiProperty()
   combinedWorkdayCount: number;
 
@@ -134,6 +139,9 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenures: string[] | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  landTenureApproach: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   survivalRatePlanted: number | null;

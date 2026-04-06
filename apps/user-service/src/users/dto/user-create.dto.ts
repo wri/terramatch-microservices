@@ -2,7 +2,7 @@ import { IsEmail, IsIn, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 
-export class UserCreateAttributes {
+export class UserCreateBaseAttributes {
   @IsNotEmpty()
   @ApiProperty()
   firstName: string;
@@ -11,34 +11,40 @@ export class UserCreateAttributes {
   @ApiProperty()
   lastName: string;
 
-  @IsNotEmpty()
-  @ApiProperty()
-  password: string;
-
   @IsEmail()
   @ApiProperty()
   emailAddress: string;
 
-  @IsNotEmpty()
-  @ApiProperty()
-  phoneNumber: string;
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  phoneNumber?: string;
 
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  jobRole?: string;
+
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  country?: string;
+
+  @IsOptional()
+  @ApiProperty({ nullable: true })
+  program?: string;
+}
+
+export class UserCreateBaseBody extends JsonApiBodyDto(
+  class UserCreateBaseData extends CreateDataDto("users", UserCreateBaseAttributes) {}
+) {}
+
+export class UserCreateAttributes extends UserCreateBaseAttributes {
   @IsNotEmpty()
   @ApiProperty()
-  jobRole: string;
+  password: string;
 
   @IsNotEmpty()
   @IsIn(["project-developer", "funder", "government"])
   @ApiProperty()
   role: string;
-
-  @IsOptional()
-  @ApiProperty()
-  country: string;
-
-  @IsOptional()
-  @ApiProperty()
-  program: string;
 
   @IsNotEmpty()
   @ApiProperty()

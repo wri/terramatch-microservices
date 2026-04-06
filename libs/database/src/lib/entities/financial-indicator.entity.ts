@@ -27,6 +27,7 @@ import { FinancialReport } from "./financial-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Organisation } from "./organisation.entity";
+import { removeMedia } from "../hooks/remove-media";
 
 type FinancialIndicatorMedia = "documentation";
 
@@ -34,7 +35,7 @@ type FinancialIndicatorMedia = "documentation";
   financialReport: (id: number) => ({ where: { financialReportId: id } }),
   organisation: (id: number) => ({ where: { organisationId: id, financialReportId: null } })
 }))
-@Table({ tableName: "financial_indicators", underscored: true, paranoid: true })
+@Table({ tableName: "financial_indicators", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class FinancialIndicator extends Model<
   InferAttributes<FinancialIndicator>,
   InferCreationAttributes<FinancialIndicator>

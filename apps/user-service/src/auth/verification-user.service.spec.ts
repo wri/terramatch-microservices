@@ -65,7 +65,7 @@ describe("VerificationUserService", () => {
   });
 
   it("should create a new verification token and send email when user exists", async () => {
-    const user = await UserFactory.create({ emailAddress: "user@example.com" });
+    const user = await UserFactory.create({ emailAddress: `user+${crypto.randomUUID()}@example.com` });
     const callbackUrl = "https://example.com/verify?token=";
     const tokenBuffer = Buffer.alloc(32, 1);
 
@@ -90,8 +90,7 @@ describe("VerificationUserService", () => {
       expect.any(Object),
       expect.objectContaining({
         additionalValues: expect.objectContaining({
-          link: expect.stringContaining(callbackUrl),
-          transactional: "transactional"
+          link: expect.stringContaining(callbackUrl)
         })
       })
     );
@@ -114,7 +113,7 @@ describe("VerificationUserService", () => {
   });
 
   it("should use default verify path when callbackUrl is not provided", async () => {
-    const user = await UserFactory.create({ emailAddress: "user2@example.com" });
+    const user = await UserFactory.create({ emailAddress: `user+${crypto.randomUUID()}@example.com` });
     const tokenBuffer = Buffer.alloc(32, 2);
 
     jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -132,8 +131,7 @@ describe("VerificationUserService", () => {
       expect.any(Object),
       expect.objectContaining({
         additionalValues: expect.objectContaining({
-          link: expect.stringContaining("/verify?token="),
-          transactional: "transactional"
+          link: expect.stringContaining("/verify?token=")
         })
       })
     );

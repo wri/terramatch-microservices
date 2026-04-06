@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { umzug, sequelize } from "../../../libs/database/src/lib/umzug";
+import { sequelize, umzug } from "./umzug";
 
 export function migrationsCommand(): Command {
   const command = new Command("migrations");

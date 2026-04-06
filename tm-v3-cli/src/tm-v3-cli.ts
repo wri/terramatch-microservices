@@ -1,4 +1,5 @@
 #! /usr/bin/env node
+import "./load-env";
 import { Command, Option } from "commander";
 import { replCommand } from "./repl/command";
 import { printVerboseHook } from "./utils";

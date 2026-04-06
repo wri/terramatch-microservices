@@ -1,6 +1,6 @@
 import { Argument, Command, Option, OptionValues } from "commander";
-import { rootDebug } from "../utils";
-import { ECSClient, ExecuteCommandCommand, ListTasksCommand } from "@aws-sdk/client-ecs";
+import { getTaskId, rootDebug } from "../utils";
+import { ECSClient, ExecuteCommandCommand } from "@aws-sdk/client-ecs";
 import { CLUSTER, Environment, ENVIRONMENTS, Service, SERVICES } from "../consts";
 
 import { WebSocket } from "ws";
@@ -36,20 +36,6 @@ const startLocalRepl = async (service: Service) => {
     stdio: "inherit",
     env: { ...process.env, NODE_ENV: "development", REPL: "true" }
   });
-};
-
-const getTaskId = async (service: Service, env: Environment) => {
-  debug("Getting tasks");
-
-  const client = new ECSClient();
-  const command = new ListTasksCommand({ cluster: CLUSTER, family: `terramatch-${service}-${env}` });
-  try {
-    const { taskArns } = await client.send(command);
-    return taskArns?.[0]?.split("/").pop();
-  } catch (e) {
-    debugError(`Failed to get task id ${e}`);
-  }
-  return undefined;
 };
 
 const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) => {
@@ -144,7 +130,7 @@ export const replCommand = () =>
       if (environment === "local") {
         await startLocalRepl(service);
       } else {
-        const taskId = await getTaskId(service, environment);
+        const taskId = await getTaskId(service, environment, debug, debugError);
         if (taskId == null) return;
         debug(`Found task id: ${taskId}`);
 

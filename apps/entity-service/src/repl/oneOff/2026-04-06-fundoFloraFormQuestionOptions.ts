@@ -1,9 +1,7 @@
-import { NestFactory } from "@nestjs/core";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { FormQuestion, FormQuestionOption, Media } from "@terramatch-microservices/database/entities";
-import { AppModule } from "../../app.module";
 
 /**
  * Keys match ProjectConfiguration / SiteConfiguration / ProjectPitchConfiguration (linkedFields).
@@ -137,12 +135,8 @@ async function appendLandownerAgreementOptions(
   return { questionsProcessed: targets.length, optionsCreated };
 }
 
-export const fundoFloraFormQuestionOptions = withoutSqlLogs(async () => {
-  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
-  try {
-    const mediaService = app.get(MediaService);
-    const localizationService = app.get(LocalizationService);
-
+export const fundoFloraFormQuestionOptions = withoutSqlLogs(
+  async (mediaService: MediaService, localizationService: LocalizationService) => {
     const sourceOptions = await pickSourceLandTenureOptions();
     const landProject = await replicateLandTenureOptions(mediaService, sourceOptions, LAND_TENURE_PROJECT_KEY);
     const landSite = await replicateLandTenureOptions(mediaService, sourceOptions, LAND_TENURE_SITE_KEY);
@@ -151,7 +145,5 @@ export const fundoFloraFormQuestionOptions = withoutSqlLogs(async () => {
     console.log("Land tenure (project):", landProject);
     console.log("Land tenure (site):", landSite);
     console.log("Landowner agreement:", agreement);
-  } finally {
-    await app.close();
   }
-});
+);

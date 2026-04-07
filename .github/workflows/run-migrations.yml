@@ -1,6 +1,11 @@
 name: Run Database Migrations
 run-name: "Run Database Migrations [env: ${{ inputs.env }}]"
 on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       env:

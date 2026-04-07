@@ -1,0 +1,57 @@
+name: Run Database Migrations
+run-name: "Run Database Migrations [env: ${{ inputs.env }}]"
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Migration target environment"
+        type: choice
+        required: true
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  HUSKY: 0
+  AWS_REGION: eu-west-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::603634817705:role/terramatch-microservices-github-actions
+  AWS_ROLE_SESSION_NAME: terramatch-microservices-cicd-${{ inputs.env }}-migrations
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build REPL
+        run: npx nx executable tm-v3-cli --no-cloud
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to AWS
+        id: AWS
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Run Migrations
+        run: ./dist/tm-v3-cli/src/tm-v3-cli.js -v repl --script "await umzug.up()" user-service "${{ inputs.env }}"

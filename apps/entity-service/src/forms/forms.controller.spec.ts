@@ -6,7 +6,6 @@ import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Form } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
-import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
 import { StoreFormAttributes } from "./dto/form.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
@@ -57,9 +56,12 @@ describe("FormsController", () => {
       policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
     });
 
-    it("throws if the form is published", async () => {
-      service.findOne.mockResolvedValue({ published: true } as Form);
-      await expect(controller.delete("fake-uuid")).rejects.toThrow(BadRequestException);
+    it("deletes a published form", async () => {
+      const form = await FormFactory.create({ published: true });
+      service.findOne.mockResolvedValue(form);
+      await controller.delete(form.uuid);
+      await form.reload({ paranoid: false });
+      expect(form.deletedAt).not.toBeNull();
     });
 
     it("Destroys the form and all questions", async () => {
@@ -91,8 +93,7 @@ describe("FormsController", () => {
       service.store.mockResolvedValue(form);
       const attributes: StoreFormAttributes = {
         title: "",
-        submissionMessage: "",
-        published: false
+        submissionMessage: ""
       };
       await controller.create({ data: { type: "forms", attributes } });
       expect(service.store).toHaveBeenCalledWith(attributes);
@@ -106,8 +107,7 @@ describe("FormsController", () => {
       service.findOne.mockResolvedValue(form);
       const attributes: StoreFormAttributes = {
         title: "",
-        submissionMessage: "",
-        published: false
+        submissionMessage: ""
       };
       await controller.update("fake-uuid", { data: { id: "fake-uuid", type: "forms", attributes } });
       expect(service.findOne).toHaveBeenCalledWith("fake-uuid");

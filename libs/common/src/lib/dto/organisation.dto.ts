@@ -313,9 +313,6 @@ export class OrganisationFullDto extends OrganisationLightDto {
   additionalComments: string | null;
 
   @ApiProperty({ nullable: true, type: String })
-  consortium: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
   femaleYouthLeadershipExample: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })

@@ -34,12 +34,34 @@ export class TaskUpdateAttributes {
   @IsArray()
   @Type(() => String)
   @ApiProperty({
+    description: "UUIDs of site reports to approve",
+    isArray: true,
+    type: String,
+    required: false
+  })
+  siteReportApprovalUuids?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
     description: "UUIDs of nursery reports to mark as 'Nothing to report'",
     isArray: true,
     type: String,
     required: false
   })
   nurseryReportNothingToReportUuids?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @ApiProperty({
+    description: "UUIDs of nursery reports to approve",
+    isArray: true,
+    type: String,
+    required: false
+  })
+  nurseryReportApprovalUuids?: string[];
 }
 
 export class TaskUpdateBody extends JsonApiBodyDto(

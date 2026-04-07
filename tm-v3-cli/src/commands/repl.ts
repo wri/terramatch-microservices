@@ -98,10 +98,10 @@ const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: 
   debug("Starting ECS Exec stream connection");
   const connection = new WebSocket(streamUrl);
 
-  if (script != null) {
+  if (script == null) {
     const textEncoder = new TextEncoder();
     process.stdin.setRawMode(true);
-    // This will prevent the process for exiting until we explicitly call process.exit()
+    // This will prevent the process from exiting until we explicitly call process.exit()
     process.stdin.resume();
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (key: string) => {

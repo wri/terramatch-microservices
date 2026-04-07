@@ -14,26 +14,21 @@ const generateSlug = async (label: string, formQuestionId: number) => {
   }
 };
 
+const generateSlugHook = async (option: FormQuestionOption) => {
+  if (isEmpty(option.slug) && !isEmpty(option.label)) {
+    option.slug = await generateSlug(option.label as string, option.formQuestionId);
+  }
+};
+
 @Table({
   tableName: "form_question_options",
   underscored: true,
   paranoid: true,
 
   hooks: {
-    beforeCreate: async (option: FormQuestionOption) => {
-      if (option.slug == null && !isEmpty(option.label))
-        option.slug = await generateSlug(option.label as string, option.formQuestionId);
-    },
-    beforeUpdate: async (option: FormQuestionOption) => {
-      if (option.slug == null && !isEmpty(option.label)) {
-        option.slug = await generateSlug(option.label as string, option.formQuestionId);
-      }
-    },
-    beforeSave: async (option: FormQuestionOption) => {
-      if (option.slug == null && !isEmpty(option.label)) {
-        option.slug = await generateSlug(option.label as string, option.formQuestionId);
-      }
-    },
+    beforeCreate: generateSlugHook,
+    beforeUpdate: generateSlugHook,
+    beforeSave: generateSlugHook,
     afterDestroy: removeMedia
   }
 })

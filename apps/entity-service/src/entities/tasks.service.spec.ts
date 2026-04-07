@@ -378,8 +378,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport.uuid],
-            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
+            siteReportApprovalUuids: [siteReport.uuid],
+            nurseryReportApprovalUuids: [nurseryReport.uuid],
             feedback: "Looks good"
           }
         }
@@ -403,8 +403,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [],
-            nurseryReportNothingToReportUuids: [],
+            siteReportApprovalUuids: [],
+            nurseryReportApprovalUuids: [],
             feedback: "Empty arrays"
           }
         }
@@ -424,8 +424,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: null,
-            nurseryReportNothingToReportUuids: null,
+            siteReportApprovalUuids: null,
+            nurseryReportApprovalUuids: null,
             feedback: "Null arrays"
           }
         }
@@ -452,8 +452,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport.uuid],
-            nurseryReportNothingToReportUuids: [nurseryReport.uuid],
+            siteReportApprovalUuids: [siteReport.uuid],
+            nurseryReportApprovalUuids: [nurseryReport.uuid],
             feedback: "Test feedback"
           }
         }
@@ -495,8 +495,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [siteReport1.uuid],
-            nurseryReportNothingToReportUuids: [],
+            siteReportApprovalUuids: [siteReport1.uuid],
+            nurseryReportApprovalUuids: [],
             feedback: "Filtered approval"
           }
         }
@@ -529,8 +529,8 @@ describe("TasksService", () => {
       const updateBody = {
         data: {
           attributes: {
-            siteReportNothingToReportUuids: [],
-            nurseryReportNothingToReportUuids: [nurseryReport2.uuid],
+            siteReportApprovalUuids: [],
+            nurseryReportApprovalUuids: [nurseryReport2.uuid],
             feedback: "Nursery filtered approval"
           }
         }
@@ -545,6 +545,53 @@ describe("TasksService", () => {
       expect(auditStatuses[0].auditableId).toBe(nurseryReport2.id);
 
       loadReportsSpy.mockRestore();
+    });
+  });
+
+  describe("nothingToReportBulk", () => {
+    it("should update the included reports", async () => {
+      const task = await TaskFactory.create();
+      const siteReports = await SiteReportFactory.createMany(2, { taskId: task.id, submittedAt: null });
+      const nurseryReports = await NurseryReportFactory.createMany(2, { taskId: task.id, submittedAt: null });
+
+      task.siteReports = siteReports;
+      task.nurseryReports = nurseryReports;
+      jest.spyOn(service, "loadReports" as keyof TasksService).mockResolvedValue(undefined);
+
+      await service.nothingToReportBulk(
+        {
+          siteReportNothingToReportUuids: [siteReports[0].uuid],
+          nurseryReportNothingToReportUuids: [nurseryReports[0].uuid]
+        },
+        task
+      );
+
+      await Promise.all([...siteReports, ...nurseryReports].map(report => report.reload()));
+
+      expect(siteReports[0]).toMatchObject({
+        nothingToReport: true,
+        status: "awaiting-approval",
+        completion: 100,
+        submittedAt: expect.any(Date)
+      });
+      expect(siteReports[1]).toMatchObject({
+        nothingToReport: null,
+        status: "due",
+        completion: 0,
+        submittedAt: null
+      });
+      expect(nurseryReports[0]).toMatchObject({
+        nothingToReport: true,
+        status: "awaiting-approval",
+        completion: 100,
+        submittedAt: expect.any(Date)
+      });
+      expect(nurseryReports[1]).toMatchObject({
+        nothingToReport: null,
+        status: "due",
+        completion: 0,
+        submittedAt: null
+      });
     });
   });
 });

@@ -64,7 +64,7 @@ const startLocalRepl = async (service: Service, script?: string) => {
 const getRemoteCommandString = (service: Service, remoteCommand: EcsCommand, script?: string) => {
   switch (remoteCommand) {
     case "repl": {
-      const prefix = script == null ? undefined : `echo -e "${script}\nprocess.exit()" | `;
+      const prefix = script == null ? "" : `echo -e "${script}\nprocess.exit()" | `;
       return `sh -c '${prefix}REPL=true node dist/apps/${service}-repl'`;
     }
     case "sh":

@@ -1,4 +1,4 @@
-import { Argument, Command, Option, OptionValues } from "commander";
+import { Argument, Command, Option } from "commander";
 import { getTaskId, rootDebug } from "../utils";
 import { ECSClient, ExecuteCommandCommand } from "@aws-sdk/client-ecs";
 import { CLUSTER, Environment, ENVIRONMENTS, Service, SERVICES } from "../consts";
@@ -13,10 +13,10 @@ const debugError = rootDebug.extend("remote-repl:error");
 
 const TERM_OPTIONS = { rows: 34, cols: 197 };
 
-const REMOTE_COMMANDS = ["repl", "sh"] as const;
-type RemoteCommand = (typeof REMOTE_COMMANDS)[number];
+const ECS_COMMANDS = ["repl", "sh"] as const;
+type EcsCommand = (typeof ECS_COMMANDS)[number];
 
-const startLocalRepl = async (service: Service) => {
+const startLocalRepl = async (service: Service, script?: string) => {
   debug(`Building REPL for ${service}`);
   await new Promise<void>(resolve => {
     const build = spawn("nx", ["build-repl", service, "--no-cloud"], { stdio: "inherit" });
@@ -32,16 +32,41 @@ const startLocalRepl = async (service: Service) => {
   });
 
   debug(`Launching REPL process for ${service}`);
-  spawn("node", [`dist/apps/${service}-repl`], {
-    stdio: "inherit",
-    env: { ...process.env, NODE_ENV: "development", REPL: "true" }
-  });
+  if (script == null) {
+    spawn("node", [`dist/apps/${service}-repl`], {
+      stdio: "inherit",
+      env: { ...process.env, NODE_ENV: "development", REPL: "true" }
+    });
+  } else {
+    const repl = spawn("node", [`dist/apps/${service}-repl`], {
+      env: { ...process.env, NODE_ENV: "development", REPL: "true" }
+    });
+
+    const exitCode = await new Promise((resolve, reject) => {
+      repl.on("close", resolve);
+      repl.on("error", reject);
+
+      repl.stdout.on("data", data => {
+        const line: string = data.toString();
+        console.log(line.trim());
+
+        if (line.includes("REPL initialized")) {
+          repl.stdin.write(`${script}\n`);
+          repl.stdin.end();
+        }
+      });
+    });
+
+    debug(`Process completed with exit code: ${exitCode}`);
+  }
 };
 
-const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) => {
+const getRemoteCommandString = (service: Service, remoteCommand: EcsCommand, script?: string) => {
   switch (remoteCommand) {
-    case "repl":
-      return `sh -c 'REPL=true node dist/apps/${service}-repl'`;
+    case "repl": {
+      const prefix = script == null ? undefined : `echo -e "${script}\nprocess.exit()" | `;
+      return `sh -c '${prefix}REPL=true node dist/apps/${service}-repl'`;
+    }
     case "sh":
       return "sh";
 
@@ -51,9 +76,9 @@ const getRemoteCommandString = (service: Service, remoteCommand: RemoteCommand) 
   }
 };
 
-const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: RemoteCommand) => {
+const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: EcsCommand, script?: string) => {
   const client = new ECSClient();
-  const command = getRemoteCommandString(service, remoteCommand);
+  const command = getRemoteCommandString(service, remoteCommand, script);
   debug(`Setting command to run after connection: ${command}`);
   const executionCommand = new ExecuteCommandCommand({
     cluster: CLUSTER,
@@ -70,29 +95,30 @@ const startRemoteRepl = async (taskId: string, service: Service, remoteCommand: 
     session: { streamUrl, tokenValue }
   } = sessionResponse;
 
-  const textDecoder = new TextDecoder();
-  const textEncoder = new TextEncoder();
-
   debug("Starting ECS Exec stream connection");
   const connection = new WebSocket(streamUrl);
 
-  process.stdin.setRawMode(true);
-  // This will prevent the process for exiting until we explicitly call process.exit()
-  process.stdin.resume();
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", (key: string) => {
-    if (key === "\u0003") {
-      debug("Killing process with ctrl-c");
-      process.exit();
-    } else if (connection.readyState === connection.OPEN) {
-      ssm.sendText(connection, textEncoder.encode(key));
-    }
-  });
+  if (script != null) {
+    const textEncoder = new TextEncoder();
+    process.stdin.setRawMode(true);
+    // This will prevent the process for exiting until we explicitly call process.exit()
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (key: string) => {
+      if (key === "\u0003") {
+        debug("Killing process with ctrl-c");
+        process.exit();
+      } else if (connection.readyState === connection.OPEN) {
+        ssm.sendText(connection, textEncoder.encode(key));
+      }
+    });
+  }
 
   connection.onopen = () => {
     ssm.init(connection, { token: tokenValue, termOptions: TERM_OPTIONS });
   };
 
+  const textDecoder = new TextDecoder();
   connection.onmessage = event => {
     const agentMessage = ssm.decode(event.data);
     ssm.sendACK(connection, agentMessage);
@@ -124,16 +150,28 @@ export const replCommand = () =>
     .addOption(
       new Option("-c, --command <command>", "Ignored in local environment. Command to run after connecting.")
         .default("repl")
-        .choices(REMOTE_COMMANDS)
+        .choices(ECS_COMMANDS)
     )
-    .action(async (service: Service, environment: Environment, options: OptionValues) => {
-      if (environment === "local") {
-        await startLocalRepl(service);
-      } else {
-        const taskId = await getTaskId(service, environment, debug, debugError);
-        if (taskId == null) return;
-        debug(`Found task id: ${taskId}`);
+    .addOption(
+      new Option(
+        "-s, --script <script>",
+        "Script to execute after connecting to the REPL. If provided, the script will be executed and then the REPL will be closed. Only valid if the command is 'repl'."
+      )
+    )
+    .action(
+      async (
+        service: Service,
+        environment: Environment,
+        { command, script }: { command: EcsCommand; script?: string }
+      ) => {
+        if (environment === "local") {
+          await startLocalRepl(service, script);
+        } else {
+          const taskId = await getTaskId(service, environment, debug, debugError);
+          if (taskId == null) return;
+          debug(`Found task id: ${taskId}`);
 
-        await startRemoteRepl(taskId, service, options.command as RemoteCommand);
+          await startRemoteRepl(taskId, service, command as EcsCommand, script);
+        }
       }
-    });
+    );

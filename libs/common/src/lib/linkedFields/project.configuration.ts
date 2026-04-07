@@ -399,6 +399,18 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       property: "nurserySeedlingsGoal",
       label: "Nursery seedlings goal",
       inputType: "number"
+    },
+    "pro-bioeconomy-product-list": {
+      property: "bioeconomyProductList",
+      label: "Bioeconomy product list",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "pro-bioeconomy-product-description": {
+      property: "bioeconomyProductDescription",
+      label: "Bioeconomy product description",
+      inputType: "long-text"
     }
   },
   fileCollections: {

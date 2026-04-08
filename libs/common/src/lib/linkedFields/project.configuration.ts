@@ -260,8 +260,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-full-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
         collection: "full-time"
       },
       label: "Aggregate full time jobs",
@@ -269,8 +270,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-full-clt-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
         collection: "full-time-clt"
       },
       label: "Aggregate full time CLT jobs",
@@ -278,8 +280,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-part-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
         collection: "part-time"
       },
       label: "Aggregate part time jobs",
@@ -287,8 +290,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-part-clt-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
         collection: "part-time-clt"
       },
       label: "Aggregate part time CLT jobs",
@@ -296,8 +300,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-volunteers-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "volunteers",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "volunteers",
         collection: "volunteer"
       },
       label: "Aggregate volunteers",
@@ -305,8 +310,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-beneficiaries-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "all-beneficiaries",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "all-beneficiaries",
         collection: "all"
       },
       label: "Aggregate beneficiaries",
@@ -314,8 +320,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-indirect-beneficiaries-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "indirect-beneficiaries",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "indirect-beneficiaries",
         collection: "indirect"
       },
       label: "Aggregate indirect beneficiaries",
@@ -323,8 +330,9 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     },
     "pro-associates-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "associates",
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "associates",
         collection: "all"
       },
       label: "Aggregate associates",

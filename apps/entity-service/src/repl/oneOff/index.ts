@@ -15,3 +15,4 @@ export { migrateFinancialReports } from "./2026-03-02-migrateFinancialReports";
 export { fixSiteReportTrees } from "./2026-03-17-fixSiteReportTrees";
 export { migrateConsortium } from "./2026-03-19-migrateConsortium";
 export { cleanupReportAuditLogs } from "./2026-03-17-cleanupReportAuditLogs";
+export { fundoFloraFormQuestionOptions } from "./2026-04-06-fundoFloraFormQuestionOptions";

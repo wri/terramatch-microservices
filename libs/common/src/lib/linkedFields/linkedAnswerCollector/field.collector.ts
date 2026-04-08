@@ -5,7 +5,7 @@ import {
 } from "@terramatch-microservices/database/constants/linked-fields";
 import { Dictionary, difference, isEmpty, isInteger, isString, uniq } from "lodash";
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
-import { Tracking, TrackingEntry, FormQuestion, ProjectPolygon } from "@terramatch-microservices/database/entities";
+import { FormQuestion, ProjectPolygon, Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { FieldResourceCollector } from "./index";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
@@ -13,7 +13,6 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { mapLaravelTypes } from "./utils";
 import { WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { TrackingDomain } from "@terramatch-microservices/database/types/tracking";
 
 function normalizePlantingStatusValue(answer: unknown) {
   if (answer == null || answer === "") return null;
@@ -70,26 +69,27 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         virtualQuestionModels.length === 0 ? [] : await Tracking.forAll(virtualQuestionModels).findAll();
 
       for (const [questionUuid, { props, modelType }] of Object.entries(virtualQuestions)) {
-        if (props.type == "demographicsAggregate") {
+        if (props.type === "trackingAggregate") {
           // Find the first visible demographic that matches our config
-          const tracking = trackings.find(({ hidden, trackableType, trackableId, type, collection }) => {
+          const tracking = trackings.find(({ hidden, trackableType, trackableId, domain, type, collection }) => {
             if (hidden) return false;
             if (trackableType !== laravelTypes[modelType] || trackableId !== models[modelType]?.id) return false;
-            if (type !== props.demographicsType) return false;
-            return props.collection === collection;
+            return domain === props.domain && type === props.trackingType && collection === props.collection;
           });
 
           answers[questionUuid] =
             tracking == null ? 0 : (await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0;
-        } else if (props.type == "demographicsDescription") {
+        } else if (props.type === "trackingDescription") {
           // Pull the description from the first matching demographic that has a non-null description.
           // For this one we ignore the "visible" flag.
-          answers[questionUuid] = trackings.find(({ trackableType, trackableId, type, collection, description }) => {
-            if (description == null || collection == null) return false;
-            if (trackableType !== laravelTypes[modelType] || trackableId !== models[modelType]?.id) return false;
-            if (type !== props.demographicsType) return false;
-            return props.collections.includes(collection);
-          })?.description;
+          answers[questionUuid] = trackings.find(
+            ({ trackableType, trackableId, domain, type, collection, description }) => {
+              if (description == null || collection == null) return false;
+              if (trackableType !== laravelTypes[modelType] || trackableId !== models[modelType]?.id) return false;
+              if (domain !== props.domain || type !== props.trackingType) return false;
+              return props.collections.includes(collection);
+            }
+          )?.description;
         } else if (props.type === "projectBoundary") {
           const model = models[modelType];
           if (model == null) {
@@ -141,7 +141,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
       }
 
       const { virtual } = field;
-      if (virtual.type === "demographicsAggregate") {
+      if (virtual.type === "trackingAggregate") {
         const value = answer == null ? null : Number(answer);
         if (value != null && (!isInteger(value) || value < 0)) {
           throw new BadRequestException(
@@ -149,8 +149,9 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           );
         }
 
-        let tracking = await Tracking.for(model)
-          .type(virtual.demographicsType)
+        const tracking = await Tracking.for(model)
+          .domain(virtual.domain)
+          .type(virtual.trackingType)
           .collection(virtual.collection)
           .findOne();
         if (value == null) {
@@ -163,18 +164,17 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         }
 
         if (tracking == null) {
-          tracking = await Tracking.create({
+          const { id: trackingId } = await Tracking.create({
             trackableType: laravelType(model),
             trackableId: model.id,
-            domain: "demographics",
-            type: virtual.demographicsType,
+            domain: virtual.domain,
+            type: virtual.trackingType,
             collection: virtual.collection
           });
 
-          await TrackingEntry.bulkCreate([
-            { trackingId: tracking.id, type: "gender", subtype: "unknown", amount: value },
-            { trackingId: tracking.id, type: "age", subtype: "unknown", amount: value }
-          ]);
+          await TrackingEntry.bulkCreate(
+            virtual.entryTypes.map(type => ({ trackingId, type, subtype: "unknown", amount: value }))
+          );
         } else {
           // make sure it hasn't been used for a typical demographics entry, as in that case we
           // don't want to handle trying to balance with this single integer value.
@@ -190,7 +190,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
 
           await TrackingEntry.update({ amount: value }, { where: { id: entries.map(({ id }) => id) } });
         }
-      } else if (virtual.type === "demographicsDescription") {
+      } else if (virtual.type === "trackingDescription") {
         if (answer != null && !isString(answer)) {
           throw new BadRequestException(`Invalid demographics description: [${question.linkedFieldKey}, ${answer}]`);
         }
@@ -198,8 +198,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         const demographicWhere: WhereOptions<Tracking> = {
           trackableType: laravelType(model),
           trackableId: model.id,
-          domain: "demographics",
-          type: virtual.demographicsType,
+          domain: virtual.domain,
+          type: virtual.trackingType,
           collection: virtual.collections
         };
 
@@ -214,8 +214,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
               missing.map(collection => ({
                 trackableType: laravelType(model),
                 trackableId: model.id as number,
-                domain: "demographics" as TrackingDomain,
-                type: virtual.demographicsType,
+                domain: virtual.domain,
+                type: virtual.trackingType,
                 collection
               }))
             );

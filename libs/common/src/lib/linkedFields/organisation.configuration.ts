@@ -528,6 +528,28 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       property: "bioeconomyDescription",
       label: "Bioeconomy description",
       inputType: "long-text"
+    },
+    "org-aggregate-employees": {
+      virtual: {
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "employees",
+        collection: "all",
+        entryTypes: ["gender", "age"]
+      },
+      label: "Aggregate employees",
+      inputType: "number"
+    },
+    "org-aggregate-associates": {
+      virtual: {
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "associates",
+        collection: "all",
+        entryTypes: ["gender", "age", "race", "traditional-community"]
+      },
+      label: "Aggregate associates",
+      inputType: "number"
     }
   },
   fileCollections: {

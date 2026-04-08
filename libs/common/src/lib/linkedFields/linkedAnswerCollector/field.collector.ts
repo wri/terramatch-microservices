@@ -149,7 +149,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           );
         }
 
-        let tracking = await Tracking.for(model)
+        const tracking = await Tracking.for(model)
           .domain(virtual.domain)
           .type(virtual.trackingType)
           .collection(virtual.collection)
@@ -164,7 +164,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         }
 
         if (tracking == null) {
-          tracking = await Tracking.create({
+          const { id: trackingId } = await Tracking.create({
             trackableType: laravelType(model),
             trackableId: model.id,
             domain: virtual.domain,
@@ -172,10 +172,9 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
             collection: virtual.collection
           });
 
-          await TrackingEntry.bulkCreate([
-            { trackingId: tracking.id, type: "gender", subtype: "unknown", amount: value },
-            { trackingId: tracking.id, type: "age", subtype: "unknown", amount: value }
-          ]);
+          await TrackingEntry.bulkCreate(
+            virtual.entryTypes.map(type => ({ trackingId, type, subtype: "unknown", amount: value }))
+          );
         } else {
           // make sure it hasn't been used for a typical demographics entry, as in that case we
           // don't want to handle trying to balance with this single integer value.

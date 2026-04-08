@@ -503,7 +503,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "jobs",
-        collection: "full-time"
+        collection: "full-time",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time jobs",
       inputType: "number"
@@ -513,7 +514,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "jobs",
-        collection: "full-time-clt"
+        collection: "full-time-clt",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
@@ -523,7 +525,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "jobs",
-        collection: "part-time"
+        collection: "part-time",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time jobs",
       inputType: "number"
@@ -533,7 +536,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "jobs",
-        collection: "part-time-clt"
+        collection: "part-time-clt",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
@@ -543,7 +547,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "volunteers",
-        collection: "volunteer"
+        collection: "volunteer",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate volunteers",
       inputType: "number"
@@ -553,7 +558,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "all-beneficiaries",
-        collection: "all"
+        collection: "all",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate beneficiaries",
       inputType: "number"
@@ -563,7 +569,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "indirect-beneficiaries",
-        collection: "indirect"
+        collection: "indirect",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
@@ -573,7 +580,8 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "associates",
-        collection: "all"
+        collection: "all",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate associates",
       inputType: "number"

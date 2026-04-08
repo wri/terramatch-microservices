@@ -31,6 +31,7 @@ export type VirtualTrackingAggregate = {
   domain: TrackingDomain;
   trackingType: TrackingType;
   collection: string;
+  entryTypes: string[];
 };
 export type VirtualTrackingDescription = {
   type: "trackingDescription";

@@ -1,5 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Notification,
@@ -18,7 +17,6 @@ import {
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { DateTime } from "luxon";
@@ -37,9 +35,6 @@ const MYSQL_LOCK_POLYGON_UPDATES_WEEKLY = "tm_job_svc_polygon_update_wk";
 
 const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
-const EXPORT_FILE_RETENTION_DAYS = 1;
-/** S3 prefix for transient export files (matches legacy public/temp layout). */
-const EXPORT_TEMP_S3_PREFIX = "temp/";
 const NOTIFICATION_RETENTION_DAYS = 90;
 
 @Injectable()
@@ -48,9 +43,7 @@ export class ScheduledJobsService {
 
   constructor(
     @InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue,
-    @InjectQueue("email") private readonly emailQueue: Queue,
-    private readonly configService: ConfigService,
-    private readonly fileService: FileService
+    @InjectQueue("email") private readonly emailQueue: Queue
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -197,19 +190,6 @@ export class ScheduledJobsService {
     });
     if (removed > 0) {
       this.logger.log(`Removed ${removed} stale password resets (older than ${PASSWORD_RESET_RETENTION_DAYS}d)`);
-    }
-  }
-
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: "removeOldExportFiles" })
-  async removeOldExportFiles(): Promise<void> {
-    const bucket = this.configService.get<string>("AWS_BUCKET");
-    if (bucket == null || bucket === "") {
-      throw new InternalServerErrorException("AWS_BUCKET is not set; cannot clean up stale export files in S3");
-    }
-    const cutoff = DateTime.utc().minus({ days: EXPORT_FILE_RETENTION_DAYS }).toJSDate();
-    const removed = await this.fileService.deleteObjectsInPrefixOlderThan(bucket, EXPORT_TEMP_S3_PREFIX, cutoff);
-    if (removed > 0) {
-      this.logger.log(`Removed ${removed} stale export object(s) from s3://${bucket}/${EXPORT_TEMP_S3_PREFIX}`);
     }
   }
 

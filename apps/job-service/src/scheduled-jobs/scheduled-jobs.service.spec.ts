@@ -5,9 +5,6 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
-import { ConfigService } from "@nestjs/config";
-import { InternalServerErrorException } from "@nestjs/common";
-import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
@@ -33,9 +30,7 @@ describe("ScheduledJobsService", () => {
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) },
-        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        { provide: FileService, useValue: createMock<FileService>() }
+        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) }
       ]
     }).compile();
 
@@ -256,17 +251,13 @@ describe("ScheduledJobsService maintenance cleanup", () => {
   let service: ScheduledJobsService;
   let transactionSpy: jest.SpyInstance | undefined;
   let querySpy: jest.SpyInstance | undefined;
-  let configService: DeepMocked<ConfigService>;
-  let fileService: DeepMocked<FileService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: createMock<Queue>() },
-        { provide: getQueueToken("email"), useValue: createMock<Queue>() },
-        { provide: ConfigService, useValue: (configService = createMock<ConfigService>()) },
-        { provide: FileService, useValue: (fileService = createMock<FileService>()) }
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
       ]
     }).compile();
     service = module.get(ScheduledJobsService);
@@ -361,27 +352,5 @@ describe("ScheduledJobsService maintenance cleanup", () => {
     await service.removeStaleNotifications();
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 5 stale read notifications"));
     destroySpy.mockRestore();
-  });
-
-  it("removeOldExportFiles throws when AWS_BUCKET is unset", async () => {
-    configService.get.mockReturnValue(undefined);
-    await expect(service.removeOldExportFiles()).rejects.toBeInstanceOf(InternalServerErrorException);
-  });
-
-  it("removeOldExportFiles does not log when no stale S3 objects", async () => {
-    configService.get.mockImplementation((key: string) => (key === "AWS_BUCKET" ? "my-bucket" : undefined));
-    fileService.deleteObjectsInPrefixOlderThan.mockResolvedValue(0);
-    const logSpy = jest.spyOn((service as any).logger, "log");
-    await service.removeOldExportFiles();
-    expect(logSpy).not.toHaveBeenCalled();
-  });
-
-  it("removeOldExportFiles logs when stale S3 objects were removed", async () => {
-    configService.get.mockImplementation((key: string) => (key === "AWS_BUCKET" ? "my-bucket" : undefined));
-    fileService.deleteObjectsInPrefixOlderThan.mockResolvedValue(2);
-    const logSpy = jest.spyOn((service as any).logger, "log");
-    await service.removeOldExportFiles();
-    expect(fileService.deleteObjectsInPrefixOlderThan).toHaveBeenCalledWith("my-bucket", "temp/", expect.any(Date));
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 2 stale export object(s)"));
   });
 });

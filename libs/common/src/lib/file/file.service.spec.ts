@@ -4,13 +4,7 @@ import { createMock, PartialFuncReturn } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { faker } from "@faker-js/faker";
-import {
-  CopyObjectCommand,
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  PutObjectCommand
-} from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 jest.mock("@aws-sdk/client-s3", () => {
   const actual = jest.requireActual("@aws-sdk/client-s3");
@@ -26,7 +20,7 @@ const createTestFile = (mimetype = "text/plain", ext = "txt", size = 123) =>
     mimetype,
     size,
     buffer: Buffer.from("test text file")
-  } as Express.Multer.File);
+  }) as Express.Multer.File;
 
 describe("FileService", () => {
   let service: FileService;
@@ -106,42 +100,6 @@ describe("FileService", () => {
       await expectCommand(DeleteObjectCommand, { Bucket: "test-bucket", Key: "test-key" }, () =>
         service.deleteRemoteFile("test-bucket", "test-key")
       );
-    });
-  });
-
-  describe("deleteObjectsInPrefixOlderThan", () => {
-    it("should list and delete objects older than cutoff", async () => {
-      const sendSpy = s3Spy();
-      const old = new Date("2020-01-01T00:00:00.000Z");
-      const cutoff = new Date("2024-01-01T00:00:00.000Z");
-      sendSpy
-        .mockResolvedValueOnce({
-          Contents: [{ Key: "temp/old.csv", LastModified: old }],
-          IsTruncated: false
-        })
-        .mockResolvedValueOnce({ Errors: [] });
-
-      const n = await service.deleteObjectsInPrefixOlderThan("test-bucket", "temp/", cutoff);
-
-      expect(n).toBe(1);
-      expect(sendSpy).toHaveBeenCalledTimes(2);
-      expect(sendSpy).toHaveBeenNthCalledWith(1, expect.any(ListObjectsV2Command));
-      expect(sendSpy).toHaveBeenNthCalledWith(2, expect.any(DeleteObjectsCommand));
-    });
-
-    it("should not delete when LastModified is after cutoff", async () => {
-      const sendSpy = s3Spy();
-      const recent = new Date("2030-01-01T00:00:00.000Z");
-      const cutoff = new Date("2024-01-01T00:00:00.000Z");
-      sendSpy.mockResolvedValueOnce({
-        Contents: [{ Key: "temp/recent.csv", LastModified: recent }],
-        IsTruncated: false
-      });
-
-      const n = await service.deleteObjectsInPrefixOlderThan("test-bucket", "temp/", cutoff);
-
-      expect(n).toBe(0);
-      expect(sendSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

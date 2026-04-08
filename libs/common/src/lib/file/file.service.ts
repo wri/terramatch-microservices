@@ -1,7 +1,9 @@
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client
@@ -74,6 +76,47 @@ export class FileService {
   async deleteRemoteFile(bucket: string, key: string) {
     await this.s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     this.logger.log(`Deleted ${bucket}/${key} from S3`);
+  }
+
+  /**
+   * Lists objects under `prefix` and deletes those older than `cutoff` (by S3 LastModified).
+   * Used for scheduled cleanup of temporary exports stored under a known prefix.
+   */
+  async deleteObjectsInPrefixOlderThan(bucket: string, prefix: string, cutoff: Date): Promise<number> {
+    let deleted = 0;
+    let continuationToken: string | undefined;
+    do {
+      const response = await this.s3.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken
+        })
+      );
+      const contents = response.Contents ?? [];
+      const keysToDelete: string[] = [];
+      for (const obj of contents) {
+        if (obj.Key == null) continue;
+        if (obj.LastModified == null || obj.LastModified >= cutoff) continue;
+        keysToDelete.push(obj.Key);
+      }
+      if (keysToDelete.length > 0) {
+        const delResponse = await this.s3.send(
+          new DeleteObjectsCommand({
+            Bucket: bucket,
+            Delete: { Objects: keysToDelete.map(Key => ({ Key })), Quiet: true }
+          })
+        );
+        const errs = delResponse.Errors ?? [];
+        if (errs.length > 0) {
+          this.logger.error(`S3 DeleteObjects reported errors: ${JSON.stringify(errs)}`);
+          throw new Error(`Failed to delete ${errs.length} S3 object(s) under ${bucket}/${prefix}`);
+        }
+        deleted += keysToDelete.length;
+      }
+      continuationToken = response.IsTruncated === true ? response.NextContinuationToken : undefined;
+    } while (continuationToken != null);
+    return deleted;
   }
 
   /**

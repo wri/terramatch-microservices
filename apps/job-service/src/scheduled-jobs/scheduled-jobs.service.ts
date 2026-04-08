@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Notification,
@@ -17,6 +18,7 @@ import {
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { DateTime } from "luxon";
@@ -25,28 +27,20 @@ import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafun
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import type { Dirent } from "fs";
-import * as fs from "fs/promises";
-import * as path from "path";
 
 const TASK_DIGEST_CHUNK_SIZE = 100;
 const POLYGON_DIGEST_CHUNK_SIZE = 50;
 
-/** MySQL/MariaDB named locks so only one job-service replica runs each cron at a time. */
+/** MySQL/MariaDB named locks so only one job-service replica runs each digest cron at a time. */
 const MYSQL_LOCK_TASK_DIGEST_WEEKLY = "tm_job_svc_task_digest_wk";
 const MYSQL_LOCK_POLYGON_UPDATES_WEEKLY = "tm_job_svc_polygon_update_wk";
-const MYSQL_LOCK_RM_VERIFICATIONS = "tm_job_svc_rm_verifications";
-const MYSQL_LOCK_RM_PASSWORD_RESETS = "tm_job_svc_rm_password_resets";
-const MYSQL_LOCK_RM_EXPORT_FILES = "tm_job_svc_rm_export_files";
-const MYSQL_LOCK_RM_NOTIFICATIONS = "tm_job_svc_rm_notifications";
 
 const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
 const EXPORT_FILE_RETENTION_DAYS = 1;
+/** S3 prefix for transient export files (matches legacy public/temp layout). */
+const EXPORT_TEMP_S3_PREFIX = "temp/";
 const NOTIFICATION_RETENTION_DAYS = 90;
-const PUBLIC_STORAGE_ROOT_ENV = "PUBLIC_STORAGE_ROOT";
-
-let hasWarnedMissingPublicStorageRoot = false;
 
 @Injectable()
 export class ScheduledJobsService {
@@ -54,13 +48,14 @@ export class ScheduledJobsService {
 
   constructor(
     @InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue,
-    @InjectQueue("email") private readonly emailQueue: Queue
+    @InjectQueue("email") private readonly emailQueue: Queue,
+    private readonly configService: ConfigService,
+    private readonly fileService: FileService
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processScheduledJobs() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const transaction = await ScheduledJob.sequelize!.transaction();
+    const transaction = await ScheduledJob.sql.transaction();
     try {
       const jobs = await ScheduledJob.findAll({
         where: { executionTime: { [Op.lte]: new Date() } },
@@ -146,8 +141,7 @@ export class ScheduledJobsService {
    */
   @Cron("0 17 * * 1", { name: "taskDigestWeekly" })
   async enqueueTaskDigestEmails(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
+    await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_TASK_DIGEST_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing task digest email jobs (incomplete tasks)");
         let total = 0;
@@ -170,8 +164,7 @@ export class ScheduledJobsService {
    */
   @Cron("0 0 * * 1", { name: "weeklyPolygonUpdates" })
   async enqueueWeeklyPolygonUpdateEmails(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
+    await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_POLYGON_UPDATES_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing weekly polygon update email jobs");
         const weekAgo = DateTime.now().minus({ days: 7 }).toJSDate();
@@ -187,111 +180,51 @@ export class ScheduledJobsService {
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleVerifications" })
   async removeStaleVerifications(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_RM_VERIFICATIONS, transaction, async () => {
-        const cutoff = DateTime.utc().minus({ hours: VERIFICATION_RETENTION_HOURS }).toJSDate();
-        const removed = await Verification.destroy({
-          where: { createdAt: { [Op.lte]: cutoff } },
-          transaction
-        });
-        if (removed > 0) {
-          this.logger.log(`Removed ${removed} stale verifications (older than ${VERIFICATION_RETENTION_HOURS}h)`);
-        }
-      });
+    const cutoff = DateTime.utc().minus({ hours: VERIFICATION_RETENTION_HOURS }).toJSDate();
+    const removed = await Verification.destroy({
+      where: { createdAt: { [Op.lte]: cutoff } }
     });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale verifications (older than ${VERIFICATION_RETENTION_HOURS}h)`);
+    }
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStalePasswordResets" })
   async removeStalePasswordResets(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_RM_PASSWORD_RESETS, transaction, async () => {
-        const cutoff = DateTime.utc().minus({ days: PASSWORD_RESET_RETENTION_DAYS }).toJSDate();
-        const removed = await PasswordReset.destroy({
-          where: { createdAt: { [Op.lte]: cutoff } },
-          transaction
-        });
-        if (removed > 0) {
-          this.logger.log(`Removed ${removed} stale password resets (older than ${PASSWORD_RESET_RETENTION_DAYS}d)`);
-        }
-      });
+    const cutoff = DateTime.utc().minus({ days: PASSWORD_RESET_RETENTION_DAYS }).toJSDate();
+    const removed = await PasswordReset.destroy({
+      where: { createdAt: { [Op.lte]: cutoff } }
     });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale password resets (older than ${PASSWORD_RESET_RETENTION_DAYS}d)`);
+    }
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: "removeOldExportFiles" })
   async removeOldExportFiles(): Promise<void> {
-    const publicRoot = process.env[PUBLIC_STORAGE_ROOT_ENV];
-    if (publicRoot == null || publicRoot === "") {
-      if (!hasWarnedMissingPublicStorageRoot) {
-        hasWarnedMissingPublicStorageRoot = true;
-        this.logger.warn(
-          `Export file cleanup skipped: set ${PUBLIC_STORAGE_ROOT_ENV} when this service shares the filesystem used for generated exports.`
-        );
-      }
-      return;
+    const bucket = this.configService.get<string>("AWS_BUCKET");
+    if (bucket == null || bucket === "") {
+      throw new InternalServerErrorException("AWS_BUCKET is not set; cannot clean up stale export files in S3");
     }
-
-    const tempDir = path.join(publicRoot, "temp");
-    const minMtimeMs = DateTime.utc().minus({ days: EXPORT_FILE_RETENTION_DAYS }).toMillis();
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_RM_EXPORT_FILES, transaction, async () => {
-        const removed = await this.deleteExportFilesOlderThan(tempDir, minMtimeMs);
-        if (removed > 0) {
-          this.logger.log(`Removed ${removed} stale export file(s) under ${tempDir}`);
-        }
-      });
-    });
+    const cutoff = DateTime.utc().minus({ days: EXPORT_FILE_RETENTION_DAYS }).toJSDate();
+    const removed = await this.fileService.deleteObjectsInPrefixOlderThan(bucket, EXPORT_TEMP_S3_PREFIX, cutoff);
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale export object(s) from s3://${bucket}/${EXPORT_TEMP_S3_PREFIX}`);
+    }
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleNotifications" })
   async removeStaleNotifications(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_RM_NOTIFICATIONS, transaction, async () => {
-        const cutoff = DateTime.utc().minus({ days: NOTIFICATION_RETENTION_DAYS }).toJSDate();
-        const removed = await Notification.destroy({
-          where: {
-            createdAt: { [Op.lte]: cutoff },
-            unread: false
-          },
-          transaction
-        });
-        if (removed > 0) {
-          this.logger.log(`Removed ${removed} stale read notifications (older than ${NOTIFICATION_RETENTION_DAYS}d)`);
-        }
-      });
+    const cutoff = DateTime.utc().minus({ days: NOTIFICATION_RETENTION_DAYS }).toJSDate();
+    const removed = await Notification.destroy({
+      where: {
+        createdAt: { [Op.lte]: cutoff },
+        unread: false
+      }
     });
-  }
-
-  private async deleteExportFilesOlderThan(dir: string, minMtimeMs: number): Promise<number> {
-    let deleted = 0;
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch (e: unknown) {
-      const code = (e as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") {
-        return 0;
-      }
-      throw e;
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale read notifications (older than ${NOTIFICATION_RETENTION_DAYS}d)`);
     }
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        deleted += await this.deleteExportFilesOlderThan(fullPath, minMtimeMs);
-      } else if (entry.isFile()) {
-        const st = await fs.stat(fullPath);
-        if (st.mtimeMs < minMtimeMs) {
-          await fs.unlink(fullPath);
-          deleted++;
-        }
-      }
-    }
-    return deleted;
   }
 
   /**
@@ -303,8 +236,7 @@ export class ScheduledJobsService {
     transaction: Transaction,
     fn: () => Promise<void>
   ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const sequelize = Task.sequelize!;
+    const sequelize = Task.sql;
     const rows = await sequelize.query<{ got: number }>("SELECT GET_LOCK(:name, 0) AS got", {
       replacements: { name: lockName },
       transaction,

@@ -5,9 +5,9 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
-import * as fs from "fs/promises";
-import * as os from "os";
-import * as path from "path";
+import { ConfigService } from "@nestjs/config";
+import { InternalServerErrorException } from "@nestjs/common";
+import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
@@ -33,7 +33,9 @@ describe("ScheduledJobsService", () => {
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) },
-        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) }
+        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
+        { provide: FileService, useValue: createMock<FileService>() }
       ]
     }).compile();
 
@@ -254,19 +256,21 @@ describe("ScheduledJobsService maintenance cleanup", () => {
   let service: ScheduledJobsService;
   let transactionSpy: jest.SpyInstance | undefined;
   let querySpy: jest.SpyInstance | undefined;
-  let prevPublicStorageRoot: string | undefined;
+  let configService: DeepMocked<ConfigService>;
+  let fileService: DeepMocked<FileService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: createMock<Queue>() },
-        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() },
+        { provide: ConfigService, useValue: (configService = createMock<ConfigService>()) },
+        { provide: FileService, useValue: (fileService = createMock<FileService>()) }
       ]
     }).compile();
     service = module.get(ScheduledJobsService);
 
-    prevPublicStorageRoot = process.env.PUBLIC_STORAGE_ROOT;
     const sequelize = Task.sequelize;
     if (sequelize == null) {
       throw new Error("Task.sequelize is not initialized");
@@ -294,11 +298,6 @@ describe("ScheduledJobsService maintenance cleanup", () => {
   afterEach(() => {
     transactionSpy?.mockRestore();
     querySpy?.mockRestore();
-    if (prevPublicStorageRoot === undefined) {
-      delete process.env.PUBLIC_STORAGE_ROOT;
-    } else {
-      process.env.PUBLIC_STORAGE_ROOT = prevPublicStorageRoot;
-    }
   });
 
   it("removeStaleVerifications deletes rows past retention", async () => {
@@ -306,10 +305,10 @@ describe("ScheduledJobsService maintenance cleanup", () => {
     await service.removeStaleVerifications();
     expect(destroySpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { createdAt: { [Op.lte]: expect.any(Date) } },
-        transaction: expect.anything()
+        where: { createdAt: { [Op.lte]: expect.any(Date) } }
       })
     );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
     destroySpy.mockRestore();
   });
 
@@ -321,36 +320,15 @@ describe("ScheduledJobsService maintenance cleanup", () => {
     destroySpy.mockRestore();
   });
 
-  it("removeStaleVerifications skips work when named lock is not acquired", async () => {
-    querySpy?.mockImplementation(async (sql: string | { query: string }) => {
-      const q = typeof sql === "string" ? sql : sql.query;
-      if (q.includes("GET_LOCK")) {
-        return [{ got: 0 }];
-      }
-      if (q.includes("RELEASE_LOCK")) {
-        return [{ rel: 0 }];
-      }
-      return [];
-    });
-    const destroySpy = jest.spyOn(Verification, "destroy");
-    const debugSpy = jest.spyOn((service as any).logger, "debug");
-    await service.removeStaleVerifications();
-    expect(destroySpy).not.toHaveBeenCalled();
-    expect(debugSpy).toHaveBeenCalledWith(
-      expect.stringContaining("could not acquire named lock [tm_job_svc_rm_verifications]")
-    );
-    destroySpy.mockRestore();
-  });
-
   it("removeStalePasswordResets deletes rows past retention", async () => {
     const destroySpy = jest.spyOn(PasswordReset, "destroy").mockResolvedValue(0);
     await service.removeStalePasswordResets();
     expect(destroySpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { createdAt: { [Op.lte]: expect.any(Date) } },
-        transaction: expect.anything()
+        where: { createdAt: { [Op.lte]: expect.any(Date) } }
       })
     );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
     destroySpy.mockRestore();
   });
 
@@ -370,10 +348,10 @@ describe("ScheduledJobsService maintenance cleanup", () => {
         where: {
           createdAt: { [Op.lte]: expect.any(Date) },
           unread: false
-        },
-        transaction: expect.anything()
+        }
       })
     );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
     destroySpy.mockRestore();
   });
 
@@ -385,59 +363,25 @@ describe("ScheduledJobsService maintenance cleanup", () => {
     destroySpy.mockRestore();
   });
 
-  it("removeOldExportFiles warns once when PUBLIC_STORAGE_ROOT is unset", async () => {
-    delete process.env.PUBLIC_STORAGE_ROOT;
-    const warnSpy = jest.spyOn((service as any).logger, "warn");
-    await service.removeOldExportFiles();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("PUBLIC_STORAGE_ROOT"));
+  it("removeOldExportFiles throws when AWS_BUCKET is unset", async () => {
+    configService.get.mockReturnValue(undefined);
+    await expect(service.removeOldExportFiles()).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 
-  it("removeOldExportFiles does not log when temp/ is empty", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tm-export-empty-"));
-    await fs.mkdir(path.join(root, "temp"), { recursive: true });
-    process.env.PUBLIC_STORAGE_ROOT = root;
+  it("removeOldExportFiles does not log when no stale S3 objects", async () => {
+    configService.get.mockImplementation((key: string) => (key === "AWS_BUCKET" ? "my-bucket" : undefined));
+    fileService.deleteObjectsInPrefixOlderThan.mockResolvedValue(0);
     const logSpy = jest.spyOn((service as any).logger, "log");
     await service.removeOldExportFiles();
     expect(logSpy).not.toHaveBeenCalled();
   });
 
-  it("removeStaleVerifications skips when GET_LOCK returns no row", async () => {
-    querySpy?.mockImplementation(async (sql: string | { query: string }) => {
-      const q = typeof sql === "string" ? sql : sql.query;
-      if (q.includes("GET_LOCK")) {
-        return [];
-      }
-      if (q.includes("RELEASE_LOCK")) {
-        return [{ rel: 1 }];
-      }
-      return [];
-    });
-    const destroySpy = jest.spyOn(Verification, "destroy");
-    await service.removeStaleVerifications();
-    expect(destroySpy).not.toHaveBeenCalled();
-    destroySpy.mockRestore();
-  });
-
-  it("removeOldExportFiles removes files under temp/ when root is configured", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tm-export-"));
-    const tempDir = path.join(root, "temp");
-    await fs.mkdir(tempDir, { recursive: true });
-    const staleFile = path.join(tempDir, "stale.bin");
-    await fs.writeFile(staleFile, "x");
-    const oldMs = Date.now() - 86400000 * 3;
-    const oldDate = new Date(oldMs);
-    await fs.utimes(staleFile, oldDate, oldDate);
-
-    process.env.PUBLIC_STORAGE_ROOT = root;
+  it("removeOldExportFiles logs when stale S3 objects were removed", async () => {
+    configService.get.mockImplementation((key: string) => (key === "AWS_BUCKET" ? "my-bucket" : undefined));
+    fileService.deleteObjectsInPrefixOlderThan.mockResolvedValue(2);
     const logSpy = jest.spyOn((service as any).logger, "log");
     await service.removeOldExportFiles();
-
-    await expect(fs.access(staleFile)).rejects.toMatchObject({ code: "ENOENT" });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 1 stale export file(s)"));
-  });
-
-  it("deleteExportFilesOlderThan returns 0 when directory does not exist", async () => {
-    const n = await (service as any).deleteExportFilesOlderThan(path.join(os.tmpdir(), "nonexistent-tm-export-dir"), 0);
-    expect(n).toBe(0);
+    expect(fileService.deleteObjectsInPrefixOlderThan).toHaveBeenCalledWith("my-bucket", "temp/", expect.any(Date));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 2 stale export object(s)"));
   });
 });

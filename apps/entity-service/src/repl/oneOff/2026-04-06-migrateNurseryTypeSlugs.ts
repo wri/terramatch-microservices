@@ -1,18 +1,38 @@
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
-import { FormQuestion, FormQuestionOption, Nursery, UpdateRequest } from "@terramatch-microservices/database/entities";
+import {
+  FormOptionList,
+  FormOptionListOption,
+  FormQuestion,
+  FormQuestionOption,
+  Nursery,
+  UpdateRequest
+} from "@terramatch-microservices/database/entities";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 
-/** TM-3177 follow-up: align DB with new nursery type slugs (v2_nurseries.type + form_question_options). */
+/**
+ * TM-3177 follow-up: align DB with new nursery type slugs (v2_nurseries.type, form_question_options,
+ * and form_option_list_options for GET /forms/v3/optionLabels/nursery-type).
+ */
 const OLD_TO_NEW: Readonly<Record<string, string>> = {
   building: "new-nursery",
   expanding: "nursery-expansion",
   managing: "co-managed-nursery"
 };
 
+const NEW_SLUG_LABEL: Readonly<Record<string, string>> = {
+  "new-nursery": "New Nursery",
+  "nursery-expansion": "Nursery Expansion",
+  "co-managed-nursery": "Co-Managed Nursery"
+};
+
+const NEW_SLUGS = new Set(Object.values(OLD_TO_NEW));
+
 const OLD_TYPE_VALUES = Object.keys(OLD_TO_NEW);
+
+const NURSERY_TYPE_OPTION_LIST_KEY = "nursery-type";
 
 const NURSERY_TYPE_FORM_QUESTION_IDS = [1033, 2975, 3503, 4340] as const;
 
@@ -136,6 +156,36 @@ export const migrateNurseryTypeSlugs = withoutSqlLogs(async (opts: MigrateNurser
   }
 
   const optionWarnings: string[] = [];
+  let listOptionRowsUpdated = 0;
+
+  const optionList = await FormOptionList.findOne({
+    where: { key: NURSERY_TYPE_OPTION_LIST_KEY },
+    attributes: ["id", "key"]
+  });
+  if (optionList == null) {
+    optionWarnings.push(
+      `form_option_lists key=${NURSERY_TYPE_OPTION_LIST_KEY} not found (form builder loads options from form_option_list_options via GET /forms/v3/optionLabels/${NURSERY_TYPE_OPTION_LIST_KEY})`
+    );
+  } else {
+    const listOptions = await FormOptionListOption.findAll({
+      where: { formOptionListId: optionList.id },
+      attributes: ["id", "slug", "label", "labelId"]
+    });
+    for (const row of listOptions) {
+      const slug = row.slug ?? "";
+      const nextSlug = OLD_TO_NEW[slug];
+      if (nextSlug == null) {
+        if (NEW_SLUGS.has(slug)) continue;
+        continue;
+      }
+      const nextLabel = NEW_SLUG_LABEL[nextSlug];
+      if (!dryRun) {
+        await row.update({ slug: nextSlug, label: nextLabel, labelId: null }, { silent: true });
+      }
+      listOptionRowsUpdated += 1;
+    }
+  }
+
   let optionsUpdated = 0;
 
   for (const spec of FORM_QUESTION_OPTION_EXPECTED) {
@@ -151,7 +201,7 @@ export const migrateNurseryTypeSlugs = withoutSqlLogs(async (opts: MigrateNurser
       continue;
     }
     if (!dryRun) {
-      await row.update({ slug: spec.slug, label: spec.label });
+      await row.update({ slug: spec.slug, label: spec.label, labelId: null }, { silent: true });
     }
     optionsUpdated += 1;
   }
@@ -203,6 +253,9 @@ export const migrateNurseryTypeSlugs = withoutSqlLogs(async (opts: MigrateNurser
   }
 
   console.log(`\nmigrateNurseryTypeSlugs ${dryRun ? "[DRY RUN]" : "[EXECUTE]"}`);
+  console.log(
+    `form_option_list_options rows updated (nursery-type list, drives form builder / optionLabels): ${listOptionRowsUpdated}`
+  );
   console.log(`form_question_options rows updated: ${optionsUpdated} (of ${FORM_QUESTION_OPTION_EXPECTED.length})`);
   console.log(`v2_nurseries.type rows updated: ${nurseriesTypeUpdated}`);
   console.log(`v2_nurseries rows with answers JSON updated: ${nurseryAnswersUpdated}`);

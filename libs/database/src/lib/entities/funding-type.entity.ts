@@ -12,6 +12,7 @@ import {
 } from "sequelize-typescript";
 import {
   BIGINT,
+  DECIMAL,
   INTEGER,
   STRING,
   TEXT,
@@ -58,7 +59,7 @@ export class FundingType extends Model<InferAttributes<FundingType>, InferCreati
   @Column(STRING)
   source: string | null;
 
-  @Column(INTEGER.UNSIGNED)
+  @Column(DECIMAL(15, 2))
   amount: number;
 
   @Column(INTEGER.UNSIGNED)

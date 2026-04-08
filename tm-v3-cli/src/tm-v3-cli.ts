@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 import { Command, Option } from "commander";
-import { replCommand } from "./repl/command";
+import { replCommand } from "./commands/repl";
 import { printVerboseHook } from "./utils";
 
 const program = new Command();

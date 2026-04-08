@@ -472,10 +472,6 @@ export class Organisation extends Model<Organisation> {
 
   @AllowNull
   @Column(TEXT)
-  consortium: string | null;
-
-  @AllowNull
-  @Column(TEXT)
   femaleYouthLeadershipExample: string | null;
 
   @AllowNull

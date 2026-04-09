@@ -3,7 +3,6 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
 import { EntitiesService } from "./entities.service";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { ProjectPitchService } from "./project-pitch.service";
 import { FormDataService } from "./form-data.service";
 import { SubmissionExportQueryDto } from "./dto/submission-export-query.dto";
@@ -37,21 +36,6 @@ const SRP_REPORT_CSV_COLUMNS: Record<string, string> = {
   createdAt: "Created At",
   updatedAt: "Updated At",
   submittedAt: "Submitted At"
-};
-
-const PROJECT_PITCH_CSV_COLUMNS: Record<string, string> = {
-  organisationName: "Organisation Name",
-  capacityBuildingNeeds: "Capacity Building Needs",
-  totalTrees: "Total Trees",
-  totalHectares: "Total Hectares",
-  restorationInterventionTypes: "Restoration Intervention Types",
-  projectCountyDistrict: "Project Country/District",
-  projectCountry: "Project Country",
-  projectObjectives: "Project Objectives",
-  projectName: "Project Name",
-  deletedAt: "Deleted At",
-  createdAt: "Created At",
-  updatedAt: "Updated At"
 };
 
 const FORM_SUBMISSION_CSV_COLUMNS: Record<string, string> = {
@@ -138,30 +122,6 @@ export class EntityCsvExportService {
       submittedAt: dto.submittedAt
     }));
     return this.csvExportService.stringify(rows, SRP_REPORT_CSV_COLUMNS);
-  }
-
-  async exportProjectPitchesCsv(query: ProjectPitchQueryDto): Promise<string> {
-    const { data } = await this.projectPitchService.getProjectPitchesForExport(query);
-    if (data.length > 0) {
-      await this.entitiesService.authorize("read", data);
-    }
-    const rows = data.map(pitch => {
-      return {
-        organisationName: pitch.organisation?.name ?? "",
-        capacityBuildingNeeds: pitch.capacityBuildingNeeds,
-        totalTrees: pitch.totalTrees,
-        totalHectares: pitch.totalHectares,
-        restorationInterventionTypes: pitch.restorationInterventionTypes,
-        projectCountyDistrict: pitch.projectCountyDistrict,
-        projectCountry: pitch.projectCountry,
-        projectObjectives: pitch.projectObjectives,
-        projectName: pitch.projectName,
-        deletedAt: pitch.deletedAt,
-        createdAt: pitch.createdAt,
-        updatedAt: pitch.updatedAt
-      };
-    });
-    return this.csvExportService.stringify(rows, PROJECT_PITCH_CSV_COLUMNS);
   }
 
   async exportFormSubmissionsCsv(query: SubmissionExportQueryDto): Promise<string> {

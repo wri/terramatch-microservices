@@ -3,7 +3,6 @@ import { ProjectPitch } from "@terramatch-microservices/database/entities";
 import { Includeable, Op } from "sequelize";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
 
 @Injectable()
 export class ProjectPitchService {
@@ -56,45 +55,5 @@ export class ProjectPitchService {
       paginationTotal: await builder.paginationTotal(),
       pageNumber: query.page?.number ?? 1
     };
-  }
-
-  async getProjectPitchesForExport(query: ProjectPitchQueryDto) {
-    const organisationAssociation: Includeable = {
-      association: "organisation",
-      attributes: ["name"]
-    };
-    const builder = new PaginatedQueryBuilder(ProjectPitch, MAX_CSV_EXPORT_ROWS, [organisationAssociation]);
-
-    if (query.search != null) {
-      builder.where({
-        [Op.or]: [
-          { projectName: { [Op.like]: `%${query.search}%` } },
-          { "$organisation.name$": { [Op.like]: `%${query.search}%` } }
-        ]
-      });
-    }
-    if (query.filter != null) {
-      Object.entries(query.filter).forEach(([key, value]) => {
-        if (!["restorationInterventionTypes", "projectCountry"].includes(key)) {
-          throw new BadRequestException(`Invalid filter key: ${key}`);
-        }
-        builder.where({
-          [key]: { [Op.like]: `%${value}%` }
-        });
-      });
-    }
-    if (query.sort?.field != null) {
-      if (
-        ["id", "organisationId", "projectName", "projectCountry", "restorationInterventionTypes", "createdAt"].includes(
-          query.sort.field
-        )
-      ) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
-      } else {
-        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
-      }
-    }
-
-    return { data: await builder.execute() };
   }
 }

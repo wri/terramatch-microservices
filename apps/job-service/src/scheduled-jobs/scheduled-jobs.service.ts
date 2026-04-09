@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { ScheduledJob, Task } from "@terramatch-microservices/database/entities";
+import {
+  Notification,
+  PasswordReset,
+  ScheduledJob,
+  Task,
+  Verification
+} from "@terramatch-microservices/database/entities";
 import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
 import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/constants/status";
 import { Op, QueryTypes, Transaction } from "sequelize";
@@ -23,9 +29,13 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 const TASK_DIGEST_CHUNK_SIZE = 100;
 const POLYGON_DIGEST_CHUNK_SIZE = 50;
 
-/** MySQL/MariaDB named locks so only one job-service replica runs each weekly cron at a time. */
+/** MySQL/MariaDB named locks so only one job-service replica runs each digest cron at a time. */
 const MYSQL_LOCK_TASK_DIGEST_WEEKLY = "tm_job_svc_task_digest_wk";
 const MYSQL_LOCK_POLYGON_UPDATES_WEEKLY = "tm_job_svc_polygon_update_wk";
+
+const VERIFICATION_RETENTION_HOURS = 48;
+const PASSWORD_RESET_RETENTION_DAYS = 7;
+const NOTIFICATION_RETENTION_DAYS = 90;
 
 @Injectable()
 export class ScheduledJobsService {
@@ -38,8 +48,7 @@ export class ScheduledJobsService {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processScheduledJobs() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const transaction = await ScheduledJob.sequelize!.transaction();
+    const transaction = await ScheduledJob.sql.transaction();
     try {
       const jobs = await ScheduledJob.findAll({
         where: { executionTime: { [Op.lte]: new Date() } },
@@ -125,8 +134,7 @@ export class ScheduledJobsService {
    */
   @Cron("0 17 * * 1", { name: "taskDigestWeekly" })
   async enqueueTaskDigestEmails(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
+    await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_TASK_DIGEST_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing task digest email jobs (incomplete tasks)");
         let total = 0;
@@ -149,8 +157,7 @@ export class ScheduledJobsService {
    */
   @Cron("0 0 * * 1", { name: "weeklyPolygonUpdates" })
   async enqueueWeeklyPolygonUpdateEmails(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await Task.sequelize!.transaction(async transaction => {
+    await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_POLYGON_UPDATES_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing weekly polygon update email jobs");
         const weekAgo = DateTime.now().minus({ days: 7 }).toJSDate();
@@ -164,6 +171,42 @@ export class ScheduledJobsService {
     });
   }
 
+  @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleVerifications" })
+  async removeStaleVerifications(): Promise<void> {
+    const cutoff = DateTime.utc().minus({ hours: VERIFICATION_RETENTION_HOURS }).toJSDate();
+    const removed = await Verification.destroy({
+      where: { createdAt: { [Op.lte]: cutoff } }
+    });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale verifications (older than ${VERIFICATION_RETENTION_HOURS}h)`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStalePasswordResets" })
+  async removeStalePasswordResets(): Promise<void> {
+    const cutoff = DateTime.utc().minus({ days: PASSWORD_RESET_RETENTION_DAYS }).toJSDate();
+    const removed = await PasswordReset.destroy({
+      where: { createdAt: { [Op.lte]: cutoff } }
+    });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale password resets (older than ${PASSWORD_RESET_RETENTION_DAYS}d)`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleNotifications" })
+  async removeStaleNotifications(): Promise<void> {
+    const cutoff = DateTime.utc().minus({ days: NOTIFICATION_RETENTION_DAYS }).toJSDate();
+    const removed = await Notification.destroy({
+      where: {
+        createdAt: { [Op.lte]: cutoff },
+        unread: false
+      }
+    });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} stale read notifications (older than ${NOTIFICATION_RETENTION_DAYS}d)`);
+    }
+  }
+
   /**
    * Runs `fn` while holding a MySQL/MariaDB named lock on the current transaction connection.
    * If the lock is not acquired (another node holds it), `fn` is skipped.
@@ -173,8 +216,7 @@ export class ScheduledJobsService {
     transaction: Transaction,
     fn: () => Promise<void>
   ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const sequelize = Task.sequelize!;
+    const sequelize = Task.sql;
     const rows = await sequelize.query<{ got: number }>("SELECT GET_LOCK(:name, 0) AS got", {
       replacements: { name: lockName },
       transaction,

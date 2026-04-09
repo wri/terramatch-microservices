@@ -338,8 +338,8 @@ export class Organisation extends Model<Organisation> {
   accountNumber2: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  loanStatusAmount: string | null;
+  @Column(DECIMAL(15, 2))
+  loanStatusAmount: number | null;
 
   @AllowNull
   @JsonColumn()

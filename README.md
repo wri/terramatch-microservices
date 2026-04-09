@@ -24,6 +24,16 @@ Repository for the Microservices API backend of the TerraMatch service
     ```
     $ docker compose exec mariadb mysql -u wri -pwri wri_restoration_marketplace_api < 2026-04-02-staging.sql
     ```
+- To set up MinIO (local S3 proxy) using creds from the example env (`.env.local.sample`):
+  - This sets up correct local bucket in the correct region for the node services to access
+
+```
+$ docker compose exec minio bash
+... once in the container
+$ mc alias set local http://localhost:9000 AKIABUVWH1HUD7YQZQAR PVMlDMep3/jLSz9GxPV3mTvH4JZynkf2BFeTu+i8
+$ mc mb local/wri
+```
+
 - To build and start a single service:
   - `nx serve user-service`
   - The service will be available at `http://localhost:3306`

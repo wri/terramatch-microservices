@@ -273,7 +273,8 @@ export class FormDataService {
     answersModel: T,
     form: Form,
     answers: Dictionary<unknown>,
-    associatedModels: FormModels = {}
+    associatedModels: FormModels = {},
+    opts: { preserveReportStatus?: boolean } = {}
   ) {
     answersModel.answers = {};
     const type = formModelType(answersModel as unknown as FormModel);
@@ -326,7 +327,7 @@ export class FormDataService {
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
       // we want the transition to go ahead and take place.
-      if (answersModel.status === DUE || !isAdmin) {
+      if (!opts.preserveReportStatus && (answersModel.status === DUE || !isAdmin)) {
         answersModel.status = STARTED;
       }
 

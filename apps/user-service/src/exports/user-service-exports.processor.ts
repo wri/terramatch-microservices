@@ -7,14 +7,15 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Job, Queue } from "bullmq";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { InternalServerErrorException } from "@nestjs/common";
-import { DelayedJob, Organisation } from "@terramatch-microservices/database/entities";
+import { DelayedJob, Media, Organisation } from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
-import { Dictionary } from "lodash";
+import { Dictionary, startCase } from "lodash";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 type UserServiceExportJobData = {
   delayedJobId: number;
@@ -58,7 +59,8 @@ const ORGANISATION_CSV_COLUMNS: Dictionary<string> = {
   treeCareApproach: "Tree Care Approach",
   relevantExperienceYears: "Relevant Experience Years",
   lastUpdatedAt: "Last Updated At",
-  createdAt: "Created At"
+  createdAt: "Created At",
+  ...Object.keys(Organisation.MEDIA).reduce((acc, key) => ({ ...acc, [key]: startCase(key) }), {})
 };
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
@@ -80,7 +82,7 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  constructor(private readonly csvExportService: CsvExportService) {
+  constructor(private readonly csvExportService: CsvExportService, private readonly mediaService: MediaService) {
     super();
   }
 
@@ -94,8 +96,18 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     try {
       const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
       for await (const page of batchFindAll(builder)) {
+        const pageMedia = await Media.for(page).findAll();
         for (const org of page) {
-          addRow(org);
+          const additional = pageMedia
+            .filter(media => media.modelId === org.id)
+            .reduce(
+              (acc, media) => ({
+                ...acc,
+                [media.collectionName]: this.mediaService.getUrl(media)
+              }),
+              {}
+            );
+          addRow(org, additional);
         }
       }
     } catch (error) {

@@ -5,6 +5,7 @@ import { FileService } from "../file/file.service";
 import { ConfigService } from "@nestjs/config";
 import { FileDownloadDto } from "../dto/file-download.dto";
 import { Dictionary, pick } from "lodash";
+import { Model } from "sequelize";
 
 function serializeCell(value: unknown): string | number {
   if (value == null) return "";
@@ -43,7 +44,9 @@ export class CsvExportService {
 
     const keys = Object.keys(columns);
     return {
-      addRow: row => stringifier.write(pick(row, keys)),
+      addRow: (model: Model, additional?: Dictionary<unknown>) => {
+        stringifier.write({ ...pick(model, keys), ...additional });
+      },
       close: () => stringifier.end()
     };
   }

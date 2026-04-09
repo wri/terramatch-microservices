@@ -29,8 +29,6 @@ describe("OrganisationsService", () => {
   let service: OrganisationsService;
   let policyService: DeepMocked<PolicyService>;
   let mediaService: DeepMocked<MediaService>;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -38,7 +36,7 @@ describe("OrganisationsService", () => {
         OrganisationsService,
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         { provide: getQueueToken("email"), useValue: {} }
       ]
     }).compile();

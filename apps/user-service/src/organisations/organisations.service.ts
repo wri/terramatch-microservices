@@ -1,16 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
-  Organisation,
-  OrganisationUser,
-  User,
   FinancialIndicator,
   FinancialReport,
-  Media,
   FundingType,
   Leadership,
+  Media,
+  Organisation,
+  OrganisationUser,
   OwnershipStake,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
@@ -29,55 +28,10 @@ import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/fi
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
-import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
-
-const ORGANISATION_CSV_COLUMNS: Record<string, string> = {
-  status: "Status",
-  type: "Type",
-  private: "Private",
-  name: "Name",
-  phone: "Phone",
-  hqStreet1: "HQ Street 1",
-  hqStreet2: "HQ Street 2",
-  hqCity: "HQ City",
-  hqState: "HQ State",
-  hqZipcode: "HQ Zipcode",
-  hqCountry: "HQ Country",
-  countries: "Countries",
-  languages: "Languages",
-  foundingDate: "Founding Date",
-  description: "Description",
-  treeSpeciesGrown: "Tree Species Grown",
-  webUrl: "Web URL",
-  facebookUrl: "Facebook URL",
-  instagramUrl: "Instagram URL",
-  linkedinUrl: "Linkedin URL",
-  twitterUrl: "Twitter URL",
-  finStartMonth: "Fin Start Month",
-  finBudget3year: "Fin Budget 3year",
-  finBudget2year: "Fin Budget 2year",
-  finBudget1year: "Fin Budget 1year",
-  finBudgetCurrentYear: "Fin Budget Current Year",
-  haRestoredTotal: "Ha Restored Total",
-  haRestored3year: "Ha Restored 3year",
-  treesGrownTotal: "Trees Grown Total",
-  treesGrown3year: "Trees Grown 3year",
-  treeCareApproach: "Tree Care Approach",
-  relevantExperienceYears: "Relevant Experience Years",
-  lastUpdatedAt: "Last Updated At",
-  createdAt: "Created At"
-};
 
 @Injectable()
 export class OrganisationsService {
-  private readonly logger = new TMLogger(OrganisationsService.name);
-
-  constructor(
-    private readonly policyService: PolicyService,
-    private readonly mediaService: MediaService,
-    private readonly csvExportService: CsvExportService
-  ) {}
+  constructor(private readonly policyService: PolicyService, private readonly mediaService: MediaService) {}
 
   async findMany(query: OrganisationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Organisation, query.page);
@@ -86,51 +40,6 @@ export class OrganisationsService {
       organisations: await builder.execute(),
       paginationTotal: await builder.paginationTotal()
     };
-  }
-
-  async findManyForExport(query: OrganisationIndexQueryDto) {
-    const builder = new PaginatedQueryBuilder(Organisation, MAX_CSV_EXPORT_ROWS);
-    await this.applyOrganisationIndexClauses(builder, query);
-    return { organisations: await builder.execute() };
-  }
-
-  buildOrganisationsCsv(organisations: Organisation[]): string {
-    const rows = organisations.map(org => {
-      return {
-        uuid: org.uuid,
-        name: org.name,
-        status: org.status,
-        type: org.type,
-        private: org.private,
-        phone: org.phone,
-        hqStreet1: org.hqStreet1,
-        hqStreet2: org.hqStreet2,
-        hqCity: org.hqCity,
-        hqState: org.hqState,
-        hqZipcode: org.hqZipcode,
-        hqCountry: org.hqCountry,
-        countries: org.countries,
-        languages: org.languages,
-        foundingDate: org.foundingDate,
-        description: org.description,
-        treeSpeciesGrown: org.treesGrownTotal,
-        webUrl: org.webUrl,
-        facebookUrl: org.facebookUrl,
-        instagramUrl: org.instagramUrl,
-        linkedinUrl: org.linkedinUrl,
-        twitterUrl: org.twitterUrl,
-        finStartMonth: org.finStartMonth,
-        haRestoredTotal: org.haRestoredTotal,
-        haRestored3Year: org.haRestored3Year,
-        treesGrownTotal: org.treesGrownTotal,
-        treesGrown3Year: org.treesGrown3Year,
-        treeCareApproach: org.treeCareApproach,
-        relevantExperienceYears: org.relevantExperienceYears,
-        lastUpdatedAt: org.updatedAt,
-        createdAt: org.createdAt
-      };
-    });
-    return this.csvExportService.stringify(rows, ORGANISATION_CSV_COLUMNS);
   }
 
   private async applyOrganisationIndexClauses(

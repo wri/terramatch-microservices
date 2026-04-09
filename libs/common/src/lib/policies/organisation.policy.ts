@@ -8,15 +8,11 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     this.builder.can("create", Organisation);
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["read", "update", "delete"], Organisation);
+      this.builder.can(["read", "update", "delete", "approveReject", "export"], Organisation);
     }
 
     if (this.permissions.includes("users-manage")) {
       this.builder.can(["uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
-    }
-
-    if ((await this.isVerifiedAdmin()) || this.frameworks.length > 0) {
-      this.builder.can(["approveReject", "export"], Organisation);
     }
 
     const userForApproveReject = await this.getUser();
@@ -124,23 +120,5 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
 
     const orgIds = user.projects.map(({ organisationId }) => organisationId).filter((id): id is number => id != null);
     return (this._projectOrgIds = [...new Set(orgIds)]);
-  }
-
-  protected _isVerifiedAdmin?: boolean;
-  protected async isVerifiedAdmin(): Promise<boolean> {
-    if (this._isVerifiedAdmin != null) return this._isVerifiedAdmin;
-
-    const user = await User.findOne({
-      where: { id: this.userId },
-      attributes: ["emailAddressVerifiedAt"],
-      include: [{ association: "roles", attributes: ["name"] }]
-    });
-
-    if (user == null) return (this._isVerifiedAdmin = false);
-
-    const hasAdminRole = user.roles?.some(({ name }) => name.startsWith("admin-")) ?? false;
-    const isEmailVerified = user.emailAddressVerifiedAt != null;
-
-    return (this._isVerifiedAdmin = hasAdminRole && isEmailVerified);
   }
 }

@@ -3,7 +3,6 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
 import { EntitiesService } from "./entities.service";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { ProjectPitchService } from "./project-pitch.service";
 import { FormDataService } from "./form-data.service";
 import { SubmissionExportQueryDto } from "./dto/submission-export-query.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
@@ -63,7 +62,6 @@ export class EntityCsvExportService {
   constructor(
     private readonly entitiesService: EntitiesService,
     private readonly csvExportService: CsvExportService,
-    private readonly projectPitchService: ProjectPitchService,
     private readonly formDataService: FormDataService
   ) {}
 

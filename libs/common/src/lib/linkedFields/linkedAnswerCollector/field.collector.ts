@@ -179,7 +179,10 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           // make sure it hasn't been used for a typical demographics entry, as in that case we
           // don't want to handle trying to balance with this single integer value.
           const entries = await TrackingEntry.tracking(tracking.id).findAll();
-          if (entries.length !== 2 || entries.find(({ subtype }) => subtype !== "unknown") != null) {
+          if (
+            entries.length !== virtual.entryTypes.length ||
+            entries.find(({ subtype }) => subtype !== "unknown") != null
+          ) {
             throw new BadRequestException(
               `Illegal attempt to update complicated demographics through aggregate accessor. [${question.linkedFieldKey}]`
             );

@@ -534,7 +534,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "employees",
-        collection: "all",
+        collection: "aggregate",
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate employees",
@@ -545,7 +545,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "associates",
-        collection: "all",
+        collection: "aggregate",
         entryTypes: ["gender", "age", "race", "traditional-community"]
       },
       label: "Aggregate associates",

@@ -61,7 +61,9 @@ export class DelayedJob extends Model<InferAttributes<DelayedJob>, InferCreation
   @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
 
-  @Column({ type: BOOLEAN, defaultValue: false })
+  // Defaults to true because by default we don't want delayed jobs to show up on the bulk delayed
+  // jobs popup in the FE. That is an opt-in behavior.
+  @Column({ type: BOOLEAN, defaultValue: true })
   isAcknowledged: CreationOptional<boolean>;
 
   @AllowNull

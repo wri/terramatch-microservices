@@ -105,7 +105,6 @@ export class OrganisationsController {
   @JsonApiResponse([FileDownloadDto, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Organisation export not allowed." })
   async exportCsv() {
-    console.log("EXPORT CSV");
     await this.policyService.authorize("export", Organisation);
 
     const date = DateTime.now().toISODate();

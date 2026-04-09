@@ -22,6 +22,7 @@ import { SiteReport } from "./site-report.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { SrpReport } from "./srp-report.entity";
 import { chainScope } from "../util/chain-scope";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
@@ -37,6 +38,13 @@ export class Task extends Model<Task> {
 
   static dueAtDesc() {
     return chainScope(this, "dueAtDesc") as typeof Task;
+  }
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("Task model is missing sequelize connection");
+    }
+    return this.sequelize;
   }
 
   @PrimaryKey

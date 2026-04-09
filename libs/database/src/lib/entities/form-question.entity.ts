@@ -19,6 +19,7 @@ import { InputType } from "../constants/linked-fields";
 import { Dictionary } from "lodash";
 import { chainScope } from "../util/chain-scope";
 import { Literal } from "sequelize/types/utils";
+import { removeQuestionDependencies } from "../hooks/remove-question-dependencies";
 
 @Scopes(() => ({
   form: (formUuid: string | Literal) => ({ where: { formSectionId: { [Op.in]: FormSection.forForm(formUuid) } } })
@@ -28,9 +29,11 @@ import { Literal } from "sequelize/types/utils";
   underscored: true,
   paranoid: true,
   hooks: {
-    async beforeDestroy(question: FormQuestion) {
-      // Child questions cannot themselves have children, so avoid N+1 query by forcing hooks off
-      await FormQuestion.destroy({ where: { parentId: question.id }, hooks: false });
+    async afterDestroy(question: FormQuestion) {
+      const childIds = (await FormQuestion.findAll({ where: { parentId: question.id }, attributes: ["id"] })).map(
+        ({ id }) => id
+      );
+      await removeQuestionDependencies([question.id, ...childIds]);
     }
   }
 })

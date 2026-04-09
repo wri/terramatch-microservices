@@ -27,6 +27,21 @@ describe("UserPolicy", () => {
     await expectCan(service, "read", new User());
   });
 
+  it("allows reading all users as admin", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "readAll", User);
+  });
+
+  it("allows creating users as admin", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "create", User);
+  });
+
+  it("disallows creating users as non-admin", async () => {
+    mockPermissions();
+    await expectCannot(service, "create", User);
+  });
+
   it("disallows reading other users as non-admin", async () => {
     mockPermissions();
     await expectCannot(service, "read", new User());
@@ -77,5 +92,83 @@ describe("UserPolicy", () => {
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
 
     await expectCan(service, "verify", new User());
+  });
+
+  it("allows reading all users for verified admin without users-manage", async () => {
+    mockPermissions();
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "readAll", User);
+  });
+
+  it("allows updating any user for verified admin without users-manage", async () => {
+    mockPermissions();
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "update", new User());
+  });
+
+  it("disallows verify any user when admin role is unverified", async () => {
+    mockPermissions();
+
+    const unverifiedAdminUser = new User();
+    (unverifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = null;
+    (unverifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(unverifiedAdminUser);
+
+    await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
+  });
+
+  it("disallows verify any user when verified user has no admin role", async () => {
+    mockPermissions();
+
+    const verifiedNonAdminUser = new User();
+    (verifiedNonAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedNonAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "project-manager" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedNonAdminUser);
+
+    await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
+  });
+
+  it("disallows verify any user when authenticated user is not found", async () => {
+    mockPermissions();
+    jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+    await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
+  });
+
+  it("allows deleting any user as users-manage", async () => {
+    mockPermissions("users-manage");
+    await expectCan(service, "delete", new User());
+  });
+
+  it("disallows deleting users as non-admin", async () => {
+    mockPermissions();
+    await expectCannot(service, "delete", new User());
+    await expectCannot(service, "delete", await UserFactory.build({ id: 123 }));
+  });
+
+  it("allows deleting any user for verified admin without users-manage", async () => {
+    mockPermissions();
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "delete", new User());
   });
 });

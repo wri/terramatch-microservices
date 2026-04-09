@@ -48,6 +48,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -83,7 +85,13 @@ type SiteReportMedia =
   tableName: "v2_site_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (report: SiteReport) => {
+      await removeMedia(report);
+      await removeActions(report);
+    }
+  }
 })
 export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees"];

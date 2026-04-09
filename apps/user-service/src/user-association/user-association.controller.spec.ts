@@ -155,6 +155,56 @@ describe("UserAssociationController", () => {
     });
   });
 
+  describe("inviteOrganisationUser", () => {
+    it("should authorize and invite an organisation user", async () => {
+      const organisation = await OrganisationFactory.create();
+      const invite = {
+        uuid: "invite-uuid",
+        emailAddress: "invitee@example.com",
+        callbackUrl: "https://example.com/invite",
+        organisationUuid: organisation.uuid
+      };
+      (stubProcessor.getEntity as jest.Mock).mockResolvedValue(organisation);
+      userAssociationService.inviteOrganisationUser.mockResolvedValue(invite as never);
+
+      const result = serialize(
+        await controller.inviteOrganisationUser(
+          { uuid: organisation.uuid as string, model: "organisations" },
+          {
+            emailAddress: "invitee@example.com",
+            callbackUrl: "https://example.com/invite"
+          }
+        )
+      );
+
+      expect(userAssociationService.createProcessor).toHaveBeenCalledWith("organisations", organisation.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", organisation);
+      expect(userAssociationService.inviteOrganisationUser).toHaveBeenCalledWith(
+        organisation,
+        "invitee@example.com",
+        "https://example.com/invite"
+      );
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe("invite-uuid");
+    });
+
+    it("should propagate UnauthorizedException when policy denies", async () => {
+      const organisation = await OrganisationFactory.create();
+      (stubProcessor.getEntity as jest.Mock).mockResolvedValue(organisation);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(
+        controller.inviteOrganisationUser(
+          { uuid: organisation.uuid as string, model: "organisations" },
+          {
+            emailAddress: "invitee@example.com",
+            callbackUrl: "https://example.com/invite"
+          }
+        )
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
   describe("deleteUserAssociations", () => {
     it("should call handleDelete and return deleted response", async () => {
       const project = await ProjectFactory.create();

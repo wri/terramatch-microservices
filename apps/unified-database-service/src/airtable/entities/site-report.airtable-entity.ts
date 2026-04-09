@@ -29,7 +29,17 @@ const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [
   "siteCommunityPartnersIncomeIncreaseDescription",
   "nothingToReport",
   "plantingStatus",
-  "anrPractices"
+  "anrPractices",
+  {
+    airtableColumn: "workdaysPaidSelfReported",
+    dbColumn: "workdaysPaid",
+    valueMap: async ({ workdaysPaid }) => workdaysPaid
+  },
+  {
+    airtableColumn: "workdaysVolunteerSelfReported",
+    dbColumn: "workdaysVolunteer",
+    valueMap: async ({ workdaysVolunteer }) => workdaysVolunteer
+  }
 ];
 
 export class SiteReportEntity extends AirtableEntity<SiteReport, SiteReportAssociations> {

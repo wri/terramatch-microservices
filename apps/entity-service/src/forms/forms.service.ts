@@ -56,7 +56,7 @@ import { LinkedFile } from "@terramatch-microservices/database/constants/linked-
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
 
-const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type"];
+const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
 const EXTRA_FIELDS: string[] = ["id", "optionsList"];
 
@@ -395,8 +395,10 @@ export class FormsService {
         ? null
         : await Stage.findOne({ where: { uuid: attributes.stageId }, attributes: ["fundingProgrammeId"] });
     form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
-    // Newly created forms are always unpublished
-    form.published = form.id == null ? false : attributes.published;
+    // New forms are created unpublished; published is not managed via the API (legacy DB column).
+    if (form.id == null) {
+      form.published = false;
+    }
     await form.save();
 
     const currentSections = await FormSection.findAll({ where: { formId: form.uuid } });

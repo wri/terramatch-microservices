@@ -351,11 +351,6 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       multiChoice: true,
       optionListKey: "gadm-level-2"
     },
-    "pro-land-tenure-approach": {
-      property: "landTenureApproach",
-      label: "Land tenure approach",
-      inputType: "long-text"
-    },
     "pro-seedlings-procurement": {
       property: "seedlingsProcurement",
       label: "Seedlings procurement",
@@ -404,6 +399,18 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       property: "nurserySeedlingsGoal",
       label: "Nursery seedlings goal",
       inputType: "number"
+    },
+    "pro-bioeconomy-product-list": {
+      property: "bioeconomyProductList",
+      label: "Bioeconomy product list",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "pro-bioeconomy-product-description": {
+      property: "bioeconomyProductDescription",
+      label: "Bioeconomy product description",
+      inputType: "long-text"
     }
   },
   fileCollections: {

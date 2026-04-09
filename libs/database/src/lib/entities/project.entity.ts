@@ -41,6 +41,8 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
 import { InternalServerErrorException } from "@nestjs/common";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
+import { removeActions } from "../hooks/remove-actions";
 
 type ProjectMedia =
   | "media"
@@ -58,7 +60,20 @@ type ProjectMedia =
   tableName: "v2_projects",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+    afterDestroy: async (project: Project) => {
+      await removeMedia(project);
+      await removeActions(project);
+
+      // Load these before deleting them individually so that their after destroy hooks fire. This is N+1 behavior,
+      // but this happens very rarely and this is cleaner than duplicating all those hooks here.
+      const reports = await ProjectReport.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+      const sites = await Site.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+      const nurseries = await Nursery.findAll({ where: { projectId: project.id }, attributes: ["id"] });
+      await Promise.all([...reports, ...sites, ...nurseries].map(entity => entity.destroy()));
+    }
+  }
 })
 export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees"];
@@ -446,10 +461,6 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   level2Project: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  landTenureApproach: string | null;
-
-  @AllowNull
   @Column(STRING(255))
   seedlingsProcurement: string | null;
 
@@ -483,6 +494,14 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(INTEGER)
   nurserySeedlingsGoal: number | null;
+
+  @AllowNull
+  @JsonColumn()
+  bioeconomyProductList: string[] | null;
+
+  @AllowNull
+  @Column(TEXT)
+  bioeconomyProductDescription: string | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

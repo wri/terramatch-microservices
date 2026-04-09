@@ -10,6 +10,7 @@ import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { UsersService } from "./users.service";
 import { User } from "@terramatch-microservices/database/entities";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
@@ -20,17 +21,24 @@ describe("UsersController", () => {
   let controller: UsersController;
   let policyService: DeepMocked<PolicyService>;
   let userCreationService: DeepMocked<UserCreationService>;
-
+  let usersService: DeepMocked<UsersService>;
+  let realUsersService: UsersService;
   beforeEach(async () => {
+    realUsersService = new UsersService();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) }
+        { provide: UserCreationService, useValue: (userCreationService = createMock<UserCreationService>()) },
+        { provide: UsersService, useValue: (usersService = createMock<UsersService>()) }
       ]
     }).compile();
 
     controller = module.get<UsersController>(UsersController);
+    usersService.update.mockImplementation((user, attrs) => realUsersService.update(user, attrs));
+    usersService.delete.mockImplementation(async u => {
+      await realUsersService.delete(u);
+    });
   });
 
   afterEach(() => {
@@ -137,6 +145,64 @@ describe("UsersController", () => {
     });
   });
 
+  describe("delete", () => {
+    it("should throw not found if the user is not found", async () => {
+      await expect(controller.delete({ uuid: "00000000-0000-4000-8000-000000000000" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should throw unauthorized if policy does not authorize", async () => {
+      const { uuid } = await UserFactory.create();
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.delete({ uuid: uuid! })).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should soft-delete the user and return a JSON:API deleted document", async () => {
+      const user = await UserFactory.create();
+      policyService.authorize.mockResolvedValue(undefined);
+      usersService.delete.mockImplementation(async u => {
+        await u.destroy();
+      });
+
+      const result = serialize(await controller.delete({ uuid: user.uuid! }));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: user.id }));
+      expect(usersService.delete).toHaveBeenCalledWith(expect.objectContaining({ id: user.id }));
+      expect(result.meta.resourceType).toBe("users");
+      expect(result.meta.resourceIds).toEqual([user.uuid]);
+
+      const reloaded = await User.findOne({ where: { id: user.id }, paranoid: false });
+      expect(reloaded?.deletedAt).not.toBeNull();
+    });
+  });
+
+  describe("userIndex", () => {
+    it("authorizes and enriches the document when users are returned", async () => {
+      const user = await UserFactory.create();
+      const query = { page: { number: 2 } };
+      usersService.findMany.mockResolvedValue({ users: [user], paginationTotal: 1 });
+      usersService.addUsersToDocument.mockImplementation(async document => document);
+
+      await controller.userIndex(query);
+
+      expect(usersService.findMany).toHaveBeenCalledWith(query);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", [user]);
+      expect(usersService.addUsersToDocument).toHaveBeenCalledWith(expect.anything(), [user]);
+    });
+
+    it("does not authorize when no users are returned", async () => {
+      usersService.findMany.mockResolvedValue({ users: [], paginationTotal: 0 });
+      usersService.addUsersToDocument.mockImplementation(async document => document);
+
+      await controller.userIndex({});
+
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(usersService.addUsersToDocument).toHaveBeenCalledWith(expect.anything(), []);
+    });
+  });
+
   describe("update", () => {
     const makeValidBody = (uuid: string, locale?: ValidLocale) => ({
       data: {
@@ -176,6 +242,30 @@ describe("UsersController", () => {
   });
 
   describe("create", () => {
+    it("authorizes creation when request is authenticated", async () => {
+      const user = await UserFactory.create();
+      const attributes = new UserCreateAttributes();
+      mockUserId(1);
+      userCreationService.createNewUser.mockResolvedValue(user);
+
+      await controller.create(createRequest(attributes));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("create", User);
+      expect(userCreationService.createNewUser).toHaveBeenCalledWith(true, attributes);
+    });
+
+    it("does not authorize creation when request is unauthenticated", async () => {
+      const user = await UserFactory.create();
+      const attributes = new UserCreateAttributes();
+      mockUserId();
+      userCreationService.createNewUser.mockResolvedValue(user);
+
+      await controller.create(createRequest(attributes));
+
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(userCreationService.createNewUser).toHaveBeenCalledWith(false, attributes);
+    });
+
     it("should create a new user", async () => {
       const user = await UserFactory.create();
       const attributes = new UserCreateAttributes();

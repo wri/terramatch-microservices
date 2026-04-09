@@ -2,10 +2,36 @@ import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, 
 import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
+import { removeMedia } from "../hooks/remove-media";
+import { isEmpty, kebabCase } from "lodash";
 
 type FormQuestionOptionMedia = "image";
 
-@Table({ tableName: "form_question_options", underscored: true, paranoid: true })
+const generateSlug = async (label: string, formQuestionId: number) => {
+  for (let ii = 0; ; ii++) {
+    const slug = `${kebabCase(label)}${ii === 0 ? "" : `_${ii}`}`;
+    if ((await FormQuestionOption.count({ where: { formQuestionId, slug } })) === 0) return slug;
+  }
+};
+
+const generateSlugHook = async (option: FormQuestionOption) => {
+  if (isEmpty(option.slug) && !isEmpty(option.label)) {
+    option.slug = await generateSlug(option.label as string, option.formQuestionId);
+  }
+};
+
+@Table({
+  tableName: "form_question_options",
+  underscored: true,
+  paranoid: true,
+
+  hooks: {
+    beforeCreate: generateSlugHook,
+    beforeUpdate: generateSlugHook,
+    beforeSave: generateSlugHook,
+    afterDestroy: removeMedia
+  }
+})
 export class FormQuestionOption extends Model<FormQuestionOption> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Forms\\FormQuestionOption";
 

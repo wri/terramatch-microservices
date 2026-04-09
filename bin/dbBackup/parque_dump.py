@@ -29,7 +29,7 @@ TERRAMATCH_QUERY = """\
 SELECT vp.uuid as project_id, vp.name as project_name, vp.country,
        vp.framework_key, vp.short_name, vp.cohort,
        vs.name as site_name, vs.uuid as site_id,
-       sp.poly_name, sp.poly_id, sp.plantstart, sp.practice,
+       sp.poly_name, sp.uuid as poly_uuid, sp.plantstart, sp.practice,
        sp.target_sys, sp.distr, sp.calc_area,
        sp.status, sp.version_name, sp.is_active,
        sp.source, sp.deleted_at,

@@ -28,7 +28,19 @@ import { chainScope } from "../util/chain-scope";
   tableName: "form_submissions",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: {
+    afterCreate: statusUpdateSequelizeHook,
+
+    afterDestroy: async (submission: FormSubmission) => {
+      const { applicationId } = submission;
+      if (applicationId != null) {
+        const count = await FormSubmission.count({ where: { applicationId } });
+        if (count === 0) {
+          await Application.destroy({ where: { id: applicationId } });
+        }
+      }
+    }
+  }
 })
 @Scopes(() => ({
   application: (applicationId: number) => ({ where: { applicationId } })

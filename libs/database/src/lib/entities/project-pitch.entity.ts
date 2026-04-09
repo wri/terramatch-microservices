@@ -31,6 +31,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { FormSubmission } from "./form-submission.entity";
 import { Subquery } from "../util/subquery.builder";
 import { chainScope } from "../util/chain-scope";
+import { removeMedia } from "../hooks/remove-media";
 
 type ProjectPitchMedia =
   | "cover"
@@ -45,7 +46,7 @@ type ProjectPitchMedia =
     where: { uuid: { [Op.in]: ProjectPitch.uuidForApplication(applicationId) } }
   })
 }))
-@Table({ tableName: "project_pitches", underscored: true, paranoid: true })
+@Table({ tableName: "project_pitches", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCreationAttributes<ProjectPitch>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\ProjectPitch";
 

@@ -60,7 +60,17 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   "publicNarrative",
   "totalUniqueRestorationPartners",
   "businessMilestones",
-  "plantingStatus"
+  "plantingStatus",
+  {
+    airtableColumn: "workdaysPaidSelfReported",
+    dbColumn: "workdaysPaid",
+    valueMap: async ({ workdaysPaid }) => workdaysPaid
+  },
+  {
+    airtableColumn: "workdaysVolunteerSelfReported",
+    dbColumn: "workdaysVolunteer",
+    valueMap: async ({ workdaysVolunteer }) => workdaysVolunteer
+  }
 ];
 
 export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectReportAssociations> {

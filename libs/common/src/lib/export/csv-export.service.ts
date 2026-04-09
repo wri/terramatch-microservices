@@ -6,10 +6,11 @@ import { ConfigService } from "@nestjs/config";
 import { FileDownloadDto } from "../dto/file-download.dto";
 import { Dictionary, pick } from "lodash";
 import { Model } from "sequelize";
+import { DateTime } from "luxon";
 
 function serializeCell(value: unknown): string | number {
   if (value == null) return "";
-  if (value instanceof Date) return value.toISOString().split("T")[0] ?? "";
+  if (value instanceof Date) return DateTime.fromJSDate(value).toISODate() ?? "";
   if (Array.isArray(value)) {
     return value.map(v => (v == null ? "" : serializeCell(v))).join("; ");
   }
@@ -45,7 +46,11 @@ export class CsvExportService {
     const keys = Object.keys(columns);
     return {
       addRow: (model: Model, additional?: Dictionary<unknown>) => {
-        stringifier.write({ ...pick(model, keys), ...additional });
+        const row = Object.entries({ ...pick(model, keys), ...additional }).reduce(
+          (acc, [key, value]) => ({ ...acc, [key]: serializeCell(value) }),
+          {}
+        );
+        stringifier.write(row);
       },
       close: () => stringifier.end()
     };

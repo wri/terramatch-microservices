@@ -98,12 +98,20 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
     return this.application?.uuid ?? null;
   }
 
+  get fundingProgrammeUuid() {
+    return this.application?.fundingProgrammeUuid ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   projectPitchUuid: string | null;
 
   @BelongsTo(() => ProjectPitch, { foreignKey: "projectPitchUuid", targetKey: "uuid", constraints: false })
   projectPitch: ProjectPitch | null;
+
+  get projectName() {
+    return this.projectPitch?.projectName;
+  }
 
   @AllowNull
   @Column(UUID)

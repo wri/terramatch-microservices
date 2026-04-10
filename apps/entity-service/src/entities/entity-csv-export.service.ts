@@ -3,10 +3,13 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { MAX_CSV_EXPORT_ROWS } from "@terramatch-microservices/common/export/csv-export.constants";
 import { EntitiesService } from "./entities.service";
 import { EntityQueryDto } from "./dto/entity-query.dto";
-import { FormDataService } from "./form-data.service";
-import { SubmissionExportQueryDto } from "./dto/submission-export-query.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
-import { FinancialReport } from "@terramatch-microservices/database/entities";
+import { FinancialReport, Form, FormSubmission } from "@terramatch-microservices/database/entities";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { Response } from "express";
+import { DateTime } from "luxon";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 const EXPORTABLE_ENTITY_TYPES = ["financialReports", "srpReports"] as const;
 export type CsvExportableEntityType = (typeof EXPORTABLE_ENTITY_TYPES)[number];
@@ -54,16 +57,15 @@ const FORM_SUBMISSION_CSV_COLUMNS: Record<string, string> = {
   organisationInstagram: "Organization Instagram URL(optional)",
   organisationLinkedin: "Organization LinkedIn URL(optional)",
   organisationLogo: "Upload your organization logo(optional)",
-  organisationCover: "Upload a cover photo (optional)"
+  organisationCover: "Upload a cover photo (optional)",
+  updatedByName: "User Name"
 };
 
 @Injectable()
 export class EntityCsvExportService {
-  constructor(
-    private readonly entitiesService: EntitiesService,
-    private readonly csvExportService: CsvExportService,
-    private readonly formDataService: FormDataService
-  ) {}
+  private readonly logger = new TMLogger(EntityCsvExportService.name);
+
+  constructor(private readonly entitiesService: EntitiesService, private readonly csvExportService: CsvExportService) {}
 
   isExportableEntityType(entity: string): entity is CsvExportableEntityType {
     return (EXPORTABLE_ENTITY_TYPES as readonly string[]).includes(entity);
@@ -122,37 +124,50 @@ export class EntityCsvExportService {
     return this.csvExportService.stringify(rows, SRP_REPORT_CSV_COLUMNS);
   }
 
-  async exportFormSubmissionsCsv(query: SubmissionExportQueryDto): Promise<string> {
-    const { submissions } = await this.formDataService.findSubmissionsForExport(query);
-    if (submissions.length > 0) {
-      await this.entitiesService.authorize("read", submissions);
+  async exportFormSubmissionsCsv(formUuid: string, response: Response) {
+    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["title"] });
+    response.set({
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="${form?.title} Submission Export - ${DateTime.now().toFormat(
+        "yyyy-MM-dd HH:mm:ss"
+      )}.csv"`
+    });
+
+    const { addRow, close } = this.csvExportService.getResponseStreamWriter(response, FORM_SUBMISSION_CSV_COLUMNS);
+    try {
+      const builder = new PaginatedQueryBuilder(FormSubmission, 10, [
+        { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
+        {
+          association: "organisation",
+          attributes: [
+            "uuid",
+            "name",
+            "type",
+            "phone",
+            "hqStreet1",
+            "hqStreet2",
+            "hqCity",
+            "hqState",
+            "hqZipcode",
+            "webUrl",
+            "facebookUrl",
+            "instagramUrl",
+            "linkedinUrl",
+            "twitterUrl"
+          ]
+        },
+        { association: "stage", attributes: ["name"] }
+      ]).where({ formId: formUuid });
+
+      for await (const page of batchFindAll(builder)) {
+        for (const submission of page) {
+          addRow(submission);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error exporting form submissions CSV for form ${formUuid}: ${error}`);
+    } finally {
+      close();
     }
-    const rows = submissions.map(s => ({
-      status: s.status,
-      name: s.name,
-      stageName: s.stageName,
-      organisationType: s.organisationType,
-      organisationName: s.organisationName,
-      organisationPhone: s.organisationPhone,
-      organisationStreet1: s.organisationStreet1,
-      organisationStreet2: s.organisationStreet2,
-      organisationCity: s.organisationCity,
-      organisationState: s.organisationState,
-      organisationZipcode: s.organisationZipcode,
-      organisationWebUrl: s.organisationWebUrl,
-      organisationFacebookUrl: s.organisationFacebookUrl,
-      organisationInstagramUrl: s.organisationInstagramUrl,
-      organisationLinkedinUrl: s.organisationLinkedinUrl,
-      organisationTwitterUrl: s.organisationTwitterUrl,
-      organisationUuid: s.organisationUuid,
-      projectPitchUuid: s.projectPitchUuid,
-      projectName: s.projectPitch?.projectName ?? "",
-      applicationUuid: s.application?.uuid ?? "",
-      fundingProgrammeUuid: s.application?.fundingProgrammeUuid ?? "",
-      userName: s.user == null ? "" : [s.user.firstName, s.user.lastName].filter(Boolean).join(" ").trim(),
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt
-    }));
-    return this.csvExportService.stringify(rows, FORM_SUBMISSION_CSV_COLUMNS);
   }
 }

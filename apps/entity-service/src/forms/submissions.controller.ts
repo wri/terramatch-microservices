@@ -3,15 +3,13 @@ import {
   Body,
   Controller,
   Get,
-  Header,
   NotFoundException,
   Param,
   Post,
   Put,
-  Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { CreateSubmissionBody, SubmissionDto, UpdateSubmissionBody } from "../entities/dto/submission.dto";
@@ -29,34 +27,10 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataDto } from "../entities/dto/form-data.dto";
-import { EntityCsvExportService } from "../entities/entity-csv-export.service";
-import { SubmissionExportQueryDto } from "../entities/dto/submission-export-query.dto";
 
 @Controller("forms/v3/submissions")
 export class SubmissionsController {
-  constructor(
-    private readonly policyService: PolicyService,
-    private readonly formDataService: FormDataService,
-    private readonly entityCsvExportService: EntityCsvExportService
-  ) {}
-
-  @Get("export")
-  @ApiOperation({
-    operationId: "formSubmissionsExportCsv",
-    summary: "Export form submissions as CSV (capped row count)."
-  })
-  @ApiResponse({
-    status: 200,
-    description: "CSV file",
-    content: { "text/csv": { schema: { type: "string" } } }
-  })
-  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
-  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
-  @Header("Content-Type", "text/csv")
-  @Header("Content-Disposition", 'attachment; filename="form-submissions-export.csv"')
-  async exportSubmissionsCsv(@Query() query: SubmissionExportQueryDto) {
-    return await this.entityCsvExportService.exportFormSubmissionsCsv(query);
-  }
+  constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
 
   @Get(":uuid")
   @ApiOperation({ operationId: "submissionGet", summary: "Get a single form submission by UUID" })

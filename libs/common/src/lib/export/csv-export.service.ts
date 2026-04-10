@@ -7,6 +7,7 @@ import { FileDownloadDto } from "../dto/file-download.dto";
 import { Dictionary, pick } from "lodash";
 import { Model } from "sequelize";
 import { DateTime } from "luxon";
+import { Response } from "express";
 
 function serializeCell(value: unknown): string | number {
   if (value == null) return "";
@@ -19,6 +20,11 @@ function serializeCell(value: unknown): string | number {
   }
   return value as string | number;
 }
+
+type StreamWriter = {
+  addRow: (model: Model, additional?: Dictionary<unknown>) => void;
+  close: () => void;
+};
 
 @Injectable()
 export class CsvExportService {
@@ -38,10 +44,23 @@ export class CsvExportService {
     return new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, `exports/${fileName}`));
   }
 
-  getStreamWriter(fileName: string, columns: Dictionary<string>) {
-    const passThrough = this.fileService.uploadStream(this.bucket, `exports/${fileName}`, "text/csv");
+  getS3StreamWriter(fileName: string, columns: Dictionary<string>): StreamWriter {
+    return this.createStreamWriter(
+      this.fileService.uploadStream(this.bucket, `exports/${fileName}`, "text/csv"),
+      columns
+    );
+  }
+
+  getResponseStreamWriter(response: Response, columns: Dictionary<string>): StreamWriter {
+    return this.createStreamWriter(response, columns);
+  }
+
+  private createStreamWriter<T extends NodeJS.WritableStream>(
+    destination: T,
+    columns: Dictionary<string>
+  ): StreamWriter {
     const stringifier = stringify({ header: true, columns });
-    stringifier.pipe(passThrough);
+    stringifier.pipe(destination);
 
     const keys = Object.keys(columns);
     return {

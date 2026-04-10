@@ -92,7 +92,7 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     }
 
     const { fileName } = job.data;
-    const { addRow, close } = this.csvExportService.getStreamWriter(fileName, ORGANISATION_CSV_COLUMNS);
+    const { addRow, close } = this.csvExportService.getS3StreamWriter(fileName, ORGANISATION_CSV_COLUMNS);
     try {
       const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
       for await (const page of batchFindAll(builder)) {

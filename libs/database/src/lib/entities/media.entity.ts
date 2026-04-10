@@ -31,6 +31,7 @@ import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
 import { Dictionary } from "factory-girl-ts";
 import { InternalServerErrorException } from "@nestjs/common";
+import { mediaDestroy } from "../hooks/media-destroy";
 
 @DefaultScope(() => ({ order: ["orderColumn"] }))
 @Scopes(() => ({
@@ -55,7 +56,8 @@ import { InternalServerErrorException } from "@nestjs/common";
   indexes: [
     { name: "media_model_type_model_id_index", fields: ["model_type", "model_id"] },
     { name: "media_order_column_index", fields: ["order_column"] }
-  ]
+  ],
+  hooks: { afterDestroy: mediaDestroy }
 })
 export class Media extends Model<InferAttributes<Media>, InferCreationAttributes<Media>> {
   static get sql() {

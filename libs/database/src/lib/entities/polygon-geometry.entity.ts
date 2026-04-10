@@ -3,8 +3,14 @@ import { BIGINT, GEOMETRY, UUID, UUIDV4, QueryTypes, Transaction } from "sequeli
 import { Polygon } from "geojson";
 import { User } from "./user.entity";
 import { InternalServerErrorException } from "@nestjs/common";
+import { polygonUpdate } from "../hooks/polygon-geometry-update";
 
-@Table({ tableName: "polygon_geometry", underscored: true, paranoid: true })
+@Table({
+  tableName: "polygon_geometry",
+  underscored: true,
+  paranoid: true,
+  hooks: { afterUpdate: polygonUpdate }
+})
 export class PolygonGeometry extends Model<PolygonGeometry> {
   static get sql() {
     if (this.sequelize == null) {

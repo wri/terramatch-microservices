@@ -22,7 +22,7 @@ export const mediaDestroy = async (media: Media, options: DestroyOptions) => {
     await DatabaseModule.emitMediaDeleted(media);
   };
 
-  if (options?.transaction) {
+  if (options?.transaction != null) {
     options.transaction.afterCommit(sendEvent);
   } else {
     sendEvent();

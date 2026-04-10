@@ -6,7 +6,7 @@ export const polygonUpdate = async (polygon: PolygonGeometry, options: InstanceU
   const sendEvent = async () => {
     await DatabaseModule.emitPolygonUpdated(polygon);
   };
-  if (options?.transaction) {
+  if (options?.transaction != null) {
     options.transaction.afterCommit(sendEvent);
   } else {
     sendEvent();

@@ -1,10 +1,9 @@
 import { FinancialIndicator, FinancialReport, Media, Organisation } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
-import { Dictionary, isEmpty } from "lodash";
+import { Dictionary, isEmpty, isString } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes, Op } from "sequelize";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { MediaService } from "../../media/media.service";
 import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { FormModel } from "@terramatch-microservices/database/constants/entities";
@@ -83,7 +82,7 @@ export function financialIndicatorsCollector(
       }
 
       const dtos = answer as EmbeddedFinancialIndicatorDto[];
-      const dtoUuids = dtos.map(({ uuid }) => uuid).filter(isNotNull);
+      const dtoUuids = dtos.map(({ uuid }) => uuid).filter(isString);
       if (dtoUuids.length === 0) {
         await scope.destroy();
       } else {
@@ -106,7 +105,8 @@ export function financialIndicatorsCollector(
             });
           } else {
             const creationUuid =
-              dto.uuid == null || (await FinancialIndicator.count({ where: { uuid: dto.uuid }, paranoid: false })) !== 0
+              !isString(dto.uuid) ||
+              (await FinancialIndicator.count({ where: { uuid: dto.uuid }, paranoid: false })) !== 0
                 ? undefined
                 : dto.uuid;
             toCreate.push({

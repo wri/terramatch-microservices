@@ -6,7 +6,7 @@ import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import { StatusUpdateModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "../util/tm-logger";
 import { MediaService } from "../media/media.service";
-import { Media, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import { Media, PolygonGeometry, User } from "@terramatch-microservices/database/entities";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -31,6 +31,21 @@ export class EventService {
 
   @OnEvent("database.mediaDeleted")
   async handleMediaDeleted(media: Media) {
+    let createdBy = media.getDataValue("createdBy");
+    if (createdBy === undefined) {
+      const mediaWithProperty = await Media.findOne({
+        where: { uuid: media.uuid },
+        attributes: ["createdBy"]
+      });
+      createdBy = mediaWithProperty?.getDataValue("createdBy") ?? null;
+    }
+    if (createdBy === null) {
+      return;
+    }
+    const user = await User.findByPk(createdBy, { include: [{ association: "roles" }] });
+    if (!user?.roles?.map(role => role.name).includes("greenhouse-service-account")) {
+      return;
+    }
     await this.greenhouseQueue.add("mediaDeleted", media);
   }
 

@@ -24,7 +24,7 @@ export class GreenhouseNotificationService {
   }
 
   private isEnabled() {
-    return (this.apiUrl != null || this.apiUrl != "") && this.apiToken != null && this.apiToken != "";
+    return this.apiUrl != null && this.apiUrl != "" && this.apiToken != null && this.apiToken != "";
   }
 
   private async runMutation(mutation: string, uuid: string) {

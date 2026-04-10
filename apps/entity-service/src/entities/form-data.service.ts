@@ -151,7 +151,7 @@ export class FormDataService {
       formSubmission
     );
 
-    const i18nItemIds = isEmpty(formSubmission.feedbackFields)
+    const i18nLightItems = isEmpty(formSubmission.feedbackFields)
       ? []
       : (
           await I18nTranslation.findAll({
@@ -161,11 +161,20 @@ export class FormDataService {
                 longValue: formSubmission.feedbackFields
               }
             },
-            attributes: ["i18nItemId"]
+            attributes: ["i18nItemId", "shortValue", "longValue"]
           })
-        ).map(({ i18nItemId }) => i18nItemId);
+        ).map(({ i18nItemId, shortValue, longValue }) => ({ i18nItemId, shortValue, longValue }));
+
+    const notFoundFeedbackFields =
+      formSubmission.feedbackFields?.filter(
+        field => !i18nLightItems.some(item => item.shortValue === field || item.longValue === field)
+      ) ?? [];
+
+    const i18nItemIds = i18nLightItems.map(({ i18nItemId }) => i18nItemId);
     const translations = uniq(
-      Object.values(await this.localizationService.translateIds(i18nItemIds, locale)).filter(isNotNull)
+      Object.values(await this.localizationService.translateIds(i18nItemIds, locale))
+        .concat(notFoundFeedbackFields)
+        .filter(isNotNull)
     );
 
     document.addData(
@@ -264,7 +273,8 @@ export class FormDataService {
     answersModel: T,
     form: Form,
     answers: Dictionary<unknown>,
-    associatedModels: FormModels = {}
+    associatedModels: FormModels = {},
+    opts: { preserveReportStatus?: boolean } = {}
   ) {
     answersModel.answers = {};
     const type = formModelType(answersModel as unknown as FormModel);
@@ -317,7 +327,7 @@ export class FormDataService {
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
       // we want the transition to go ahead and take place.
-      if (answersModel.status === DUE || !isAdmin) {
+      if (!opts.preserveReportStatus && (answersModel.status === DUE || !isAdmin)) {
         answersModel.status = STARTED;
       }
 

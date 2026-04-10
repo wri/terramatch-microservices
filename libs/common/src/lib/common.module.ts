@@ -19,8 +19,10 @@ import { ReportGenerationService } from "./tasks/report-generation-service";
 import { AnalyticsEventService } from "./analytics/analytics-events.service";
 import { AnalyticsProcessor } from "./analytics/analytics.processor";
 import { FileService } from "./file/file.service";
+import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-notification.processor";
+import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
 
-export const QUEUES = ["email", "analytics", "entities"];
+export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
 
 @Module({
   imports: [
@@ -69,7 +71,9 @@ export const QUEUES = ["email", "analytics", "entities"];
     EmailProcessor,
     ReportGenerationService,
     AnalyticsEventService,
-    AnalyticsProcessor
+    AnalyticsProcessor,
+    GreenhouseNotificationProcessor,
+    GreenhouseNotificationService
   ],
   exports: [
     PolicyService,
@@ -81,7 +85,9 @@ export const QUEUES = ["email", "analytics", "entities"];
     TemplateService,
     SlackService,
     ReportGenerationService,
-    AnalyticsEventService
+    AnalyticsEventService,
+    GreenhouseNotificationService,
+    GreenhouseNotificationProcessor
   ]
 })
 export class CommonModule {}

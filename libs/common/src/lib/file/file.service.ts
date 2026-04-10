@@ -2,10 +2,14 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  NotFound,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { TMLogger } from "../util/tm-logger";
 import { ConfigService } from "@nestjs/config";
 import fs from "fs";
@@ -13,8 +17,11 @@ import { Dictionary } from "lodash";
 import { parse } from "csv";
 import { NodeJsClient } from "@smithy/types";
 import { Injectable } from "@nestjs/common";
+import { PassThrough } from "node:stream";
 
 export type CsvRowCallback = (row: Dictionary<string>) => void | Promise<void>;
+
+const PRESIGNED_URL_TIMEOUT = 3600; // 1 hour
 
 @Injectable()
 export class FileService {
@@ -54,6 +61,22 @@ export class FileService {
     this.logger.log(`Uploaded ${bucket}/${path} to S3`);
   }
 
+  uploadStream(bucket: string, key: string, mimeType: string) {
+    const stream = new PassThrough();
+    const upload = new Upload({
+      client: this.s3,
+      params: {
+        Bucket: bucket,
+        Key: key,
+        Body: stream,
+        ContentType: mimeType
+      }
+    });
+    // have to call done in order to start the writing process.
+    upload.done().catch(error => this.logger.error(`Error uploading stream to S3: ${error}`));
+    return stream;
+  }
+
   async copyRemoteFile(bucket: string, fromPath: string, toPath: string, mimeType?: string) {
     try {
       await this.s3.send(
@@ -69,6 +92,34 @@ export class FileService {
     } catch (error) {
       this.logger.error(`Error copying file from ${fromPath} to ${toPath} in S3 bucket ${bucket} [${error}]`);
     }
+  }
+
+  async remoteFileExists(bucket: string, key: string) {
+    try {
+      await this.s3.send(
+        new HeadObjectCommand({
+          Bucket: bucket,
+          Key: key
+        })
+      );
+      return true; // the request is successful only if the object exists.
+    } catch (error) {
+      if (!(error instanceof NotFound)) {
+        this.logger.error(`Error getting object head ${bucket}/${key} [${error}]`);
+      }
+      return false;
+    }
+  }
+
+  async generatePresignedUrl(bucket: string, key: string) {
+    return await getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key
+      }),
+      { expiresIn: PRESIGNED_URL_TIMEOUT }
+    );
   }
 
   async deleteRemoteFile(bucket: string, key: string) {

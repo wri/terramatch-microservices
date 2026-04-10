@@ -6,35 +6,34 @@ import { OrganisationsService } from "./organisations.service";
 import { OrganisationCreationService } from "./organisation-creation.service";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
-import { Queue, Job } from "bullmq";
+import { Job, Queue } from "bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import {
-  OrganisationFactory,
   FinancialIndicatorFactory,
   FinancialReportFactory,
-  MediaFactory,
-  UserFactory,
   LeadershipFactory,
-  OwnershipStakeFactory
+  MediaFactory,
+  OrganisationFactory,
+  OwnershipStakeFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import {
-  Organisation,
   FinancialIndicator,
   FinancialReport,
-  Media,
   Leadership,
+  Media,
+  Organisation,
   OwnershipStake,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
-import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
-import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";

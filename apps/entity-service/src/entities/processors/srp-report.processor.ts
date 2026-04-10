@@ -111,6 +111,71 @@ export class SrpReportProcessor extends ReportProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
+  async findManyForExport(query: EntityQueryDto, maxRows: number) {
+    const projectAssociation: Includeable = {
+      association: "project",
+      attributes: ["id", "uuid", "name"],
+      include: [{ association: "organisation", attributes: ["uuid", "name"] }]
+    };
+
+    const builder = this.entitiesService.buildExportQuery(SrpReport, maxRows, [projectAssociation]);
+
+    if (query.sort?.field != null) {
+      if (
+        ["title", "status", "updateRequestStatus", "createdAt", "dueAt", "updatedAt", "submittedAt", "year"].includes(
+          query.sort.field
+        )
+      ) {
+        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "projectName") {
+        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field === "organisationName") {
+        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+      } else if (query.sort.field !== "id") {
+        throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
+      }
+    }
+
+    const permissions = await this.entitiesService.getPermissions();
+    const frameworkPermissions = permissions
+      ?.filter(name => name.startsWith("framework-"))
+      .map(name => name.substring("framework-".length) as FrameworkKey);
+    if (frameworkPermissions?.length > 0) {
+      builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
+    } else if (permissions?.includes("manage-own")) {
+      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
+    } else if (permissions?.includes("projects-manage")) {
+      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+    }
+
+    for (const term of SIMPLE_FILTERS) {
+      if (query[term] != null) {
+        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+        builder.where({ [field]: query[term] });
+      }
+    }
+
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
+    }
+
+    if (query.search != null) {
+      builder.where({
+        [Op.or]: [
+          { "$project.name$": { [Op.like]: `%${query.search}%` } },
+          { "$project.organisation.name$": { [Op.like]: `%${query.search}%` } },
+          { title: { [Op.like]: `%${query.search}%` } }
+        ]
+      });
+    }
+
+    if (query.projectUuid != null) {
+      builder.where({ projectId: Project.forUuid(query.projectUuid) });
+    }
+
+    return { models: await builder.execute() };
+  }
+
   async getFullDto(srpReport: SrpReport) {
     const mediaCollection = await Media.for(srpReport).findAll();
     const dto = new SrpReportFullDto(srpReport, {

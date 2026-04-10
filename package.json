@@ -11,7 +11,8 @@
     "all": "nx run-many --parallel=100 -t serve --no-cloud",
     "prepare": "husky",
     "test:ci": "nx run-many -t test --parallel=1 --no-cloud --coverage --runInBand --passWithNoTests",
-    "lint-build": "nx run-many -t lint build --exclude tm-v3-cli --no-cloud --verbose"
+    "lint-build": "nx run-many -t lint build --exclude tm-v3-cli --no-cloud --verbose",
+    "schema:audit": "ts-node --transpile-only -P tsconfig.schema-audit.json libs/database/src/lib/tools/schema-audit-sequelize-vs-db.ts"
   },
   "private": true,
   "dependencies": {

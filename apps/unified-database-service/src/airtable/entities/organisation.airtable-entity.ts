@@ -87,7 +87,6 @@ const COLUMNS: ColumnMapping<Organisation, OrganisationAssociations>[] = [
   "environmentalImpact",
   "growthStage",
   "additionalComments",
-  "consortium",
   "femaleYouthLeadershipExample",
   "level0PastRestoration",
   associatedValueColumn("level0PastRestorationNames", "level0PastRestoration"),

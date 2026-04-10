@@ -4,6 +4,7 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { SequelizeConfigService } from "./sequelize-config.service";
 import { EventEmitter2, EventEmitterModule } from "@nestjs/event-emitter";
 import { Model } from "sequelize-typescript";
+import { Media, PolygonGeometry } from "./entities";
 
 @Module({
   imports: [
@@ -30,5 +31,13 @@ export class DatabaseModule {
 
   static async emitModelEvent(eventName: string, model: Model) {
     await this.eventEmitter?.emitAsync(`database.${eventName}`, model);
+  }
+
+  static async emitMediaDeleted(media: Media) {
+    await this.eventEmitter?.emitAsync(`database.mediaDeleted`, media);
+  }
+
+  static async emitPolygonUpdated(polygon: PolygonGeometry) {
+    await this.eventEmitter?.emitAsync(`database.polygonUpdated`, polygon);
   }
 }

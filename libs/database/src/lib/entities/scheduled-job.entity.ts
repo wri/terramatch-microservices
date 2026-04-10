@@ -13,6 +13,7 @@ import {
 } from "../constants/scheduled-jobs";
 import { FrameworkKey } from "../constants";
 import { chainScope } from "../util/chain-scope";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Scopes(() => ({
   taskDue: (frameworks: FrameworkKey | readonly FrameworkKey[]) => ({
@@ -25,6 +26,13 @@ import { chainScope } from "../util/chain-scope";
 }))
 @Table({ tableName: "scheduled_jobs", underscored: true, paranoid: true })
 export class ScheduledJob extends Model<ScheduledJob> {
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("ScheduledJob model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
   static taskDue(frameworks: FrameworkKey | readonly FrameworkKey[]) {
     return chainScope(this, "taskDue", frameworks) as typeof ScheduledJob;
   }

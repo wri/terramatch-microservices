@@ -12,14 +12,19 @@ import {
   SitePolygon,
   SitePolygonData
 } from "@terramatch-microservices/database/entities";
+import { PPC } from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Geometry } from "geojson";
 import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 
 @Injectable()
 export class GeoJsonExportService {
   private readonly logger = new Logger(GeoJsonExportService.name);
+
+  private siteIncludeForGeoJson(): Includeable[] {
+    return [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }];
+  }
 
   async getGeoJson(query: GeoJsonQueryDto): Promise<FeatureCollection> {
     const providedParams = [query.uuid, query.siteUuid, query.projectUuid].filter(isNotNull);
@@ -79,7 +84,7 @@ export class GeoJsonExportService {
 
     const sitePolygon = await SitePolygon.findOne({
       where: { polygonUuid },
-      include: [{ model: Site, attributes: ["uuid", "name"] }]
+      include: this.siteIncludeForGeoJson()
     });
 
     if (sitePolygon == null) {
@@ -105,7 +110,7 @@ export class GeoJsonExportService {
   private async getSitePolygonsGeoJson(siteUuid: string, includeExtendedData: boolean): Promise<Feature[]> {
     const sitePolygons = await SitePolygon.findAll({
       where: { siteUuid, isActive: true },
-      include: [{ model: Site, attributes: ["uuid", "name"] }]
+      include: this.siteIncludeForGeoJson()
     });
 
     if (sitePolygons.length === 0) {
@@ -196,7 +201,7 @@ export class GeoJsonExportService {
         siteUuid: { [Op.in]: siteUuids },
         isActive: true
       },
-      include: [{ model: Site, attributes: ["uuid", "name"] }]
+      include: this.siteIncludeForGeoJson()
     });
 
     if (sitePolygons.length === 0) {
@@ -273,6 +278,11 @@ export class GeoJsonExportService {
       numTrees: sitePolygon.numTrees ?? null,
       siteId: sitePolygon.siteUuid ?? null
     };
+
+    const site = sitePolygon.site;
+    if (site?.frameworkKey === PPC) {
+      properties.ppcExternalId = site.ppcExternalId ?? null;
+    }
 
     if (includeExtendedData) {
       let dataToMerge: Record<string, unknown> | null = null;

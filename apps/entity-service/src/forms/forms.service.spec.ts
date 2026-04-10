@@ -89,6 +89,15 @@ describe("FormsService", () => {
       ]);
     });
 
+    it("sorts by published", async () => {
+      await FormFactory.create({ title: "First", published: false });
+      await FormFactory.create({ title: "Second", published: true });
+      const asc = await service.findMany({ sort: { field: "published", direction: "ASC" } });
+      expect(asc.forms.map(({ published }) => published)).toEqual([false, true]);
+      const desc = await service.findMany({ sort: { field: "published", direction: "DESC" } });
+      expect(desc.forms.map(({ published }) => published)).toEqual([true, false]);
+    });
+
     it("filters", async () => {
       await FormFactory.create({ type: "application" });
       await FormFactory.create({ type: "project" });
@@ -115,17 +124,17 @@ describe("FormsService", () => {
       const dtos = document.data as Resource[];
       expect(dtos.length).toBe(forms.length);
       expect(dtos[0].attributes).toEqual({
-        ...pick(forms[0], "uuid", "title", "type", "published"),
+        ...pick(forms[0], "uuid", "title", "type"),
         banner: expect.objectContaining({ url: "fake-url" }),
         lightResource: true
       });
       expect(dtos[1].attributes).toEqual({
-        ...pick(forms[1], "uuid", "title", "type", "published"),
+        ...pick(forms[1], "uuid", "title", "type"),
         banner: null,
         lightResource: true
       });
       expect(dtos[2].attributes).toEqual({
-        ...pick(forms[2], "uuid", "title", "type", "published"),
+        ...pick(forms[2], "uuid", "title", "type"),
         banner: null,
         lightResource: true
       });
@@ -315,7 +324,6 @@ describe("FormsService", () => {
         type: "project",
         submissionMessage: faker.lorem.paragraph(),
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -443,7 +451,6 @@ describe("FormsService", () => {
         type: "site",
         submissionMessage: faker.lorem.paragraph(),
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -495,7 +502,6 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           {
             id: section.uuid,
@@ -533,7 +539,6 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           {
             id: section.uuid,
@@ -584,7 +589,6 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           {
             id: section.uuid,
@@ -619,7 +623,6 @@ describe("FormsService", () => {
         type: form.type,
         submissionMessage: form.submissionMessage!,
         deadlineAt: faker.date.soon(),
-        published: false,
         sections: [
           // scramble order and drop section 1
           {

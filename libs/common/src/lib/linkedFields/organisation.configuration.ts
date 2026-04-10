@@ -390,11 +390,6 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       multiChoice: false,
       optionListKey: "growith-stage"
     },
-    "org-consortium": {
-      property: "consortium",
-      label: "Organizations involved in consortium and description",
-      inputType: "long-text"
-    },
     "org-female-youth-leadership-example": {
       property: "femaleYouthLeadershipExample",
       label: "Female or youth contribution to project leadership or decision making example",

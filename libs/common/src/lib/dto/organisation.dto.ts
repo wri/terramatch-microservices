@@ -213,8 +213,8 @@ export class OrganisationFullDto extends OrganisationLightDto {
   @ApiProperty({ nullable: true, type: String })
   accountNumber2: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  loanStatusAmount: string | null;
+  @ApiProperty({ nullable: true, type: Number })
+  loanStatusAmount: number | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   loanStatusTypes: string[] | null;
@@ -311,9 +311,6 @@ export class OrganisationFullDto extends OrganisationLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   additionalComments: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  consortium: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   femaleYouthLeadershipExample: string | null;

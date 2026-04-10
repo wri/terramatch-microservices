@@ -40,8 +40,7 @@ export class AdminUserCreationEmail extends EmailSender<AdminUserCreationEmailDa
     };
     const resetToken = await emailService.jwtService.signAsync({ sub: user.uuid }, { expiresIn: "7d" });
     const additionalValues = {
-      link: `/auth/reset-password/${resetToken}`,
-      transactional: "transactional"
+      link: `/auth/reset-password/${resetToken}`
     };
     await emailService.sendI18nTemplateEmail(
       user.emailAddress,

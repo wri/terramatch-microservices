@@ -1,7 +1,7 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectAuthority, expectCan, expectCannot } from "./policy.service.spec";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Project, User } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
   ProjectFactory,
@@ -12,6 +12,7 @@ import { mockPermissions, mockUserId } from "../util/testing";
 
 describe("ProjectPolicy", () => {
   let service: PolicyService;
+  const originalUserFindOne = User.findOne.bind(User);
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -19,6 +20,20 @@ describe("ProjectPolicy", () => {
     }).compile();
 
     service = await module.resolve(PolicyService);
+
+    // isVerifiedAdmin() queries User with roles; avoid hitting DB for that lookup in tests that use factories.
+    jest.spyOn(User, "findOne").mockImplementation(async options => {
+      const include = (options as { include?: unknown[] })?.include ?? [];
+      const wantsRoles =
+        Array.isArray(include) && include.some((i: { association?: string }) => i?.association === "roles");
+      if (wantsRoles) {
+        const fallback = new User();
+        (fallback as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = null;
+        (fallback as unknown as { roles: Array<{ name: string }> }).roles = [];
+        return fallback;
+      }
+      return originalUserFindOne(options as Parameters<typeof User.findOne>[0]);
+    });
   });
 
   afterEach(async () => {
@@ -89,5 +104,31 @@ describe("ProjectPolicy", () => {
       can: [[["read", "delete", "update", "approve", "deleteFiles"], p1]],
       cannot: [[["read", "delete", "update", "approve", "deleteFiles"], p2]]
     });
+  });
+
+  it("allows verified admin to approve projects (e.g. null or unmatched frameworkKey)", async () => {
+    mockPermissions();
+    mockUserId(123);
+
+    const verifiedAdminUser = new User();
+    (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
+    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-super" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
+
+    await expectCan(service, "approve", new Project());
+  });
+
+  it("does not allow unverified admin to approve without framework or projects-manage", async () => {
+    mockPermissions();
+    mockUserId(123);
+
+    const unverifiedAdminUser = new User();
+    (unverifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = null;
+    (unverifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-super" }];
+
+    jest.spyOn(User, "findOne").mockResolvedValue(unverifiedAdminUser);
+
+    await expectCannot(service, "approve", new Project());
   });
 });

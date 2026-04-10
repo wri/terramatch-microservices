@@ -8,6 +8,13 @@ export class ProjectPolicy extends UserPermissionsPolicy {
       this.builder.can("read", Project);
     }
 
+    if (await this.isVerifiedAdmin()) {
+      this.builder.can(
+        ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        Project
+      );
+    }
+
     if (this.frameworks.length > 0) {
       this.builder.can(
         ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
@@ -64,5 +71,23 @@ export class ProjectPolicy extends UserPermissionsPolicy {
       attributes: ["organisationId"],
       include: [{ association: "projects", attributes: ["id"] }]
     }));
+  }
+
+  protected _isVerifiedAdmin?: boolean;
+  protected async isVerifiedAdmin(): Promise<boolean> {
+    if (this._isVerifiedAdmin != null) return this._isVerifiedAdmin;
+
+    const user = await User.findOne({
+      where: { id: this.userId },
+      attributes: ["emailAddressVerifiedAt"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+
+    if (user == null) return (this._isVerifiedAdmin = false);
+
+    const hasAdminRole = user.roles?.some(({ name }) => name.startsWith("admin-")) ?? false;
+    const isEmailVerified = user.emailAddressVerifiedAt != null;
+
+    return (this._isVerifiedAdmin = hasAdminRole && isEmailVerified);
   }
 }

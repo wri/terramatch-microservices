@@ -500,72 +500,88 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
     },
     "pro-pit-full-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
-        collection: "full-time"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
+        collection: "full-time",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time jobs",
       inputType: "number"
     },
     "pro-pit-full-time-clt-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
-        collection: "full-time-clt"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
+        collection: "full-time-clt",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time CLT jobs",
       inputType: "number"
     },
     "pro-pit-part-time-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
-        collection: "part-time"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
+        collection: "part-time",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time jobs",
       inputType: "number"
     },
     "pro-pit-part-time-clt-jobs-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "jobs",
-        collection: "part-time-clt"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "jobs",
+        collection: "part-time-clt",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time CLT jobs",
       inputType: "number"
     },
     "pro-pit-volunteers-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "volunteers",
-        collection: "volunteer"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "volunteers",
+        collection: "volunteer",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate volunteers",
       inputType: "number"
     },
     "pro-pit-beneficiaries-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "all-beneficiaries",
-        collection: "all"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "all-beneficiaries",
+        collection: "all",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate beneficiaries",
       inputType: "number"
     },
     "pro-pit-indirect-beneficiaries-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "indirect-beneficiaries",
-        collection: "indirect"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "indirect-beneficiaries",
+        collection: "indirect",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate indirect beneficiaries",
       inputType: "number"
     },
     "pro-pit-associates-count": {
       virtual: {
-        type: "demographicsAggregate",
-        demographicsType: "associates",
-        collection: "all"
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "associates",
+        collection: "all",
+        entryTypes: ["gender", "age"]
       },
       label: "Aggregate associates",
       inputType: "number"

@@ -1,7 +1,7 @@
 import { Dictionary } from "lodash";
 import { Attributes } from "sequelize";
 import { FormModel } from "./entities";
-import { DemographicsType } from "../types/tracking";
+import { DemographicsType, TrackingDomain, TrackingType } from "../types/tracking";
 
 export type LinkedFieldConfiguration<M extends FormModel> = {
   label: string;
@@ -26,23 +26,23 @@ export const FIELD_INPUT_TYPES = [
 ] as const;
 export type FieldInputType = (typeof FIELD_INPUT_TYPES)[number];
 
-export type VirtualDemographicsAggregate = {
-  type: "demographicsAggregate";
-  demographicsType: DemographicsType;
+export type VirtualTrackingAggregate = {
+  type: "trackingAggregate";
+  domain: TrackingDomain;
+  trackingType: TrackingType;
   collection: string;
+  entryTypes: string[];
 };
-export type VirtualDemographicsDescription = {
-  type: "demographicsDescription";
-  demographicsType: DemographicsType;
+export type VirtualTrackingDescription = {
+  type: "trackingDescription";
+  domain: TrackingDomain;
+  trackingType: DemographicsType;
   collections: string[];
 };
 export type VirtualProjectBoundary = {
   type: "projectBoundary";
 };
-export type VirtualLinkedFieldProps =
-  | VirtualDemographicsAggregate
-  | VirtualDemographicsDescription
-  | VirtualProjectBoundary;
+export type VirtualLinkedFieldProps = VirtualTrackingAggregate | VirtualTrackingDescription | VirtualProjectBoundary;
 export type VirtualLinkedField = {
   virtual: VirtualLinkedFieldProps;
   label: string;
@@ -87,7 +87,9 @@ export const RELATION_INPUT_TYPES = [
   "treesHistorical",
   "treeSpecies",
   "volunteers",
-  "workdays"
+  "workdays",
+  "elpBeneficiaries",
+  "livelihoodActivities"
 ] as const;
 export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 

@@ -69,8 +69,9 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
     },
     "site-rep-other-workdays-description": {
       virtual: {
-        type: "demographicsDescription",
-        demographicsType: "workdays",
+        type: "trackingDescription",
+        domain: "demographics",
+        trackingType: "workdays",
         collections: ["paid-other-activities", "volunteer-other-activities"]
       },
       label: "Other Activities Description",

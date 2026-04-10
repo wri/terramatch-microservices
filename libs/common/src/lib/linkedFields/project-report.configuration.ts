@@ -221,8 +221,9 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     },
     "pro-rep-other-workdays-description": {
       virtual: {
-        type: "demographicsDescription",
-        demographicsType: "workdays",
+        type: "trackingDescription",
+        domain: "demographics",
+        trackingType: "workdays",
         collections: ["paid-other-activities", "volunteer-other-activities"]
       },
       label: "Other Activities Description",
@@ -245,8 +246,9 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     },
     "pro-rep-other-restoration-partners-description": {
       virtual: {
-        type: "demographicsDescription",
-        demographicsType: "restoration-partners",
+        type: "trackingDescription",
+        domain: "demographics",
+        trackingType: "restoration-partners",
         collections: ["direct-other", "indirect-other"]
       },
       label: "Other Restoration Partners Description",
@@ -294,7 +296,8 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "beneficiariesTrainingNonYouth",
       label: "Non Youth Trained",
       inputType: "number"
-    }
+    },
+    "pro-rep-elp-description": { property: "elpDescription", label: "ELP description", inputType: "long-text" }
   },
   fileCollections: {
     "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },
@@ -654,6 +657,18 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       label: "Associates",
       resource: "demographics",
       inputType: "associates",
+      collection: "all"
+    },
+    "pro-rep-elp-beneficiaries": {
+      label: "ELP Beneficiaries",
+      resource: "demographics",
+      inputType: "elpBeneficiaries",
+      collection: "elp"
+    },
+    "pro-rep-livelihood-activities": {
+      label: "Livelihood Activities",
+      resource: "demographics",
+      inputType: "livelihoodActivities",
       collection: "all"
     }
   }

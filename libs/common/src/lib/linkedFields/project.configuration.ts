@@ -76,7 +76,7 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       label: "Community incentives",
       inputType: "long-text"
     },
-    "pro-budget": { property: "budget", label: "budget", inputType: "number" },
+    "pro-budget": { property: "budget", label: "budget", inputType: "number-currency" },
     "pro-jobs-created-goal": { property: "jobsCreatedGoal", label: "Jobs created goal", inputType: "number" },
     "pro-total-hectares-restored-goal": {
       property: "totalHectaresRestoredGoal",

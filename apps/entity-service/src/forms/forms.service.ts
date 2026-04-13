@@ -177,6 +177,8 @@ export class FormsService {
 
     const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []) => {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
+      const resolvedInputType =
+        question.linkedFieldKey != null && config?.field != null ? config.field.inputType : question.inputType;
       // For file questions, the collection is the collection of the field.
       const collection =
         (question.inputType === "file" ? (config?.field as LinkedFile | undefined)?.collection : question.collection) ??
@@ -184,7 +186,8 @@ export class FormsService {
       const childQuestions = sectionQuestions.filter(({ parentId }) => parentId === question.uuid);
       const options = optionsByQuestionId[question.id];
       const tableHeaders = tableHeadersByQuestionId[question.id];
-      return new FormQuestionDto(question, {
+      const questionForDto = Object.assign({}, question.get({ plain: true }), { inputType: resolvedInputType });
+      return new FormQuestionDto(questionForDto, {
         name: question.uuid,
         model: config?.model ?? null,
         collection,

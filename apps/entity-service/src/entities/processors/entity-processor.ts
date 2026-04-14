@@ -296,8 +296,8 @@ export abstract class ReportProcessor<
       if (isPropertyField(field)) {
         if (attributes[field.property] == null) continue;
         model[field.property] = attributes[field.property].defaultValue ?? null;
-      } else if (field.virtual.type === "demographicsAggregate" || field.virtual.type === "demographicsDescription") {
-        resources.push("demographics");
+      } else if (field.virtual.type === "trackingAggregate" || field.virtual.type === "trackingDescription") {
+        resources.push(field.virtual.domain);
       }
     }
     await model.save();

@@ -221,8 +221,9 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     },
     "pro-rep-other-workdays-description": {
       virtual: {
-        type: "demographicsDescription",
-        demographicsType: "workdays",
+        type: "trackingDescription",
+        domain: "demographics",
+        trackingType: "workdays",
         collections: ["paid-other-activities", "volunteer-other-activities"]
       },
       label: "Other Activities Description",
@@ -245,8 +246,9 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     },
     "pro-rep-other-restoration-partners-description": {
       virtual: {
-        type: "demographicsDescription",
-        demographicsType: "restoration-partners",
+        type: "trackingDescription",
+        domain: "demographics",
+        trackingType: "restoration-partners",
         collections: ["direct-other", "indirect-other"]
       },
       label: "Other Restoration Partners Description",

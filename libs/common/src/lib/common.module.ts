@@ -20,8 +20,10 @@ import { AnalyticsEventService } from "./analytics/analytics-events.service";
 import { AnalyticsProcessor } from "./analytics/analytics.processor";
 import { FileService } from "./file/file.service";
 import { CsvExportService } from "./export/csv-export.service";
+import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-notification.processor";
+import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
 
-export const QUEUES = ["email", "analytics", "entities"];
+export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
 
 @Module({
   imports: [
@@ -71,7 +73,9 @@ export const QUEUES = ["email", "analytics", "entities"];
     ReportGenerationService,
     AnalyticsEventService,
     AnalyticsProcessor,
-    CsvExportService
+    CsvExportService,
+    GreenhouseNotificationProcessor,
+    GreenhouseNotificationService
   ],
   exports: [
     PolicyService,
@@ -84,7 +88,9 @@ export const QUEUES = ["email", "analytics", "entities"];
     SlackService,
     ReportGenerationService,
     AnalyticsEventService,
-    CsvExportService
+    CsvExportService,
+    GreenhouseNotificationService,
+    GreenhouseNotificationProcessor
   ]
 })
 export class CommonModule {}

@@ -166,7 +166,9 @@ describe("UpdateRequestsController", () => {
       expect(service.updateModelFromForm).toHaveBeenCalledWith(
         project,
         form,
-        expect.objectContaining({ color: "red" })
+        expect.objectContaining({ color: "red" }),
+        {},
+        { preserveReportStatus: true }
       );
     });
   });

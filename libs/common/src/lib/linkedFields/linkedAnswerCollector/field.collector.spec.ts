@@ -8,7 +8,7 @@ import {
   SiteFactory
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
-import { VirtualDemographicsAggregate } from "@terramatch-microservices/database/constants/linked-fields";
+import { VirtualTrackingAggregate } from "@terramatch-microservices/database/constants/linked-fields";
 import {
   Tracking,
   TrackingEntry,
@@ -47,7 +47,7 @@ describe("FieldCollector", () => {
     );
   });
 
-  it("collects demographicsDescription virtual fields", async () => {
+  it("collects trackingDescription virtual fields", async () => {
     collector.addField(getField("pro-rep-other-workdays-description"), "projectReports", "one");
 
     const projectReport = await ProjectReportFactory.create();
@@ -96,7 +96,7 @@ describe("FieldCollector", () => {
       type: "foo",
       demographicsType: "workdays",
       collection: "paid-other-activities"
-    } as unknown as VirtualDemographicsAggregate;
+    } as unknown as VirtualTrackingAggregate;
     collector.addField({ virtual, label: "", inputType: "long-text" }, "projectReports", "one");
 
     await expect(harness.getAnswers({ projectReports: new ProjectReport() })).rejects.toThrow(
@@ -195,7 +195,7 @@ describe("FieldCollector", () => {
     expect(report.landscapeCommunityContribution).toBe("existing value");
   });
 
-  describe("demographicsAggregate sync", () => {
+  describe("trackingAggregate sync", () => {
     let pitch: ProjectPitch;
     let question: FormQuestion;
 
@@ -292,7 +292,7 @@ describe("FieldCollector", () => {
     });
   });
 
-  describe("demographicsDescription sync", () => {
+  describe("trackingDescription sync", () => {
     let report: ProjectReport;
     let question: FormQuestion;
 

@@ -25,7 +25,9 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
       where: {
         polygonUuid: {
           [Op.eq]: polygonUuid
-        }
+        },
+        isActive: true,
+        status: "approved"
       },
       attributes: ["id", "calcArea"]
     });

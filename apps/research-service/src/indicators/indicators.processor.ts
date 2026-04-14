@@ -251,7 +251,7 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     const currentYear = new Date().getFullYear();
 
     const sitePolygon = await SitePolygon.findOne({
-      where: { polygonUuid },
+      where: { polygonUuid, isActive: true, status: "approved" },
       attributes: ["id"]
     });
 

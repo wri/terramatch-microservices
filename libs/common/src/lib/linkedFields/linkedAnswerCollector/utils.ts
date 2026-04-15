@@ -45,6 +45,13 @@ export const mapLaravelTypes = (models: FormModels) =>
     return { ...laravelTypes, [modelType]: type };
   }, {} as Dictionary<string>);
 
+export const pickAttributesForExport = <T extends Model>(model: T, attributes: (keyof Attributes<T>)[]) =>
+  attributes.map(attr => model[attr]).join(":");
+export const attributeExporter =
+  <T extends Model>(attributes: (keyof Attributes<T>)[]) =>
+  (model: T) =>
+    pickAttributesForExport(model, attributes);
+
 export const scopedSync = <M extends UuidModel>(
   modelClass: ModelCtor<M>,
   dtoClass: DtoClass<M>,

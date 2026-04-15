@@ -4,6 +4,7 @@ import { RelationResourceCollector } from "./index";
 import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-entry.dto";
 import { isEmpty } from "lodash";
 import { Op } from "sequelize";
+import { attributeExporter } from "./utils";
 
 export function disturbanceReportEntriesCollector(logger: LoggerService): RelationResourceCollector {
   let questionUuid: string;
@@ -19,14 +20,16 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
       questionUuid = addQuestionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.disturbanceReports == null) {
         logger.warn("missing disturbanceReport for disturbanceReportEntries");
         return;
       }
 
       const entries = await DisturbanceReportEntry.report(models.disturbanceReports.id).findAll();
-      answers[questionUuid] = entries.map(entry => new EmbeddedDisturbanceReportEntryDto(entry));
+      answers[questionUuid] = forExport
+        ? entries.map(attributeExporter(["name", "title", "subtitle", "value"]))
+        : entries.map(entry => new EmbeddedDisturbanceReportEntryDto(entry));
     },
 
     async syncRelation(model, _, answer) {

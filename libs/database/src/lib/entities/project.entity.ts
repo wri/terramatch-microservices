@@ -253,7 +253,7 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   communityIncentives: string | null;
 
   @AllowNull
-  @Column(DECIMAL(15, 2))
+  @Column(INTEGER.UNSIGNED)
   budget: number | null;
 
   @AllowNull

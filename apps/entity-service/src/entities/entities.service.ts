@@ -6,7 +6,6 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
-  Tracking,
   Disturbance,
   Form,
   FormQuestion,
@@ -14,6 +13,7 @@ import {
   Media,
   Seeding,
   Strata,
+  Tracking,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
@@ -57,6 +57,7 @@ import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFie
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { ConfigService } from "@nestjs/config";
 import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -124,7 +125,8 @@ export class EntitiesService {
     private readonly mediaService: MediaService,
     private readonly policyService: PolicyService,
     private readonly localizationService: LocalizationService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly csvExportService: CsvExportService
   ) {}
 
   get userId() {

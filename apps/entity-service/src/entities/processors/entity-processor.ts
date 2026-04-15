@@ -1,4 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
+import { Response } from "express";
 import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
@@ -184,6 +185,11 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async exportAll(response: Response) {
+    throw new BadRequestException("Export all not supported for this entity type");
   }
 
   protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {

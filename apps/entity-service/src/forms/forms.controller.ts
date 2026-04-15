@@ -24,7 +24,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Form, FormSubmission } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
-import { EntityCsvExportService } from "../entities/entity-csv-export.service";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
@@ -32,8 +31,7 @@ export class FormsController {
   constructor(
     private readonly formsService: FormsService,
     private readonly policyService: PolicyService,
-    private readonly localizationService: LocalizationService,
-    private readonly entityCsvExportService: EntityCsvExportService
+    private readonly localizationService: LocalizationService
   ) {}
 
   @Get()
@@ -156,6 +154,6 @@ export class FormsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async exportSubmissionsCsv(@Param("uuid") uuid: string, @Res() response: Response) {
     await this.policyService.authorize("read", FormSubmission);
-    await this.entityCsvExportService.exportFormSubmissionsCsv(uuid, response);
+    await this.formsService.exportAllSubmissions(uuid, response);
   }
 }

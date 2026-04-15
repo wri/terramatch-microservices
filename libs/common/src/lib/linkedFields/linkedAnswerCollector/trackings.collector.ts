@@ -121,7 +121,7 @@ const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
     }
 
     const list: string[] = [];
-    list.push(`years:(${types.years.join(")(")})`);
+    list.push(`years:(${types.years?.join(")(")})`);
     if (types.strategy != null) list.push(`strategy:(${types.strategy.join(")(")})`);
     if (types["land-use"] != null) list.push(`land-use:(${types["land-use"].join(")(")})`);
 

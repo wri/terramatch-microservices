@@ -197,24 +197,20 @@ export class EntityCsvExportService {
         "twitterUrl",
         ...mapAttributes(mappings, "organisations")
       ]);
-      const pitchAttributes = mapAttributes(mappings, "projectPitches");
+      const pitchAttributes = uniq(["id", "uuid", ...mapAttributes(mappings, "projectPitches")]);
       const includes: Includeable[] = [
         { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
-        {
-          association: "organisation",
-          attributes: orgAttributes
-        },
+        { association: "organisation", attributes: orgAttributes },
+        { association: "projectPitch", attributes: pitchAttributes },
         { association: "stage", attributes: ["name"] }
       ];
-      if (pitchAttributes.length > 0) {
-        includes.push({ association: "projectPitch", attributes: uniq(["id", "uuid", ...pitchAttributes]) });
-      }
       const builder = new PaginatedQueryBuilder(FormSubmission, 10, includes).where({ formId: formUuid });
 
       for await (const page of batchFindAll(builder)) {
         const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");
         const orgsMedia = await Media.for(orgs).collection(["logo", "cover", "legalRegistration"]).findAll();
         for (const submission of page) {
+          if (submission.organisation == null || submission.projectPitch == null) continue;
           const media = orgsMedia.filter(({ modelId }) => modelId === submission.organisation?.id);
           const additional = {
             organisationLegalRegistration: this.mediaCell(

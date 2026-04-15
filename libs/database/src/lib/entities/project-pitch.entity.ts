@@ -144,7 +144,7 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   fundingProgrammeId: string | null;
 
   @AllowNull
-  @Column(DECIMAL(15, 2))
+  @Column(BIGINT.UNSIGNED)
   projectBudget: number | null;
 
   @AllowNull

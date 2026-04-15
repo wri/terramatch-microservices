@@ -181,6 +181,7 @@ export class EntityCsvExportService {
     try {
       const orgAttributes = uniq([
         "id",
+        "uuid",
         "name",
         "type",
         "phone",
@@ -196,7 +197,7 @@ export class EntityCsvExportService {
         "twitterUrl",
         ...mapAttributes(mappings, "organisations")
       ]);
-      const pitchAttributes = uniq(mapAttributes(mappings, "projectPitches"));
+      const pitchAttributes = mapAttributes(mappings, "projectPitches");
       const includes: Includeable[] = [
         { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
         {
@@ -206,7 +207,7 @@ export class EntityCsvExportService {
         { association: "stage", attributes: ["name"] }
       ];
       if (pitchAttributes.length > 0) {
-        includes.push({ association: "projectPitch", attributes: pitchAttributes });
+        includes.push({ association: "projectPitch", attributes: uniq(["id", "uuid", ...pitchAttributes]) });
       }
       const builder = new PaginatedQueryBuilder(FormSubmission, 10, includes).where({ formId: formUuid });
 
@@ -234,7 +235,7 @@ export class EntityCsvExportService {
         }
       }
     } catch (error) {
-      this.logger.error(`Error exporting form submissions CSV for form ${formUuid}: ${error}`);
+      this.logger.error(`Error exporting form submissions CSV for form ${formUuid}: ${error}`, error.stack);
     } finally {
       close();
     }

@@ -29,11 +29,13 @@ type SyncOptions = {
   usesCollection?: boolean;
 };
 
-type PolymorphicCollectorOptions = SyncOptions & {
+type PolymorphicCollectorOptions<M extends PolymorphicModel & UuidModel> = SyncOptions & {
   // If model associations should be fetched when loading the model, include here.
   include?: Includeable | Includeable[];
   // Include if the default polymorphicSync method does not work for this association.
   syncRelation?: RelationSync;
+  // Include if customization is needed for serializing answers for export
+  exportSerializer?: (model: M) => unknown;
 };
 
 export const mapLaravelTypes = (models: FormModels) =>
@@ -145,7 +147,7 @@ export const polymorphicSync = <M extends PolymorphicModel & UuidModel>(
 export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
   modelClass: PolymorphicModelCtor<M>,
   dtoClass: new (model: M) => { uuid?: string | null; collection?: string | null },
-  options: PolymorphicCollectorOptions = {}
+  options: PolymorphicCollectorOptions<M> = {}
 ) =>
   function (logger: LoggerService): RelationResourceCollector {
     const questions: Dictionary<string> = {};
@@ -171,7 +173,7 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
         questions[key] = questionUuid;
       },
 
-      async collect(answers, models) {
+      async collect(answers, models, { forExport }) {
         const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
           const [modelType, collection] = key.split(":") as [FormModelType, string];
           return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
@@ -204,7 +206,9 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
                 model[typeAttribute] === laravelTypes[modelType] &&
                 (!hasCollection || (isCollectionModel(model) && model.collection === collection))
             )
-            .map(model => new dtoClass(model));
+            .map(model =>
+              forExport && options.exportSerializer != null ? options.exportSerializer(model) : new dtoClass(model)
+            );
         }
       },
 

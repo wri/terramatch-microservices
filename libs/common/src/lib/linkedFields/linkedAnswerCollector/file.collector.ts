@@ -20,7 +20,7 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
       questions[key] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
         const [modelType, collection] = key.split(":") as [FormModelType, string];
         return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
@@ -55,13 +55,15 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
         const media = medias.filter(
           media => media.collectionName === collection && media.modelType === laravelTypes[modelType]
         );
-        const createDto = (media: Media) =>
-          new EmbeddedMediaDto(media, {
-            url: mediaService.getUrl(media),
-            thumbUrl: mediaService.getUrl(media, "thumbnail")
-          });
+        const createData = (media: Media) =>
+          forExport
+            ? mediaService.getUrl(media)
+            : new EmbeddedMediaDto(media, {
+                url: mediaService.getUrl(media),
+                thumbUrl: mediaService.getUrl(media, "thumbnail")
+              });
         if (configuration.multiple) {
-          answers[questionUuid] = media.length == 0 ? undefined : media.map(createDto);
+          answers[questionUuid] = media.length == 0 ? undefined : media.map(createData);
         } else {
           if (media.length > 1) {
             logger.warn("Found multiple media for a singular media definition, returning first", {
@@ -70,7 +72,7 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
               collection: collection
             });
           }
-          answers[questionUuid] = media.length === 0 ? undefined : createDto(media[0]);
+          answers[questionUuid] = media.length === 0 ? undefined : createData(media[0]);
         }
       }
     }

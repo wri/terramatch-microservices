@@ -88,7 +88,12 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       label: "Monitoring and evaluation plan",
       inputType: "long-text"
     },
-    "pro-pit-proj-boundary": { virtual: { type: "projectBoundary" }, label: "Project Boundary", inputType: "mapInput" },
+    "pro-pit-proj-boundary": {
+      virtual: { type: "projectBoundary" },
+      label: "Project Boundary",
+      exportHeading: "projBoundary",
+      inputType: "mapInput"
+    },
     "pro-pit-sustainable-dev-goals": {
       property: "sustainableDevGoals",
       label: "Sustainable Development Goals",
@@ -507,6 +512,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time jobs",
+      exportHeading: "fullTimeJobsAggregate",
       inputType: "number"
     },
     "pro-pit-full-time-clt-jobs-count": {
@@ -518,6 +524,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate full time CLT jobs",
+      exportHeading: "fullTimeCltJobsAggregate",
       inputType: "number"
     },
     "pro-pit-part-time-jobs-count": {
@@ -529,6 +536,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time jobs",
+      exportHeading: "partTimeJobsAggregate",
       inputType: "number"
     },
     "pro-pit-part-time-clt-jobs-count": {
@@ -540,6 +548,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate part time CLT jobs",
+      exportHeading: "partTimeCltJobsAggregate",
       inputType: "number"
     },
     "pro-pit-volunteers-count": {
@@ -551,6 +560,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate volunteers",
+      exportHeading: "volunteersAggregate",
       inputType: "number"
     },
     "pro-pit-beneficiaries-count": {
@@ -562,6 +572,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate beneficiaries",
+      exportHeading: "allBeneficiariesAggregate",
       inputType: "number"
     },
     "pro-pit-indirect-beneficiaries-count": {
@@ -573,6 +584,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate indirect beneficiaries",
+      exportHeading: "indirectBeneficiariesAggregate",
       inputType: "number"
     },
     "pro-pit-associates-count": {
@@ -584,6 +596,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate associates",
+      exportHeading: "allAssociatesAggregate",
       inputType: "number"
     },
     "pro-pit-goal-trees-restored-description": {
@@ -639,54 +652,63 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
   relations: {
     "pro-pit-tree-species": {
       label: "Tree Species",
+      exportHeading: "treeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "pro-pit-all-jobs": {
       label: "All Jobs",
+      exportHeading: "jobsAll",
       resource: "demographics",
       inputType: "jobs",
       collection: "all"
     },
     "pro-pit-full-time-jobs": {
       label: "Full-time Jobs",
+      exportHeading: "jobsFullTime",
       resource: "demographics",
       inputType: "jobs",
       collection: "full-time"
     },
     "pro-pit-part-time-jobs": {
       label: "Part-time Jobs",
+      exportHeading: "jobsPartTime",
       resource: "demographics",
       inputType: "jobs",
       collection: "part-time"
     },
     "pro-pit-volunteers": {
       label: "Volunteers",
+      exportHeading: "volunteers",
       resource: "demographics",
       inputType: "volunteers",
       collection: "volunteer"
     },
     "pro-pit-all-beneficiaries": {
       label: "All Beneficiaries",
+      exportHeading: "allBeneficiaries",
       resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "pro-pit-indirect-beneficiaries": {
       label: "Indirect Beneficiaries",
+      exportHeading: "indirectBeneficiaries",
       resource: "demographics",
       inputType: "indirectBeneficiaries",
       collection: "indirect"
     },
     "pro-pit-hectares-goal": {
       label: "Hectares Goal",
+      exportHeading: "hectaresGoal",
       resource: "restoration",
       inputType: "hectaresGoal",
       collection: "all"
     },
     "pro-pit-trees-goal": {
       label: "Trees Goal",
+      exportHeading: "treesGoal",
       resource: "restoration",
       inputType: "treesGoal",
       collection: "all"

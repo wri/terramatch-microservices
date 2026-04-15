@@ -51,7 +51,11 @@ export class CsvExportService {
     );
   }
 
-  getResponseStreamWriter(response: Response, columns: Dictionary<string>): StreamWriter {
+  getResponseStreamWriter(fileName: string, response: Response, columns: Dictionary<string>): StreamWriter {
+    response.set({
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="${fileName}"`
+    });
     return this.createStreamWriter(response, columns);
   }
 

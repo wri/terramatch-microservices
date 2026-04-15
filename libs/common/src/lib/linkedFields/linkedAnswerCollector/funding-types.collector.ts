@@ -33,7 +33,7 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
       questions[modelType] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations != null && models.financialReports != null) {
         throw new InternalServerErrorException(
           "Only one of financialReports or organisations can be set for fundingTypes."
@@ -49,7 +49,13 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
         attributes: ["uuid", "year", "type", "source", "amount"]
       });
 
-      answers[Object.values(questions)[0]] = fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
+      if (forExport) {
+        answers[Object.values(questions)[0]] = fundingTypes.map(({ type, source, amount, year }) =>
+          [type, source, amount, year].join(":")
+        );
+      } else {
+        answers[Object.values(questions)[0]] = fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
+      }
     },
 
     async syncRelation(model, _, answer) {

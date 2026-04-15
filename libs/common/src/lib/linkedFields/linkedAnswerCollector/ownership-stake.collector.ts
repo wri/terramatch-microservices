@@ -32,13 +32,19 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
       questionUuid = addQuestionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations == null) {
         throw new InternalServerErrorException("missing org for ownership stake");
       }
 
       const stakes = await OwnershipStake.organisation(models.organisations.uuid).findAll();
-      answers[questionUuid] = stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
+      if (forExport) {
+        answers[questionUuid] = stakes.map(({ firstName, lastName, title, gender, percentOwnership, yearOfBirth }) =>
+          [firstName, lastName, title, gender, percentOwnership, yearOfBirth].join(":")
+        );
+      } else {
+        answers[questionUuid] = stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
+      }
     },
 
     syncRelation: (...args) => ownershipStakeSync(...args, logger),

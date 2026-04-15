@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -20,6 +21,7 @@ import { Dictionary } from "lodash";
 import { chainScope } from "../util/chain-scope";
 import { Literal } from "sequelize/types/utils";
 import { removeQuestionDependencies } from "../hooks/remove-question-dependencies";
+import { FormQuestionOption } from "./form-question-option.entity";
 
 @Scopes(() => ({
   form: (formUuid: string | Literal) => ({ where: { formSectionId: { [Op.in]: FormSection.forForm(formUuid) } } })
@@ -166,6 +168,9 @@ export class FormQuestion extends Model<FormQuestion> {
   @AllowNull
   @JsonColumn()
   years: number[] | null;
+
+  @HasMany(() => FormQuestionOption)
+  options: FormQuestionOption[] | null;
 
   /**
    * Returns true if this question is hidden based on the parent conditional's answer

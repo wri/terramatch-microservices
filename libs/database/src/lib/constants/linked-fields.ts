@@ -45,12 +45,13 @@ export type VirtualProjectBoundary = {
 export type VirtualLinkedFieldProps = VirtualTrackingAggregate | VirtualTrackingDescription | VirtualProjectBoundary;
 export type VirtualLinkedField = {
   virtual: VirtualLinkedFieldProps;
+  exportHeading: string;
   label: string;
   inputType: FieldInputType;
   multiChoice?: boolean;
   optionListKey?: string;
 };
-export type PropertyLinkedField<M extends FormModel> = Omit<VirtualLinkedField, "virtual"> & {
+export type PropertyLinkedField<M extends FormModel> = Omit<VirtualLinkedField, "virtual" | "exportHeading"> & {
   virtual?: never;
   property: keyof Attributes<M>;
 };
@@ -95,6 +96,7 @@ export type RelationInputType = (typeof RELATION_INPUT_TYPES)[number];
 
 export type LinkedRelation = Omit<LinkedField, "optionListKey" | "inputType" | "multichoice" | "property"> & {
   inputType: RelationInputType;
+  exportHeading: string;
   resource: LinkedFieldResource;
   collection?: string;
 };

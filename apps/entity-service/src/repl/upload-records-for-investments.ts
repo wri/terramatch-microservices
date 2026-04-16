@@ -1,6 +1,6 @@
 import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { parseCsv } from "@terramatch-microservices/common/util/repl/parse-csv";
-import { Investment, InvestmentSplit, Project } from "@terramatch-microservices/database/entities";
+import { Investment, InvestmentSplit } from "@terramatch-microservices/database/entities";
 import { CreationAttributes } from "sequelize";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";

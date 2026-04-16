@@ -126,7 +126,7 @@ export class EntitiesService {
     private readonly policyService: PolicyService,
     private readonly localizationService: LocalizationService,
     private readonly configService: ConfigService,
-    private readonly csvExportService: CsvExportService
+    readonly csvExportService: CsvExportService
   ) {}
 
   get userId() {

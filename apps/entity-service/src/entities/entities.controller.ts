@@ -66,6 +66,24 @@ export class EntitiesController {
     return document;
   }
 
+  @Get(":entity/exportAll")
+  @ApiOperation({
+    operationId: "entityExportAll",
+    summary: "Export all of a given entity as CSV."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async exportExport<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+
+    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
+    await processor.exportAll(response);
+  }
+
   @Get(":entity/:uuid")
   @ApiOperation({
     operationId: "entityGet",
@@ -182,23 +200,5 @@ export class EntitiesController {
     const model = await processor.create(createPayload.data.attributes);
     const { id, dto } = await processor.getFullDto(model);
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
-  }
-
-  @Get(":entity/exportAll")
-  @ApiOperation({
-    operationId: "entityExportAll",
-    summary: "Export all of a given entity as CSV."
-  })
-  @ApiResponse({
-    status: 200,
-    description: "CSV file",
-    content: { "text/csv": { schema: { type: "string" } } }
-  })
-  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
-  async exportExport<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
-    const processor = this.entitiesService.createEntityProcessor<T>(entity);
-
-    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
-    await processor.exportAll(response);
   }
 }

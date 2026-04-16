@@ -12,7 +12,6 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { EntityCsvExportService } from "./entity-csv-export.service";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -37,7 +36,6 @@ describe("EntitiesController", () => {
   let controller: EntitiesController;
   let entitiesService: DeepMocked<EntitiesService>;
   let policyService: DeepMocked<PolicyService>;
-  let entityCsvExportService: DeepMocked<EntityCsvExportService>;
   let processor: StubProcessor;
 
   beforeEach(async () => {
@@ -45,8 +43,7 @@ describe("EntitiesController", () => {
       controllers: [EntitiesController],
       providers: [
         { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId: 123 })) },
-        { provide: EntityCsvExportService, useValue: (entityCsvExportService = createMock<EntityCsvExportService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId: 123 })) }
       ]
     }).compile();
 

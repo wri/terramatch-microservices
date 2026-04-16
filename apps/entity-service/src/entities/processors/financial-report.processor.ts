@@ -125,12 +125,13 @@ export class FinancialReportProcessor extends ReportProcessor<
   }
 
   async exportAll(response: Response) {
-    const filename = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const fileName = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     const { addRow, close } = this.entitiesService.csvExportService.getResponseStreamWriter(
-      filename,
+      fileName,
       response,
       CSV_COLUMNS
     );
+
     try {
       const builder = new PaginatedQueryBuilder(FinancialReport, 10, [
         {

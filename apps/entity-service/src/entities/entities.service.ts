@@ -238,10 +238,6 @@ export class EntitiesService {
     return PaginatedQueryBuilder.forNumberPage(modelClass, query.page, include);
   }
 
-  buildExportQuery<T extends Model>(modelClass: ModelCtor<T>, maxRows: number, include?: Includeable[]) {
-    return new PaginatedQueryBuilder(modelClass, maxRows, include);
-  }
-
   fullUrl = (media: Media) => this.mediaService.getUrl(media);
   thumbnailUrl = (media: Media) => this.mediaService.getUrl(media, "thumbnail");
 

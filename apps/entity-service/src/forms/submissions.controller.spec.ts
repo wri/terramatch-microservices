@@ -16,22 +16,18 @@ import {
 import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
 import { UpdateSubmissionAttributes } from "../entities/dto/submission.dto";
-import { EntityCsvExportService } from "../entities/entity-csv-export.service";
-import { SubmissionExportQueryDto } from "../entities/dto/submission-export-query.dto";
 
 describe("SubmissionsController", () => {
   let controller: SubmissionsController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
-  let entityCsvExportService: DeepMocked<EntityCsvExportService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SubmissionsController],
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: EntityCsvExportService, useValue: (entityCsvExportService = createMock<EntityCsvExportService>()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
       ]
     }).compile();
 
@@ -40,17 +36,6 @@ describe("SubmissionsController", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-  });
-
-  describe("exportSubmissionsCsv", () => {
-    it("delegates to EntityCsvExportService", async () => {
-      entityCsvExportService.exportFormSubmissionsCsv.mockResolvedValue("uuid,Status\n1,approved");
-      const result = await controller.exportSubmissionsCsv(new SubmissionExportQueryDto());
-      expect(result).toBe("uuid,Status\n1,approved");
-      expect(entityCsvExportService.exportFormSubmissionsCsv).toHaveBeenCalledWith(
-        expect.any(SubmissionExportQueryDto)
-      );
-    });
   });
 
   describe("get", () => {

@@ -77,7 +77,7 @@ export class EntitiesController {
     content: { "text/csv": { schema: { type: "string" } } }
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
-  async exportExport<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
+  async entityExportAll<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
 
     await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);

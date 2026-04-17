@@ -22,7 +22,7 @@ import { isField, isFile } from "@terramatch-microservices/database/constants/li
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 
-type StreamWriter = {
+export type StreamWriter = {
   addRow: (model: Model, additional?: Dictionary<unknown>) => void;
   close: () => void;
 };

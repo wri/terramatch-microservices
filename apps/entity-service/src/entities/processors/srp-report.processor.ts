@@ -9,7 +9,6 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { Response } from "express";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { DIRECT_OTHER, INDIRECT_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
@@ -49,8 +48,6 @@ export class SrpReportProcessor extends ReportProcessor<
   SrpReportFullDto,
   ReportUpdateAttributes
 > {
-  private readonly logger = new TMLogger(SrpReportProcessor.name);
-
   readonly LIGHT_DTO = SrpReportLightDto;
   readonly FULL_DTO = SrpReportFullDto;
 
@@ -164,13 +161,7 @@ export class SrpReportProcessor extends ReportProcessor<
     const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
-    const { addRow, close } = this.entitiesService.csvExportService.getResponseStreamWriter(
-      fileName,
-      response,
-      CSV_COLUMNS
-    );
-
-    try {
+    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(SrpReport, 10, [
         {
           association: "project",
@@ -196,10 +187,6 @@ export class SrpReportProcessor extends ReportProcessor<
           });
         }
       }
-    } catch (error) {
-      this.logger.error(`Error exporting srp reports: ${error.message}`, error.stack);
-    } finally {
-      close();
-    }
+    });
   }
 }

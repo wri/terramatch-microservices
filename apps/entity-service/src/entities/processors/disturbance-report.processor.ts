@@ -21,7 +21,6 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { Dictionary, flatten, kebabCase } from "lodash";
 import { DateTime } from "luxon";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -157,8 +156,6 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   DisturbanceReportFullDto,
   ReportUpdateAttributes
 > {
-  private readonly logger = new TMLogger(DisturbanceReportProcessor.name);
-
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;
 
@@ -321,13 +318,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
 
   async exportAll(response: Response) {
     const fileName = `Disturbance Reports Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    const { addRow, close } = this.entitiesService.csvExportService.getResponseStreamWriter(
-      fileName,
-      response,
-      CSV_COLUMNS
-    );
-
-    try {
+    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {
           association: "project",
@@ -356,10 +347,6 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           });
         }
       }
-    } catch (error) {
-      this.logger.error(`Error exporting disturbance reports: ${error.message}`, error.stack);
-    } finally {
-      close();
-    }
+    });
   }
 }

@@ -13,7 +13,6 @@ import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Dictionary, uniq } from "lodash";
 import { DateTime } from "luxon";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -46,7 +45,6 @@ export class FinancialReportProcessor extends ReportProcessor<
   FinancialReportFullDto,
   ReportUpdateAttributes
 > {
-  private readonly logger = new TMLogger(FinancialReportProcessor.name);
   readonly LIGHT_DTO = FinancialReportLightDto;
   readonly FULL_DTO = FinancialReportFullDto;
 
@@ -126,13 +124,7 @@ export class FinancialReportProcessor extends ReportProcessor<
 
   async exportAll(response: Response) {
     const fileName = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    const { addRow, close } = this.entitiesService.csvExportService.getResponseStreamWriter(
-      fileName,
-      response,
-      CSV_COLUMNS
-    );
-
-    try {
+    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(FinancialReport, 10, [
         {
           association: "organisation",
@@ -159,11 +151,7 @@ export class FinancialReportProcessor extends ReportProcessor<
           });
         }
       }
-    } catch (error) {
-      this.logger.error(`Error exporting financial reports: ${error.message}`, error.stack);
-    } finally {
-      close();
-    }
+    });
   }
 
   protected async getFundingTypes(financialReport: FinancialReport) {

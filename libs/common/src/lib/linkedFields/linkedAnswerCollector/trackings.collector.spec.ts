@@ -25,7 +25,11 @@ describe("TrackingsCollector", () => {
     describe("collect", () => {
       it("throws if no collection is defined", () => {
         expect(() =>
-          collector.addField({ resource: "demographics", inputType: "workdays", label: "" }, "siteReports", "one")
+          collector.addField(
+            { resource: "demographics", inputType: "workdays", label: "", exportHeading: "" },
+            "siteReports",
+            "one"
+          )
         ).toThrow("Invalid tracking field definition [demographics, workdays, undefined]");
       });
 
@@ -94,7 +98,7 @@ describe("TrackingsCollector", () => {
         await expect(
           collector.syncRelation(
             new SiteReport(),
-            { inputType: "workdays", label: "", resource: "demographics" },
+            { inputType: "workdays", label: "", resource: "demographics", exportHeading: "" },
             undefined,
             false
           )

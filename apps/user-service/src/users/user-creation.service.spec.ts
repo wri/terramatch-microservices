@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import {
+  Framework,
   LocalizationKey,
   ModelHasRole,
   Organisation,
@@ -463,10 +464,12 @@ describe("UserCreationService", () => {
   });
 
   describe("authenticated/admin user creation", () => {
-    const getAdminRequest = (email: string, role: string) => {
+    const getAdminRequest = async (email: string, role: string) => {
       const frameworkSlug = "ppc";
-      RoleFactory.create({ name: role });
-      FrameworkFactory.create({ slug: frameworkSlug });
+      if ((await Role.count({ where: { name: role } })) === 0) await RoleFactory.create({ name: role });
+      if ((await Framework.count({ where: { slug: frameworkSlug } })) === 0) {
+        await FrameworkFactory.create({ slug: frameworkSlug });
+      }
       const request = new AdminUserCreateAttributes();
       request.emailAddress = email;
       request.firstName = "firstName";
@@ -480,7 +483,7 @@ describe("UserCreationService", () => {
     };
 
     it("should create user for authenticated request", async () => {
-      const request = getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", "project-manager");
       const role = RoleFactory.create({ name: request.role });
       const createdUser = await UserFactory.create();
       const organisation = { id: 999 } as Organisation;
@@ -502,7 +505,7 @@ describe("UserCreationService", () => {
     });
 
     it("should fail when organisation does not exist", async () => {
-      const request = getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", "project-manager");
 
       jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
 
@@ -512,7 +515,7 @@ describe("UserCreationService", () => {
     });
 
     it("should fail when admin role does not exist", async () => {
-      const request = getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", "project-manager");
       const createdUser = await UserFactory.create();
       const organisation = { id: 888 } as Organisation;
 
@@ -525,7 +528,7 @@ describe("UserCreationService", () => {
     });
 
     it("should fail validation for malformed admin payload", async () => {
-      const request = getAdminRequest("invalid-email", "project-manager");
+      const request = await getAdminRequest("invalid-email", "project-manager");
       request.organisationUuid = "";
       // @ts-expect-error test invalid payload
       request.phoneNumber = null;

@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { DisturbanceReport } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -10,37 +8,22 @@ import {
   DisturbanceReportEntryFactory,
   DisturbanceReportFactory,
   ProjectFactory,
-  ProjectUserFactory,
-  UserFactory
+  ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("DisturbanceReportProcessor", () => {
   let processor: DisturbanceReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
 
   beforeEach(async () => {
     await DisturbanceReport.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
     processor = module.get(EntitiesService).createEntityProcessor("disturbanceReports") as DisturbanceReportProcessor;
   });
 
@@ -146,7 +129,12 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const projectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
       await DisturbanceReportFactory.createMany(5);
@@ -165,7 +153,7 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should returns own project disturbance reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const ownProjectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
       await DisturbanceReportFactory.createMany(5);
 

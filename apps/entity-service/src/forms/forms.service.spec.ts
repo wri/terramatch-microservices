@@ -28,6 +28,7 @@ import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { pick } from "lodash";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("FormsService", () => {
   let service: FormsService;
@@ -43,6 +44,7 @@ describe("FormsService", () => {
       providers: [
         { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         FormsService
       ]
     }).compile();

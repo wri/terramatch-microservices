@@ -14,6 +14,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { ConfigService } from "@nestjs/config";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -34,6 +35,7 @@ describe("EntitiesService", () => {
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: PolicyService, useValue: createMock<PolicyService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         {
           provide: ConfigService,
           useValue: createMock<ConfigService>({

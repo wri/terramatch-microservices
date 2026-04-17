@@ -1,14 +1,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import {
-  TrackingEntryFactory,
-  TrackingFactory,
   ProjectReportFactory,
   SeedingFactory,
   SiteReportFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
@@ -16,26 +13,14 @@ import { TrackingDto, TrackingEntryDto } from "@terramatch-microservices/common/
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 import { SeedingDto } from "@terramatch-microservices/common/dto/seeding.dto";
-import { PolicyService } from "@terramatch-microservices/common";
 import { SiteReport } from "@terramatch-microservices/database/entities";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("AssociationProcessor", () => {
   let service: EntitiesService;
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>() },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
-    service = module.get(EntitiesService);
+    service = (await mockEntityService()).get(EntitiesService);
   });
 
   afterEach(() => {

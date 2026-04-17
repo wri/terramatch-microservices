@@ -234,15 +234,9 @@ describe("OrganisationPolicy", () => {
   describe("approveReject permissions", () => {
     it("allows approveReject for verified admin users (admin role + email verified)", async () => {
       const org = await OrganisationFactory.create();
-      const adminRole = await RoleFactory.create({ name: "admin-super" });
-      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
-      await ModelHasRole.create({
-        modelId: user.id,
-        roleId: adminRole.id,
-        modelType: User.LARAVEL_TYPE
-      } as ModelHasRole);
+      const user = await UserFactory.create({});
       mockUserId(user.id);
-      mockPermissions("users-manage");
+      mockPermissions("framework-terrafund");
       await expectCan(service, "approveReject", org);
     });
 
@@ -285,29 +279,17 @@ describe("OrganisationPolicy", () => {
 
     it("allows approveReject for admin-ppc role with email verified", async () => {
       const org = await OrganisationFactory.create();
-      const adminRole = await RoleFactory.create({ name: "admin-ppc" });
-      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
-      await ModelHasRole.create({
-        modelId: user.id,
-        roleId: adminRole.id,
-        modelType: User.LARAVEL_TYPE
-      } as ModelHasRole);
+      const user = await UserFactory.create();
       mockUserId(user.id);
-      mockPermissions("users-manage");
+      mockPermissions("framework-ppc");
       await expectCan(service, "approveReject", org);
     });
 
     it("allows approveReject for admin-terrafund role with email verified", async () => {
       const org = await OrganisationFactory.create();
-      const adminRole = await RoleFactory.create({ name: "admin-terrafund" });
-      const user = await UserFactory.create({ emailAddressVerifiedAt: new Date() });
-      await ModelHasRole.create({
-        modelId: user.id,
-        roleId: adminRole.id,
-        modelType: User.LARAVEL_TYPE
-      } as ModelHasRole);
+      const user = await UserFactory.create();
       mockUserId(user.id);
-      mockPermissions("users-manage");
+      mockPermissions("framework-terrafund");
       await expectCan(service, "approveReject", org);
     });
 

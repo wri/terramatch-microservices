@@ -32,7 +32,7 @@ describe("FinancialIndicatorCollector", () => {
   describe("collect", () => {
     it("throws if both an org and a financial report is provided in a single collection", async () => {
       await expect(
-        collector.collect({}, { organisations: new Organisation(), financialReports: new FinancialReport() })
+        collector.collect({}, { organisations: new Organisation(), financialReports: new FinancialReport() }, {})
       ).rejects.toThrow("Only one of financialReports or organisations can be set for financialIndicators.");
     });
 

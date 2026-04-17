@@ -37,6 +37,8 @@ import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/fi
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { USER_SERVICE_EXPORT_QUEUE } from "../exports/user-service-exports.processor";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -55,6 +57,7 @@ describe("OrganisationsController", () => {
       controllers: [OrganisationsController],
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         {
           provide: OrganisationsService,
           useValue: (organisationsService = createMock<OrganisationsService>())
@@ -65,6 +68,7 @@ describe("OrganisationsController", () => {
         },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
+        { provide: getQueueToken(USER_SERVICE_EXPORT_QUEUE), useValue: createMock<Queue>() },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();

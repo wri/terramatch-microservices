@@ -97,7 +97,7 @@ describe("FieldCollector", () => {
       demographicsType: "workdays",
       collection: "paid-other-activities"
     } as unknown as VirtualTrackingAggregate;
-    collector.addField({ virtual, label: "", inputType: "long-text" }, "projectReports", "one");
+    collector.addField({ virtual, label: "", inputType: "long-text", exportHeading: "" }, "projectReports", "one");
 
     await expect(harness.getAnswers({ projectReports: new ProjectReport() })).rejects.toThrow(
       "Unrecognized virtual props type: foo"

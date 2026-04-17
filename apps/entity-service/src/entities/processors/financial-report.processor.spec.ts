@@ -6,9 +6,7 @@ import {
   Media,
   Organisation
 } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -16,24 +14,17 @@ import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
   FundingTypeFactory,
-  OrganisationFactory,
-  UserFactory
+  OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("FinancialReportProcessor", () => {
   let processor: FinancialReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
 
   beforeEach(async () => {
     await FinancialReport.truncate();
@@ -41,16 +32,8 @@ describe("FinancialReportProcessor", () => {
     await FundingType.truncate();
     await Organisation.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
     processor = module.get(EntitiesService).createEntityProcessor("financialReports") as FinancialReportProcessor;
   });
 
@@ -68,7 +51,7 @@ describe("FinancialReportProcessor", () => {
       expect(result).toBeDefined();
       expect(result?.id).toBe(financialReport.id);
       expect(result?.organisation).toBeDefined();
-      expect(result?.organisation.id).toBe(organisation.id);
+      expect(result?.organisation?.id).toBe(organisation.id);
     });
 
     it("should return null for non-existent uuid", async () => {

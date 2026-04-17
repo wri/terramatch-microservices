@@ -1,5 +1,4 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { stringify as stringifySync } from "csv-stringify/sync";
 import { stringify } from "csv-stringify";
 import { FileService } from "../file/file.service";
 import { ConfigService } from "@nestjs/config";
@@ -28,11 +27,11 @@ type StreamWriter = {
   close: () => void;
 };
 
-type FormQuestionExportMapping = {
+export type FormQuestionExportMapping = {
   questionUuid: string;
   heading: string;
+  config: LinkedFieldSpecification;
   attribute?: ModelAttribute;
-  config?: LinkedFieldSpecification;
 };
 
 @Injectable()
@@ -53,7 +52,7 @@ export class CsvExportService {
     return await this.fileService.remoteFileExists(this.bucket, `exports/${fileName}`);
   }
 
-  async generateDto(fileName: string) {
+  async generateExportDto(fileName: string) {
     return new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, `exports/${fileName}`));
   }
 
@@ -91,7 +90,7 @@ export class CsvExportService {
       for (const question of sectionQuestions[`${section.id}`] ?? []) {
         this.addQuestionToMapping(mappings, question);
 
-        for (const child of childQuestions[`${question.id}`] ?? []) {
+        for (const child of childQuestions[question.uuid] ?? []) {
           this.addQuestionToMapping(mappings, child);
         }
       }
@@ -128,22 +127,6 @@ export class CsvExportService {
       const { heading } = mappings.find(mapping => questionUuid === mapping.questionUuid) ?? {};
       return heading == null ? acc : { ...acc, [heading]: value };
     }, {});
-  }
-
-  /**
-   * @param rows Plain objects whose keys match `columnMap` keys (extras are ignored).
-   * @param columnMap field key → CSV header label (column order follows insertion order).
-   */
-  stringify(rows: Dictionary<unknown>[], columnMap: Dictionary<string>): string {
-    const columnsArray = Object.entries(columnMap).map(([key, header]) => ({ key, header }));
-    const filteredRows = rows.map(row => {
-      const filteredRow: Record<string, string | number> = {};
-      for (const { key } of columnsArray) {
-        filteredRow[key] = this.serializeCell(row[key]);
-      }
-      return filteredRow;
-    });
-    return stringifySync(filteredRows, { header: true, columns: columnsArray });
   }
 
   private createStreamWriter<T extends NodeJS.WritableStream>(
@@ -183,6 +166,8 @@ export class CsvExportService {
     if (question.linkedFieldKey == null || question.inputType === "tableInput") return;
 
     const config = getLinkedFieldConfig(question.linkedFieldKey);
+    if (config == null) return;
+
     mappings.push({
       questionUuid: question.uuid,
       heading: getExportHeading(config),

@@ -119,7 +119,7 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     return {
       payload: buildJsonApi(FileDownloadDto).addData(
         "organisationsExport",
-        await this.csvExportService.generateDto(fileName)
+        await this.csvExportService.generateExportDto(fileName)
       )
     };
   }

@@ -112,7 +112,7 @@ export class OrganisationsController {
     if (await this.csvExportService.exportExists(fileName)) {
       return buildJsonApi(FileDownloadDto).addData(
         "organisationsExport",
-        await this.csvExportService.generateDto(fileName)
+        await this.csvExportService.generateExportDto(fileName)
       );
     }
 

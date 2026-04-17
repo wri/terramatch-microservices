@@ -5,6 +5,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { INDICATORS, TreeCoverLossData, TreeCoverLossResult } from "@terramatch-microservices/database/constants";
 import { NotFoundException } from "@nestjs/common";
 import { IndicatorOutputTreeCoverLoss, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
 
 export class TreeCoverLossCalculator implements CalculateIndicator {
   private logger = new TMLogger(TreeCoverLossCalculator.name);
@@ -21,7 +22,9 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
 
     const sitePolygon = await SitePolygon.findOne({
       where: {
-        polygonUuid: polygonUuid
+        polygonUuid: { [Op.eq]: polygonUuid },
+        isActive: true,
+        status: "approved"
       },
       attributes: ["id"]
     });

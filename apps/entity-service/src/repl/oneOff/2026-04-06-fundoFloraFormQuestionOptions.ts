@@ -1,7 +1,13 @@
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
-import { FormQuestion, FormQuestionOption, Media } from "@terramatch-microservices/database/entities";
+import {
+  FormOptionList,
+  FormOptionListOption,
+  FormQuestion,
+  FormQuestionOption,
+  Media
+} from "@terramatch-microservices/database/entities";
 
 /**
  * Keys match ProjectConfiguration / SiteConfiguration / ProjectPitchConfiguration (linkedFields).
@@ -11,6 +17,7 @@ const LAND_TENURE_PITCH_SOURCE_KEY = "pro-pit-land-tenure-proj-area";
 const LAND_TENURE_PROJECT_KEY = "pro-land-tenure-proj-area";
 const LAND_TENURE_SITE_KEY = "site-land-tenures";
 const LANDOWNER_AGREEMENT_KEY = "pro-landowner-agreement";
+const LANDOWNER_COLLECTION_LIST_KEY = "landowner-collection";
 
 const LANDOWNER_AGREEMENT_OPTION_ROWS: { slug: string; label: string }[] = [
   {
@@ -135,15 +142,50 @@ async function appendLandownerAgreementOptions(
   return { questionsProcessed: targets.length, optionsCreated };
 }
 
+async function appendLandownerAgreementOptionList(
+  localizationService: LocalizationService
+): Promise<{ listCreated: boolean; optionsCreated: number }> {
+  let optionList = await FormOptionList.findOne({ where: { key: LANDOWNER_COLLECTION_LIST_KEY } });
+  const listCreated = optionList == null;
+  if (optionList == null) {
+    optionList = new FormOptionList();
+    optionList.key = LANDOWNER_COLLECTION_LIST_KEY;
+    await optionList.save();
+  }
+
+  const existing = await FormOptionListOption.findAll({ where: { formOptionListId: optionList.id } });
+  const existingSlugs = new Set(existing.map(o => o.slug).filter((s): s is string => s != null));
+  let optionsCreated = 0;
+
+  for (const def of LANDOWNER_AGREEMENT_OPTION_ROWS) {
+    if (existingSlugs.has(def.slug)) continue;
+
+    const row = new FormOptionListOption();
+    row.formOptionListId = optionList.id;
+    row.slug = def.slug;
+    row.label = def.label;
+    row.labelId = await localizationService.generateI18nId(def.label, null);
+    row.imageUrl = null;
+    row.altValue = null;
+    await row.save();
+    existingSlugs.add(def.slug);
+    optionsCreated += 1;
+  }
+
+  return { listCreated, optionsCreated };
+}
+
 export const fundoFloraFormQuestionOptions = withoutSqlLogs(
   async (mediaService: MediaService, localizationService: LocalizationService) => {
     const sourceOptions = await pickSourceLandTenureOptions();
     const landProject = await replicateLandTenureOptions(mediaService, sourceOptions, LAND_TENURE_PROJECT_KEY);
     const landSite = await replicateLandTenureOptions(mediaService, sourceOptions, LAND_TENURE_SITE_KEY);
     const agreement = await appendLandownerAgreementOptions(localizationService);
+    const agreementList = await appendLandownerAgreementOptionList(localizationService);
 
     console.log("Land tenure (project):", landProject);
     console.log("Land tenure (site):", landSite);
     console.log("Landowner agreement:", agreement);
+    console.log("Landowner agreement option list:", agreementList);
   }
 );

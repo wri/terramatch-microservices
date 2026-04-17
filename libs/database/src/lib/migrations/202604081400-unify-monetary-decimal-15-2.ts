@@ -1,5 +1,5 @@
 import { RunnableMigration } from "umzug";
-import { QueryInterface, BIGINT, DECIMAL, INTEGER, TEXT } from "sequelize";
+import { QueryInterface, DECIMAL, INTEGER, TEXT } from "sequelize";
 
 const LOAN_STATUS_CLEANUP = `
 UPDATE organisations
@@ -22,16 +22,6 @@ export const unifyMonetaryDecimal152: RunnableMigration<QueryInterface> = {
       allowNull: true
     });
 
-    await context.changeColumn("project_pitches", "project_budget", {
-      type: DECIMAL(15, 2),
-      allowNull: true
-    });
-
-    await context.changeColumn("v2_projects", "budget", {
-      type: DECIMAL(15, 2),
-      allowNull: true
-    });
-
     await context.changeColumn("v2_funding_types", "amount", {
       type: DECIMAL(15, 2),
       allowNull: false
@@ -42,16 +32,6 @@ export const unifyMonetaryDecimal152: RunnableMigration<QueryInterface> = {
     await context.changeColumn("v2_funding_types", "amount", {
       type: INTEGER.UNSIGNED,
       allowNull: false
-    });
-
-    await context.changeColumn("v2_projects", "budget", {
-      type: INTEGER.UNSIGNED,
-      allowNull: true
-    });
-
-    await context.changeColumn("project_pitches", "project_budget", {
-      type: BIGINT.UNSIGNED,
-      allowNull: true
     });
 
     await context.changeColumn("organisations", "loan_status_amount", {

@@ -20,7 +20,7 @@ export class GreenhouseNotificationService {
   }
 
   async notifyPolygonUpdated(polygon: PolygonGeometry) {
-    return this.runMutation("tmNotifyPolygonUpdated", polygon.uuid);
+    return this.runMutation("tmNotifyFeatureUpdated", polygon.uuid);
   }
 
   private isEnabled() {

@@ -16,3 +16,4 @@ export { fixSiteReportTrees } from "./2026-03-17-fixSiteReportTrees";
 export { cleanupReportAuditLogs } from "./2026-03-17-cleanupReportAuditLogs";
 export { fundoFloraFormQuestionOptions } from "./2026-04-06-fundoFloraFormQuestionOptions";
 export { migrateNurseryTypeSlugs } from "./2026-04-06-migrateNurseryTypeSlugs";
+export { migrateFormQuestionsMonetaryInputType } from "./2026-04-13-migrateFormQuestionsMonetaryInputType";

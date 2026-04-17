@@ -42,20 +42,6 @@ const COLLECTIONS: Record<string, ListOption[]> = {
     { label: "UGX - Ugandan Shilling", slug: "ugx" },
     { label: "ZMW - Zambian Kwacha", slug: "zmw" },
     { label: "ZWL - Zimbabwean Dollar", slug: "zwl" }
-  ],
-  "months-by-number": [
-    { label: "January", slug: "1" },
-    { label: "February", slug: "2" },
-    { label: "March", slug: "3" },
-    { label: "April", slug: "4" },
-    { label: "May", slug: "5" },
-    { label: "June", slug: "6" },
-    { label: "July", slug: "7" },
-    { label: "August", slug: "8" },
-    { label: "September", slug: "9" },
-    { label: "October", slug: "10" },
-    { label: "November", slug: "11" },
-    { label: "December", slug: "12" }
   ]
 };
 

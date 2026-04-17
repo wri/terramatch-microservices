@@ -31,7 +31,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
     },
     "pro-pit-tot-ha": { property: "totalHectares", label: "Total hectares", inputType: "number" },
     "pro-pit-tot-trees": { property: "totalTrees", label: "Total trees", inputType: "number" },
-    "pro-pit-bgt": { property: "projectBudget", label: "Project budget", inputType: "number" },
+    "pro-pit-bgt": { property: "projectBudget", label: "Project budget", inputType: "number-currency" },
     "pro-pit-cap-bld-needs": {
       property: "capacityBuildingNeeds",
       label: "Capacity building needs",

@@ -2,7 +2,7 @@ import { CalculateIndicator } from "../calculate-indicator.interface";
 import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { IndicatorOutputHectares, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
-import { NotFoundException } from "@nestjs/common";
+import { NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { IndicatorSlug, RestorationByTypeData } from "@terramatch-microservices/database/constants";
 
@@ -18,7 +18,9 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
       where: {
         polygonUuid: {
           [Op.eq]: polygonUuid
-        }
+        },
+        isActive: true,
+        status: "approved"
       },
       attributes: ["id", this.type, "calcArea"]
     });
@@ -30,7 +32,19 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
     const area = await this.calculateArea(sitePolygon, geometry);
 
     const fieldValue = sitePolygon.get(this.type) as string[] | string | null;
-    const key = fieldValue != null ? (Array.isArray(fieldValue) ? fieldValue.join(",") : String(fieldValue)) : "";
+    const key =
+      fieldValue != null
+        ? (Array.isArray(fieldValue) ? fieldValue.join(",") : String(fieldValue))
+            .split(",")
+            .map(value => value.trim())
+            .filter(value => value.length > 0)
+            .join(",")
+        : "";
+    if (key.length === 0) {
+      throw new UnprocessableEntityException(
+        `Cannot calculate ${this.indicatorSlug}: polygon ${polygonUuid} has empty ${this.type}`
+      );
+    }
 
     const restorationByValue: RestorationByTypeData = {
       [key]: area

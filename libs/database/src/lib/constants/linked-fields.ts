@@ -16,6 +16,7 @@ export const FIELD_INPUT_TYPES = [
   "long-text",
   "mapInput",
   "number",
+  "number-currency",
   "number-percentage",
   "radio",
   "select",

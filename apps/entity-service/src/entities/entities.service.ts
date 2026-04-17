@@ -285,6 +285,7 @@ export class EntitiesService {
       await writeRows(addRow);
     } catch (error) {
       this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
+      throw error;
     } finally {
       close();
     }

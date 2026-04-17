@@ -133,7 +133,7 @@ describe("EntitiesService", () => {
       };
       const close = jest.fn();
       csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
-      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
+      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
       expect(close).toHaveBeenCalled();
     });
 

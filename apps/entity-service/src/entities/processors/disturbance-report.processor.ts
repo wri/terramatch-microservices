@@ -142,7 +142,7 @@ const formatEntriesForExport = (entries: DisturbanceReportEntry[], name: string)
         const affected = decodeValue(entry.value);
         if (!Array.isArray(affected)) return "";
         return flatten(
-          affected.map(group => (!Array.isArray(group) ? null : group.map(poly => poly["polyName"])))
+          affected.map(group => (!Array.isArray(group) ? null : group.map(poly => poly["polyName"]))).filter(isNotNull)
         ).join("; ");
       } else {
         return decodeValue(entry.value);

@@ -21,6 +21,7 @@ import { Project } from "./project.entity";
 import { Task } from "./task.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeActions } from "../hooks/remove-actions";
 
 type SrpReportMedia = "media";
 
@@ -32,7 +33,7 @@ type SrpReportMedia = "media";
   tableName: "srp_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeActions }
 })
 export class SrpReport extends Model<SrpReport> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\SrpReport";

@@ -108,7 +108,6 @@ export class EmailService {
       banner: null,
       invite: null,
       monitoring: null,
-      transactional: null,
       year: new Date().getFullYear(),
       ...translated,
       title,

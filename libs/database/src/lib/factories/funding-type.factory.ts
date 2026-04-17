@@ -6,7 +6,7 @@ import { FinancialReportFactory } from "./financial-report.factory";
 
 const defaultAttributesFactory = async () => ({
   source: faker.company.name(),
-  amount: faker.number.int({ min: 1000, max: 1000000 }),
+  amount: faker.number.float({ min: 1000, max: 1000000, fractionDigits: 2 }),
   year: faker.number.int({ min: 2020, max: 2025 }),
   type: faker.helpers.arrayElement(["grant", "loan", "investment", "donation"])
 });

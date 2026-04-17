@@ -1,0 +1,34 @@
+<dataStore>
+  <id>DataStoreInfoImpl--7559e60b:19c336f1e70:-7fe1</id>
+  <name>wri</name>
+  <type>MySQL</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--7559e60b:19c336f1e70:-7fe3</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="Evictor run periodicity">300</entry>
+    <entry key="fetch size">1000</entry>
+    <entry key="Expose primary keys">false</entry>
+    <entry key="validate connections">true</entry>
+    <entry key="Connection timeout">20</entry>
+    <entry key="Batch insert size">1</entry>
+    <entry key="database">wri_restoration_marketplace_api</entry>
+    <entry key="port">3306</entry>
+    <entry key="passwd">crypt1:arR7WL2TMILyNpC9g1TYTQ==</entry>
+    <entry key="storage engine">MyISAM</entry>
+    <entry key="min connections">1</entry>
+    <entry key="dbtype">mysql</entry>
+    <entry key="host">mariadb</entry>
+    <entry key="namespace">wri</entry>
+    <entry key="max connections">10</entry>
+    <entry key="Evictor tests per run">3</entry>
+    <entry key="Test while idle">true</entry>
+    <entry key="user">root</entry>
+    <entry key="Max connection idle time">300</entry>
+  </connectionParameters>
+  <__default>false</__default>
+  <dateCreated>2026-02-06 15:05:35.430 UTC</dateCreated>
+  <dateModified>2026-02-06 16:48:23.438 UTC</dateModified>
+  <disableOnConnFailure>false</disableOnConnFailure>
+</dataStore>

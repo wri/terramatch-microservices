@@ -33,6 +33,7 @@ import { StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
+import { removeMedia } from "../hooks/remove-media";
 
 type DisturbanceReportMedia = "media";
 
@@ -43,7 +44,7 @@ type DisturbanceReportMedia = "media";
   tableName: "disturbance_reports",
   underscored: true,
   paranoid: true,
-  hooks: { afterCreate: statusUpdateSequelizeHook }
+  hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeMedia }
 })
 export class DisturbanceReport extends Model<
   InferAttributes<DisturbanceReport>,

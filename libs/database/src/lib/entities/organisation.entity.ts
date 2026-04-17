@@ -5,6 +5,7 @@ import { OrganisationStatus } from "../constants/status";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Application } from "./application.entity";
 import { Subquery } from "../util/subquery.builder";
+import { removeMedia } from "../hooks/remove-media";
 
 type OrganisationMedia =
   | "logo"
@@ -36,7 +37,7 @@ type OrganisationMedia =
   | "carbonCreditsProof"
   | "additionalFinancialDocumentation";
 
-@Table({ tableName: "organisations", underscored: true, paranoid: true })
+@Table({ tableName: "organisations", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class Organisation extends Model<Organisation> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
 
@@ -337,8 +338,8 @@ export class Organisation extends Model<Organisation> {
   accountNumber2: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  loanStatusAmount: string | null;
+  @Column(DECIMAL(15, 2))
+  loanStatusAmount: number | null;
 
   @AllowNull
   @JsonColumn()
@@ -468,10 +469,6 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(TEXT)
   additionalComments: string | null;
-
-  @AllowNull
-  @Column(TEXT)
-  consortium: string | null;
 
   @AllowNull
   @Column(TEXT)

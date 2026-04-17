@@ -57,9 +57,6 @@ export class OrganisationUserApprovedEmail extends EmailSender<OrganisationUserA
       {
         i18nReplacements: {
           "{organisationName}": organisation.name
-        },
-        additionalValues: {
-          transactional: "transactional"
         }
       }
     );

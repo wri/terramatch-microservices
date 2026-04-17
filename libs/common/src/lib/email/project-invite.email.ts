@@ -51,8 +51,7 @@ export class ProjectInviteEmail extends EmailSender<ProjectInviteEmailData> {
       "{projectName}": project.name as string
     };
     const additionalValues = {
-      link: `/auth/signup/${this.data.token}`,
-      transactional: "transactional"
+      link: `/auth/signup/${this.data.token}`
     };
     await emailService.sendI18nTemplateEmail(this.data.emailAddress, "en-US", EMAIL_PROJECT_INVITE_KEYS, {
       i18nReplacements,

@@ -54,7 +54,11 @@ function parquetDumpToS3() {
   local filename
   filename="$(date -I)-polygons-$env.geoparquet"
   uv run parque_dump.py --host "$address" --password "$password" --output "$filename" && \
-  aws s3 cp "$filename" s3://wri-tm-db-backup/"$env"/ && \
+  aws s3 cp "$filename" s3://wri-restoration-geodata/terramatch/snapshot/ --region "us-east-1" --storage-class INTELLIGENT_TIERING && \
+  
+  if [ "$env" = "prod" ]; then
+    aws s3 cp "$filename" s3://wri-restoration-geodata/terramatch/tm.geoparquet --region "us-east-1" --storage-class INTELLIGENT_TIERING
+  fi && \
   rm "$filename"
 }
 

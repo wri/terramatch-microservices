@@ -64,13 +64,9 @@ export class FormsController {
     description: "Authentication failed, or resource is unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })
-  @ExceptionResponse(BadRequestException, { description: "Form is not allowed to be deleted." })
   async delete(@Param("uuid") uuid: string) {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("delete", form);
-    if (form.published) {
-      throw new BadRequestException("Published forms may not be deleted");
-    }
 
     await form.destroy();
     return buildDeletedResponse(getDtoType(FormFullDto), uuid);

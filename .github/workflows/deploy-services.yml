@@ -97,3 +97,10 @@ jobs:
       env: ${{ inputs.env }}
       service: dashboard-service
     secrets: inherit
+
+  migrate-db:
+    needs: user-service
+    uses: ./.github/workflows/run-migrations.yml
+    with:
+      env: ${{ inputs.env }}
+    secrets: inherit

@@ -1,12 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { faker } from "@faker-js/faker";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
+import { Op } from "sequelize";
 import { Transaction } from "sequelize";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
-import { ScheduledJob, Task } from "@terramatch-microservices/database/entities";
+import {
+  Notification,
+  PasswordReset,
+  ScheduledJob,
+  Task,
+  Verification
+} from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
@@ -121,8 +129,8 @@ describe("ScheduledJobsService", () => {
   });
 
   describe("enqueueTaskDigestEmails", () => {
-    let transactionSpy: jest.SpyInstance;
-    let querySpy: jest.SpyInstance;
+    let transactionSpy: jest.SpyInstance | undefined;
+    let querySpy: jest.SpyInstance | undefined;
 
     beforeEach(() => {
       const sequelize = Task.sequelize;
@@ -150,8 +158,8 @@ describe("ScheduledJobsService", () => {
     });
 
     afterEach(() => {
-      transactionSpy.mockRestore();
-      querySpy.mockRestore();
+      transactionSpy?.mockRestore();
+      querySpy?.mockRestore();
     });
 
     it("should not enqueue when no incomplete tasks", async () => {
@@ -175,8 +183,8 @@ describe("ScheduledJobsService", () => {
   });
 
   describe("enqueueWeeklyPolygonUpdateEmails", () => {
-    let transactionSpy: jest.SpyInstance;
-    let querySpy: jest.SpyInstance;
+    let transactionSpy: jest.SpyInstance | undefined;
+    let querySpy: jest.SpyInstance | undefined;
 
     beforeEach(() => {
       const sequelize = Task.sequelize;
@@ -204,8 +212,8 @@ describe("ScheduledJobsService", () => {
     });
 
     afterEach(() => {
-      transactionSpy.mockRestore();
-      querySpy.mockRestore();
+      transactionSpy?.mockRestore();
+      querySpy?.mockRestore();
     });
 
     it("should not enqueue when no polygon UUIDs in window", async () => {
@@ -236,5 +244,113 @@ describe("ScheduledJobsService", () => {
       });
       loadSpy.mockRestore();
     });
+  });
+});
+
+describe("ScheduledJobsService maintenance cleanup", () => {
+  let service: ScheduledJobsService;
+  let transactionSpy: jest.SpyInstance | undefined;
+  let querySpy: jest.SpyInstance | undefined;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        ScheduledJobsService,
+        { provide: getQueueToken("scheduled-jobs"), useValue: createMock<Queue>() },
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
+      ]
+    }).compile();
+    service = module.get(ScheduledJobsService);
+
+    const sequelize = Task.sequelize;
+    if (sequelize == null) {
+      throw new Error("Task.sequelize is not initialized");
+    }
+    const mockTransaction = async (arg?: unknown) => {
+      if (typeof arg === "function") {
+        return await (arg as (t: Transaction) => Promise<void>)({} as Transaction);
+      }
+      return {} as Transaction;
+    };
+    const mockQuery = async (sql: string | { query: string }) => {
+      const q = typeof sql === "string" ? sql : sql.query;
+      if (q.includes("GET_LOCK")) {
+        return [{ got: 1 }];
+      }
+      if (q.includes("RELEASE_LOCK")) {
+        return [{ rel: 1 }];
+      }
+      return [];
+    };
+    transactionSpy = jest.spyOn(sequelize, "transaction").mockImplementation(mockTransaction as never);
+    querySpy = jest.spyOn(sequelize, "query").mockImplementation(mockQuery as never);
+  });
+
+  afterEach(() => {
+    transactionSpy?.mockRestore();
+    querySpy?.mockRestore();
+  });
+
+  it("removeStaleVerifications deletes rows past retention", async () => {
+    const destroySpy = jest.spyOn(Verification, "destroy").mockResolvedValue(0);
+    await service.removeStaleVerifications();
+    expect(destroySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { createdAt: { [Op.lte]: expect.any(Date) } }
+      })
+    );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
+    destroySpy.mockRestore();
+  });
+
+  it("removeStaleVerifications logs when rows were removed", async () => {
+    const destroySpy = jest.spyOn(Verification, "destroy").mockResolvedValue(3);
+    const logSpy = jest.spyOn((service as any).logger, "log");
+    await service.removeStaleVerifications();
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 3 stale verifications"));
+    destroySpy.mockRestore();
+  });
+
+  it("removeStalePasswordResets deletes rows past retention", async () => {
+    const destroySpy = jest.spyOn(PasswordReset, "destroy").mockResolvedValue(0);
+    await service.removeStalePasswordResets();
+    expect(destroySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { createdAt: { [Op.lte]: expect.any(Date) } }
+      })
+    );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
+    destroySpy.mockRestore();
+  });
+
+  it("removeStalePasswordResets logs when rows were removed", async () => {
+    const destroySpy = jest.spyOn(PasswordReset, "destroy").mockResolvedValue(2);
+    const logSpy = jest.spyOn((service as any).logger, "log");
+    await service.removeStalePasswordResets();
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 2 stale password resets"));
+    destroySpy.mockRestore();
+  });
+
+  it("removeStaleNotifications deletes read rows past retention", async () => {
+    const destroySpy = jest.spyOn(Notification, "destroy").mockResolvedValue(0);
+    await service.removeStaleNotifications();
+    expect(destroySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          createdAt: { [Op.lte]: expect.any(Date) },
+          unread: false
+        }
+      })
+    );
+    expect(destroySpy.mock.calls[0][0]).not.toHaveProperty("transaction");
+    destroySpy.mockRestore();
+  });
+
+  it("removeStaleNotifications logs when rows were removed", async () => {
+    const destroySpy = jest.spyOn(Notification, "destroy").mockResolvedValue(5);
+    const logSpy = jest.spyOn((service as any).logger, "log");
+    await service.removeStaleNotifications();
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 5 stale read notifications"));
+    destroySpy.mockRestore();
   });
 });

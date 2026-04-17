@@ -7,9 +7,12 @@ import { Sequelize } from "sequelize-typescript";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { buildJsonApi } from "./json-api-builder";
-import { Op } from "sequelize";
+import { Model, Op } from "sequelize";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
+import { SequelizeStorage, Umzug } from "umzug";
+import { migrations } from "@terramatch-microservices/database/migrations";
+import { User } from "@terramatch-microservices/database/entities";
 
 const logger = new TMLogger("REPL");
 
@@ -24,8 +27,19 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
 
   const replServer = await repl(module);
 
+  const umzug = new Umzug({
+    migrations,
+    context: User.sql.getQueryInterface(),
+    storage: new SequelizeStorage({ sequelize: User.sql }),
+    logger: console
+  });
+
+  const dataValues = (models: Model[]) => models.map(model => model.dataValues);
+
   // By default, we make lodash, luxon, the JSON API Builder, and the Sequelize models available
   context = {
+    umzug,
+    dataValues,
     lodash,
     uuidv4,
     DateTime,

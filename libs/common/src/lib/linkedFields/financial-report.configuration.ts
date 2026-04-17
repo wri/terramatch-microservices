@@ -17,7 +17,7 @@ export const FinancialReportConfiguration: LinkedFieldConfiguration<FinancialRep
       label: "Financial Start Month",
       inputType: "select",
       multiChoice: false,
-      optionListKey: "months"
+      optionListKey: "months-by-number"
     }
   },
   fileCollections: {},

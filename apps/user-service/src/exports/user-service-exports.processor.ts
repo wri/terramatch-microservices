@@ -17,7 +17,7 @@ import { Dictionary, startCase } from "lodash";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
-type UserServiceExportJobData = {
+export type UserServiceExportJobData = {
   delayedJobId: number;
   fileName: string;
 };

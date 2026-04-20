@@ -130,7 +130,9 @@ const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
 
   if (tracking.type === Tracking.LIVELIHOOD_ACTIVITIES_TYPE) {
     const livelihoods =
-      tracking.entries?.filter(({ type }) => type === "livelihoods").map(({ amount }) => amount) ?? [];
+      tracking.entries
+        ?.filter(({ type }) => type === "livelihoods")
+        .map(({ amount, subtype }) => [amount, subtype].join(":")) ?? [];
     return `livelihoods:(${livelihoods.join(")(")})`;
   }
 
@@ -151,6 +153,7 @@ const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
     if (tracking.type === Tracking.TRAINING_BENEFICIARIES_TYPE) {
       list.push(`caste:(${types.caste?.join(")(")})`);
     }
+  } else {
     if (tracking.type === Tracking.WORKDAYS_TYPE || tracking.type === Tracking.RESTORATION_PARTNERS_TYPE) {
       list.push(`ethnicity:(${types.ethnicity?.join(")(")})`);
     }

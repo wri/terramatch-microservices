@@ -6,7 +6,7 @@ import { getLinkedFieldConfig } from "../linkedFields";
 import { LinkedField, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "../media/media.service";
-import { FormModels, LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
+import { CollectOptions, FormModels, LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { Dictionary } from "lodash";
 import { LocalizationService, Translations } from "../localization/localization.service";
 import { Model } from "sequelize-typescript";
@@ -46,14 +46,14 @@ export class CollectorTestHarness {
   mediaService = createMock<MediaService>();
   collector = new LinkedAnswerCollector(this.mediaService);
 
-  async getAnswers(models: FormModels) {
+  async getAnswers(models: FormModels, opts: CollectOptions = {}) {
     const answers: Dictionary<unknown> = {};
-    await this.collector.collect(answers, models);
+    await this.collector.collect(answers, models, opts);
     return answers;
   }
 
-  async expectAnswers(models: FormModels, expected: Dictionary<unknown>) {
-    expect(await this.getAnswers(models)).toStrictEqual(expected);
+  async expectAnswers(models: FormModels, expected: Dictionary<unknown>, opts: CollectOptions = {}) {
+    expect(await this.getAnswers(models, opts)).toStrictEqual(expected);
   }
 }
 

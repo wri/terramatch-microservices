@@ -221,6 +221,8 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
 
       syncRelation: (...args) => syncRelation(...args, logger),
 
+      // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+      /* istanbul ignore next */
       async clearRelations(model) {
         const where = { [typeAttribute]: laravelType(model), [idAttribute]: model.id } as WhereAttributeHash<
           Attributes<M>

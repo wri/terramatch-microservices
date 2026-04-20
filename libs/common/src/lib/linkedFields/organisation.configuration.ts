@@ -72,6 +72,13 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
       multiChoice: false,
       optionListKey: "months"
     },
+    "org-currency": {
+      property: "currency",
+      label: "Local Currency",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "currencies"
+    },
     "org-eng-farmers": {
       property: "engagementFarmers",
       label: "Engagement farmers",

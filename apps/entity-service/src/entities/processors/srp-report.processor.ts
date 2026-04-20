@@ -165,21 +165,22 @@ export class SrpReportProcessor extends ReportProcessor<
       const builder = new PaginatedQueryBuilder(SrpReport, 10, [
         {
           association: "project",
-          attributes: ["id", "uuid", "name"],
-          include: [{ association: "organisation", attributes: ["uuid", "name"] }]
+          attributes: ["id", "uuid", "name"]
         }
       ]);
 
       for await (const page of batchFindAll(builder)) {
-        const trackings = await Tracking.findAll({
-          where: {
-            trackableType: SrpReport.LARAVEL_TYPE,
-            trackableId: page.map(({ id }) => id),
-            collection: [DIRECT_OTHER, INDIRECT_OTHER],
-            description: { [Op.not]: null }
-          },
-          attributes: ["trackableId", "description"]
-        });
+        const trackings = await Tracking.domain("demographics")
+          .type("restoration-partners")
+          .collection([DIRECT_OTHER, INDIRECT_OTHER])
+          .findAll({
+            where: {
+              trackableType: SrpReport.LARAVEL_TYPE,
+              trackableId: page.map(({ id }) => id),
+              description: { [Op.not]: null }
+            },
+            attributes: ["trackableId", "description"]
+          });
         for (const report of page) {
           addRow(report, {
             otherRestorationPartnersDescription: trackings.find(({ trackableId }) => trackableId === report.id)

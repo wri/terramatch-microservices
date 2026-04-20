@@ -6,7 +6,8 @@ import { faker } from "@faker-js/faker";
 const defaultAttributesFactory = async () => ({
   collection: faker.lorem.slug(),
   amount: faker.number.float({ min: 100, max: 10000, fractionDigits: 2 }),
-  description: faker.lorem.sentences()
+  description: faker.lorem.sentences(),
+  year: faker.number.int({ min: 2020, max: 2025 })
 });
 
 export const FinancialIndicatorFactory = {

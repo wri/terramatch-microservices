@@ -8,7 +8,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
-import { reverse, sortBy } from "lodash";
+import { orderBy, reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   FinancialIndicatorFactory,
@@ -21,10 +21,13 @@ import { FinancialReportProcessor } from "./financial-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { mockEntityService } from "./entity.processor.spec";
+import { Response } from "express";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("FinancialReportProcessor", () => {
   let processor: FinancialReportProcessor;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await FinancialReport.truncate();
@@ -34,6 +37,7 @@ describe("FinancialReportProcessor", () => {
 
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("financialReports") as FinancialReportProcessor;
   });
 
@@ -220,6 +224,50 @@ describe("FinancialReportProcessor", () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBeInstanceOf(Promise);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all reports to the CSV", async () => {
+      const organisations = orderBy(await OrganisationFactory.createMany(2), "id");
+      const reports = [
+        await FinancialReportFactory.org(organisations[0]).create({}),
+        await FinancialReportFactory.org(organisations[1]).create({})
+      ];
+      const fundingTypes1 = orderBy(await FundingTypeFactory.org(organisations[0]).createMany(2), "id");
+      const fundingTypes2 = orderBy(await FundingTypeFactory.org(organisations[1]).createMany(2), "id");
+      const indicators1 = orderBy(await FinancialIndicatorFactory.report(reports[0]).createMany(2), "id");
+      const indicators2 = orderBy(await FinancialIndicatorFactory.report(reports[1]).createMany(2), "id");
+
+      const addRow = jest.fn();
+      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await processor.exportAll({} as Response);
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          uuid: reports[0].uuid,
+          organisationUuid: organisations[0].uuid,
+          organisationName: organisations[0].name
+        }),
+        {
+          financialIndicators: indicators1.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`),
+          fundingTypes: fundingTypes1.map(({ type, amount, year }) => `${type}:${amount}(${year})`)
+        }
+      );
+      expect(addRow).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          uuid: reports[1].uuid,
+          organisationUuid: organisations[1].uuid,
+          organisationName: organisations[1].name
+        }),
+        {
+          financialIndicators: indicators2.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`),
+          fundingTypes: fundingTypes2.map(({ type, amount, year }) => `${type}:${amount}(${year})`)
+        }
+      );
     });
   });
 });

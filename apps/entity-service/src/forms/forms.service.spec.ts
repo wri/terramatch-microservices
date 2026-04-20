@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { Response } from "express";
 import { FormsService } from "./forms.service";
 import { faker } from "@faker-js/faker";
 import { Test } from "@nestjs/testing";
@@ -7,13 +8,17 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { NotFoundException } from "@nestjs/common";
 import {
+  ApplicationFactory,
   FormFactory,
   FormQuestionFactory,
   FormQuestionOptionFactory,
   FormSectionFactory,
+  FormSubmissionFactory,
   FormTableHeaderFactory,
   I18nItemFactory,
   MediaFactory,
+  OrganisationFactory,
+  ProjectPitchFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -27,13 +32,14 @@ import {
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
-import { pick } from "lodash";
+import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("FormsService", () => {
   let service: FormsService;
   let mediaService: DeepMocked<MediaService>;
   let localizationService: DeepMocked<LocalizationService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await Form.truncate();
@@ -42,14 +48,17 @@ describe("FormsService", () => {
 
     const module = await Test.createTestingModule({
       providers: [
-        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         FormsService
       ]
     }).compile();
 
     service = await module.resolve(FormsService);
+    localizationService = module.get(LocalizationService);
+    mediaService = module.get(MediaService);
+    csvExportService = module.get(CsvExportService);
   });
 
   afterEach(() => {
@@ -648,6 +657,80 @@ describe("FormsService", () => {
       expect(updateSections.map(({ uuid }) => uuid)).toEqual([sections[2].uuid, sections[0].uuid]);
       // make sure questions in the removed section are also gone.
       expect(await FormQuestion.count({ where: { formSectionId: sections[1].id } })).toBe(0);
+    });
+  });
+
+  describe("exportAllSubmissions", () => {
+    it("throws if the form UUID is invalid", async () => {
+      await expect(service.exportAllSubmissions("invalid-uuid", {} as Response)).rejects.toThrowError(
+        "Form with UUID invalid-uuid not found"
+      );
+    });
+
+    it("exports all submissions for the given form UUID", async () => {
+      const form = await FormFactory.create();
+
+      const orgs = orderBy(await OrganisationFactory.createMany(2), "id");
+      const pitches = orderBy(await ProjectPitchFactory.createMany(2), "id");
+      const applications = [
+        await ApplicationFactory.create({ organisationUuid: orgs[0].uuid }),
+        await ApplicationFactory.create({ organisationUuid: orgs[1].uuid })
+      ];
+
+      const logo = await MediaFactory.org(orgs[1]).create({ collectionName: "logo" });
+      const cover = await MediaFactory.org(orgs[1]).create({ collectionName: "cover" });
+
+      const submissions = [
+        await FormSubmissionFactory.create({
+          applicationId: applications[0].id,
+          organisationUuid: orgs[0].uuid,
+          projectPitchUuid: pitches[0].uuid,
+          formId: form.uuid
+        }),
+        await FormSubmissionFactory.create({
+          applicationId: applications[1].id,
+          organisationUuid: orgs[1].uuid,
+          projectPitchUuid: pitches[1].uuid,
+          formId: form.uuid
+        })
+      ];
+      // These two should be skipped due to missing associations
+      await FormSubmissionFactory.create({ formUuid: form.uuid });
+      await FormSubmissionFactory.create({ formUuid: form.uuid });
+
+      csvExportService.collectFormCells.mockResolvedValue({});
+
+      const addRow = jest.fn();
+      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await service.exportAllSubmissions(form.uuid, {} as Response);
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          uuid: submissions[0].uuid,
+          organisationUuid: orgs[0].uuid,
+          projectPitchUuid: pitches[0].uuid
+        }),
+        {
+          organisationLegalRegistration: [],
+          organisationCover: [],
+          organisationLogo: []
+        }
+      );
+      expect(addRow).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          uuid: submissions[1].uuid,
+          organisationUuid: orgs[1].uuid,
+          projectPitchUuid: pitches[1].uuid
+        }),
+        {
+          organisationLegalRegistration: [],
+          organisationCover: [expect.objectContaining({ uuid: cover.uuid })],
+          organisationLogo: [expect.objectContaining({ uuid: logo.uuid })]
+        }
+      );
     });
   });
 

@@ -9,39 +9,41 @@ import { CreationAttributes } from "sequelize";
 
 type ListOption = { label: string; slug: string };
 
+const normalizeSlug = (slug: string | null | undefined) => slug?.trim().toUpperCase() ?? null;
+
 /** Matches getCurrencyOptions: title -> label, value -> slug (lowercase). */
 const COLLECTIONS: Record<string, ListOption[]> = {
   currencies: [
-    { label: "USD - US Dollar", slug: "usd" },
-    { label: "EUR - Euro", slug: "eur" },
-    { label: "GBP - British Pound", slug: "gbp" },
-    { label: "RWF Rwandan Franc", slug: "rwf" },
-    { label: "KES - Kenyan Shilling", slug: "kes" },
-    { label: "GHS - Ghanaian Cedi", slug: "ghs" },
-    { label: "CDF - Congolese Fran", slug: "cdf" },
-    { label: "BIF - Burundian Franc", slug: "bif" },
-    { label: "BRL - Brazilian Real", slug: "brl" },
-    { label: "INR - Indian Rupee", slug: "inr" },
-    { label: "XOF - West African CFA Franc", slug: "xof" },
-    { label: "XAF - Central African CFA Franc", slug: "xaf" },
-    { label: "SZL - Swazi Lilangeni", slug: "szl" },
-    { label: "ZAF - South African Rand", slug: "zaf" },
-    { label: "ETB - Ethiopian Birr", slug: "etb" },
-    { label: "GNF - Guinean Franc", slug: "gnf" },
-    { label: "LSL - Lesotho Loti", slug: "lsl" },
-    { label: "LRD - Liberian Dollar", slug: "lrd" },
-    { label: "MGA - Malagasy Ariary", slug: "mga" },
-    { label: "MWK - Malawian Kwacha", slug: "mwk" },
-    { label: "MZN - Mozambican Metical", slug: "mzn" },
-    { label: "NAD - Namibian Dollar", slug: "nad" },
-    { label: "NGN - Nigerian Naira", slug: "ngn" },
-    { label: "SLE - Sierra Leonean Leone", slug: "sle" },
-    { label: "SOS - Somali Shilling", slug: "sos" },
-    { label: "SDG - Sudanese Pound", slug: "sdg" },
-    { label: "TZS - Tanzanian Shilling", slug: "tzs" },
-    { label: "UGX - Ugandan Shilling", slug: "ugx" },
-    { label: "ZMW - Zambian Kwacha", slug: "zmw" },
-    { label: "ZWL - Zimbabwean Dollar", slug: "zwl" }
+    { label: "USD - US Dollar", slug: "USD" },
+    { label: "EUR - Euro", slug: "EUR" },
+    { label: "GBP - British Pound", slug: "GBP" },
+    { label: "RWF Rwandan Franc", slug: "RWF" },
+    { label: "KES - Kenyan Shilling", slug: "KES" },
+    { label: "GHS - Ghanaian Cedi", slug: "GHS" },
+    { label: "CDF - Congolese Fran", slug: "CDF" },
+    { label: "BIF - Burundian Franc", slug: "BIF" },
+    { label: "BRL - Brazilian Real", slug: "BRL" },
+    { label: "INR - Indian Rupee", slug: "INR" },
+    { label: "XOF - West African CFA Franc", slug: "XOF" },
+    { label: "XAF - Central African CFA Franc", slug: "XAF" },
+    { label: "SZL - Swazi Lilangeni", slug: "SZL" },
+    { label: "ZAF - South African Rand", slug: "ZAF" },
+    { label: "ETB - Ethiopian Birr", slug: "ETB" },
+    { label: "GNF - Guinean Franc", slug: "GNF" },
+    { label: "LSL - Lesotho Loti", slug: "LSL" },
+    { label: "LRD - Liberian Dollar", slug: "LRD" },
+    { label: "MGA - Malagasy Ariary", slug: "MGA" },
+    { label: "MWK - Malawian Kwacha", slug: "MWK" },
+    { label: "MZN - Mozambican Metical", slug: "MZN" },
+    { label: "NAD - Namibian Dollar", slug: "NAD" },
+    { label: "NGN - Nigerian Naira", slug: "NGN" },
+    { label: "SLE - Sierra Leonean Leone", slug: "SLE" },
+    { label: "SOS - Somali Shilling", slug: "SOS" },
+    { label: "SDG - Sudanese Pound", slug: "SDG" },
+    { label: "TZS - Tanzanian Shilling", slug: "TZS" },
+    { label: "UGX - Ugandan Shilling", slug: "UGX" },
+    { label: "ZMW - Zambian Kwacha", slug: "ZMW" },
+    { label: "ZWL - Zimbabwean Dollar", slug: "ZWL" }
   ]
 };
 
@@ -63,40 +65,69 @@ export const addOptionsListToNewField = withoutSqlLogs(async () => {
   let createdFormOptionLists = 0;
   let createdFormOptionListOptions = 0;
   let updatedLabelIds = 0;
+  let normalizedSlugs = 0;
+  const targetFormOptionListIds = new Set<number>();
 
   for (const [listKey, options] of Object.entries(COLLECTIONS)) {
     const [formOptionList, createdList] = await FormOptionList.findOrCreate({
       where: { key: listKey },
       defaults: { key: listKey } as CreationAttributes<FormOptionList>
     });
+    targetFormOptionListIds.add(formOptionList.id);
     if (createdList) createdFormOptionLists++;
 
     for (const { label, slug } of options) {
-      const [, createdOption] = await FormOptionListOption.findOrCreate({
+      const normalizedSlug = normalizeSlug(slug);
+      const [formOptionListOption, createdOption] = await FormOptionListOption.findOrCreate({
         where: {
           formOptionListId: formOptionList.id,
+          label
+        },
+        defaults: {
+          formOptionListId: formOptionList.id,
           label,
-          slug
-        }
+          slug: normalizedSlug
+        } as CreationAttributes<FormOptionListOption>
       });
       if (createdOption) createdFormOptionListOptions++;
+      if (!createdOption && formOptionListOption.slug !== normalizedSlug) {
+        formOptionListOption.slug = normalizedSlug;
+        await formOptionListOption.save();
+        normalizedSlugs++;
+      }
     }
   }
 
-  const allListOptions = await FormOptionListOption.findAll({ attributes: ["id", "label", "labelId"] });
+  const allListOptions = await FormOptionListOption.findAll({
+    where: { formOptionListId: [...targetFormOptionListIds] },
+    attributes: ["id", "label", "labelId", "slug"]
+  });
   for (const option of allListOptions) {
+    let shouldSave = false;
+    const normalizedOptionSlug = normalizeSlug(option.slug);
+    if (option.slug !== normalizedOptionSlug) {
+      option.slug = normalizedOptionSlug;
+      normalizedSlugs++;
+      shouldSave = true;
+    }
+
     const labelId = await generateMissingLabelI18nItem(option);
     if (labelId !== option.labelId) {
       option.labelId = labelId ?? null;
-      await option.save();
       updatedLabelIds++;
+      shouldSave = true;
+    }
+
+    if (shouldSave) {
+      await option.save();
     }
   }
 
   const summary = {
     createdFormOptionLists,
     createdFormOptionListOptions,
-    updatedLabelIds
+    updatedLabelIds,
+    normalizedSlugs
   };
   console.log(`addOptionsListToNewField: ${JSON.stringify(summary)}`);
   return summary;

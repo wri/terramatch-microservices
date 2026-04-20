@@ -405,7 +405,7 @@ export class MediaService {
     });
   }
 
-  public async fetchDataFromUrlAsMulterFile(url: string): Promise<Express.Multer.File> {
+  public async fetchRemoteImage(url: string): Promise<Express.Multer.File> {
     let res: Response;
     try {
       res = await fetch(url);

@@ -119,7 +119,7 @@ export class FilesController {
     const transaction = await Media.sql.transaction();
     for (const [index, payloadData] of payload.data.entries()) {
       try {
-        const file = await this.mediaService.fetchDataFromUrlAsMulterFile(payloadData.attributes.downloadUrl);
+        const file = await this.mediaService.fetchRemoteImage(payloadData.attributes.downloadUrl);
         const media = await this.mediaService.createMedia(
           model,
           entity,
@@ -235,7 +235,7 @@ export class FilesController {
       })
     );
 
-    if (updatePayload.data.attributes.isCover != null && updatePayload.data.attributes.isCover === true) {
+    if (updatePayload.data.attributes.isCover === true) {
       const project = await this.mediaService.getProjectForModel(model);
       await this.policyService.authorize("read", project);
       const updatedMedias = await this.mediaService.unsetMediaCoverForProject(updatedMedia, project);

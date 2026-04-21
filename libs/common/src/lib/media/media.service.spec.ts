@@ -8,7 +8,7 @@ import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
 import { MediaFactory, ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { Media, Project, Site } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker/.";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { FileService } from "../file/file.service";
 import { MediaUpdateBody } from "../dto/media-update.dto";
@@ -412,6 +412,43 @@ describe("MediaService", () => {
           })
         );
       });
+    });
+  });
+
+  describe("fetchRemoteImage", () => {
+    it("throws if the fetch fails", async () => {
+      global.fetch = jest.fn(() => Promise.reject(new Error("Fetch failed")));
+      await expect(service.fetchRemoteImage("image.jpg")).rejects.toThrow(BadRequestException);
+    });
+
+    it("throws if the result is not OK", async () => {
+      global.fetch = jest.fn(() => Promise.resolve({ ok: false })) as unknown as typeof fetch;
+      await expect(service.fetchRemoteImage("image.jpg")).rejects.toThrow(BadRequestException);
+    });
+
+    it("throws if the mime type is not allowed", async () => {
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer()),
+          headers: new Headers({ "content-type": "text/csv" })
+        })
+      ) as unknown as typeof fetch;
+      await expect(service.fetchRemoteImage("https://example.com/image.jpg")).rejects.toThrow("Invalid file type");
+    });
+
+    it("returns the image as a multer file", async () => {
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer()),
+          headers: new Headers({ "content-type": "image/jpeg" })
+        })
+      ) as unknown as typeof fetch;
+      const result = await service.fetchRemoteImage("https://example.com/image.jpg");
+      expect(result.originalname).toEqual("image.jpg");
+      expect(result.mimetype).toEqual("image/jpeg");
+      expect(result.filename).toEqual("image.jpg");
     });
   });
 });

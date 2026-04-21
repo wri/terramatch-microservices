@@ -45,6 +45,16 @@ describe("FieldCollector", () => {
       { sites: site, nurseries: nursery },
       { one: site.name, two: nursery.name, four: site.landscapeCommunityContribution }
     );
+
+    await harness.expectAnswers(
+      { sites: site, nurseries: nursery },
+      {
+        one: site.name,
+        two: nursery.name,
+        four: site.landscapeCommunityContribution
+      },
+      { forExport: true }
+    );
   });
 
   it("collects trackingDescription virtual fields", async () => {
@@ -69,6 +79,7 @@ describe("FieldCollector", () => {
     });
 
     await harness.expectAnswers({ projectReports: projectReport }, { one: demo.description });
+    await harness.expectAnswers({ projectReports: projectReport }, { one: demo.description }, { forExport: true });
   });
 
   it("collects demographics aggregate virtual fields", async () => {
@@ -89,6 +100,7 @@ describe("FieldCollector", () => {
     await TrackingEntryFactory.gender(beneDemo, "unknown").create({ amount: 20 });
 
     await harness.expectAnswers({ projectPitches: pitch }, { one: 10, two: 20 });
+    await harness.expectAnswers({ projectPitches: pitch }, { one: 10, two: 20 }, { forExport: true });
   });
 
   it("throws in collect if an invalid virtual config is found", async () => {
@@ -97,7 +109,7 @@ describe("FieldCollector", () => {
       demographicsType: "workdays",
       collection: "paid-other-activities"
     } as unknown as VirtualTrackingAggregate;
-    collector.addField({ virtual, label: "", inputType: "long-text" }, "projectReports", "one");
+    collector.addField({ virtual, label: "", inputType: "long-text", exportHeading: "" }, "projectReports", "one");
 
     await expect(harness.getAnswers({ projectReports: new ProjectReport() })).rejects.toThrow(
       "Unrecognized virtual props type: foo"

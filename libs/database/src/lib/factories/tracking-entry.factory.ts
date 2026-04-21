@@ -58,6 +58,12 @@ export const TrackingEntryFactory = {
       trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
     })),
 
+  farmer: (tracking?: Tracking, subtype?: string, name?: string) =>
+    FactoryGirl.define(TrackingEntry, async () => ({
+      ...(await defaultAttributesFactory("farmer", subtype, name)),
+      trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
+    })),
+
   years: (tracking?: Tracking, subtype?: string, name?: string) =>
     FactoryGirl.define(TrackingEntry, async () => ({
       ...(await defaultAttributesFactory("years", subtype, name)),
@@ -67,6 +73,18 @@ export const TrackingEntryFactory = {
   strategy: (tracking?: Tracking, subtype?: string, name?: string) =>
     FactoryGirl.define(TrackingEntry, async () => ({
       ...(await defaultAttributesFactory("strategy", subtype, name)),
+      trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
+    })),
+
+  landUse: (tracking?: Tracking, subtype?: string, name?: string) =>
+    FactoryGirl.define(TrackingEntry, async () => ({
+      ...(await defaultAttributesFactory("land-use", subtype, name)),
+      trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
+    })),
+
+  livelihoods: (tracking?: Tracking, subtype?: string, name?: string) =>
+    FactoryGirl.define(TrackingEntry, async () => ({
+      ...(await defaultAttributesFactory("livelihoods", subtype, name)),
       trackingId: (tracking?.id as number) ?? TrackingFactory.projectReportWorkday().associate("id")
     }))
 };

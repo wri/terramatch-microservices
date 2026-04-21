@@ -1,45 +1,34 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { faker } from "@faker-js/faker";
 import { SrpReport } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
-import { reverse, sortBy } from "lodash";
+import { orderBy, reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
-  SrpReportFactory,
   ProjectFactory,
   ProjectUserFactory,
-  UserFactory
+  SrpReportFactory,
+  TrackingFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
+import { Response } from "express";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("SrpReportProcessor", () => {
   let processor: SrpReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await SrpReport.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("srpReports") as SrpReportProcessor;
   });
 
@@ -145,7 +134,12 @@ describe("SrpReportProcessor", () => {
 
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const projectReports = await SrpReportFactory.createMany(3, { projectId: project.id });
       await SrpReportFactory.createMany(5);
@@ -164,7 +158,7 @@ describe("SrpReportProcessor", () => {
 
     it("should returns own project disturbance reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const ownProjectReports = await SrpReportFactory.createMany(3, { projectId: project.id });
       await SrpReportFactory.createMany(5);
 
@@ -208,6 +202,48 @@ describe("SrpReportProcessor", () => {
 
       expect(result.id).toBe(srpReport.uuid);
       expect(result.dto).toBeDefined();
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all reports to the CSV", async () => {
+      await SrpReport.truncate();
+      const projects = orderBy(await ProjectFactory.createMany(2), "id");
+      const reports = [
+        await SrpReportFactory.create({ projectId: projects[0].id }),
+        await SrpReportFactory.create({ projectId: projects[1].id })
+      ];
+      const tracking = await TrackingFactory.srpReportDirectOtherRestorationPartners(reports[1]).create({
+        description: faker.lorem.sentence()
+      });
+
+      const addRow = jest.fn();
+      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await processor.exportAll({} as Response);
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          uuid: reports[0].uuid,
+          projectUuid: projects[0].uuid,
+          projectName: projects[0].name
+        }),
+        {
+          otherRestorationPartnersDescription: undefined
+        }
+      );
+      expect(addRow).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          uuid: reports[1].uuid,
+          projectUuid: projects[1].uuid,
+          projectName: projects[1].name
+        }),
+        {
+          otherRestorationPartnersDescription: tracking.description
+        }
+      );
     });
   });
 });

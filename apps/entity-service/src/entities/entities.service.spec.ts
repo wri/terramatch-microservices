@@ -1,7 +1,7 @@
+import { Response } from "express";
 import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
-import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
 import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
@@ -9,14 +9,15 @@ import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
-import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaOwnerType } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { ConfigService } from "@nestjs/config";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { mockEntityService } from "./processors/entity.processor.spec";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
+  let csvExportService: DeepMocked<CsvExportService>;
   let service: EntitiesService;
 
   function expectMediaMatchesDto(dto: object, media: Media) {
@@ -29,29 +30,15 @@ describe("EntitiesService", () => {
   }
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: PolicyService, useValue: createMock<PolicyService>() },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        {
-          provide: ConfigService,
-          useValue: createMock<ConfigService>({
-            get: (key: string): PartialFuncReturn<unknown> => {
-              if (key === "DEPLOY_ENV") return "prod";
-              return "";
-            }
-          })
-        },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
     service = module.get(EntitiesService);
-
+    mediaService = module.get(MediaService);
     mediaService.getUrl.mockImplementation(
       ({ fileName }, conversion: string) => `https://example.com/${conversion ?? ""}/${fileName}`
     );
+    csvExportService = module.get(CsvExportService);
+    const configService: DeepMocked<ConfigService> = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) => (key === "DEPLOY_ENV" ? "prod" : ""));
   });
 
   afterEach(() => {
@@ -136,6 +123,26 @@ describe("EntitiesService", () => {
       expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);
       // non multi media
       expectMediaMatchesDto(result["detailedProjectBudget"], media[1]);
+    });
+  });
+
+  describe("writeCsv", () => {
+    it("closes the stream when there's an error", async () => {
+      const writeRows = async () => {
+        throw new Error("failed stream");
+      };
+      const close = jest.fn();
+      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
+      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
+      expect(close).toHaveBeenCalled();
+    });
+
+    it("closes the stream on success", async () => {
+      const writeRows = () => Promise.resolve();
+      const close = jest.fn();
+      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
+      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
+      expect(close).toHaveBeenCalled();
     });
   });
 });

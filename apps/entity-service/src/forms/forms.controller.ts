@@ -8,18 +8,20 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
-import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
+import { Response } from "express";
+import { ApiExtraModels, ApiOperation, ApiParam, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { FormFullDto, FormLightDto, Forms, CreateFormBody, UpdateFormBody } from "./dto/form.dto";
+import { CreateFormBody, FormFullDto, FormLightDto, Forms, UpdateFormBody } from "./dto/form.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
 import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
-import { Form } from "@terramatch-microservices/database/entities";
+import { Form, FormSubmission } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 
@@ -136,5 +138,22 @@ export class FormsController {
       uuid,
       i18nItemIds
     );
+  }
+
+  @Get(":uuid/exportSubmissions")
+  @ApiOperation({
+    operationId: "formSubmissionsExportCsv",
+    summary: "Export form submissions as CSV for a given form"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async exportSubmissionsCsv(@Param("uuid") uuid: string, @Res() response: Response) {
+    await this.policyService.authorize("read", FormSubmission);
+    await this.formsService.exportAllSubmissions(uuid, response);
   }
 }

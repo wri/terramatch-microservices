@@ -24,11 +24,13 @@ export const FinancialReportConfiguration: LinkedFieldConfiguration<FinancialRep
   relations: {
     "fin-rep-financial-indicators-financial-collection": {
       label: "Financial collection",
+      exportHeading: "financialCollection",
       resource: "financialIndicators",
       inputType: "financialIndicators"
     },
     "fin-rep-funding-types": {
       label: "Funding Type",
+      exportHeading: "fundingTypes",
       resource: "fundingTypes",
       inputType: "fundingType"
     }

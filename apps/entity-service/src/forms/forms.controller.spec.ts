@@ -1,3 +1,4 @@
+import { Response } from "express";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { FormsController } from "./forms.controller";
 import { FormsService } from "./forms.service";
@@ -113,6 +114,14 @@ describe("FormsController", () => {
       expect(service.findOne).toHaveBeenCalledWith("fake-uuid");
       expect(service.store).toHaveBeenCalledWith(attributes, form);
       expect(service.addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form, false);
+    });
+  });
+
+  describe("exportSubmissionCsv", () => {
+    it("calls exportAllSubmissions on the service", async () => {
+      const response = {} as Response;
+      await controller.exportSubmissionsCsv("fake-uuid", response);
+      expect(service.exportAllSubmissions).toHaveBeenCalledWith("fake-uuid", response);
     });
   });
 });

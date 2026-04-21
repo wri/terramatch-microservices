@@ -1,3 +1,4 @@
+import { Response } from "express";
 import {
   BadRequestException,
   Body,
@@ -9,9 +10,10 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
-import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
@@ -24,16 +26,16 @@ import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
-import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { ENTITY_MODELS, EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
 import { EntityUpdateBody } from "./dto/entity-update.dto";
 import { SupportedEntities } from "./dto/entity.dto";
-import { FinancialReportLightDto, FinancialReportFullDto } from "./dto/financial-report.dto";
+import { FinancialReportFullDto, FinancialReportLightDto } from "./dto/financial-report.dto";
 import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
 import { EntityCreateBody } from "./dto/entity-create.dto";
-import { SrpReportLightDto, SrpReportFullDto } from "./dto/srp-report.dto";
+import { SrpReportFullDto, SrpReportLightDto } from "./dto/srp-report.dto";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -62,6 +64,24 @@ export class EntitiesController {
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
     await processor.addIndex(document, query);
     return document;
+  }
+
+  @Get(":entity/exportAll")
+  @ApiOperation({
+    operationId: "entityExportAll",
+    summary: "Export all of a given entity as CSV."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityExportAll<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+
+    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
+    await processor.exportAll(response);
   }
 
   @Get(":entity/:uuid")

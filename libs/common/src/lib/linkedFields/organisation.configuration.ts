@@ -540,6 +540,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
         entryTypes: ["gender", "age"]
       },
       label: "Aggregate employees",
+      exportHeading: "allEmployeesAggregate",
       inputType: "number"
     },
     "org-aggregate-associates": {
@@ -551,6 +552,7 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
         entryTypes: ["gender", "age", "race", "traditional-community"]
       },
       label: "Aggregate associates",
+      exportHeading: "allAssociatesAggregate",
       inputType: "number"
     }
   },
@@ -683,99 +685,116 @@ export const OrganisationConfiguration: LinkedFieldConfiguration<Organisation> =
   relations: {
     "org-funding-types": {
       label: "Funding Type",
+      exportHeading: "fundingTypes",
       resource: "fundingTypes",
       inputType: "fundingType"
     },
     "org-tree-species": {
       label: "Tree Species",
+      exportHeading: "treeSpeciesHistorical",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-tree-species-restored": {
       label: "Tree species restored in landscape",
+      exportHeading: "treeSpeciesHistorical",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "historical-tree-species"
     },
     "org-ownership-stake": {
       label: "Ownership Stake",
+      exportHeading: "ownershipStake",
       resource: "ownershipStake",
       inputType: "ownershipStake"
     },
     "org-beneficiaries-all": {
       label: "Community Members",
+      exportHeading: "allBeneficiaries",
       resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "org-employees-full-time": {
       label: "Full Time Employees",
+      exportHeading: "employeesFullTime",
       resource: "demographics",
       inputType: "employees",
       collection: "full-time"
     },
     "org-employees-full-time-clt": {
       label: "Full Time CLT Employees",
+      exportHeading: "employeesFullTimeClt",
       resource: "demographics",
       inputType: "employees",
       collection: "full-time-clt"
     },
     "org-leadership-team": {
       label: "Leadership Team",
+      exportHeading: "leadershipTeam",
       resource: "leaderships",
       inputType: "leaderships",
       collection: "leadership-team"
     },
     "org-core-team-leaders": {
       label: "Core Team Leaders",
+      exportHeading: "coreTeamLeaders",
       resource: "leaderships",
       inputType: "leaderships",
       collection: "core-team-leaders"
     },
     "org-employees-part-time": {
       label: "Part Time Employees",
+      exportHeading: "employeesPartTime",
       resource: "demographics",
       inputType: "employees",
       collection: "part-time"
     },
     "org-employees-part-time-clt": {
       label: "Part Time CLT Employees",
+      exportHeading: "employeesPartTimeClt",
       resource: "demographics",
       inputType: "employees",
       collection: "part-time-clt"
     },
     "org-employees-temp": {
       label: "Temp Employees",
+      exportHeading: "employeesTemp",
       resource: "demographics",
       inputType: "employees",
       collection: "temp"
     },
     "org-associates": {
       label: "Associates",
+      exportHeading: "associates",
       resource: "demographics",
       inputType: "associates",
       collection: "all"
     },
     "org-financial-indicators-financial-collection": {
       label: "Financial collection",
+      exportHeading: "financialCollection",
       resource: "financialIndicators",
       inputType: "financialIndicators"
     },
     "org-hectares-restored": {
       label: "Hectares Restored",
+      exportHeading: "hectaresRestored",
       resource: "restoration",
       inputType: "hectaresHistorical",
       collection: "all"
     },
     "org-trees-regenerated": {
       label: "Trees Regenerated",
+      exportHeading: "treesRegenerated",
       resource: "restoration",
       inputType: "treesHistorical",
       collection: "regenerated"
     },
     "org-trees-grown": {
       label: "Trees Grown",
+      exportHeading: "treesGrown",
       resource: "restoration",
       inputType: "treesHistorical",
       collection: "grown"

@@ -6,38 +6,40 @@ import { OrganisationsService } from "./organisations.service";
 import { OrganisationCreationService } from "./organisation-creation.service";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { getQueueToken } from "@nestjs/bullmq";
-import { Queue, Job } from "bullmq";
+import { Job, Queue } from "bullmq";
 import { REQUEST } from "@nestjs/core";
 import { OrganisationCreateAttributes } from "./dto/organisation-create.dto";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import {
-  OrganisationFactory,
   FinancialIndicatorFactory,
   FinancialReportFactory,
-  MediaFactory,
-  UserFactory,
   LeadershipFactory,
-  OwnershipStakeFactory
+  MediaFactory,
+  OrganisationFactory,
+  OwnershipStakeFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import {
-  Organisation,
   FinancialIndicator,
   FinancialReport,
-  Media,
   Leadership,
+  Media,
+  Organisation,
   OwnershipStake,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { serialize, mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
-import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
-import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { ORGANISATIONS_EXPORT, USER_SERVICE_EXPORT_QUEUE } from "../exports/user-service-exports.processor";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -50,12 +52,15 @@ describe("OrganisationsController", () => {
   let organisationCreationService: DeepMocked<OrganisationCreationService>;
   let mediaService: DeepMocked<MediaService>;
   let emailQueue: DeepMocked<Queue>;
+  let exportQueue: DeepMocked<Queue>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [OrganisationsController],
       providers: [
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) },
         {
           provide: OrganisationsService,
           useValue: (organisationsService = createMock<OrganisationsService>())
@@ -66,6 +71,7 @@ describe("OrganisationsController", () => {
         },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
+        { provide: getQueueToken(USER_SERVICE_EXPORT_QUEUE), useValue: (exportQueue = createMock<Queue>()) },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();
@@ -140,6 +146,32 @@ describe("OrganisationsController", () => {
       expect(organisationsService.findMany).toHaveBeenCalledWith({ view: "public" });
       expect(policyService.authorize).toHaveBeenCalledWith("listing", orgs);
       expect(result.data).toHaveLength(2);
+    });
+  });
+
+  describe("export", () => {
+    it("should throw an error if the policy does not authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.exportCsv()).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should return a DTO if the file already exists", async () => {
+      csvExportService.exportExists.mockResolvedValue(true);
+      csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
+      const result = serialize(await controller.exportCsv());
+      expect(result.data).toBeDefined();
+      const data = result.data as Resource;
+      expect(data.type).toBe("fileDownloads");
+      expect(data.id).toBe("organisationsExport");
+      expect(data.attributes.url).toBe("fake-url");
+    });
+
+    it("should queue an export job if the file does not exist", async () => {
+      csvExportService.exportExists.mockResolvedValue(false);
+      const result = serialize(await controller.exportCsv());
+      expect(exportQueue.add).toHaveBeenCalledWith(ORGANISATIONS_EXPORT, expect.anything());
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).type).toBe("delayedJobs");
     });
   });
 

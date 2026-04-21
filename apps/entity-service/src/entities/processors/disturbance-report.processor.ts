@@ -1,3 +1,4 @@
+import { Response } from "express";
 import {
   DisturbanceReport,
   DisturbanceReportEntry,
@@ -18,6 +19,11 @@ import {
 import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
+import { Dictionary, flatten, kebabCase } from "lodash";
+import { DateTime } from "luxon";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const REPORT_ENTRIES = [
   {
@@ -85,6 +91,63 @@ const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$project.organisation.uuid$",
   country: "$project.country$",
   projectUuid: "$project.uuid$"
+};
+
+const CSV_COLUMNS: Dictionary<string> = {
+  id: "ID",
+  uuid: "UUID",
+  projectUuid: "Project UUID",
+  projectName: "Project Name",
+  status: "Status",
+  dateOfDisturbance: "Date of Disturbance",
+  extent: "Extent",
+  propertyAffected: "Property Affected",
+  peopleAffected: "People Affected",
+  monetaryDamage: "Monetary Damage",
+  description: "Description",
+  actionDescription: "Action Description",
+  disturbanceType: "Disturbance Type",
+  disturbanceSubtype: "Disturbance Subtype",
+  intensity: "Intensity",
+  siteAffected: "Site Affected",
+  polygonAffected: "Polygon Affected",
+  mediaFiles: "Media Files",
+  createdAt: "Created At",
+  updatedAt: "Updated At",
+  submittedAt: "Submitted At"
+};
+
+const decodeValue = (value: string | null) => {
+  if (value == null) return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const formatEntriesForExport = (entries: DisturbanceReportEntry[], name: string) => {
+  return entries
+    .filter(entry => entry.name === name)
+    .map(entry => {
+      if (name === "site-affected") {
+        const affected = decodeValue(entry.value);
+        if (!Array.isArray(affected)) return "";
+        return affected
+          .map(site => site["siteName"])
+          .filter(isNotNull)
+          .join("; ");
+      } else if (name === "polygon-affected") {
+        const affected = decodeValue(entry.value);
+        if (!Array.isArray(affected)) return "";
+        return flatten(
+          affected.map(group => (!Array.isArray(group) ? null : group.map(poly => poly["polyName"]))).filter(isNotNull)
+        ).join("; ");
+      } else {
+        return decodeValue(entry.value);
+      }
+    });
 };
 
 export class DisturbanceReportProcessor extends ReportProcessor<
@@ -251,5 +314,39 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
       })
     };
+  }
+
+  async exportAll(response: Response) {
+    const fileName = `Disturbance Reports Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
+      const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
+        {
+          association: "project",
+          attributes: ["uuid", "name"]
+        }
+      ]);
+
+      for await (const page of batchFindAll(builder)) {
+        const entries = await DisturbanceReportEntry.findAll({
+          where: { disturbanceReportId: page.map(({ id }) => id) }
+        });
+        const media = await Media.for(page).collection("media").findAll();
+
+        for (const report of page) {
+          const rowEntries = entries.filter(entry => entry.disturbanceReportId === report.id);
+          const rowMedia = media.filter(media => media.modelId === report.id);
+          addRow(report, {
+            ...REPORT_ENTRIES.reduce(
+              (acc, { name }) => ({
+                ...acc,
+                [kebabCase(name)]: formatEntriesForExport(rowEntries, name)
+              }),
+              {} as Dictionary<string>
+            ),
+            media: rowMedia.map(media => `${this.entitiesService.fullUrl(media)} (${media.name})`)
+          });
+        }
+      }
+    });
   }
 }

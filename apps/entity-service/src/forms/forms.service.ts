@@ -1,3 +1,4 @@
+import { Response } from "express";
 import { Injectable, NotFoundException, Scope } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -9,6 +10,7 @@ import {
   FormQuestion,
   FormQuestionOption,
   FormSection,
+  FormSubmission,
   FormTableHeader,
   FundingProgramme,
   LocalizationKey,
@@ -28,7 +30,8 @@ import {
   intersection,
   sortBy,
   union,
-  uniq
+  uniq,
+  uniqBy
 } from "lodash";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
@@ -40,7 +43,7 @@ import {
   StoreFormQuestionOptionAttributes
 } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { Attributes, Op } from "sequelize";
+import { Attributes, Includeable, Op } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
@@ -55,6 +58,9 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { DateTime } from "luxon";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -72,11 +78,41 @@ type TranslationModelType =
   | typeof FormOptionListOption;
 
 type TranslationParamsType = string | number;
+
+const FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
+  applicationUuid: "Application ID",
+  organisationUuid: "Organisation ID",
+  projectPitchUuid: "Project Pitch ID",
+  status: "Submission Status",
+  stageName: "Current Stage",
+  organisationType: "Organisation Type",
+  organisationName: "Organization Legal Name",
+  organisationPhone: "Organization WhatsApp Enabled Phone Number",
+  organisationStreet1: "Headquarters Street address",
+  organisationStreet2: "Headquarters street address 2",
+  organisationCity: "Headquarters address City",
+  organisationState: "Headquarters address State/Province",
+  organisationZipcode: "Headquarters address Zipcode",
+  organisationLegalRegistration: "Proof of local legal registration, incorporation, or right to operate",
+  organisationWebUrl: "Website URL (optional)",
+  organisationFacebookUrl: "Organization Facebook URL(optional)",
+  organisationInstagramUrl: "Organization Instagram URL(optional)",
+  organisationLinkedinUrl: "Organization LinkedIn URL(optional)",
+  organisationLogo: "Upload your organization logo(optional)",
+  organisationCover: "Upload a cover photo (optional)",
+  createdAt: "Created At",
+  updatedAt: "Updated At"
+};
+
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
 
-  constructor(private readonly localizationService: LocalizationService, private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly localizationService: LocalizationService,
+    private readonly mediaService: MediaService,
+    private readonly csvExportService: CsvExportService
+  ) {}
 
   async findOne(uuid: string) {
     const form = await Form.findOne({
@@ -261,6 +297,76 @@ export class FormsService {
   async store(attributes: StoreFormAttributes, form = new Form()) {
     await this.storeForm(form, attributes);
     return form;
+  }
+
+  async exportAllSubmissions(formUuid: string, response: Response) {
+    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["uuid", "title"] });
+    if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
+
+    const mappings = await this.csvExportService.getFormQuestionsForExport(form);
+
+    const filename = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const { addRow, close } = this.csvExportService.getResponseStreamWriter(filename, response, {
+      ...FORM_SUBMISSION_CSV_COLUMNS,
+      ...mappings.reduce((acc, { heading }) => ({ ...acc, [heading]: heading }), {} as Dictionary<string>)
+    });
+    try {
+      const orgAttributes = uniq([
+        "id",
+        "uuid",
+        "name",
+        "type",
+        "phone",
+        "hqStreet1",
+        "hqStreet2",
+        "hqCity",
+        "hqState",
+        "hqZipcode",
+        "webUrl",
+        "facebookUrl",
+        "instagramUrl",
+        "linkedinUrl",
+        "twitterUrl",
+        ...this.csvExportService.getAttributes(mappings, "organisations")
+      ]);
+      const pitchAttributes = uniq(["id", "uuid", ...this.csvExportService.getAttributes(mappings, "projectPitches")]);
+      const includes: Includeable[] = [
+        { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
+        { association: "organisation", attributes: orgAttributes },
+        { association: "projectPitch", attributes: pitchAttributes },
+        { association: "stage", attributes: ["name"] }
+      ];
+      const builder = new PaginatedQueryBuilder(FormSubmission, 10, includes).where({ formId: formUuid });
+
+      for await (const page of batchFindAll(builder)) {
+        const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");
+        const orgsMedia = await Media.for(orgs).collection(["logo", "cover", "legalRegistration"]).findAll();
+        for (const submission of page) {
+          if (submission.organisation == null || submission.projectPitch == null) continue;
+          const media = orgsMedia.filter(({ modelId }) => modelId === submission.organisation?.id);
+          const additional = {
+            organisationLegalRegistration: media.filter(
+              ({ collectionName }) => collectionName === "legal_registration"
+            ),
+            organisationLogo: media.filter(({ collectionName }) => collectionName === "logo"),
+            organisationCover: media.filter(({ collectionName }) => collectionName === "cover"),
+            ...(await this.csvExportService.collectFormCells(
+              mappings,
+              {
+                organisations: submission.organisation ?? undefined,
+                projectPitches: submission.projectPitch ?? undefined
+              },
+              form.frameworkKey ?? undefined
+            ))
+          };
+          addRow(submission, additional);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error exporting form submissions CSV for form ${formUuid}: ${error}`, error.stack);
+    } finally {
+      close();
+    }
   }
 
   private getI18nTranslationEntityFields(translationEntity: TranslationModelType) {

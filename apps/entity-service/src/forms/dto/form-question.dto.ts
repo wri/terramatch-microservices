@@ -16,7 +16,7 @@ export class FormQuestionOptionDto extends OptionLabelDto {
   thumbUrl: string | null;
 }
 
-type FieldDefinitionExtras = "label" | "description" | "placeholder" | "collection" | "name";
+type FieldDefinitionExtras = "label" | "description" | "placeholder" | "collection" | "name" | "options";
 type FormQuestionWithoutExtras = Omit<FormQuestion, FieldDefinitionExtras>;
 
 @JsonApiDto({ type: "formQuestions" })

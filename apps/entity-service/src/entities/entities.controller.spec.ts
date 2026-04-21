@@ -12,6 +12,7 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Response } from "express";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -30,6 +31,7 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
   update = jest.fn(() => Promise.resolve());
   create = jest.fn(() => Promise.resolve(new Project()));
   loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
+  exportAll = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {
@@ -80,6 +82,21 @@ describe("EntitiesController", () => {
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("entityExportAll", () => {
+    it("should throw an error if the policy does not authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.entityExportAll({ entity: "projects" }, {} as Response)).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should call exportAll on the processor", async () => {
+      const response = {} as Response;
+      await controller.entityExportAll({ entity: "projects" }, response);
+      expect(processor.exportAll).toHaveBeenCalledWith(response);
     });
   });
 

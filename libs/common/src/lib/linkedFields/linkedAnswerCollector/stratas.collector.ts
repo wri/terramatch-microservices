@@ -1,5 +1,7 @@
 import { Strata } from "@terramatch-microservices/database/entities";
-import { polymorphicCollector } from "./utils";
+import { attributeExporter, polymorphicCollector } from "./utils";
 import { EmbeddedStrataDto } from "../../dto/strata.dto";
 
-export const stratasCollector = polymorphicCollector(Strata, EmbeddedStrataDto);
+export const stratasCollector = polymorphicCollector(Strata, EmbeddedStrataDto, {
+  exportSerializer: attributeExporter(["description", "extent"])
+});

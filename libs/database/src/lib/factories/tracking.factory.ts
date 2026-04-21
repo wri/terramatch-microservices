@@ -1,11 +1,12 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Tracking, Organisation, Project, ProjectPitch, ProjectReport, Site, SiteReport } from "../entities";
+import { Tracking, Organisation, Project, ProjectPitch, ProjectReport, Site, SiteReport, SrpReport } from "../entities";
 import { ProjectReportFactory } from "./project-report.factory";
 import { SiteReportFactory } from "./site-report.factory";
 import { faker } from "@faker-js/faker";
 import {
   ALL,
   ALL_BENEFICIARIES_ORGANISATION_COLLECTIONS,
+  DIRECT_OTHER,
   JOBS_PROJECT_COLLECTIONS,
   RESTORATION_PARTNERS_PROJECT_COLLECTIONS,
   WORKDAYS_PROJECT_COLLECTIONS,
@@ -15,6 +16,7 @@ import { OrganisationFactory } from "./organisation.factory";
 import { ProjectPitchFactory } from "./project-pitch.factory";
 import { ProjectFactory } from "./project.factory";
 import { SiteFactory } from "./site.factory";
+import { SrpReportFactory } from "./srp-report.factory";
 
 const defaultAttributesFactory = async () => ({
   description: null,
@@ -138,5 +140,15 @@ export const TrackingFactory = {
       domain: "restoration",
       type: Tracking.TREES_GOAL_TYPE,
       collection: ALL
+    })),
+
+  srpReportDirectOtherRestorationPartners: (srpReport?: SrpReport) =>
+    FactoryGirl.define(Tracking, async () => ({
+      ...(await defaultAttributesFactory()),
+      trackableType: SrpReport.LARAVEL_TYPE,
+      trackableId: (srpReport?.id as number) ?? SrpReportFactory.associate("id"),
+      domain: "demographics",
+      type: Tracking.RESTORATION_PARTNERS_TYPE,
+      collection: DIRECT_OTHER
     }))
 };

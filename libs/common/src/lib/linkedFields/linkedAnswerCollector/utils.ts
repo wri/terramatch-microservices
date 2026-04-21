@@ -29,11 +29,13 @@ type SyncOptions = {
   usesCollection?: boolean;
 };
 
-type PolymorphicCollectorOptions = SyncOptions & {
+type PolymorphicCollectorOptions<M extends PolymorphicModel & UuidModel> = SyncOptions & {
   // If model associations should be fetched when loading the model, include here.
   include?: Includeable | Includeable[];
   // Include if the default polymorphicSync method does not work for this association.
   syncRelation?: RelationSync;
+  // Include if customization is needed for serializing answers for export
+  exportSerializer?: (model: M) => unknown;
 };
 
 export const mapLaravelTypes = (models: FormModels) =>
@@ -42,6 +44,13 @@ export const mapLaravelTypes = (models: FormModels) =>
     if (type == null) throw new InternalServerErrorException(`No laravel type for model [${modelType}]`);
     return { ...laravelTypes, [modelType]: type };
   }, {} as Dictionary<string>);
+
+export const pickAttributesForExport = <T extends Model>(model: T, attributes: (keyof Attributes<T>)[]) =>
+  attributes.map(attr => model[attr]).join(":");
+export const attributeExporter =
+  <T extends Model>(attributes: (keyof Attributes<T>)[]) =>
+  (model: T) =>
+    pickAttributesForExport(model, attributes);
 
 export const scopedSync = <M extends UuidModel>(
   modelClass: ModelCtor<M>,
@@ -145,7 +154,7 @@ export const polymorphicSync = <M extends PolymorphicModel & UuidModel>(
 export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
   modelClass: PolymorphicModelCtor<M>,
   dtoClass: new (model: M) => { uuid?: string | null; collection?: string | null },
-  options: PolymorphicCollectorOptions = {}
+  options: PolymorphicCollectorOptions<M> = {}
 ) =>
   function (logger: LoggerService): RelationResourceCollector {
     const questions: Dictionary<string> = {};
@@ -171,7 +180,7 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
         questions[key] = questionUuid;
       },
 
-      async collect(answers, models) {
+      async collect(answers, models, { forExport }) {
         const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
           const [modelType, collection] = key.split(":") as [FormModelType, string];
           return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
@@ -204,12 +213,16 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
                 model[typeAttribute] === laravelTypes[modelType] &&
                 (!hasCollection || (isCollectionModel(model) && model.collection === collection))
             )
-            .map(model => new dtoClass(model));
+            .map(model =>
+              forExport && options.exportSerializer != null ? options.exportSerializer(model) : new dtoClass(model)
+            );
         }
       },
 
       syncRelation: (...args) => syncRelation(...args, logger),
 
+      // Only used in the lower-env only testing feature "clear reports", not covered in specs.
+      /* istanbul ignore next */
       async clearRelations(model) {
         const where = { [typeAttribute]: laravelType(model), [idAttribute]: model.id } as WhereAttributeHash<
           Attributes<M>

@@ -1,16 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
-  Organisation,
-  OrganisationUser,
-  User,
   FinancialIndicator,
   FinancialReport,
-  Media,
   FundingType,
   Leadership,
+  Media,
+  Organisation,
+  OrganisationUser,
   OwnershipStake,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
@@ -32,13 +31,21 @@ import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-specie
 
 @Injectable()
 export class OrganisationsService {
-  private readonly logger = new TMLogger(OrganisationsService.name);
-
   constructor(private readonly policyService: PolicyService, private readonly mediaService: MediaService) {}
 
   async findMany(query: OrganisationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Organisation, query.page);
+    await this.applyOrganisationIndexClauses(builder, query);
+    return {
+      organisations: await builder.execute(),
+      paginationTotal: await builder.paginationTotal()
+    };
+  }
 
+  private async applyOrganisationIndexClauses(
+    builder: PaginatedQueryBuilder<Organisation>,
+    query: OrganisationIndexQueryDto
+  ) {
     const permissions = await this.policyService.getPermissions();
     const hasFrameworkPermission = permissions.find(p => p.startsWith("framework-")) != null;
 
@@ -125,11 +132,6 @@ export class OrganisationsService {
     } else if (query.view !== "public") {
       builder.order(["createdAt", "DESC"]);
     }
-
-    return {
-      organisations: await builder.execute(),
-      paginationTotal: await builder.paginationTotal()
-    };
   }
 
   async findOne(uuid: string): Promise<Organisation> {

@@ -9,6 +9,7 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
+      this.builder.can(["exportAll"], SrpReport);
       this.builder.can(
         [
           "read",

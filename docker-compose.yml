@@ -28,6 +28,7 @@ services:
     environment:
       MINIO_ROOT_USER: "AKIABUVWH1HUD7YQZQAR"
       MINIO_ROOT_PASSWORD: "PVMlDMep3/jLSz9GxPV3mTvH4JZynkf2BFeTu+i8"
+      MINIO_REGION_NAME: "us-west-2"
     volumes:
       - ./data:/data
     networks:

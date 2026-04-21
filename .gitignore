@@ -171,3 +171,9 @@ out
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Minio
+data
+
+# geoserver
+docker/geoserver/geoserver_data/gwc/wri_polygon_geometry

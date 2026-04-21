@@ -1,21 +1,18 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
-  Tracking,
-  TrackingEntry,
   Project,
   ProjectReport,
   ProjectUser,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
-import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities.service";
 import {
   ApplicationFactory,
-  TrackingEntryFactory,
-  TrackingFactory,
   EntityFormFactory,
   FormSubmissionFactory,
   MediaFactory,
@@ -30,10 +27,12 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Dictionary, flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
@@ -44,33 +43,20 @@ import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constan
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { EntityProcessor } from "./entity-processor";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
   let mediaService: DeepMocked<MediaService>;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
 
   beforeEach(async () => {
     await Project.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    mediaService = module.get(MediaService);
+    policyService = module.get(PolicyService);
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
@@ -102,7 +88,7 @@ describe("ProjectProcessor", () => {
     it("returns my projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId, projectId: id });
+        await ProjectUserFactory.create({ userId: policyService.userId, projectId: id });
       }
       await ProjectFactory.createMany(5);
 
@@ -112,7 +98,12 @@ describe("ProjectProcessor", () => {
     it("returns managed projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId, projectId: id, isMonitoring: false, isManaging: true });
+        await ProjectUserFactory.create({
+          userId: policyService.userId,
+          projectId: id,
+          isMonitoring: false,
+          isManaging: true
+        });
       }
       await ProjectFactory.createMany(5);
 

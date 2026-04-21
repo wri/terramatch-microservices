@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ProjectReport } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -11,40 +9,25 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
-  UserFactory,
   TrackingFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { ProjectReportProcessor } from "./project-report.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectReportLightDto } from "../dto/project-report.dto";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
 
   beforeEach(async () => {
     await ProjectReport.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
   });
 
@@ -71,7 +54,7 @@ describe("ProjectReportProcessor", () => {
 
     it("should returns project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const managedProjectReports = await ProjectReportFactory.createMany(3, { projectId: project.id });
       await ProjectReportFactory.createMany(5);
       await expectProjectReports(managedProjectReports, {}, { permissions: ["manage-own"] });
@@ -79,7 +62,12 @@ describe("ProjectReportProcessor", () => {
 
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const projectReports = await ProjectReportFactory.createMany(3, { projectId: project.id });
       await ProjectReportFactory.createMany(5);
@@ -111,8 +99,8 @@ describe("ProjectReportProcessor", () => {
     it("should return project reports filtered by the update request status or project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
-      await ProjectUserFactory.create({ userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
 
       const first = await ProjectReportFactory.create({
         title: "first project report",

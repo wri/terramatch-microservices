@@ -20,6 +20,7 @@ import { mockUserId } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { OrganisationFullDto } from "@terramatch-microservices/common/dto";
@@ -35,6 +36,7 @@ describe("OrganisationsService", () => {
         OrganisationsService,
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         { provide: getQueueToken("email"), useValue: {} }
       ]
     }).compile();

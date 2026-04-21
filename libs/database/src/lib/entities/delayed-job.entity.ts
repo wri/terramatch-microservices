@@ -1,5 +1,15 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { User } from "./user.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
@@ -13,18 +23,18 @@ interface Metadata {
   entity_id?: number;
 }
 @Table({ tableName: "delayed_jobs", underscored: true })
-export class DelayedJob extends Model<DelayedJob> {
+export class DelayedJob extends Model<InferAttributes<DelayedJob>, InferCreationAttributes<DelayedJob>> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @StateMachineColumn(DelayedJobStatusStates)
-  status: DelayedJobStatus;
+  status: CreationOptional<DelayedJobStatus>;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
@@ -51,8 +61,10 @@ export class DelayedJob extends Model<DelayedJob> {
   @Column(BIGINT.UNSIGNED)
   createdBy: number | null;
 
-  @Column(BOOLEAN)
-  isAcknowledged: boolean;
+  // Defaults to true because by default we don't want delayed jobs to show up on the bulk delayed
+  // jobs popup in the FE. That is an opt-in behavior.
+  @Column({ type: BOOLEAN, defaultValue: true })
+  isAcknowledged: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)

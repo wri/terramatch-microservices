@@ -6,13 +6,29 @@ import {
   NurseryReportFactory,
   ProjectFactory,
   ProjectReportFactory,
-  SiteReportFactory
+  SiteReportFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
 import { PolicyService } from "@terramatch-microservices/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+
+export const mockEntityService = async () => {
+  const userId = (await UserFactory.create()).id;
+  return Test.createTestingModule({
+    providers: [
+      { provide: MediaService, useValue: createMock<MediaService>() },
+      { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
+      { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+      { provide: ConfigService, useValue: createMock<ConfigService>() },
+      { provide: CsvExportService, useValue: createMock<CsvExportService>() },
+      EntitiesService
+    ]
+  }).compile();
+};
 
 describe("EntityProcessor", () => {
   let service: EntitiesService;
@@ -21,17 +37,9 @@ describe("EntityProcessor", () => {
   const createProcessor = (entity: ProcessableEntity = "projects") => service.createEntityProcessor(entity);
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
     service = module.get(EntitiesService);
+    policyService = module.get(PolicyService);
   });
 
   afterEach(async () => {

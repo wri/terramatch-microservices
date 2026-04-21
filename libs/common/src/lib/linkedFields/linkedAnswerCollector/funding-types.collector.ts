@@ -5,6 +5,7 @@ import { Dictionary } from "lodash";
 import { EmbeddedFundingTypeDto } from "../../dto/funding-type.dto";
 import { Op, WhereAttributeHash } from "sequelize";
 import { FormModel } from "@terramatch-microservices/database/constants/entities";
+import { attributeExporter } from "./utils";
 
 export function fundingTypesCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -33,7 +34,7 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
       questions[modelType] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations != null && models.financialReports != null) {
         throw new InternalServerErrorException(
           "Only one of financialReports or organisations can be set for fundingTypes."
@@ -49,7 +50,9 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
         attributes: ["uuid", "year", "type", "source", "amount"]
       });
 
-      answers[Object.values(questions)[0]] = fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
+      answers[Object.values(questions)[0]] = forExport
+        ? fundingTypes.map(attributeExporter(["type", "source", "amount", "year"]))
+        : fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
     },
 
     async syncRelation(model, _, answer) {

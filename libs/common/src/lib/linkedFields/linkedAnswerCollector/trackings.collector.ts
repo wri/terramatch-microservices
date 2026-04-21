@@ -10,6 +10,8 @@ import { FormTypeMap, RelationResourceCollector } from "./index";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { apiAttributes } from "../../dto/json-api-attributes";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 // For each of type, subtype and name, ensure predicate returns true if either they have an identical value,
 // or both are null / undefined.
@@ -110,6 +112,56 @@ const parseKey = (key: string) => {
 
 type ModelKey = { domain: TrackingDomain; type: TrackingType; collection: string };
 
+const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
+  if (tracking.domain === "restoration") {
+    const types: Dictionary<string[]> = {};
+    for (const { type, subtype, amount } of tracking.entries ?? []) {
+      if (types[type] == null) types[type] = [];
+      types[type].push([amount, subtype].filter(isNotNull).join(":"));
+    }
+
+    const list: string[] = [];
+    list.push(`years:(${types.years?.join(")(")})`);
+    if (types.strategy != null) list.push(`strategy:(${types.strategy.join(")(")})`);
+    if (types["land-use"] != null) list.push(`land-use:(${types["land-use"].join(")(")})`);
+
+    return list.join("|");
+  }
+
+  if (tracking.type === Tracking.LIVELIHOOD_ACTIVITIES_TYPE) {
+    const livelihoods =
+      tracking.entries
+        ?.filter(({ type }) => type === "livelihoods")
+        .map(({ amount, subtype }) => [amount, subtype].join(":")) ?? [];
+    return `livelihoods:(${livelihoods.join(")(")})`;
+  }
+
+  const types: Dictionary<string[]> = {};
+  for (const { type, subtype, name, amount } of tracking.entries ?? []) {
+    const value = [amount, subtype];
+    if (name != null) value.push(name);
+
+    if (types[type] == null) types[type] = [];
+    types[type].push(value.join(":"));
+  }
+
+  const list: string[] = [`gender:(${types.gender?.join(")(")})`, `age:(${types.age?.join(")(")})`];
+  if (tracking.type === Tracking.ALL_BENEFICIARIES_TYPE) {
+    list.push(`farmer:(${types.farmer?.join(")(")})`);
+  }
+  if (frameworkKey === "hbf") {
+    if (tracking.type === Tracking.TRAINING_BENEFICIARIES_TYPE) {
+      list.push(`caste:(${types.caste?.join(")(")})`);
+    }
+  } else {
+    if (tracking.type === Tracking.WORKDAYS_TYPE || tracking.type === Tracking.RESTORATION_PARTNERS_TYPE) {
+      list.push(`ethnicity:(${types.ethnicity?.join(")(")})`);
+    }
+  }
+
+  return list.join("|");
+};
+
 // Since trackings is the only model that disambiguates on more than just 'collection', the
 // base polymorphic collector is not sufficient.
 export const trackingsCollector = function (logger: LoggerService): RelationResourceCollector {
@@ -127,7 +179,7 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
       questions[key] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport, frameworkKey }) {
       const keysByModel = Object.keys(questions).reduce((byModel, key) => {
         const { modelType, domain, type, collection } = parseKey(key);
         return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
@@ -163,7 +215,10 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
             tracking.type === type &&
             tracking.collection === collection
         );
-        if (tracking != null) answers[questionUuid] = [new EmbeddedTrackingDto(tracking)];
+        if (tracking != null)
+          answers[questionUuid] = forExport
+            ? prepareForExport(tracking, frameworkKey)
+            : [new EmbeddedTrackingDto(tracking)];
       }
     },
 

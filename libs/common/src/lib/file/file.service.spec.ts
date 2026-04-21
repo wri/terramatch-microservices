@@ -4,7 +4,16 @@ import { createMock, PartialFuncReturn } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { faker } from "@faker-js/faker";
-import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { PassThrough } from "node:stream";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 jest.mock("@aws-sdk/client-s3", () => {
   const actual = jest.requireActual("@aws-sdk/client-s3");
@@ -14,29 +23,40 @@ jest.mock("@aws-sdk/client-s3", () => {
   };
 });
 
+jest.mock("@aws-sdk/lib-storage");
+jest.mock("@aws-sdk/s3-request-presigner");
+
 const createTestFile = (mimetype = "text/plain", ext = "txt", size = 123) =>
   ({
     originalname: faker.system.commonFileName(ext),
     mimetype,
     size,
     buffer: Buffer.from("test text file")
-  }) as Express.Multer.File;
+  } as Express.Multer.File);
 
 describe("FileService", () => {
   let service: FileService;
 
   const s3Spy = () => jest.spyOn((service as any).s3, "send");
 
-  const expectCommand = async (
-    command: typeof PutObjectCommand | typeof CopyObjectCommand | typeof DeleteObjectCommand,
+  const expectCommand = async <T>(
+    command:
+      | typeof PutObjectCommand
+      | typeof CopyObjectCommand
+      | typeof DeleteObjectCommand
+      | typeof HeadObjectCommand
+      | typeof GetObjectCommand,
     expected: object,
-    callService: () => Promise<void>
+    callService: () => Promise<T>,
+    mockError?: Error
   ) => {
     const sendSpy = s3Spy();
-    await callService();
+    if (mockError != null) sendSpy.mockRejectedValue(mockError);
+    const result = await callService();
     expect(sendSpy).toHaveBeenCalledTimes(1);
     expect(sendSpy).toHaveBeenCalledWith(expect.any(command));
     expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining(expected) }));
+    return result;
   };
 
   beforeEach(async () => {
@@ -81,6 +101,24 @@ describe("FileService", () => {
     });
   });
 
+  describe("uploadStream", () => {
+    it("should start an upload to s3", () => {
+      jest.spyOn(Upload.prototype, "done").mockRejectedValue("error");
+      service.uploadStream("test-bucket", "test-key", "text/plain");
+      expect(Upload).toHaveBeenCalledTimes(1);
+      expect(Upload).toHaveBeenCalledWith({
+        client: expect.anything(),
+        params: {
+          Bucket: "test-bucket",
+          Key: "test-key",
+          Body: expect.any(PassThrough),
+          ContentType: "text/plain"
+        }
+      });
+      expect(jest.mocked(Upload).mock.instances[0].done).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("copyRemoteFile", () => {
     it("should send the copy command to s3", async () => {
       await expectCommand(
@@ -92,6 +130,44 @@ describe("FileService", () => {
         },
         () => service.copyRemoteFile("test-bucket", "test-key", "test-key-copy")
       );
+    });
+  });
+
+  describe("remoteFileExists", () => {
+    it("should return true if there is no error", async () => {
+      const result = await expectCommand(
+        HeadObjectCommand,
+        {
+          Bucket: "test-bucket",
+          Key: "test-key"
+        },
+        () => service.remoteFileExists("test-bucket", "test-key")
+      );
+      expect(result).toBe(true);
+    });
+
+    it("should return false if there is an error", async () => {
+      const result = await expectCommand(
+        HeadObjectCommand,
+        {
+          Bucket: "test-bucket",
+          Key: "test-key"
+        },
+        () => service.remoteFileExists("test-bucket", "test-key"),
+        new Error()
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("generatePresignedUrl", () => {
+    it("should return a presigned url", async () => {
+      const spy = jest.mocked(getSignedUrl);
+      await service.generatePresignedUrl("test-bucket", "test-key");
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][1]).toBeInstanceOf(GetObjectCommand);
+      expect(spy.mock.calls[0][1]).toMatchObject({ input: { Bucket: "test-bucket", Key: "test-key" } });
+      expect(spy.mock.calls[0][2]).toMatchObject({ expiresIn: 3600 });
     });
   });
 

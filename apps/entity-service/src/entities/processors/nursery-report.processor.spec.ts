@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { NurseryReport } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
@@ -13,38 +11,23 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
-  TaskFactory,
-  UserFactory
+  TaskFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
 
   beforeEach(async () => {
     await NurseryReport.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
     processor = module.get(EntitiesService).createEntityProcessor("nurseryReports") as NurseryReportProcessor;
   });
 
@@ -76,7 +59,7 @@ describe("NurseryReportProcessor", () => {
     it("should returns nursery reports", async () => {
       const project = await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const managedNurseryReports = await NurseryReportFactory.createMany(3, { nurseryId: nursery.id });
       await NurseryReportFactory.createMany(5);
       await expectNurseryReports(managedNurseryReports, {}, { permissions: ["manage-own"] });
@@ -84,7 +67,12 @@ describe("NurseryReportProcessor", () => {
 
     it("should returns managed nursery reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const nursery = await NurseryFactory.create({ projectId: project.id });
       const nurseryReports = await NurseryReportFactory.createMany(3, { nurseryId: nursery.id });
@@ -129,8 +117,8 @@ describe("NurseryReportProcessor", () => {
       const org2 = await OrganisationFactory.create();
       const p1 = await ProjectFactory.create({ country: "MX", organisationId: org1.id });
       const p2 = await ProjectFactory.create({ country: "CA", organisationId: org2.id });
-      await ProjectUserFactory.create({ userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
       const n1 = await NurseryFactory.create({ projectId: p1.id });
       const n2 = await NurseryFactory.create({ projectId: p2.id });
       const first = await NurseryReportFactory.create({
@@ -193,7 +181,7 @@ describe("NurseryReportProcessor", () => {
       const nursery = await NurseryFactory.create({ projectId: project.id });
       const task1 = await TaskFactory.create({ projectId: project.id });
       const task2 = await TaskFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
 
       const task1Reports = await NurseryReportFactory.createMany(2, { nurseryId: nursery.id, taskId: task1.id });
       await NurseryReportFactory.createMany(3, { nurseryId: nursery.id, taskId: task2.id });

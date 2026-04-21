@@ -1,3 +1,4 @@
+import { Response } from "express";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
@@ -6,7 +7,6 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
-  Tracking,
   Disturbance,
   Form,
   FormQuestion,
@@ -14,12 +14,13 @@ import {
   Media,
   Seeding,
   Strata,
+  Tracking,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { groupBy } from "lodash";
+import { Dictionary, groupBy } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
@@ -57,6 +58,8 @@ import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFie
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { ConfigService } from "@nestjs/config";
 import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
+import { CsvExportService, StreamWriter } from "@terramatch-microservices/common/export/csv-export.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -120,11 +123,14 @@ export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as P
 
 @Injectable()
 export class EntitiesService {
+  protected logger = new TMLogger(EntitiesService.name);
+
   constructor(
     private readonly mediaService: MediaService,
     private readonly policyService: PolicyService,
     private readonly localizationService: LocalizationService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly csvExportService: CsvExportService
   ) {}
 
   get userId() {
@@ -266,5 +272,22 @@ export class EntitiesService {
 
   createLinkedAnswerCollector() {
     return new LinkedAnswerCollector(this.mediaService);
+  }
+
+  async writeCsv(
+    fileName: string,
+    response: Response,
+    columns: Dictionary<string>,
+    writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
+  ) {
+    const { addRow, close } = this.csvExportService.getResponseStreamWriter(fileName, response, columns);
+    try {
+      await writeRows(addRow);
+    } catch (error) {
+      this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
+      throw error;
+    } finally {
+      close();
+    }
   }
 }

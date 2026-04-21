@@ -1,9 +1,10 @@
 import {
+  FieldInputType,
   isPropertyField,
   LinkedField,
   VirtualLinkedFieldProps
 } from "@terramatch-microservices/database/constants/linked-fields";
-import { Dictionary, difference, isEmpty, isInteger, isString, uniq } from "lodash";
+import { castArray, Dictionary, difference, isEmpty, isInteger, isString, uniq } from "lodash";
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { FormQuestion, ProjectPolygon, Tracking, TrackingEntry } from "@terramatch-microservices/database/entities";
 import { laravelType } from "@terramatch-microservices/database/types/util";
@@ -13,6 +14,7 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { mapLaravelTypes } from "./utils";
 import { WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { DateTime } from "luxon";
 
 function normalizePlantingStatusValue(answer: unknown) {
   if (answer == null || answer === "") return null;
@@ -36,26 +38,87 @@ function isCompletedPlantingAnswer(answer: unknown) {
   return normalizePlantingStatusValue(answer) === "completed";
 }
 
+const OPTIONS_TYPES: FieldInputType[] = ["select", "radio", "select-image"];
+
+const READABLE_MONTHS = {
+  1: "January",
+  2: "February",
+  3: "March",
+  4: "April",
+  5: "May",
+  6: "June",
+  7: "July",
+  8: "August",
+  9: "September",
+  10: "October",
+  11: "November",
+  12: "December"
+};
+
+const prepareValueForExport = (
+  initialValue: unknown,
+  inputType: FieldInputType,
+  questionUuid: string,
+  optionsQuestions: FormQuestion[]
+) => {
+  if (OPTIONS_TYPES.includes(inputType)) {
+    const question = optionsQuestions.find(q => q.uuid === questionUuid);
+    if (question == null) return initialValue;
+
+    const selected = castArray(initialValue as string | number | string[] | number[]);
+    if (question.optionsList === "months") {
+      return selected.map(month => READABLE_MONTHS[month]);
+    } else {
+      return selected.map(selection => question.options?.find(({ slug }) => slug === selection)?.label ?? selection);
+    }
+  }
+
+  if (inputType === "date") {
+    if (!(initialValue instanceof Date)) return initialValue;
+    return DateTime.fromJSDate(initialValue).toFormat("yyyy-MM-dd HH:mm:ss");
+  }
+
+  return initialValue;
+};
+
 export function fieldCollector(logger: LoggerService): FieldResourceCollector {
-  const propertyQuestions: Dictionary<string> = {};
+  const propertyQuestions: Dictionary<{ modelType: FormModelType; property: string; inputType: FieldInputType }> = {};
   const virtualQuestions: Dictionary<{ props: VirtualLinkedFieldProps; modelType: FormModelType }> = {};
 
   return {
     addField(field, modelType, questionUuid) {
       if (isPropertyField(field)) {
-        propertyQuestions[questionUuid] = `${modelType}:${field.property}`;
+        propertyQuestions[questionUuid] = { modelType, property: field.property, inputType: field.inputType };
       } else {
         virtualQuestions[questionUuid] = { props: field.virtual, modelType };
       }
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       const laravelTypes = mapLaravelTypes(models);
 
-      for (const [questionUuid, key] of Object.entries(propertyQuestions)) {
-        const [modelType, property] = key.split(":") as [FormModelType, string];
-        if (models[modelType] == null) logger.error(`Model for type not found: ${modelType}`);
-        else answers[questionUuid] = models[modelType][property];
+      const propertyQuestionUuids = Object.keys(propertyQuestions);
+      const questions =
+        !forExport || propertyQuestionUuids.length === 0
+          ? []
+          : await FormQuestion.findAll({
+              where: { uuid: propertyQuestionUuids, inputType: OPTIONS_TYPES },
+              attributes: ["id", "optionsList"],
+              include: [{ association: "options", attributes: ["slug", "label"] }]
+            });
+
+      for (const [questionUuid, { modelType, property, inputType }] of Object.entries(propertyQuestions)) {
+        if (models[modelType] == null) {
+          logger.error(`Model for type not found: ${modelType}`);
+          continue;
+        }
+
+        const initialValue = models[modelType][property];
+        if (forExport) {
+          answers[questionUuid] = prepareValueForExport(initialValue, inputType, questionUuid, questions);
+        } else {
+          answers[questionUuid] = initialValue;
+        }
       }
 
       // Pull all demographics for affected model types in one query. The entries are not being

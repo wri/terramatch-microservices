@@ -539,6 +539,26 @@ describe("ProjectProcessor", () => {
         ),
         "amount"
       );
+      const treesPlantedGoalYears = sumBy(
+        treeEntries.filter(({ type }) => type === "years"),
+        "amount"
+      );
+      const goalTreesRestoredAnr = sumBy(
+        treeEntries.filter(({ type, subtype }) => type === "strategy" && subtype === "anr"),
+        "amount"
+      );
+      const seedsGrownGoal = sumBy(
+        treeEntries.filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
+        "amount"
+      );
+      const treesToBeRestoredGoal = Math.round(
+        treesPlantedGoalYears * ((project.survivalRate ?? 0) / 100) + goalTreesRestoredAnr
+      );
+
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 400 });
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 75 });
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 999, hidden: true });
+      const treesToBePlantedSpeciesGoalTotal = 475;
 
       project = (await processor.findOne(uuid)) as Project;
       const { id, dto } = await processor.getFullDto(project);
@@ -580,7 +600,11 @@ describe("ProjectProcessor", () => {
           projectPitchUuid: null
         },
         totalHectaresRestoredGoal,
-        treesGrownGoal
+        treesGrownGoal,
+        goalTreesRestoredAnr,
+        seedsGrownGoal,
+        treesToBeRestoredGoal,
+        treesToBePlantedSpeciesGoalTotal
       });
     });
   });

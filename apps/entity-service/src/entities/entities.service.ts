@@ -57,9 +57,14 @@ import { SrpReportProcessor } from "./processors/srp-report.processor";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { ConfigService } from "@nestjs/config";
-import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
-import { CsvExportService, StreamWriter } from "@terramatch-microservices/common/export/csv-export.service";
+import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
+import {
+  CsvExportService,
+  FormQuestionExportMapping,
+  StreamWriter
+} from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -276,11 +281,14 @@ export class EntitiesService {
 
   async writeCsv(
     fileName: string,
-    response: Response,
+    response: Response | undefined,
     columns: Dictionary<string>,
     writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
   ) {
-    const { addRow, close } = this.csvExportService.getResponseStreamWriter(fileName, response, columns);
+    const { addRow, close } =
+      response == null
+        ? this.csvExportService.getS3StreamWriter(fileName, columns)
+        : this.csvExportService.getResponseStreamWriter(fileName, response, columns);
     try {
       await writeRows(addRow);
     } catch (error) {
@@ -289,5 +297,9 @@ export class EntitiesService {
     } finally {
       close();
     }
+  }
+
+  collectFormCellsForCsv(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {
+    return this.csvExportService.collectFormCells(mappings, models, frameworkKey);
   }
 }

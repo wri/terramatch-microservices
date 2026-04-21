@@ -34,6 +34,61 @@ export type FormQuestionExportMapping = {
   attribute?: ModelAttribute;
 };
 
+export const getFormQuestionsForExport = async (form: Form) => {
+  const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: [["order", "ASC"]] });
+  const questions = await FormQuestion.forForm(form.uuid).findAll({ order: [["order", "ASC"]] });
+  const sectionQuestions = groupBy(
+    questions.filter(({ parentId }) => parentId == null),
+    "formSectionId"
+  );
+  const childQuestions = groupBy(
+    questions.filter(({ parentId }) => parentId != null),
+    "parentId"
+  );
+
+  const mappings: FormQuestionExportMapping[] = [];
+
+  for (const section of sections) {
+    for (const question of sectionQuestions[`${section.id}`] ?? []) {
+      addQuestionToMapping(mappings, question);
+
+      for (const child of childQuestions[question.uuid] ?? []) {
+        addQuestionToMapping(mappings, child);
+      }
+    }
+  }
+
+  return mappings;
+};
+
+export const getAttributes = (mappings: FormQuestionExportMapping[], model: FormModelType) => {
+  return mappings
+    .filter(({ attribute }) => attribute?.model === model)
+    .map(({ attribute }) => attribute?.attribute)
+    .filter(isNotNull);
+};
+
+const addQuestionToMapping = (mappings: FormQuestionExportMapping[], question: FormQuestion) => {
+  if (question.linkedFieldKey == null || question.inputType === "tableInput") return;
+
+  const config = getLinkedFieldConfig(question.linkedFieldKey);
+  if (config == null) return;
+
+  const attribute = getModelAttribute(config);
+  // Skip geojson export
+  if (attribute?.attribute === "boundaryGeojson") return;
+
+  mappings.push({
+    questionUuid: question.uuid,
+    heading: getExportHeading(config),
+    attribute,
+    config
+  });
+};
+
+export const getMappingsColumns = (mappings: FormQuestionExportMapping[]): Dictionary<string> =>
+  mappings.reduce((acc, { heading }) => ({ ...acc, [heading]: heading }), {});
+
 @Injectable()
 export class CsvExportService {
   constructor(
@@ -72,40 +127,6 @@ export class CsvExportService {
     return this.createStreamWriter(response, columns);
   }
 
-  async getFormQuestionsForExport(form: Form) {
-    const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: [["order", "ASC"]] });
-    const questions = await FormQuestion.forForm(form.uuid).findAll({ order: [["order", "ASC"]] });
-    const sectionQuestions = groupBy(
-      questions.filter(({ parentId }) => parentId == null),
-      "formSectionId"
-    );
-    const childQuestions = groupBy(
-      questions.filter(({ parentId }) => parentId != null),
-      "parentId"
-    );
-
-    const mappings: FormQuestionExportMapping[] = [];
-
-    for (const section of sections) {
-      for (const question of sectionQuestions[`${section.id}`] ?? []) {
-        this.addQuestionToMapping(mappings, question);
-
-        for (const child of childQuestions[question.uuid] ?? []) {
-          this.addQuestionToMapping(mappings, child);
-        }
-      }
-    }
-
-    return mappings;
-  }
-
-  getAttributes(mappings: FormQuestionExportMapping[], model: FormModelType) {
-    return mappings
-      .filter(({ attribute }) => attribute?.model === model)
-      .map(({ attribute }) => attribute?.attribute)
-      .filter(isNotNull);
-  }
-
   async collectFormCells(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {
     const collector = new LinkedAnswerCollector(this.mediaService);
     for (const mapping of mappings) {
@@ -129,10 +150,7 @@ export class CsvExportService {
     }, {});
   }
 
-  private createStreamWriter<T extends NodeJS.WritableStream>(
-    destination: T,
-    columns: Dictionary<string>
-  ): StreamWriter {
+  private createStreamWriter(destination: NodeJS.WritableStream, columns: Dictionary<string>): StreamWriter {
     const stringifier = stringify({ header: true, columns });
     stringifier.pipe(destination);
 
@@ -160,19 +178,5 @@ export class CsvExportService {
       return JSON.stringify(value);
     }
     return value as string | number;
-  }
-
-  private addQuestionToMapping(mappings: FormQuestionExportMapping[], question: FormQuestion) {
-    if (question.linkedFieldKey == null || question.inputType === "tableInput") return;
-
-    const config = getLinkedFieldConfig(question.linkedFieldKey);
-    if (config == null) return;
-
-    mappings.push({
-      questionUuid: question.uuid,
-      heading: getExportHeading(config),
-      attribute: getModelAttribute(config),
-      config
-    });
   }
 }

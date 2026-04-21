@@ -58,7 +58,12 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
-import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import {
+  CsvExportService,
+  getAttributes,
+  getFormQuestionsForExport,
+  getMappingsColumns
+} from "@terramatch-microservices/common/export/csv-export.service";
 import { DateTime } from "luxon";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
@@ -303,12 +308,12 @@ export class FormsService {
     const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["uuid", "title"] });
     if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
 
-    const mappings = await this.csvExportService.getFormQuestionsForExport(form);
+    const mappings = await getFormQuestionsForExport(form);
 
     const filename = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     const { addRow, close } = this.csvExportService.getResponseStreamWriter(filename, response, {
       ...FORM_SUBMISSION_CSV_COLUMNS,
-      ...mappings.reduce((acc, { heading }) => ({ ...acc, [heading]: heading }), {} as Dictionary<string>)
+      ...getMappingsColumns(mappings)
     });
     try {
       const orgAttributes = uniq([
@@ -327,9 +332,9 @@ export class FormsService {
         "instagramUrl",
         "linkedinUrl",
         "twitterUrl",
-        ...this.csvExportService.getAttributes(mappings, "organisations")
+        ...getAttributes(mappings, "organisations")
       ]);
-      const pitchAttributes = uniq(["id", "uuid", ...this.csvExportService.getAttributes(mappings, "projectPitches")]);
+      const pitchAttributes = uniq(["id", "uuid", ...getAttributes(mappings, "projectPitches")]);
       const includes: Includeable[] = [
         { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
         { association: "organisation", attributes: orgAttributes },

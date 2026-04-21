@@ -37,6 +37,12 @@ type OrganisationMedia =
   | "carbonCreditsProof"
   | "additionalFinancialDocumentation";
 
+const READABLE_TYPES = {
+  "for-profit-organization": "For Profit Organization",
+  "non-profit-organization": "Non Profit Organization",
+  "government-agency": "Government Agency"
+};
+
 @Table({ tableName: "organisations", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class Organisation extends Model<Organisation> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
@@ -104,6 +110,10 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(STRING)
   type: string | null;
+
+  get readableType(): string {
+    return (this.type != null ? READABLE_TYPES[this.type] : undefined) ?? "Unknown";
+  }
 
   @Default(false)
   @Column(BOOLEAN)

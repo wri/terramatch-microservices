@@ -518,6 +518,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     return this.organisation?.type;
   }
 
+  get organisationReadableType() {
+    return this.organisation?.readableType;
+  }
+
   @BelongsTo(() => Application)
   application: Application | null;
 

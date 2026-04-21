@@ -21,7 +21,6 @@ import { FinancialReportProcessor } from "./financial-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { mockEntityService } from "./entity.processor.spec";
-import { Response } from "express";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("FinancialReportProcessor", () => {
@@ -240,8 +239,8 @@ describe("FinancialReportProcessor", () => {
       const indicators2 = orderBy(await FinancialIndicatorFactory.report(reports[1]).createMany(2), "id");
 
       const addRow = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
-      await processor.exportAll({} as Response);
+      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await processor.exportAll();
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(

@@ -1,12 +1,11 @@
 import { Media, Project, ProjectUser, SrpReport, Tracking } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Response } from "express";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -157,7 +156,7 @@ export class SrpReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll(response: Response) {
+  async exportAll({ response }: ExportAllOptions = {}) {
     const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;

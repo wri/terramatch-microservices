@@ -1,4 +1,3 @@
-import { Response } from "express";
 import {
   DisturbanceReport,
   DisturbanceReportEntry,
@@ -6,7 +5,7 @@ import {
   Project,
   ProjectUser
 } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { CreationAttributes, Includeable, Op } from "sequelize";
@@ -316,7 +315,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll(response: Response) {
+  async exportAll({ response }: ExportAllOptions = {}) {
     const fileName = `Disturbance Reports Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [

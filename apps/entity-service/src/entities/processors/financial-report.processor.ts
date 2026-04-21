@@ -1,6 +1,5 @@
-import { Response } from "express";
 import { FinancialIndicator, FinancialReport, FundingType, Media } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
@@ -122,7 +121,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
   }
 
-  async exportAll(response: Response) {
+  async exportAll({ response }: ExportAllOptions = {}) {
     const fileName = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(FinancialReport, 10, [

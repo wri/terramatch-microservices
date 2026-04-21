@@ -81,7 +81,7 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
 
     await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
-    await processor.exportAll(response);
+    await processor.exportAll({ response });
   }
 
   @Get(":entity/:uuid")

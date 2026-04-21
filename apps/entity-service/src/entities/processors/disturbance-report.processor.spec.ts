@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Response } from "express";
 import { DisturbanceReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
@@ -347,9 +346,9 @@ describe("DisturbanceReportProcessor", () => {
       ];
 
       const addRow = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
       mediaService.getUrl.mockReturnValue("media-url");
-      await processor.exportAll({} as Response);
+      await processor.exportAll();
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(

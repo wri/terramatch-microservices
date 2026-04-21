@@ -270,6 +270,9 @@ export class ProjectProcessor extends EntityProcessor<
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
     const plantingStatus = resolveReportPlantingStatus(lastReport);
 
+    const treesToBePlantedSpeciesGoalTotal =
+      (await TreeSpecies.visible().collection("tree-planted").for(project).sum("amount")) ?? 0;
+
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
       plantingStatus,
@@ -278,6 +281,7 @@ export class ProjectProcessor extends EntityProcessor<
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
       totalProjectReports: await ProjectReport.project(projectId).count(),
+      treesToBePlantedSpeciesGoalTotal,
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
@@ -344,12 +348,25 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
+    const treesPlantedGoalYears = sumBy(
+      (trees?.entries ?? []).filter(({ type }) => type === "years"),
+      "amount"
+    );
+    const survivalRateFraction = (project.survivalRate ?? 0) / 100;
+    const treesToBeRestoredGoal = Math.round(treesPlantedGoalYears * survivalRateFraction + goalTreesRestoredAnr);
+
     const seedsGrownGoal = sumBy(
       (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
       "amount"
     );
 
-    return { totalHectaresRestoredGoal, treesGrownGoal, goalTreesRestoredAnr, seedsGrownGoal };
+    return {
+      totalHectaresRestoredGoal,
+      treesGrownGoal,
+      goalTreesRestoredAnr,
+      seedsGrownGoal,
+      treesToBeRestoredGoal
+    };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

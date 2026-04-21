@@ -13,6 +13,7 @@ import {
 import { UserQueryDto } from "./dto/user-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
+import bcrypt from "bcryptjs";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -324,6 +325,16 @@ describe("UsersService", () => {
       await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow(
         new NotFoundException("Role not found")
       );
+    });
+
+    it("should update password when password is provided", async () => {
+      const user = createUserMock();
+      const update = { password: "new-password" };
+      (jest.spyOn(bcrypt, "hash") as unknown as jest.SpyInstance<Promise<string>>).mockResolvedValue("hashed-password");
+
+      const result = await service.update(user, update);
+
+      expect(result.password).toBe("hashed-password");
     });
   });
 

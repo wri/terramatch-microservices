@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
 import { Framework, FrameworkUser, ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
@@ -6,7 +7,6 @@ import { UserQueryDto } from "./dto/user-query.dto";
 import { UserDto } from "@terramatch-microservices/common/dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 
 @Injectable()
@@ -128,6 +128,10 @@ export class UsersService {
       }
     }
 
+    if (update.password != null) {
+      user.password = await bcrypt.hash(update.password, 10);
+    }
+
     user.organisationId = organisationEntity?.id ?? user.organisationId;
     user.firstName = update.firstName ?? user.firstName;
     user.lastName = update.lastName ?? user.lastName;
@@ -136,7 +140,7 @@ export class UsersService {
     user.phoneNumber = update.phoneNumber ?? user.phoneNumber;
     user.country = update.country ?? user.country;
     user.program = update.program ?? user.program;
-    user.locale = (update.locale as ValidLocale | undefined) ?? user.locale;
+    user.locale = update.locale ?? user.locale;
 
     user = await user.save();
 

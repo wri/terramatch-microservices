@@ -1,11 +1,13 @@
 import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op, literal } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { Dictionary } from "lodash";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -24,6 +26,25 @@ const ASSOCIATION_FIELD_MAP = {
   country: "$nursery.project.country$",
   projectUuid: "$nursery.project.uuid$"
 };
+
+const CSV_COLUMNS: Dictionary<string> = {
+  id: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id",
+  nurseryId: "nursery-id",
+  nurseryName: "nursery-name"
+};
+
+const CSV_ATTRIBUTES = ["id", "uuid", "nurseryId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
 
 export class NurseryReportProcessor extends ReportProcessor<
   NurseryReport,
@@ -167,6 +188,33 @@ export class NurseryReportProcessor extends ReportProcessor<
   async getLightDto(nurseryReport: NurseryReport) {
     const reportTitle = await this.getReportTitle(nurseryReport);
     return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
+  }
+
+  async exportAll(opts: ExportAllOptions = {}) {
+    await this.entitiesService.entityFrameworkExport(
+      "nurseryReports",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(NurseryReport, 10, [
+        {
+          association: "nursery",
+          attributes: ["name", "id"],
+          include: [
+            {
+              association: "project",
+              attributes: ["name", "id", "ppcExternalId"],
+              include: [
+                {
+                  association: "organisation",
+                  attributes: ["name", "type"]
+                }
+              ]
+            }
+          ]
+        }
+      ]).where({ "$nursery.project.is_test$": false, frameworkKey: opts.frameworkKey }),
+      opts
+    );
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string) {

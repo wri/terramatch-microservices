@@ -184,7 +184,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   uuid: CreationOptional<string>;
 
   get linkToTerramatch(): CreationOptional<string> {
-    return `https://www.terramatch.org/admin#/site-report/${this.uuid}/show`;
+    return `https://www.terramatch.org/admin#/siteReport/${this.uuid}/show`;
   }
 
   @AllowNull

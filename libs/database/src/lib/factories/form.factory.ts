@@ -62,7 +62,7 @@ export const EntityFormFactory = {
       type: "site-report"
     })),
 
-  nurseryReport: (report?: SiteReport) =>
+  nurseryReport: (report?: NurseryReport) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),
       frameworkKey: report?.frameworkKey ?? "ppc",

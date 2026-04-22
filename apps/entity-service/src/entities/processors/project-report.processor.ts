@@ -278,20 +278,22 @@ export class ProjectReportProcessor extends ReportProcessor<
                 page.map(async ({ id, projectId, createdAt }) => {
                   // PPC requires two values that are more efficient to get with two SQL queries per
                   // row than by pulling all tree species records and doing it in memory.
-                  const totalSeedlingsGrownReport =
-                    (await TreeSpecies.projectReports([id]).visible().sum("amount")) ?? 0;
+                  const totalSeedlingsGrownReport = await TreeSpecies.projectReports([id]).visible().sum("amount");
                   const previousReports = Subquery.select(ProjectReport, "id")
                     .eq("projectId", projectId)
                     .lt("createdAt", createdAt).literal;
+                  const previousSum = await TreeSpecies.projectReports(previousReports).visible().sum("amount");
                   const totalSeedlingsGrown =
-                    totalSeedlingsGrownReport +
-                    (await TreeSpecies.projectReports(previousReports).visible().sum("amount"));
+                    totalSeedlingsGrownReport == null ? previousSum : totalSeedlingsGrownReport + previousSum;
                   return { id, totalSeedlingsGrownReport, totalSeedlingsGrown };
                 })
               )
             ).reduce(
               (acc, { id, ...rest }) => ({ ...acc, [id]: rest }),
-              {} as Record<number, { totalSeedlingsGrownReport: number; totalSeedlingsGrown: number }>
+              {} as Record<
+                number,
+                { totalSeedlingsGrownReport: number | undefined | null; totalSeedlingsGrown: number | undefined | null }
+              >
             )
         : undefined;
 

@@ -548,7 +548,7 @@ describe("ProjectReportProcessor", () => {
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
-      expect(additional1).toMatchObject({ totalSeedlingsGrownReport: 0, totalSeedlingsGrown: 0 });
+      expect(additional1).toMatchObject({ totalSeedlingsGrownReport: null, totalSeedlingsGrown: null });
       const [result2, additional2] = addRow.mock.calls[1] as [ProjectReport, Dictionary<unknown>];
       expect(result2).toMatchObject({ uuid: reports[1].uuid });
       expect(result2.projectName).toEqual(projects[1].name);

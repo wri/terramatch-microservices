@@ -176,4 +176,7 @@ out
 data
 
 # geoserver
-docker/geoserver/geoserver_data/gwc/wri_polygon_geometry
+docker/geoserver/geoserver_data/gwc/**
+docker/geoserver/geoserver_data/**/geowebcache.xml
+*.pbf
+

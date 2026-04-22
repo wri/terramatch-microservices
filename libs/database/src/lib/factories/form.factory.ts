@@ -1,5 +1,5 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Form, Nursery, Project, Site, SiteReport } from "../entities";
+import { Form, Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { UserFactory } from "./user.factory";
 
@@ -46,11 +46,27 @@ export const EntityFormFactory = {
       type: "nursery"
     })),
 
-  siteReport: (siteReport?: SiteReport) =>
+  projectReport: (report?: ProjectReport) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),
-      frameworkKey: siteReport?.frameworkKey ?? "ppc",
+      frameworkKey: report?.frameworkKey ?? "ppc",
+      model: ProjectReport.LARAVEL_TYPE,
+      type: "project-report"
+    })),
+
+  siteReport: (report?: SiteReport) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: report?.frameworkKey ?? "ppc",
       model: SiteReport.LARAVEL_TYPE,
       type: "site-report"
+    })),
+
+  nurseryReport: (report?: SiteReport) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: report?.frameworkKey ?? "ppc",
+      model: NurseryReport.LARAVEL_TYPE,
+      type: "nursery-report"
     }))
 };

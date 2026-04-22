@@ -57,17 +57,15 @@ import { SrpReportProcessor } from "./processors/srp-report.processor";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { ConfigService } from "@nestjs/config";
-import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
+import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 import {
   CsvExportService,
-  FormQuestionExportMapping,
   getAttributes,
   getFormQuestionsForExport,
   getMappingsColumns,
   StreamWriter
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 // The keys of this array must match the type in the resulting DTO.
@@ -129,6 +127,14 @@ const ASSOCIATION_PROCESSORS = {
 
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
+
+type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
+  /**
+   * If provided, is expected to provide additional data for the CSV mapping for the given page
+   * keyed on entity id.
+   */
+  additionalDataForPage?: (page: T[]) => Promise<Record<number, Dictionary<unknown>>>;
+};
 
 @Injectable()
 export class EntitiesService {
@@ -308,7 +314,7 @@ export class EntitiesService {
     columns: Dictionary<string>,
     attributes: string[],
     builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey }: ExportAllOptions
+    { response, frameworkKey, additionalDataForPage }: EntityFrameworkExportOptions<T>
   ) {
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
 
@@ -321,18 +327,18 @@ export class EntitiesService {
 
     const fileName = `all-entity-records/${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    builder = builder.attributes(uniq([...attributes, ...getAttributes(mappings, type)]));
+    builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
     await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
       for await (const page of batchFindAll(builder)) {
+        const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
         for (const entity of page) {
-          const additional = await this.csvExportService.collectFormCells(mappings, { [type]: entity }, frameworkKey);
+          const additional = {
+            ...(await this.csvExportService.collectFormCells(mappings, { [type]: entity }, frameworkKey)),
+            ...pageData[entity.id]
+          };
           addRow(entity, additional);
         }
       }
     });
-  }
-
-  collectFormCellsForCsv(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {
-    return this.csvExportService.collectFormCells(mappings, models, frameworkKey);
   }
 }

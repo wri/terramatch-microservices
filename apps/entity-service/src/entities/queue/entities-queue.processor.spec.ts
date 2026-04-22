@@ -1,4 +1,8 @@
-import { EntitiesQueueProcessor } from "./entities-queue.processor";
+import {
+  CREATE_PROJECT_FOR_APPLICATION,
+  EntitiesQueueProcessor,
+  GENERATE_FRAMEWORK_ENTITY_EXPORT
+} from "./entities-queue.processor";
 import { Test } from "@nestjs/testing";
 import { EntitiesService } from "../entities.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -44,24 +48,24 @@ describe("EntitiesQueueProcessor", () => {
 
   describe("createProjectForApplication", () => {
     it("throws if the application id not a number", async () => {
-      await expect(processor.process({ name: "createProjectForApplication", data: {} } as Job)).rejects.toThrow(
+      await expect(processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: {} } as Job)).rejects.toThrow(
         "Invalid applicationId: {}"
       );
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: "3" } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: "3" } } as Job)
       ).rejects.toThrow('Invalid applicationId: {"applicationId":"3"}');
     });
 
     it("throws if the application is not found", async () => {
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: -1 } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: -1 } } as Job)
       ).rejects.toThrow("Application not found for ID: -1");
     });
 
     it("throws if the framework is missing", async () => {
       const application = await ApplicationFactory.create();
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: application.id } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: application.id } } as Job)
       ).rejects.toThrow(`Application funding programme or framework not found for ID: ${application.id}`);
     });
 
@@ -70,7 +74,7 @@ describe("EntitiesQueueProcessor", () => {
       const fp = await FundingProgrammeFactory.create({ frameworkKey: framework.slug });
       const application = await ApplicationFactory.create({ fundingProgrammeUuid: fp.uuid });
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: application.id } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: application.id } } as Job)
       ).rejects.toThrow(`Framework does not have a project form assigned: ${framework.slug}`);
     });
 
@@ -81,7 +85,7 @@ describe("EntitiesQueueProcessor", () => {
       const fp = await FundingProgrammeFactory.create({ frameworkKey: framework.slug });
       const application = await ApplicationFactory.create({ fundingProgrammeUuid: fp.uuid });
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: application.id } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: application.id } } as Job)
       ).rejects.toThrow(`Application does not have a form submission: ${application.id}`);
     });
 
@@ -92,7 +96,7 @@ describe("EntitiesQueueProcessor", () => {
       const fp = await FundingProgrammeFactory.create({ frameworkKey: framework.slug });
       const application = await ApplicationFactory.create({ fundingProgrammeUuid: fp.uuid });
       await expect(
-        processor.process({ name: "createProjectForApplication", data: { applicationId: application.id } } as Job)
+        processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: application.id } } as Job)
       ).rejects.toThrow(`Application does not have a form submission: ${application.id}`);
       const submission = await FormSubmissionFactory.create({ applicationId: application.id, status: "approved" });
 
@@ -102,13 +106,35 @@ describe("EntitiesQueueProcessor", () => {
       });
       entitiesService.createEntityProcessor.mockReturnValue(projectProcessor);
 
-      await processor.process({ name: "createProjectForApplication", data: { applicationId: application.id } } as Job);
+      await processor.process({ name: CREATE_PROJECT_FOR_APPLICATION, data: { applicationId: application.id } } as Job);
       expect(entitiesService.createEntityProcessor).toHaveBeenCalledWith("projects");
       expect(projectProcessor.create).toHaveBeenCalledWith({ applicationUuid: application.uuid, formUuid: form.uuid });
       expect(emailQueue.add).toHaveBeenCalledWith("formSubmissionFeedback", {
         submissionId: submission.id,
         projectUuid: project.uuid
       });
+    });
+  });
+
+  describe("generateFrameworkEntityExport", () => {
+    it("throws if the framework key or entity type is missing", async () => {
+      await expect(
+        processor.process({ name: GENERATE_FRAMEWORK_ENTITY_EXPORT, data: { frameworkKey: "terrafund" } } as Job)
+      ).rejects.toThrow('Invalid frameworkKey or entityType: {"frameworkKey":"terrafund"}');
+
+      await expect(
+        processor.process({ name: GENERATE_FRAMEWORK_ENTITY_EXPORT, data: { entityType: "projects" } } as Job)
+      ).rejects.toThrow('Invalid frameworkKey or entityType: {"entityType":"projects"}');
+    });
+
+    it("calls exportAll on the processor", async () => {
+      const exportAll = jest.fn();
+      entitiesService.createEntityProcessor.mockReturnValue({ exportAll } as unknown as ProjectProcessor);
+      await processor.process({
+        name: GENERATE_FRAMEWORK_ENTITY_EXPORT,
+        data: { frameworkKey: "terrafund", entityType: "projects" }
+      } as Job);
+      expect(exportAll).toHaveBeenCalled();
     });
   });
 });

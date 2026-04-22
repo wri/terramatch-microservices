@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
+  Framework,
   Notification,
   PasswordReset,
   ScheduledJob,
@@ -25,6 +26,8 @@ import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafun
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const TASK_DIGEST_CHUNK_SIZE = 100;
 const POLYGON_DIGEST_CHUNK_SIZE = 50;
@@ -37,13 +40,23 @@ const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
 const NOTIFICATION_RETENTION_DAYS = 90;
 
+export const EXPORT_ENTITY_TYPES: EntityType[] = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+];
+
 @Injectable()
 export class ScheduledJobsService {
   private readonly logger = new TMLogger(ScheduledJobsService.name);
 
   constructor(
     @InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue,
-    @InjectQueue("email") private readonly emailQueue: Queue
+    @InjectQueue("email") private readonly emailQueue: Queue,
+    @InjectQueue("entities") private readonly entitiesQueue: Queue
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -133,7 +146,7 @@ export class ScheduledJobsService {
    * multiple job-service instances are deployed.
    */
   @Cron("0 17 * * 1", { name: "taskDigestWeekly" })
-  async enqueueTaskDigestEmails(): Promise<void> {
+  async enqueueTaskDigestEmails() {
     await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_TASK_DIGEST_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing task digest email jobs (incomplete tasks)");
@@ -156,7 +169,7 @@ export class ScheduledJobsService {
    * multiple job-service instances are deployed.
    */
   @Cron("0 0 * * 1", { name: "weeklyPolygonUpdates" })
-  async enqueueWeeklyPolygonUpdateEmails(): Promise<void> {
+  async enqueueWeeklyPolygonUpdateEmails() {
     await Task.sql.transaction(async transaction => {
       await this.runWithMysqlNamedLock(MYSQL_LOCK_POLYGON_UPDATES_WEEKLY, transaction, async () => {
         this.logger.log("Enqueueing weekly polygon update email jobs");
@@ -172,7 +185,7 @@ export class ScheduledJobsService {
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleVerifications" })
-  async removeStaleVerifications(): Promise<void> {
+  async removeStaleVerifications() {
     const cutoff = DateTime.utc().minus({ hours: VERIFICATION_RETENTION_HOURS }).toJSDate();
     const removed = await Verification.destroy({
       where: { createdAt: { [Op.lte]: cutoff } }
@@ -183,7 +196,7 @@ export class ScheduledJobsService {
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStalePasswordResets" })
-  async removeStalePasswordResets(): Promise<void> {
+  async removeStalePasswordResets() {
     const cutoff = DateTime.utc().minus({ days: PASSWORD_RESET_RETENTION_DAYS }).toJSDate();
     const removed = await PasswordReset.destroy({
       where: { createdAt: { [Op.lte]: cutoff } }
@@ -194,7 +207,7 @@ export class ScheduledJobsService {
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleNotifications" })
-  async removeStaleNotifications(): Promise<void> {
+  async removeStaleNotifications() {
     const cutoff = DateTime.utc().minus({ days: NOTIFICATION_RETENTION_DAYS }).toJSDate();
     const removed = await Notification.destroy({
       where: {
@@ -204,6 +217,16 @@ export class ScheduledJobsService {
     });
     if (removed > 0) {
       this.logger.log(`Removed ${removed} stale read notifications (older than ${NOTIFICATION_RETENTION_DAYS}d)`);
+    }
+  }
+
+  @Cron("0 13,20 * * *", { name: "generateFrameworkEntityExports" })
+  async generateFrameworkEntityExports() {
+    const frameworks = (await Framework.findAll({ attributes: ["slug"] })).map(({ slug }) => slug).filter(isNotNull);
+    for (const frameworkKey of frameworks) {
+      for (const entityType of EXPORT_ENTITY_TYPES) {
+        await this.entitiesQueue.add("generateFrameworkEntityExport", { frameworkKey, entityType });
+      }
     }
   }
 

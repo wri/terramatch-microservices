@@ -2,7 +2,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
 import { populateDto } from "./json-api-attributes";
-import { Framework, User } from "@terramatch-microservices/database/entities";
+import { Framework, Project, User } from "@terramatch-microservices/database/entities";
 
 class UserFramework {
   @ApiProperty({ example: "TerraFund Landscapes" })
@@ -12,22 +12,25 @@ class UserFramework {
   slug: string;
 }
 
-export class UserMonitoringPartnerProjectDto {
+/**
+ * Sideloaded `projects` resource on user show: monitoring-partner links (v2_project_users.is_monitoring).
+ */
+@JsonApiDto({ type: "projects" })
+export class ProjectMonitoringPartnerLightDto {
+  constructor(project: Project) {
+    populateDto<ProjectMonitoringPartnerLightDto, Project>(this, project, {});
+  }
+
   @ApiProperty({ format: "uuid" })
   uuid: string;
 
-  @ApiProperty({ nullable: true, type: String, description: "Project display name." })
+  @ApiProperty({ nullable: true, type: String })
   name: string | null;
 }
 
 @JsonApiDto({ type: "users" })
 export class UserDto {
-  constructor(
-    user: User,
-    directFrameworks: Framework[],
-    frameworks: Framework[],
-    monitoringPartnerProjects: UserMonitoringPartnerProjectDto[] = []
-  ) {
+  constructor(user: User, directFrameworks: Framework[], frameworks: Framework[]) {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
       organisationName: user.organisation?.name ?? null,
@@ -37,8 +40,7 @@ export class UserDto {
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
       directFrameworks: (directFrameworks ?? [])
         .filter(({ slug }) => slug != null)
-        .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
-      monitoringPartnerProjects
+        .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
     });
   }
 
@@ -99,11 +101,4 @@ export class UserDto {
 
   @ApiProperty({ type: () => UserFramework, isArray: true })
   directFrameworks: UserFramework[];
-
-  @ApiProperty({
-    type: () => UserMonitoringPartnerProjectDto,
-    isArray: true,
-    description: "Projects where this user is a monitoring partner (v2_project_users.is_monitoring)."
-  })
-  monitoringPartnerProjects: UserMonitoringPartnerProjectDto[];
 }

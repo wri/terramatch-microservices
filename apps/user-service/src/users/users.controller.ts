@@ -16,7 +16,7 @@ import {
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
+import { OrganisationLightDto, ProjectMonitoringPartnerLightDto, UserDto } from "@terramatch-microservices/common/dto";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
@@ -45,12 +45,19 @@ export const USER_ORG_RELATIONSHIP = {
     }
   }
 };
+
+export const USER_MONITORING_PARTNER_PROJECTS_RELATIONSHIP = {
+  name: "monitoringPartnerProjects",
+  type: ProjectMonitoringPartnerLightDto,
+  multiple: true
+};
+
 const USER_RESPONSE_SHAPE = {
   data: {
     type: UserDto,
-    relationships: [USER_ORG_RELATIONSHIP]
+    relationships: [USER_ORG_RELATIONSHIP, USER_MONITORING_PARTNER_PROJECTS_RELATIONSHIP]
   },
-  included: [OrganisationLightDto]
+  included: [OrganisationLightDto, ProjectMonitoringPartnerLightDto]
 };
 
 @Controller("users/v3/users")
@@ -185,10 +192,9 @@ export class UsersController {
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {
-    const monitoringPartnerProjects = await this.usersService.getMonitoringPartnerProjects(user);
     const userResource = document.addData(
       user.uuid ?? "no-uuid",
-      new UserDto(user, user.frameworks, await user.myFrameworks(), monitoringPartnerProjects)
+      new UserDto(user, user.frameworks, await user.myFrameworks())
     );
 
     const org = await user.primaryOrganisation();
@@ -197,6 +203,15 @@ export class UsersController {
       const isOwner = user.organisationId === org.id;
       const userStatus = isOwner ? "approved" : org.OrganisationUser?.status ?? "na";
       userResource.relateTo("org", orgResource, { meta: { userStatus } });
+    }
+
+    const monitoringProjects = await this.usersService.getMonitoringPartnerProjectRecords(user);
+    for (const project of monitoringProjects) {
+      if (project.uuid == null) {
+        continue;
+      }
+      const projectResource = document.addData(project.uuid, new ProjectMonitoringPartnerLightDto(project));
+      userResource.relateTo("monitoringPartnerProjects", projectResource);
     }
 
     return document;

@@ -41,8 +41,8 @@ describe("UsersController", () => {
 
     controller = module.get<UsersController>(UsersController);
     usersService.update.mockImplementation((user, attrs) => realUsersService.update(user, attrs));
-    usersService.getMonitoringPartnerProjects.mockImplementation(user =>
-      realUsersService.getMonitoringPartnerProjects(user)
+    usersService.getMonitoringPartnerProjectRecords.mockImplementation(user =>
+      realUsersService.getMonitoringPartnerProjectRecords(user)
     );
     usersService.delete.mockImplementation(async u => {
       await realUsersService.delete(u);
@@ -124,7 +124,7 @@ describe("UsersController", () => {
       });
     });
 
-    it("should include monitoringPartnerProjects for is_monitoring project links", async () => {
+    it("should sideload monitoring partner projects via relationships and included", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const user = await UserFactory.create();
       const project = await ProjectFactory.create({ name: "Monitoring Partner Project" });
@@ -138,9 +138,23 @@ describe("UsersController", () => {
 
       const result = serialize(await controller.findOne(user.uuid!));
       const data = result.data as Resource;
-      expect(data.attributes.monitoringPartnerProjects).toEqual([
-        { uuid: project.uuid, name: "Monitoring Partner Project" }
-      ]);
+      const rel = data.relationships?.monitoringPartnerProjects?.data;
+      expect(rel).toEqual({
+        type: "projects",
+        id: project.uuid
+      });
+      expect(result.included).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "projects",
+            id: project.uuid,
+            attributes: expect.objectContaining({
+              uuid: project.uuid,
+              name: "Monitoring Partner Project"
+            })
+          })
+        ])
+      );
     });
   });
 

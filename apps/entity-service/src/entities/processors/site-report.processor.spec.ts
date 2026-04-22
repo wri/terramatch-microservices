@@ -2,13 +2,15 @@
 import { SiteReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
-import { reverse, sortBy } from "lodash";
+import { Dictionary, reverse, sortBy, sum } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
+  SeedingFactory,
   SiteFactory,
   SiteReportFactory,
   TaskFactory,
@@ -21,16 +23,19 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await SiteReport.truncate();
 
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("siteReports") as SiteReportProcessor;
   });
 
@@ -535,6 +540,82 @@ describe("SiteReportProcessor", () => {
         "{title} for {startDate} - {endDate}",
         expect.objectContaining({ title: "Test Title" })
       );
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all site reports to the CSV", async () => {
+      await SiteReport.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      const sites = [
+        await SiteFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      const reports = [
+        await SiteReportFactory.create({ siteId: sites[0].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" })
+      ];
+      // non framework reports should be ignored
+      await SiteReportFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.siteReport(reports[0]).create();
+
+      const firstTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[1]).createMany(2)).map(({ amount }) => amount)
+      );
+      const secondTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+      const firstSeedSum = sum((await SeedingFactory.siteReport(reports[1]).createMany(2)).map(({ amount }) => amount));
+      const secondSeedSum = sum(
+        (await SeedingFactory.siteReport(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+
+      const addRow = jest.fn();
+      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(3);
+      const [result1, additional1] = addRow.mock.calls[0] as [SiteReport, Dictionary<unknown>];
+      expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      expect(additional1).toMatchObject({
+        totalTreesPlanted: null,
+        totalTreesPlantedReport: null,
+        totalSeedsPlanted: null,
+        totalSeedsPlantedReport: null
+      });
+      const [result2, additional2] = addRow.mock.calls[1] as [SiteReport, Dictionary<unknown>];
+      expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
+      expect(additional2).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: firstTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: firstSeedSum
+      });
+      const [result3, additional3] = addRow.mock.calls[2] as [SiteReport, Dictionary<unknown>];
+      expect(result3).toMatchObject({ uuid: reports[2].uuid });
+      expect(result3.projectName).toEqual(projects[1].name);
+      expect(result3.organisationReadableType).toEqual("For Profit Organization");
+      expect(result3.organisationName).toEqual(orgs[1].name);
+      expect(additional3).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: secondTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: secondSeedSum
+      });
     });
   });
 });

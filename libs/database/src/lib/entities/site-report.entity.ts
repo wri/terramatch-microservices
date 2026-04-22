@@ -183,6 +183,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
+  get linkToTerramatch(): CreationOptional<string> {
+    return `https://www.terramatch.org/admin#/site-report/${this.uuid}/show`;
+  }
+
   @AllowNull
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
@@ -229,6 +233,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.site?.project?.uuid;
   }
 
+  get projectExportId(): number | undefined {
+    return this.site?.project?.exportId;
+  }
+
   get organisationName() {
     return this.site?.project?.organisationName;
   }
@@ -237,12 +245,20 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.site?.project?.organisationUuid;
   }
 
+  get organisationReadableType() {
+    return this.site?.project?.organisationReadableType;
+  }
+
   get siteName() {
     return this.site?.name;
   }
 
   get siteUuid(): string | undefined {
     return this.site?.uuid;
+  }
+
+  get siteExportId(): number | undefined {
+    return this.site?.exportId;
   }
 
   get taskUuid() {

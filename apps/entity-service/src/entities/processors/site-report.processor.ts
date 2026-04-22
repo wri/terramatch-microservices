@@ -8,9 +8,9 @@ import {
   Tracking,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { Includeable, Op, literal } from "sequelize";
+import { Includeable, literal, Op } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
@@ -18,6 +18,8 @@ import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { ProcessableAssociation } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { PAID_OTHER, VOLUNTEER_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
+import { Dictionary } from "lodash";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -37,6 +39,34 @@ const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$site.project.organisation.uuid$",
   country: "$site.project.country$",
   projectUuid: "$site.project.uuid$"
+};
+
+const CSV_COLUMNS: Dictionary<string> = {
+  id: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id",
+  siteExportId: "site-id",
+  siteName: "site-name",
+  totalTreesPlantedReport: "total_trees_planted_report",
+  totalTreesPlanted: "total_trees_planted"
+};
+
+const CSV_ATTRIBUTES = ["id", "uuid", "siteId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
+
+type CsvAdditional = {
+  totalTreesPlantedReport?: number;
+  totalTreesPlanted?: number;
+  totalSeedsPlantedReport?: number;
+  totalSeedsPlanted?: number;
 };
 
 export class SiteReportProcessor extends ReportProcessor<
@@ -210,6 +240,69 @@ export class SiteReportProcessor extends ReportProcessor<
   async getLightDto(siteReport: SiteReport) {
     const reportTitle = await this.getReportTitle(siteReport);
     return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
+  }
+
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const columns = {
+      ...CSV_COLUMNS,
+      ...(frameworkKey === "ppc"
+        ? { totalSeedsPlantedReport: "total_seeds_planted_report", totalSeedsPlanted: "total_seeds_planted" }
+        : {})
+    };
+
+    const additionalDataForPage = async (page: SiteReport[]) =>
+      (
+        await Promise.all(
+          page.map(async ({ id, siteId }) => {
+            const totalTreesPlantedReport = await TreeSpecies.siteReports([id])
+              .visible()
+              .collection("tree-planted")
+              .sum("amount");
+            const allReports = SiteReport.idsSubquery([siteId]);
+            const totalTreesPlanted = await TreeSpecies.siteReports(allReports)
+              .visible()
+              .collection("tree-planted")
+              .sum("amount");
+            const data: CsvAdditional & { id: number } = {
+              id: id as number,
+              totalTreesPlanted,
+              totalTreesPlantedReport
+            };
+
+            if (frameworkKey === "ppc") {
+              data.totalSeedsPlantedReport = await Seeding.siteReports([id]).visible().sum("amount");
+              data.totalSeedsPlanted = await Seeding.siteReports(allReports).visible().sum("amount");
+            }
+
+            return data;
+          })
+        )
+      ).reduce((acc, { id, ...rest }) => ({ ...acc, [id]: rest }), {} as Record<number, CsvAdditional>);
+
+    await this.entitiesService.entityFrameworkExport(
+      "siteReports",
+      columns,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(SiteReport, 10, [
+        {
+          association: "site",
+          attributes: ["name", "id", "ppcExternalId"],
+          include: [
+            {
+              association: "project",
+              attributes: ["name", "id", "ppcExternalId"],
+              include: [
+                {
+                  association: "organisation",
+                  attributes: ["name", "type"]
+                }
+              ]
+            }
+          ]
+        }
+      ]).where({ "$site.project.is_test$": false, frameworkKey }),
+      { response, frameworkKey, additionalDataForPage }
+    );
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {

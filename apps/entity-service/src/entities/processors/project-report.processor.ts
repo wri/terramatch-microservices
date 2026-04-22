@@ -76,7 +76,7 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectUuid: "project_uuid"
 };
 
-const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt"];
+const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
 
 export class ProjectReportProcessor extends ReportProcessor<
   ProjectReport,

@@ -14,6 +14,8 @@ import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockEntityService } from "./processors/entity.processor.spec";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -143,6 +145,21 @@ describe("EntitiesService", () => {
       csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
       await service.writeCsv("test.csv", {} as Response, {}, writeRows);
       expect(close).toHaveBeenCalled();
+    });
+  });
+
+  describe("entityFrameworkExport", () => {
+    it("throws if the framework key is missing", async () => {
+      await expect(
+        service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {})
+      ).rejects.toThrowError("Framework key is required for entity export");
+    });
+
+    it("returns early if the form is missing", async () => {
+      await service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {
+        frameworkKey: "foo" as FrameworkKey
+      });
+      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
     });
   });
 });

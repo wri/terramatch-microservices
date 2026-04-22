@@ -20,28 +20,21 @@ import {
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { Dictionary, groupBy, sumBy, uniq } from "lodash";
+import { Dictionary, groupBy, sumBy } from "lodash";
 import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
-import { BadRequestException, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import {
-  getAttributes,
-  getFormQuestionsForExport,
-  getMappingsColumns
-} from "@terramatch-microservices/common/export/csv-export.service";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -122,6 +115,17 @@ const CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "updated_at"
 };
 
+const CSV_ATTRIBUTES = [
+  "id",
+  "ppcExternalId",
+  "uuid",
+  "name",
+  "status",
+  "updateRequestStatus",
+  "createdAt",
+  "updatedAt"
+];
+
 export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
@@ -129,8 +133,6 @@ export class ProjectProcessor extends EntityProcessor<
   ProjectUpdateAttributes,
   ProjectCreateAttributes
 > {
-  private readonly logger = new TMLogger(ProjectProcessor.name);
-
   readonly LIGHT_DTO = ProjectLightDto;
   readonly FULL_DTO = ProjectFullDto;
 
@@ -736,50 +738,16 @@ export class ProjectProcessor extends EntityProcessor<
     return (await this.findOne(project.uuid)) as Project;
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
-    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required");
-
-    const form = await Form.findOne({ where: { model: Project.LARAVEL_TYPE, frameworkKey } });
-    if (form == null) {
-      this.logger.log(`No form found for ${frameworkKey}`);
-      return;
-    }
-
-    const fileName = `all-entity-records/projects-${frameworkKey}.csv`;
-    const mappings = await getFormQuestionsForExport(form);
-    const attributes = uniq([
-      "id",
-      "ppcExternalId",
-      "uuid",
-      "name",
-      "status",
-      "updateRequestStatus",
-      "createdAt",
-      "updatedAt",
-      ...getAttributes(mappings, "projects")
-    ]);
-    await this.entitiesService.writeCsv(
-      fileName,
-      response,
-      { ...CSV_COLUMNS, ...getMappingsColumns(mappings) },
-      async addRow => {
-        const builder = new PaginatedQueryBuilder(Project, 10, [
-          { association: "organisation", attributes: ["name", "type"] }
-        ])
-          .where({ isTest: false, frameworkKey })
-          .attributes(attributes);
-
-        for await (const page of batchFindAll(builder)) {
-          for (const project of page) {
-            const additional = await this.entitiesService.collectFormCellsForCsv(
-              mappings,
-              { projects: project },
-              frameworkKey
-            );
-            addRow(project, additional);
-          }
-        }
-      }
+  async exportAll(opts: ExportAllOptions = {}) {
+    await this.entitiesService.entityFrameworkExport(
+      "projects",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where({
+        isTest: false,
+        frameworkKey: opts.frameworkKey
+      }),
+      opts
     );
   }
 

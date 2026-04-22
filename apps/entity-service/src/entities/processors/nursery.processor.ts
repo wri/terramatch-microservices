@@ -8,7 +8,7 @@ import {
   Task
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
-import { EntityProcessor } from "./entity-processor";
+import { EntityProcessor, ExportAllOptions } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
@@ -16,6 +16,8 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
+import { Dictionary } from "lodash";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -31,6 +33,22 @@ const ASSOCIATION_FIELD_MAP = {
   country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
+
+const CSV_COLUMNS: Dictionary<string> = {
+  id: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id"
+};
+
+const CSV_ATTRIBUTES = ["id", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
 export class NurseryProcessor extends EntityProcessor<
   Nursery,
@@ -216,5 +234,21 @@ export class NurseryProcessor extends EntityProcessor<
 
     // Load the full nursery with necessary associations.
     return (await this.findOne(nursery.uuid)) as Nursery;
+  }
+
+  async exportAll(opts: ExportAllOptions = {}) {
+    await this.entitiesService.entityFrameworkExport(
+      "nurseries",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(Nursery, 10, [
+        {
+          association: "project",
+          attributes: ["name", "id", "ppcExternalId"],
+          include: [{ association: "organisation", attributes: ["name", "type"] }]
+        }
+      ]).where({ "$project.is_test$": false, frameworkKey: opts.frameworkKey }),
+      opts
+    );
   }
 }

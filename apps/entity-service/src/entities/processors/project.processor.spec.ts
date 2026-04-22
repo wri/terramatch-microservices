@@ -773,15 +773,6 @@ describe("ProjectProcessor", () => {
   });
 
   describe("exportAll", () => {
-    it("throws if the framework key is missing", async () => {
-      await expect(processor.exportAll()).rejects.toThrowError("Framework key is required");
-    });
-
-    it("returns early if the form is missing", async () => {
-      await processor.exportAll({ frameworkKey: "foo" as FrameworkKey });
-      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
-    });
-
     it("writes all projects to the CSV", async () => {
       await Project.truncate();
       const orgs = [

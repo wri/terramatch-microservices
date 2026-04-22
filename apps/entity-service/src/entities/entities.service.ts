@@ -1,8 +1,8 @@
 import { Response } from "express";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
-import { EntityProcessor } from "./processors/entity-processor";
+import { EntityProcessor, ExportAllOptions } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -20,7 +20,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { Dictionary, groupBy } from "lodash";
+import { Dictionary, groupBy, kebabCase, uniq } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
@@ -61,10 +61,14 @@ import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/com
 import {
   CsvExportService,
   FormQuestionExportMapping,
+  getAttributes,
+  getFormQuestionsForExport,
+  getMappingsColumns,
   StreamWriter
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -297,6 +301,35 @@ export class EntitiesService {
     } finally {
       close();
     }
+  }
+
+  async entityFrameworkExport<T extends EntityModel>(
+    type: EntityType,
+    columns: Dictionary<string>,
+    attributes: string[],
+    builder: PaginatedQueryBuilder<T>,
+    { response, frameworkKey }: ExportAllOptions
+  ) {
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
+
+    const model = ENTITY_MODELS[type];
+    const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
+    if (form == null) {
+      this.logger.log(`No form found for [${model.name}, ${frameworkKey}]`);
+      return;
+    }
+
+    const fileName = `all-entity-records/${kebabCase(type)}-${frameworkKey}.csv`;
+    const mappings = await getFormQuestionsForExport(form);
+    builder = builder.attributes(uniq([...attributes, ...getAttributes(mappings, type)]));
+    await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
+      for await (const page of batchFindAll(builder)) {
+        for (const entity of page) {
+          const additional = await this.csvExportService.collectFormCells(mappings, { [type]: entity }, frameworkKey);
+          addRow(entity, additional);
+        }
+      }
+    });
   }
 
   collectFormCellsForCsv(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {

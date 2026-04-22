@@ -22,7 +22,6 @@ import { NotAcceptableException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
-import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("SiteProcessor", () => {
@@ -320,15 +319,6 @@ describe("SiteProcessor", () => {
   });
 
   describe("exportAll", () => {
-    it("throws if the framework key is missing", async () => {
-      await expect(processor.exportAll()).rejects.toThrowError("Framework key is required");
-    });
-
-    it("returns early if the form is missing", async () => {
-      await processor.exportAll({ frameworkKey: "foo" as FrameworkKey });
-      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
-    });
-
     it("writes all sites to the CSV", async () => {
       await Site.truncate();
       const orgs = [

@@ -6,6 +6,8 @@ import { SiteProcessor } from "./site.processor";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
+  OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
   SiteFactory,
@@ -20,16 +22,20 @@ import { NotAcceptableException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await Site.truncate();
 
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });
 
@@ -310,6 +316,52 @@ describe("SiteProcessor", () => {
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("throws if the framework key is missing", async () => {
+      await expect(processor.exportAll()).rejects.toThrowError("Framework key is required");
+    });
+
+    it("returns early if the form is missing", async () => {
+      await processor.exportAll({ frameworkKey: "foo" as FrameworkKey });
+      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
+    });
+
+    it("writes all sites to the CSV", async () => {
+      await Site.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      const sites = [
+        await SiteFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      // non-framework site should be ignored
+      await SiteFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.site(sites[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const result1 = addRow.mock.calls[0][0] as Site;
+      expect(result1).toMatchObject({ uuid: sites[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      const result2 = addRow.mock.calls[1][0] as Site;
+      expect(result2).toMatchObject({ uuid: sites[1].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
     });
   });
 });

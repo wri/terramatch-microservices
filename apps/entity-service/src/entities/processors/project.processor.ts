@@ -111,7 +111,7 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
 ];
 
 const CSV_COLUMNS: Dictionary<string> = {
-  id: "id",
+  exportId: "id",
   uuid: "uuid",
   organisationReadableType: "organization-readable_type",
   organisationName: "organization-name",
@@ -749,6 +749,7 @@ export class ProjectProcessor extends EntityProcessor<
     const mappings = await getFormQuestionsForExport(form);
     const attributes = uniq([
       "id",
+      "ppcExternalId",
       "uuid",
       "name",
       "status",

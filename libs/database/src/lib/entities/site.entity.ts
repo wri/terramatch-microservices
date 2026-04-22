@@ -145,6 +145,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @Column(BIGINT.UNSIGNED)
   override id: CreationOptional<number>;
 
+  get exportId(): CreationOptional<number> {
+    return this.ppcExternalId ?? this.id;
+  }
+
   @AllowNull
   @Column(STRING)
   name: string | null;
@@ -159,6 +163,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
+
+  get linkToTerramatch(): CreationOptional<string> {
+    return `https://www.terramatch.org/admin#/site/${this.uuid}/show`;
+  }
 
   @AllowNull
   @Column(STRING)
@@ -186,6 +194,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     return this.project?.uuid;
   }
 
+  get projectExportId(): number | undefined {
+    return this.project?.exportId;
+  }
+
   get projectCountry() {
     return this.project?.country;
   }
@@ -196,6 +208,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   get organisationName() {
     return this.project?.organisationName;
+  }
+
+  get organisationReadableType() {
+    return this.project?.organisationReadableType;
   }
 
   @AllowNull

@@ -132,6 +132,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(BIGINT.UNSIGNED)
   override id: CreationOptional<number>;
 
+  get exportId(): CreationOptional<number> {
+    return this.ppcExternalId ?? this.id;
+  }
+
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;

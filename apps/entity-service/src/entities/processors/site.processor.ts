@@ -1,4 +1,4 @@
-import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
 import {
   Tracking,
   TrackingEntry,
@@ -11,18 +11,27 @@ import {
   SitePolygon,
   SiteReport,
   Task,
-  TreeSpecies
+  TreeSpecies,
+  Form
 } from "@terramatch-microservices/database/entities";
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { BadRequestException, NotAcceptableException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op } from "sequelize";
-import { groupBy, sumBy } from "lodash";
+import { Dictionary, groupBy, sumBy, uniq } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
+import {
+  getAttributes,
+  getFormQuestionsForExport,
+  getMappingsColumns
+} from "@terramatch-microservices/common/export/csv-export.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -39,7 +48,23 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
+const CSV_COLUMNS: Dictionary<string> = {
+  exportId: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id"
+};
+
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
+  private readonly logger = new TMLogger(SiteProcessor.name);
+
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
 
@@ -433,5 +458,55 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     // Load the full site with necessary associations.
     return (await this.findOne(site.uuid)) as Site;
+  }
+
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required");
+
+    const form = await Form.findOne({ where: { model: Site.LARAVEL_TYPE, frameworkKey } });
+    if (form == null) {
+      this.logger.log(`No form found for ${frameworkKey}`);
+      return;
+    }
+
+    const fileName = `all-entity-records/sites-${frameworkKey}.csv`;
+    const mappings = await getFormQuestionsForExport(form);
+    const attributes = uniq([
+      "id",
+      "ppcExternalId",
+      "uuid",
+      "status",
+      "updateRequestStatus",
+      "createdAt",
+      "updatedAt",
+      ...getAttributes(mappings, "sites")
+    ]);
+    await this.entitiesService.writeCsv(
+      fileName,
+      response,
+      { ...CSV_COLUMNS, ...getMappingsColumns(mappings) },
+      async addRow => {
+        const builder = new PaginatedQueryBuilder(Site, 10, [
+          {
+            association: "project",
+            attributes: ["name", "id", "ppcExternalId"],
+            include: [{ association: "organisation", attributes: ["name", "type"] }]
+          }
+        ])
+          .where({ "$project.is_test$": false, frameworkKey })
+          .attributes(attributes);
+
+        for await (const page of batchFindAll(builder)) {
+          for (const site of page) {
+            const additional = await this.entitiesService.collectFormCellsForCsv(
+              mappings,
+              { sites: site },
+              frameworkKey
+            );
+            addRow(site, additional);
+          }
+        }
+      }
+    );
   }
 }

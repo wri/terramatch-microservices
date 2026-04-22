@@ -798,8 +798,8 @@ describe("ProjectProcessor", () => {
 
       const addRow = jest.fn();
       csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
-
       await processor.exportAll({ frameworkKey: "ppc" });
+
       expect(addRow).toHaveBeenCalledTimes(2);
       const result1 = addRow.mock.calls[0][0] as Project;
       expect(result1).toMatchObject({

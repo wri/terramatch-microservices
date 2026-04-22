@@ -36,11 +36,19 @@ import { FinancialReportFullDto, FinancialReportLightDto } from "./dto/financial
 import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
 import { EntityCreateBody } from "./dto/entity-create.dto";
 import { SrpReportFullDto, SrpReportLightDto } from "./dto/srp-report.dto";
+import { EntityExportQueryDto } from "./dto/entity-export-query.dto";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { kebabCase } from "lodash";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
 export class EntitiesController {
-  constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly entitiesService: EntitiesService,
+    private readonly csvExportService: CsvExportService
+  ) {}
 
   @Get(":entity")
   @ApiOperation({
@@ -71,17 +79,27 @@ export class EntitiesController {
     operationId: "entityExportAll",
     summary: "Export all of a given entity as CSV."
   })
+  @JsonApiResponse(FileDownloadDto)
   @ApiResponse({
     status: 200,
     description: "CSV file",
     content: { "text/csv": { schema: { type: "string" } } }
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
-  async entityExportAll<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
-    const processor = this.entitiesService.createEntityProcessor<T>(entity);
-
-    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
-    await processor.exportAll({ response });
+  async entityExportAll<T extends EntityModel>(
+    @Param() { entity }: EntityIndexParamsDto,
+    @Query() { frameworkKey }: EntityExportQueryDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
+    if (frameworkKey == null) {
+      const processor = this.entitiesService.createEntityProcessor<T>(entity);
+      await processor.exportAll({ response });
+    } else {
+      const fileName = `all-entity-records/${kebabCase(entity)}-${frameworkKey}.csv`;
+      const dto = await this.csvExportService.generateExportDto(fileName);
+      return buildJsonApi(FileDownloadDto).addData(`${entity}Export`, dto);
+    }
   }
 
   @Get(":entity/:uuid")

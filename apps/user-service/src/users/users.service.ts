@@ -1,16 +1,49 @@
 import bcrypt from "bcryptjs";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Op } from "sequelize";
-import { Framework, FrameworkUser, ModelHasRole, Role, User } from "@terramatch-microservices/database/entities";
+import {
+  Framework,
+  FrameworkUser,
+  ModelHasRole,
+  Project,
+  ProjectUser,
+  Role,
+  User
+} from "@terramatch-microservices/database/entities";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { UserQueryDto } from "./dto/user-query.dto";
-import { UserDto } from "@terramatch-microservices/common/dto";
+import { UserDto, UserMonitoringPartnerProjectDto } from "@terramatch-microservices/common/dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 
 @Injectable()
 export class UsersService {
+  /**
+   * Projects linked via v2_project_users with is_monitoring = true.
+   */
+  async getMonitoringPartnerProjects(user: User): Promise<UserMonitoringPartnerProjectDto[]> {
+    const links = await ProjectUser.findAll({
+      where: { userId: user.id, isMonitoring: true },
+      attributes: ["projectId"]
+    });
+    if (links.length === 0) {
+      return [];
+    }
+    const projects = await Project.findAll({
+      where: { id: { [Op.in]: links.map(link => link.projectId) } },
+      attributes: ["uuid", "name"],
+      order: [["name", "ASC"]]
+    });
+    const summaries: UserMonitoringPartnerProjectDto[] = [];
+    for (const project of projects) {
+      if (project.uuid != null) {
+        summaries.push({ uuid: project.uuid, name: project.name });
+      }
+    }
+    return summaries;
+  }
+
   async findMany(query: UserQueryDto) {
     const includes = [
       {

@@ -7,6 +7,8 @@ import {
   FrameworkUser,
   ModelHasRole,
   Organisation,
+  Project,
+  ProjectUser,
   Role,
   User
 } from "@terramatch-microservices/database/entities";
@@ -168,6 +170,45 @@ describe("UsersService", () => {
           sort: { field: "invalidField", direction: "ASC" }
         } as UserQueryDto)
       ).rejects.toThrow(new BadRequestException("Invalid sort field: invalidField"));
+    });
+  });
+
+  describe("getMonitoringPartnerProjects", () => {
+    it("returns uuid and name for linked projects, ordered by name", async () => {
+      const user = { id: 42 } as User;
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([{ projectId: 10 }, { projectId: 20 }] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([
+        { uuid: "p2-uuid", name: null },
+        { uuid: null, name: "Skip" },
+        { uuid: "p1-uuid", name: "Alpha" }
+      ] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjects(user);
+
+      expect(ProjectUser.findAll).toHaveBeenCalledWith({
+        where: { userId: 42, isMonitoring: true },
+        attributes: ["projectId"]
+      });
+      expect(Project.findAll).toHaveBeenCalledWith({
+        where: { id: { [Op.in]: [10, 20] } },
+        attributes: ["uuid", "name"],
+        order: [["name", "ASC"]]
+      });
+      expect(result).toEqual([
+        { uuid: "p2-uuid", name: null },
+        { uuid: "p1-uuid", name: "Alpha" }
+      ]);
+    });
+
+    it("returns an empty list when there are no monitoring links", async () => {
+      const user = { id: 7 } as User;
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([]);
+      const projectSpy = jest.spyOn(Project, "findAll");
+
+      const result = await service.getMonitoringPartnerProjects(user);
+
+      expect(result).toEqual([]);
+      expect(projectSpy).not.toHaveBeenCalled();
     });
   });
 

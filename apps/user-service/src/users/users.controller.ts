@@ -185,9 +185,10 @@ export class UsersController {
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {
+    const monitoringPartnerProjects = await this.usersService.getMonitoringPartnerProjects(user);
     const userResource = document.addData(
       user.uuid ?? "no-uuid",
-      new UserDto(user, user.frameworks, await user.myFrameworks())
+      new UserDto(user, user.frameworks, await user.myFrameworks(), monitoringPartnerProjects)
     );
 
     const org = await user.primaryOrganisation();

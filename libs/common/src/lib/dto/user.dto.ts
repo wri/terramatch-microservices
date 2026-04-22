@@ -12,9 +12,22 @@ class UserFramework {
   slug: string;
 }
 
+export class UserMonitoringPartnerProjectDto {
+  @ApiProperty({ format: "uuid" })
+  uuid: string;
+
+  @ApiProperty({ nullable: true, type: String, description: "Project display name." })
+  name: string | null;
+}
+
 @JsonApiDto({ type: "users" })
 export class UserDto {
-  constructor(user: User, directFrameworks: Framework[], frameworks: Framework[]) {
+  constructor(
+    user: User,
+    directFrameworks: Framework[],
+    frameworks: Framework[],
+    monitoringPartnerProjects: UserMonitoringPartnerProjectDto[] = []
+  ) {
     populateDto<UserDto, Omit<User, "uuid" | "frameworks">>(this, user, {
       uuid: user.uuid ?? "",
       organisationName: user.organisation?.name ?? null,
@@ -24,7 +37,8 @@ export class UserDto {
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
       directFrameworks: (directFrameworks ?? [])
         .filter(({ slug }) => slug != null)
-        .map(({ name, slug }) => ({ name, slug })) as UserFramework[]
+        .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
+      monitoringPartnerProjects
     });
   }
 
@@ -85,4 +99,11 @@ export class UserDto {
 
   @ApiProperty({ type: () => UserFramework, isArray: true })
   directFrameworks: UserFramework[];
+
+  @ApiProperty({
+    type: () => UserMonitoringPartnerProjectDto,
+    isArray: true,
+    description: "Projects where this user is a monitoring partner (v2_project_users.is_monitoring)."
+  })
+  monitoringPartnerProjects: UserMonitoringPartnerProjectDto[];
 }

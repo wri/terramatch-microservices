@@ -3,3 +3,5 @@
 /coverage
 /.nx/cache
 /.nx/workspace-data
+/data
+/docker/geoserver/geoserver_data/gwc

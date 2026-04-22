@@ -1,0 +1,16 @@
+<layer>
+  <name>world_countries_generalized</name>
+  <id>LayerInfoImpl-7dde99a5:19d97049406:-7ff4</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--7559e60b:19c336f1e70:-7ffc</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-7dde99a5:19d97049406:-7ff5</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2026-04-16 16:47:10.849 UTC</dateCreated>
+</layer>

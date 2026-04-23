@@ -129,7 +129,6 @@ describe("FormsService", () => {
   describe("addIndex", () => {
     it("adds the light DTOs", async () => {
       mediaService.getUrl.mockReturnValue("fake-url");
-      // addIndex uses findMany default order ["id"] ASC; createMany order is not guaranteed to match.
       const forms = orderBy(
         [...(await FormFactory.createMany(2)), await FormFactory.create({ published: false })],
         "id"

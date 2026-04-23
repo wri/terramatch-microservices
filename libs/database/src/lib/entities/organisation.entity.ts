@@ -6,6 +6,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { Application } from "./application.entity";
 import { Subquery } from "../util/subquery.builder";
 import { removeMedia } from "../hooks/remove-media";
+import { Dictionary } from "lodash";
 
 type OrganisationMedia =
   | "logo"
@@ -37,7 +38,7 @@ type OrganisationMedia =
   | "carbonCreditsProof"
   | "additionalFinancialDocumentation";
 
-const READABLE_TYPES = {
+const READABLE_TYPES: Dictionary<string> = {
   "for-profit-organization": "For Profit Organization",
   "non-profit-organization": "Non Profit Organization",
   "government-agency": "Government Agency"

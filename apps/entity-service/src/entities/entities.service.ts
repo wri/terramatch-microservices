@@ -1,4 +1,3 @@
-import { Response } from "express";
 import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
@@ -62,8 +61,7 @@ import {
   CsvExportService,
   getAttributes,
   getFormQuestionsForExport,
-  getMappingsColumns,
-  StreamWriter
+  getMappingsColumns
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
@@ -294,24 +292,8 @@ export class EntitiesService {
     return new LinkedAnswerCollector(this.mediaService);
   }
 
-  async writeCsv(
-    fileName: string,
-    response: Response | undefined,
-    columns: Dictionary<string>,
-    writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
-  ) {
-    const { addRow, close } =
-      response == null
-        ? this.csvExportService.getS3StreamWriter(fileName, columns)
-        : this.csvExportService.getResponseStreamWriter(fileName, response, columns);
-    try {
-      await writeRows(addRow);
-    } catch (error) {
-      this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
-      throw error;
-    } finally {
-      close();
-    }
+  writeCsv(...args: Parameters<CsvExportService["writeCsv"]>) {
+    return this.csvExportService.writeCsv(...args);
   }
 
   async entityFrameworkExport<T extends EntityModel>(

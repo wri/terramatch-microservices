@@ -49,7 +49,7 @@ describe("UsersService", () => {
           expect.objectContaining({ association: "roles" })
         ])
       );
-      expect(builder.order).toHaveBeenCalledWith(["createdAt", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
       expect(result).toEqual({
         users: [{ id: 1 }],
         paginationTotal: 42
@@ -119,7 +119,7 @@ describe("UsersService", () => {
         sort: { field: "firstName", direction: "ASC" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["firstName", "ASC"]);
+      expect(builder.order).toHaveBeenCalledWith([["firstName", "ASC"]]);
     });
 
     it("should sort by organisation name", async () => {
@@ -131,7 +131,7 @@ describe("UsersService", () => {
         sort: { field: "organisationName", direction: "DESC" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["organisation", "name", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["organisation", "name", "DESC"]]);
     });
 
     it("should default sort direction to DESC when direction is missing", async () => {
@@ -143,7 +143,7 @@ describe("UsersService", () => {
         sort: { field: "emailAddress" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["emailAddress", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["emailAddress", "DESC"]]);
     });
 
     it("should allow id sort field without adding explicit order", async () => {

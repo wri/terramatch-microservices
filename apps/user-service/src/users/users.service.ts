@@ -62,14 +62,14 @@ export class UsersService {
       ];
 
       if (directFields.includes(sortField)) {
-        builder.order([sortField, direction]);
+        builder.order([[sortField, direction]]);
       } else if (sortField === "organisationName") {
-        builder.order(["organisation", "name", direction]);
+        builder.order([["organisation", "name", direction]]);
       } else if (sortField !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     } else {
-      builder.order(["createdAt", "DESC"]);
+      builder.order([["createdAt", "DESC"]]);
     }
 
     return {

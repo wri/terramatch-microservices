@@ -540,7 +540,9 @@ describe("NurseryReportProcessor", () => {
       await EntityFormFactory.nurseryReport(reports[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
       await processor.exportAll({ frameworkKey: "terrafund" });
 
       expect(addRow).toHaveBeenCalledTimes(2);

@@ -1,3 +1,4 @@
+import { Response } from "express";
 import { Test } from "@nestjs/testing";
 import {
   CsvExportService,
@@ -219,6 +220,26 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         history: site.history,
         media: ["url-for-media", "url-for-media"]
       });
+    });
+  });
+
+  describe("writeCsv", () => {
+    it("closes the stream when there's an error", async () => {
+      const writeRows = async () => {
+        throw new Error("failed stream");
+      };
+      const close = jest.fn();
+      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
+      expect(close).toHaveBeenCalled();
+    });
+
+    it("closes the stream on success", async () => {
+      const writeRows = () => Promise.resolve();
+      const close = jest.fn();
+      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
+      expect(close).toHaveBeenCalled();
     });
   });
 });

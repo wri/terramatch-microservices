@@ -87,9 +87,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     if (query.sort?.field != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

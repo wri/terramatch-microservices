@@ -1,4 +1,3 @@
-import { Response } from "express";
 import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DeepMocked } from "@golevelup/ts-jest";
@@ -125,26 +124,6 @@ describe("EntitiesService", () => {
       expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);
       // non multi media
       expectMediaMatchesDto(result["detailedProjectBudget"], media[1]);
-    });
-  });
-
-  describe("writeCsv", () => {
-    it("closes the stream when there's an error", async () => {
-      const writeRows = async () => {
-        throw new Error("failed stream");
-      };
-      const close = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
-      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
-      expect(close).toHaveBeenCalled();
-    });
-
-    it("closes the stream on success", async () => {
-      const writeRows = () => Promise.resolve();
-      const close = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
-      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
-      expect(close).toHaveBeenCalled();
     });
   });
 

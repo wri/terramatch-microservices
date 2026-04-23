@@ -789,7 +789,9 @@ describe("ProjectProcessor", () => {
       await EntityFormFactory.project(projects[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
       await processor.exportAll({ frameworkKey: "ppc" });
 
       expect(addRow).toHaveBeenCalledTimes(2);

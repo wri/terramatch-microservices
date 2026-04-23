@@ -154,6 +154,6 @@ export class FormsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async exportSubmissionsCsv(@Param("uuid") uuid: string, @Res() response: Response) {
     await this.policyService.authorize("read", FormSubmission);
-    await this.formsService.exportAllSubmissions(uuid, response);
+    await this.formsService.exportSubmissions(uuid, response);
   }
 }

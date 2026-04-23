@@ -82,11 +82,11 @@ export class NurseryProcessor extends EntityProcessor<
     const builder = await this.entitiesService.buildQuery(Nursery, query, [projectAssociation]);
     if (query.sort?.field != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

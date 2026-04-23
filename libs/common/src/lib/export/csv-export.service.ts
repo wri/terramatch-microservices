@@ -21,6 +21,7 @@ import { MediaService } from "../media/media.service";
 import { isField, isFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { TMLogger } from "../util/tm-logger";
 
 export type StreamWriter = {
   addRow: (model: Model, additional?: Dictionary<unknown>) => void;
@@ -88,6 +89,8 @@ export const getMappingsColumns = (mappings: FormQuestionExportMapping[]): Dicti
 
 @Injectable()
 export class CsvExportService {
+  private readonly logger = new TMLogger(CsvExportService.name);
+
   constructor(
     private readonly fileService: FileService,
     private readonly configService: ConfigService,
@@ -122,6 +125,26 @@ export class CsvExportService {
       "Access-Control-Expose-Headers": "Content-Disposition"
     });
     return this.createStreamWriter(response, columns);
+  }
+
+  async writeCsv(
+    fileName: string,
+    response: Response | undefined,
+    columns: Dictionary<string>,
+    writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
+  ) {
+    const { addRow, close } =
+      response == null
+        ? this.getS3StreamWriter(fileName, columns)
+        : this.getResponseStreamWriter(fileName, response, columns);
+    try {
+      await writeRows(addRow);
+    } catch (error) {
+      this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
+      throw error;
+    } finally {
+      close();
+    }
   }
 
   async collectFormCells(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {

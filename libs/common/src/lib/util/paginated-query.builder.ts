@@ -73,8 +73,8 @@ export class PaginatedQueryBuilder<T extends Model> {
     }
   }
 
-  order(order: OrderItem) {
-    this.findOptions.order = [order];
+  order(order: OrderItem[]) {
+    this.findOptions.order = order;
     return this;
   }
 

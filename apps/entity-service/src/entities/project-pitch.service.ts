@@ -45,7 +45,7 @@ export class ProjectPitchService {
           query.sort.field
         )
       ) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

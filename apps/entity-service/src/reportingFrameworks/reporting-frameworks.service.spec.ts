@@ -450,9 +450,20 @@ describe("ReportingFrameworksService", () => {
       const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
       jest.spyOn(Form, "update").mockResolvedValue([1]);
 
-      const result = await service.update(framework, { name: "TerraFund Updated" });
+      const attributes = {
+        name: "TerraFund Updated",
+        accessCode: "foo",
+        projectFormUuid: "project-uuid",
+        projectReportFormUuid: "project-report-uuid",
+        siteFormUuid: "site-uuid",
+        siteReportFormUuid: "site-report-uuid",
+        nurseryFormUuid: "nursery-uuid",
+        nurseryReportFormUuid: "nursery-report-uuid",
+        financialReportFormUuid: "financial-report-uuid"
+      };
+      const result = await service.update(framework, attributes);
 
-      expect(updateSpy).toHaveBeenCalledWith({ name: "TerraFund Updated" });
+      expect(updateSpy).toHaveBeenCalledWith(attributes);
       expect(result).toBe(framework);
     });
 

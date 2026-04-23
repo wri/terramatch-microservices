@@ -96,18 +96,18 @@ export class NurseryReportProcessor extends ReportProcessor<
       if (["dueAt", "updatedAt", "status", "updateRequestStatus", "submittedAt"].includes(query.sort.field)) {
         if (query.sort.field === "submittedAt") {
           if (direction === "ASC") {
-            builder.order(literal("submitted_at IS NULL, submitted_at ASC"));
+            builder.order([literal("submitted_at IS NULL, submitted_at ASC")]);
           } else {
             // NULLs last, newest first
-            builder.order(literal("submitted_at IS NULL ASC, submitted_at DESC"));
+            builder.order([literal("submitted_at IS NULL ASC, submitted_at DESC")]);
           }
         } else {
-          builder.order([query.sort.field, direction]);
+          builder.order([[query.sort.field, direction]]);
         }
       } else if (query.sort.field === "organisationName") {
-        builder.order(["nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["nursery", "project", "organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["nursery", "project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["nursery", "project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

@@ -343,7 +343,7 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "name", direction: "DESC" } });
 
-      expect(builder.order).toHaveBeenCalledWith(["polyName", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["polyName", "DESC"]]);
     });
 
     it("should apply sorting by status with number pagination", async () => {
@@ -352,7 +352,7 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "status", direction: "ASC" } });
 
-      expect(builder.order).toHaveBeenCalledWith(["status", "ASC"]);
+      expect(builder.order).toHaveBeenCalledWith([["status", "ASC"]]);
     });
 
     it("should apply sorting by createdAt with number pagination", async () => {
@@ -361,7 +361,7 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "createdAt", direction: "DESC" } });
 
-      expect(builder.order).toHaveBeenCalledWith(["createdAt", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
     });
 
     it("should call isMissingIndicators when missingIndicator is provided", async () => {

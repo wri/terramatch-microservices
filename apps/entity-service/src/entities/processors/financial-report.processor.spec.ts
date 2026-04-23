@@ -239,7 +239,9 @@ describe("FinancialReportProcessor", () => {
       const indicators2 = orderBy(await FinancialIndicatorFactory.report(reports[1]).createMany(2), "id");
 
       const addRow = jest.fn();
-      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close: jest.fn() });
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
       await processor.exportAll();
 
       expect(addRow).toHaveBeenCalledTimes(2);

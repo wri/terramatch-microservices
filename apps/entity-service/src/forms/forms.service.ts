@@ -43,7 +43,7 @@ import {
   StoreFormQuestionOptionAttributes
 } from "./dto/form-question.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { Attributes, Includeable, Op } from "sequelize";
+import { Attributes, Op, OrderItem, WhereOptions } from "sequelize";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
@@ -60,12 +60,14 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
+  FormQuestionExportMapping,
   getAttributes,
   getFormQuestionsForExport,
   getMappingsColumns
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { DateTime } from "luxon";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -109,6 +111,26 @@ const FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "Updated At"
 };
 
+const SUBMISSION_CSV_ORG_ATTRIBUTES = [
+  "id",
+  "uuid",
+  "name",
+  "type",
+  "phone",
+  "hqStreet1",
+  "hqStreet2",
+  "hqCity",
+  "hqState",
+  "hqZipcode",
+  "webUrl",
+  "facebookUrl",
+  "instagramUrl",
+  "linkedinUrl",
+  "twitterUrl"
+];
+
+const SUBMISSION_CSV_PITCH_ATTRIBUTES = ["id", "uuid"];
+
 @Injectable({ scope: Scope.REQUEST })
 export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
@@ -134,7 +156,7 @@ export class FormsService {
 
     if (query.sort?.field != null) {
       if (SORTABLE_FIELDS.includes(query.sort?.field as keyof Attributes<Form>)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort?.field}`);
       }
@@ -304,74 +326,121 @@ export class FormsService {
     return form;
   }
 
-  async exportAllSubmissions(formUuid: string, response: Response) {
+  async exportApplications(fundingProgramme: FundingProgramme) {
+    const stages = await fundingProgramme.$get("stages", {
+      order: [["order", "DESC"]],
+      attributes: ["id"],
+      include: [{ association: "form" }]
+    });
+    const forms = stages.map(stage => stage.form).filter(isNotNull);
+
+    if (forms.length == 0) {
+      this.logger.warn(`No forms found for funding programme ${fundingProgramme.uuid}`);
+      return;
+    }
+
+    // need to map this by form id
+    const mappings = (
+      await Promise.all(
+        forms.map(async form => ({
+          uuid: form.uuid,
+          frameworkKey: form.frameworkKey,
+          mappings: await getFormQuestionsForExport(form)
+        }))
+      )
+    ).reduce(
+      (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
+      {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
+    );
+    const fileName = `exports/${fundingProgramme.name} Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    await this.writeSubmissionsCsv(
+      fileName,
+      undefined,
+      mappings,
+      {
+        "$application.funding_programme_uuid$": fundingProgramme.uuid
+      },
+      [
+        ["application", "id", "ASC"],
+        ["stage", "order", "ASC"]
+      ]
+    );
+
+    return fileName;
+  }
+
+  async exportSubmissions(formUuid: string, response: Response) {
     const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["uuid", "title"] });
     if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
 
     const mappings = await getFormQuestionsForExport(form);
+    const fileName = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    await this.writeSubmissionsCsv(
+      fileName,
+      response,
+      { [form.uuid]: { mappings, frameworkKey: form.frameworkKey } },
+      { formId: formUuid }
+    );
+  }
 
-    const filename = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    const { addRow, close } = this.csvExportService.getResponseStreamWriter(filename, response, {
-      ...FORM_SUBMISSION_CSV_COLUMNS,
-      ...getMappingsColumns(mappings)
-    });
-    try {
-      const orgAttributes = uniq([
-        "id",
-        "uuid",
-        "name",
-        "type",
-        "phone",
-        "hqStreet1",
-        "hqStreet2",
-        "hqCity",
-        "hqState",
-        "hqZipcode",
-        "webUrl",
-        "facebookUrl",
-        "instagramUrl",
-        "linkedinUrl",
-        "twitterUrl",
-        ...getAttributes(mappings, "organisations")
-      ]);
-      const pitchAttributes = uniq(["id", "uuid", ...getAttributes(mappings, "projectPitches")]);
-      const includes: Includeable[] = [
-        { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
-        { association: "organisation", attributes: orgAttributes },
-        { association: "projectPitch", attributes: pitchAttributes },
-        { association: "stage", attributes: ["name"] }
-      ];
-      const builder = new PaginatedQueryBuilder(FormSubmission, 10, includes).where({ formId: formUuid });
+  private async writeSubmissionsCsv(
+    fileName: string,
+    response: Response | undefined,
+    formIdMap: Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>,
+    where: WhereOptions,
+    order?: OrderItem[]
+  ) {
+    const allMappings = Object.values(formIdMap).reduce((acc, { mappings }) => [...acc, ...mappings], []);
+    const orgAttributes = uniq([...SUBMISSION_CSV_ORG_ATTRIBUTES, ...getAttributes(allMappings, "organisations")]);
+    const pitchAttributes = uniq([...SUBMISSION_CSV_PITCH_ATTRIBUTES, ...getAttributes(allMappings, "projectPitches")]);
+    const builder = new PaginatedQueryBuilder(FormSubmission, 10, [
+      { association: "application", attributes: ["uuid", "fundingProgrammeUuid"] },
+      { association: "organisation", attributes: orgAttributes },
+      { association: "projectPitch", attributes: pitchAttributes },
+      { association: "stage", attributes: ["name"] }
+    ]).where(where);
+    if (order != null) builder.order(order);
+    await this.csvExportService.writeCsv(
+      fileName,
+      response,
+      { ...FORM_SUBMISSION_CSV_COLUMNS, ...getMappingsColumns(allMappings) },
+      async addRow => {
+        for await (const page of batchFindAll(builder)) {
+          const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");
+          const orgsMedia = await Media.for(orgs).collection(["logo", "cover", "legalRegistration"]).findAll();
+          for (const submission of page) {
+            if (submission.organisation == null || submission.projectPitch == null || submission.formId == null)
+              continue;
 
-      for await (const page of batchFindAll(builder)) {
-        const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");
-        const orgsMedia = await Media.for(orgs).collection(["logo", "cover", "legalRegistration"]).findAll();
-        for (const submission of page) {
-          if (submission.organisation == null || submission.projectPitch == null) continue;
-          const media = orgsMedia.filter(({ modelId }) => modelId === submission.organisation?.id);
-          const additional = {
-            organisationLegalRegistration: media.filter(
-              ({ collectionName }) => collectionName === "legal_registration"
-            ),
-            organisationLogo: media.filter(({ collectionName }) => collectionName === "logo"),
-            organisationCover: media.filter(({ collectionName }) => collectionName === "cover"),
-            ...(await this.csvExportService.collectFormCells(
-              mappings,
-              {
-                organisations: submission.organisation ?? undefined,
-                projectPitches: submission.projectPitch ?? undefined
-              },
-              form.frameworkKey ?? undefined
-            ))
-          };
-          addRow(submission, additional);
+            const { mappings, frameworkKey } = formIdMap[submission.formId];
+            if (mappings == null) {
+              this.logger.warn(
+                `Missing mappings for submission [submissionId=${submission.id}, formId=${submission.formId}]`
+              );
+              continue;
+            }
+
+            const media = orgsMedia.filter(({ modelId }) => modelId === submission.organisation?.id);
+            const additional = {
+              organisationLegalRegistration: media.filter(
+                ({ collectionName }) => collectionName === "legal_registration"
+              ),
+              organisationLogo: media.filter(({ collectionName }) => collectionName === "logo"),
+              organisationCover: media.filter(({ collectionName }) => collectionName === "cover"),
+              ...(await this.csvExportService.collectFormCells(
+                mappings,
+                {
+                  organisations: submission.organisation ?? undefined,
+                  projectPitches: submission.projectPitch ?? undefined
+                },
+                frameworkKey ?? undefined
+              ))
+            };
+            addRow(submission, additional);
+          }
         }
       }
-    } catch (error) {
-      this.logger.error(`Error exporting form submissions CSV for form ${formUuid}: ${error}`, error.stack);
-    } finally {
-      close();
-    }
+    );
   }
 
   private getI18nTranslationEntityFields(translationEntity: TranslationModelType) {

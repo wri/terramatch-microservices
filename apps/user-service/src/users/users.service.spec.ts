@@ -201,6 +201,52 @@ describe("UsersService", () => {
       expect(result[4]).toEqual([]);
       expect(projectSpy).not.toHaveBeenCalled();
     });
+
+    it("returns an empty object when no user ids are requested", async () => {
+      const projectUserSpy = jest.spyOn(ProjectUser, "findAll");
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([]);
+
+      expect(result).toEqual({});
+      expect(projectUserSpy).not.toHaveBeenCalled();
+    });
+
+    it("dedupes repeated project links for the same user", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([
+        { userId: 1, projectId: 10 },
+        { userId: 1, projectId: 10 }
+      ] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([{ id: 10, uuid: "p1", name: "Only" }] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1]).toHaveLength(1);
+      expect(result[1][0].uuid).toBe("p1");
+    });
+
+    it("omits projects missing from the database or without uuid", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([
+        { userId: 1, projectId: 10 },
+        { userId: 1, projectId: 11 }
+      ] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([
+        { id: 10, uuid: null, name: "A" },
+        { id: 11, uuid: "ok", name: "B" }
+      ] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1].map(p => p.uuid)).toEqual(["ok"]);
+    });
+
+    it("returns no projects when link rows exist but no project rows load", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([{ userId: 1, projectId: 10 }] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1]).toEqual([]);
+    });
   });
 
   describe("addUsersToDocument", () => {
@@ -230,6 +276,29 @@ describe("UsersService", () => {
       await service.addUsersToDocument(document, users);
 
       expect(document.addData).toHaveBeenCalledWith("no-uuid", expect.anything());
+    });
+
+    it("does not add data when the user list is empty", async () => {
+      const document = { addData: jest.fn() } as unknown as DocumentBuilder;
+      const batchSpy = jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({});
+
+      await service.addUsersToDocument(document, []);
+
+      expect(batchSpy).toHaveBeenCalledWith([]);
+      expect(document.addData).not.toHaveBeenCalled();
+    });
+
+    it("includes monitoring partner projects on each UserDto when present", async () => {
+      const document = { addData: jest.fn() } as unknown as DocumentBuilder;
+      const project = { id: 7, uuid: "proj-uuid", name: "P" } as Project;
+      const user = { id: 3, uuid: "user-uuid", frameworks: [] } as unknown as User;
+      jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({ 3: [project] });
+
+      await service.addUsersToDocument(document, [user]);
+
+      const dto = (document.addData as jest.Mock).mock.calls[0][1] as { monitoringPartnerProjects: { uuid: string }[] };
+      expect(dto.monitoringPartnerProjects).toHaveLength(1);
+      expect(dto.monitoringPartnerProjects[0].uuid).toBe("proj-uuid");
     });
   });
 

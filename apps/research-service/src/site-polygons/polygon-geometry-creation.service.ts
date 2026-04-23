@@ -1,9 +1,10 @@
-import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Geometry } from "@terramatch-microservices/database/constants";
 import { QueryTypes, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { Polygon } from "geojson";
+import { Polygon, type Geometry as GeoJsonGeometry } from "geojson";
+import { areLinearRingsValid, LINEAR_RING_ERROR_MESSAGE } from "../validations/utils/linear-ring.util";
 
 export interface GeometryWithArea {
   uuid: string;
@@ -84,6 +85,11 @@ export class PolygonGeometryCreationService {
 
     for (let i = 0; i < geometries.length; i++) {
       const geom = geometries[i];
+      if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+        if (!areLinearRingsValid(geom as GeoJsonGeometry)) {
+          throw new BadRequestException(LINEAR_RING_ERROR_MESSAGE);
+        }
+      }
       if (geom.type === "Polygon") {
         expandedGeometries.push(geom);
         geometryIndexMap.push(i);

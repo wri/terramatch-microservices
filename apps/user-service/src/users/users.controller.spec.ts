@@ -4,7 +4,12 @@ import { UsersController } from "./users.controller";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
+import {
+  OrganisationFactory,
+  ProjectFactory,
+  ProjectUserFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
@@ -36,6 +41,9 @@ describe("UsersController", () => {
 
     controller = module.get<UsersController>(UsersController);
     usersService.update.mockImplementation((user, attrs) => realUsersService.update(user, attrs));
+    usersService.getMonitoringPartnerProjectsByUserIds.mockImplementation(ids =>
+      realUsersService.getMonitoringPartnerProjectsByUserIds(ids)
+    );
     usersService.delete.mockImplementation(async u => {
       await realUsersService.delete(u);
     });
@@ -114,6 +122,29 @@ describe("UsersController", () => {
         id: org.uuid,
         meta: { userStatus: "approved" }
       });
+    });
+
+    it("embeds monitoring partner projects on user attributes", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create({ name: "Monitoring Partner Project" });
+      await ProjectUserFactory.create({
+        userId: user.id,
+        projectId: project.id,
+        isMonitoring: true,
+        isManaging: false
+      });
+      mockUserId(user.id + 1);
+
+      const result = serialize(await controller.findOne(user.uuid!));
+      const data = result.data as Resource;
+      expect(data.attributes.monitoringPartnerProjects).toEqual([
+        expect.objectContaining({
+          uuid: project.uuid,
+          name: "Monitoring Partner Project",
+          lightResource: true
+        })
+      ]);
     });
   });
 

@@ -129,7 +129,10 @@ describe("FormsService", () => {
   describe("addIndex", () => {
     it("adds the light DTOs", async () => {
       mediaService.getUrl.mockReturnValue("fake-url");
-      const forms = [...(await FormFactory.createMany(2)), await FormFactory.create({ published: false })];
+      const forms = orderBy(
+        [...(await FormFactory.createMany(2)), await FormFactory.create({ published: false })],
+        "id"
+      );
       await MediaFactory.form(forms[0]).create({ collectionName: "banner" });
       const document = serialize(await service.addIndex(buildJsonApi<FormLightDto>(FormLightDto), {}));
       const dtos = document.data as Resource[];

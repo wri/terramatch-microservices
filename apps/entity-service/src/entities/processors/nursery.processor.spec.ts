@@ -430,6 +430,7 @@ describe("NurseryProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all nurseries to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       await Nursery.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

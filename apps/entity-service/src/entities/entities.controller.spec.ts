@@ -93,9 +93,10 @@ describe("EntitiesController", () => {
   describe("entityExportAll", () => {
     it("should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.entityExportAll({ entity: "projects" }, {}, {} as Response)).rejects.toThrow(
-        UnauthorizedException
-      );
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await expect(
+        controller.entityExportAll({ entity: "projects" }, { frameworkKey: "ppc" }, {} as Response)
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it("should call exportAll on the processor", async () => {

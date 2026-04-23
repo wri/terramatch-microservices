@@ -774,6 +774,7 @@ describe("ProjectProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all projects to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       await Project.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

@@ -134,6 +134,11 @@ type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
    * keyed on entity id.
    */
   additionalDataForPage?: (page: T[]) => Promise<Record<number, Dictionary<unknown>>>;
+
+  /**
+   * If provided, each record to be exported will be checked with the given ability.
+   */
+  ability?: string;
 };
 
 @Injectable()
@@ -149,8 +154,7 @@ export class EntitiesService {
   ) {}
 
   get userId() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.policyService.userId!;
+    return this.policyService.userId;
   }
 
   get isProd() {
@@ -158,7 +162,7 @@ export class EntitiesService {
   }
 
   async getPermissions() {
-    return await this.policyService.getPermissions();
+    return this.userId == null ? undefined : await this.policyService.getPermissions();
   }
 
   async authorize(action: string, subject: Model | Model[]) {
@@ -166,7 +170,8 @@ export class EntitiesService {
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
-    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+    const permissions = await this.getPermissions();
+    return permissions == null ? false : permissions.includes(`framework-${frameworkKey}`);
   }
 
   /**
@@ -314,7 +319,7 @@ export class EntitiesService {
     columns: Dictionary<string>,
     attributes: string[],
     builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey, additionalDataForPage }: EntityFrameworkExportOptions<T>
+    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
   ) {
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
 
@@ -330,6 +335,7 @@ export class EntitiesService {
     builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
     await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
       for await (const page of batchFindAll(builder)) {
+        if (ability != null) await this.policyService.authorize(ability, page);
         const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
         for (const entity of page) {
           const additional = {

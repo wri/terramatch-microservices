@@ -320,6 +320,7 @@ describe("SiteProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all sites to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       await Site.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

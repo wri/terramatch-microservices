@@ -91,15 +91,23 @@ export class EntitiesController {
     @Query() { frameworkKey }: EntityExportQueryDto,
     @Res({ passthrough: true }) response: Response
   ) {
-    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
-    if (frameworkKey == null) {
-      const processor = this.entitiesService.createEntityProcessor<T>(entity);
-      await processor.exportAll({ response });
-    } else {
+    // if we're some kind of admin and we have a framework key set, the intention is to access the
+    // automatically generated reports that are sent to S3.
+    const permissions = await this.policyService.getPermissions();
+    if (frameworkKey != null && permissions.find(p => p.startsWith("framework-")) != null) {
+      // These reports are generated twice a day and stored in S3
+      await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
       const fileName = `all-entity-records/${kebabCase(entity)}-${frameworkKey}.csv`;
       const dto = await this.csvExportService.generateExportDto(fileName);
       return buildJsonApi(FileDownloadDto).addData(`${entity}Export`, dto);
     }
+
+    // Otherwise, we're either an admin accessing an entity type that isn't framework specific, or
+    // we're a non-admin trying to get an export of all of the entities of this type we have access
+    // to. Either way, it writes directly to the response, and the permissions are checked in
+    // the processor.
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    await processor.exportAll({ response, frameworkKey });
   }
 
   @Get(":entity/:uuid")

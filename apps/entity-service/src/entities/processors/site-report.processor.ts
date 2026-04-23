@@ -10,7 +10,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { Includeable, literal, Op } from "sequelize";
+import { Includeable, literal, Op, WhereOptions } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
@@ -137,18 +137,19 @@ export class SiteReportProcessor extends ReportProcessor<
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
       builder.where({
-        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+        "$site.project.id$": { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
       });
     } else if (permissions?.includes("projects-manage")) {
       builder.where({
-        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+        "$site.project.id$": { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
       });
     }
 
@@ -279,6 +280,16 @@ export class SiteReportProcessor extends ReportProcessor<
         )
       ).reduce((acc, { id, ...rest }) => ({ ...acc, [id]: rest }), {} as Record<number, CsvAdditional>);
 
+    const where: WhereOptions<SiteReport> = { "$site.project.is_test$": false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["$site.project.id$"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["$site.project.id$"] = {
+        [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number)
+      };
+    }
+
     await this.entitiesService.entityFrameworkExport(
       "siteReports",
       columns,
@@ -300,8 +311,8 @@ export class SiteReportProcessor extends ReportProcessor<
             }
           ]
         }
-      ]).where({ "$site.project.is_test$": false, frameworkKey }),
-      { response, frameworkKey, additionalDataForPage }
+      ]).where(where),
+      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
     );
   }
 

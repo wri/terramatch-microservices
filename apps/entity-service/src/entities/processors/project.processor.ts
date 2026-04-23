@@ -21,7 +21,7 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
+import { Attributes, CreationAttributes, Op, Sequelize, WhereOptions } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
@@ -165,15 +165,16 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      .filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
     if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
-    } else if (permissions.includes("manage-own")) {
-      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
-    } else if (permissions.includes("projects-manage")) {
-      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+    } else if (permissions?.includes("manage-own")) {
+      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) } });
+    } else if (permissions?.includes("projects-manage")) {
+      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) } });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -731,23 +732,31 @@ export class ProjectProcessor extends EntityProcessor<
         }))
       );
     } else {
-      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId, status: "active" });
+      const userId = this.entitiesService.userId;
+      if (userId == null) throw new BadRequestException("Authenticated user is required");
+      await ProjectUser.create({ projectId: project.id, userId, status: "active" });
     }
 
     // Load the full project with necessary associations.
     return (await this.findOne(project.uuid)) as Project;
   }
 
-  async exportAll(opts: ExportAllOptions = {}) {
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const where: WhereOptions<Project> = { isTest: false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["id"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["id"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
     await this.entitiesService.entityFrameworkExport(
       "projects",
       CSV_COLUMNS,
       CSV_ATTRIBUTES,
-      new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where({
-        isTest: false,
-        frameworkKey: opts.frameworkKey
-      }),
-      opts
+      new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where(
+        where
+      ),
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
     );
   }
 

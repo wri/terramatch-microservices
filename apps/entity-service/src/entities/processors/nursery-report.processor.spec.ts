@@ -517,6 +517,7 @@ describe("NurseryReportProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all nursery reports to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
       await NurseryReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

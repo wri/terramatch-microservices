@@ -16,7 +16,7 @@ import {
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Includeable, Op } from "sequelize";
+import { Includeable, Op, WhereOptions } from "sequelize";
 import { Dictionary, groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
@@ -96,18 +96,19 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
       });
     } else if (permissions?.includes("projects-manage")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
       });
     }
 
@@ -401,7 +402,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
   async delete(site: Site) {
     const permissions = await this.entitiesService.getPermissions();
-    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
+    const managesOwn = permissions?.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
     if (managesOwn) {
       const reportCount = await SiteReport.count({ where: { siteId: site.id } });
       if (reportCount > 0) {
@@ -452,7 +453,15 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (await this.findOne(site.uuid)) as Site;
   }
 
-  async exportAll(opts: ExportAllOptions = {}) {
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const where: WhereOptions<Site> = { "$project.is_test$": false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
+
     await this.entitiesService.entityFrameworkExport(
       "sites",
       CSV_COLUMNS,
@@ -463,8 +472,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           attributes: ["name", "id", "ppcExternalId"],
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
-      ]).where({ "$project.is_test$": false, frameworkKey: opts.frameworkKey }),
-      opts
+      ]).where(where),
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
     );
   }
 }

@@ -227,15 +227,20 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
+      });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -326,6 +331,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       ]);
 
       for await (const page of batchFindAll(builder)) {
+        await this.entitiesService.authorize("export", page);
         const entries = await DisturbanceReportEntry.findAll({
           where: { disturbanceReportId: page.map(({ id }) => id) }
         });

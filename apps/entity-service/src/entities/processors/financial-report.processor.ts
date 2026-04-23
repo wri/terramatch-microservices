@@ -132,6 +132,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       ]);
 
       for await (const page of batchFindAll(builder)) {
+        await this.entitiesService.authorize("export", page);
         const orgUuids = uniq(page.map(report => report.organisationUuid).filter(isNotNull));
         const fundingTypes = await FundingType.findAll({
           where: { organisationId: orgUuids, financialReportId: null }

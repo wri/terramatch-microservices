@@ -69,19 +69,16 @@ export const getAttributes = (mappings: FormQuestionExportMapping[], model: Form
 };
 
 const addQuestionToMapping = (mappings: FormQuestionExportMapping[], question: FormQuestion) => {
-  if (question.linkedFieldKey == null || question.inputType === "tableInput") return;
+  if (question.linkedFieldKey == null || question.inputType === "tableInput" || question.inputType === "mapInput")
+    return;
 
   const config = getLinkedFieldConfig(question.linkedFieldKey);
   if (config == null) return;
 
-  const attribute = getModelAttribute(config);
-  // Skip geojson export
-  if (attribute?.attribute === "boundaryGeojson") return;
-
   mappings.push({
     questionUuid: question.uuid,
     heading: getExportHeading(config),
-    attribute,
+    attribute: getModelAttribute(config),
     config
   });
 };

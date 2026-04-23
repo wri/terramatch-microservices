@@ -330,7 +330,8 @@ export class EntitiesService {
       return;
     }
 
-    const fileName = `all-entity-records/${kebabCase(type)}-${frameworkKey}.csv`;
+    const prefix = response == null ? "all-entity-records/" : "";
+    const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
     builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
     await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {

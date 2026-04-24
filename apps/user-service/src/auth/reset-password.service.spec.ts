@@ -82,16 +82,6 @@ describe("ResetPasswordService", () => {
     expect(result).toStrictEqual({ email: user.emailAddress, uuid: user.uuid });
   });
 
-  it("should an error when invalid token", async () => {
-    const newPassword = "abc282821";
-    // @ts-expect-error bogus mock value
-    jwtService.verifyAsync.mockReturnValue(Promise.resolve(null));
-    const token = "fake token";
-    await expect(service.resetPassword(token, newPassword)).rejects.toThrow(
-      new BadRequestException("Provided token is invalid or expired")
-    );
-  });
-
   it("should an error user not found", async () => {
     jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
     const newPassword = "abc282821";

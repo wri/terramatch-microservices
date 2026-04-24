@@ -205,6 +205,61 @@ describe("UserAssociationController", () => {
     });
   });
 
+  describe("acceptProjectInvite", () => {
+    it("should accept a project invite and return ProjectInviteAcceptanceDto", async () => {
+      const user = await UserFactory.create();
+      const project = await ProjectFactory.create({ name: "Restoration Project" });
+      const invite = {
+        id: 1,
+        uuid: "project-invite-uuid",
+        projectId: project.id,
+        emailAddress: user.emailAddress,
+        acceptedAt: new Date()
+      };
+      Object.defineProperty(policyService, "userId", { value: user.id, writable: true, configurable: true });
+      userAssociationService.acceptProjectInvite.mockResolvedValue({ invite, project } as never);
+
+      const result = serialize(await controller.acceptProjectInvite("projects", { token: "invite-token" }));
+
+      expect(userAssociationService.acceptProjectInvite).toHaveBeenCalledWith("invite-token", user.id);
+      expect(result.data).toBeDefined();
+      expect((result.data as Resource).id).toBe(invite.uuid);
+      expect((result.data as Resource).attributes).toMatchObject({
+        id: invite.id,
+        uuid: invite.uuid,
+        projectId: invite.projectId,
+        emailAddress: invite.emailAddress,
+        projectName: project.name
+      });
+    });
+
+    it("should throw BadRequestException when model is not projects", async () => {
+      await expect(controller.acceptProjectInvite("organisations", { token: "invite-token" })).rejects.toThrow(
+        BadRequestException
+      );
+      expect(userAssociationService.acceptProjectInvite).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when user is not authenticated", async () => {
+      Object.defineProperty(policyService, "userId", { value: null, writable: true, configurable: true });
+
+      await expect(controller.acceptProjectInvite("projects", { token: "invite-token" })).rejects.toThrow(
+        UnauthorizedException
+      );
+      expect(userAssociationService.acceptProjectInvite).not.toHaveBeenCalled();
+    });
+
+    it("should propagate NotFoundException from service", async () => {
+      const user = await UserFactory.create();
+      Object.defineProperty(policyService, "userId", { value: user.id, writable: true, configurable: true });
+      userAssociationService.acceptProjectInvite.mockRejectedValue(new NotFoundException("Project invite not found"));
+
+      await expect(controller.acceptProjectInvite("projects", { token: "invite-token" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+  });
+
   describe("deleteUserAssociations", () => {
     it("should call handleDelete and return deleted response", async () => {
       const project = await ProjectFactory.create();

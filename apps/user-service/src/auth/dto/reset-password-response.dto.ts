@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { IsBoolean, IsString } from "class-validator";
 
 @JsonApiDto({ type: "passwordResets" })

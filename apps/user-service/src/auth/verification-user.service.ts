@@ -36,7 +36,7 @@ export class VerificationUserService {
     }
   }
 
-  async resendVerificationEmail(emailAddress: string, callbackUrl?: string) {
+  async resendVerificationEmail(emailAddress: string, callbackUrl: string) {
     const user = await User.findOne({
       where: { emailAddress },
       attributes: ["id", "emailAddress", "locale"]

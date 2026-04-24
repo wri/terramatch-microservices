@@ -39,7 +39,7 @@ export class VerificationUserController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request" })
   async resendVerification(@Body() payload: ResendVerificationBody) {
     const { emailAddress, callbackUrl } = payload.data.attributes;
-    await this.verificationUserService.resendVerificationEmail(emailAddress, callbackUrl);
+    await this.verificationUserService.resendVerificationEmail(emailAddress, callbackUrl as string);
     return buildJsonApi(ResendVerificationResponseDto).addData(
       emailAddress,
       populateDto(new ResendVerificationResponseDto(), { emailAddress })

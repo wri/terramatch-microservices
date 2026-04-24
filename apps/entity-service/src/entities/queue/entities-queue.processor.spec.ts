@@ -1,6 +1,7 @@
 import {
   CREATE_PROJECT_FOR_APPLICATION,
   EntitiesQueueProcessor,
+  GENERATE_APPLICATION_EXPORT,
   GENERATE_FRAMEWORK_ENTITY_EXPORT
 } from "./entities-queue.processor";
 import { Test } from "@nestjs/testing";
@@ -18,12 +19,14 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Project, SavedExport } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "../processors";
+import { FormsService } from "../../forms/forms.service";
 
 describe("EntitiesQueueProcessor", () => {
   let processor: EntitiesQueueProcessor;
   let entitiesService: DeepMocked<EntitiesService>;
+  let formsService: DeepMocked<FormsService>;
   let emailQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
@@ -31,6 +34,7 @@ describe("EntitiesQueueProcessor", () => {
       providers: [
         EntitiesQueueProcessor,
         { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
+        { provide: FormsService, useValue: (formsService = createMock<FormsService>()) },
         { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) }
       ]
     }).compile();
@@ -135,6 +139,31 @@ describe("EntitiesQueueProcessor", () => {
         data: { frameworkKey: "terrafund", entityType: "projects" }
       } as Job);
       expect(exportAll).toHaveBeenCalled();
+    });
+  });
+
+  describe("generateApplicationExport", () => {
+    it("throws if the funding programme id is missing", async () => {
+      await expect(processor.process({ name: GENERATE_APPLICATION_EXPORT, data: {} } as Job)).rejects.toThrow(
+        "Invalid fundingProgrammeId: {}"
+      );
+    });
+
+    it("throws if the funding programme is not found", async () => {
+      await expect(
+        processor.process({ name: GENERATE_APPLICATION_EXPORT, data: { fundingProgrammeId: -1 } } as Job)
+      ).rejects.toThrow("Funding programme not found: -1");
+    });
+
+    it("calls the service and records a saved export", async () => {
+      const fp = await FundingProgrammeFactory.create();
+      const name = `${faker.lorem.slug()}.csv`;
+      formsService.exportApplications.mockResolvedValue(name);
+      await processor.process({ name: GENERATE_APPLICATION_EXPORT, data: { fundingProgrammeId: fp.id } } as Job);
+      expect(formsService.exportApplications).toHaveBeenCalledWith(expect.objectContaining({ id: fp.id }));
+      const latest = await SavedExport.findOne({ order: [["id", "DESC"]] });
+      expect(latest?.name).toBe(name);
+      expect(latest?.fundingProgrammeId).toBe(fp.id);
     });
   });
 });

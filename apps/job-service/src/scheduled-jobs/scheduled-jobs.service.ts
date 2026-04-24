@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Framework,
+  FundingProgramme,
   Notification,
   PasswordReset,
   ScheduledJob,
@@ -227,6 +228,14 @@ export class ScheduledJobsService {
       for (const entityType of EXPORT_ENTITY_TYPES) {
         await this.entitiesQueue.add("generateFrameworkEntityExport", { frameworkKey, entityType });
       }
+    }
+  }
+
+  @Cron("0 13,20 * * *", { name: "generateApplicationExports" })
+  async generateApplicationExports() {
+    const ids = (await FundingProgramme.findAll({ attributes: ["id"] })).map(({ id }) => id as number);
+    for (const fundingProgrammeId of ids) {
+      await this.entitiesQueue.add("generateApplicationExport", { fundingProgrammeId });
     }
   }
 

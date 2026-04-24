@@ -352,7 +352,7 @@ export class FormsService {
       (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
       {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
     );
-    const fileName = `exports/${fundingProgramme.name} Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const fileName = `${fundingProgramme.name} Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     await this.writeSubmissionsCsv(
       fileName,
       undefined,

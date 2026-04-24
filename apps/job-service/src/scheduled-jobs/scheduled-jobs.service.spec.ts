@@ -10,6 +10,7 @@ import { Transaction } from "sequelize";
 import { EXPORT_ENTITY_TYPES, ScheduledJobsService } from "./scheduled-jobs.service";
 import {
   Framework,
+  FundingProgramme,
   Notification,
   PasswordReset,
   ScheduledJob,
@@ -20,7 +21,7 @@ import { ScheduledJobFactory } from "@terramatch-microservices/database/factorie
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
-import { FrameworkFactory } from "@terramatch-microservices/database/factories";
+import { FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
@@ -261,6 +262,21 @@ describe("ScheduledJobsService", () => {
         expect(entitiesQueue.add).toHaveBeenCalledWith("generateFrameworkEntityExport", {
           frameworkKey: slug,
           entityType
+        });
+      }
+    }
+  });
+
+  it("queues application generation for every funding programme", async () => {
+    await FundingProgramme.truncate();
+    const fps = await FundingProgrammeFactory.createMany(2);
+    await service.generateApplicationExports();
+
+    expect(entitiesQueue.add).toHaveBeenCalledTimes(fps.length);
+    for (const { id } of fps) {
+      for (const entityType of EXPORT_ENTITY_TYPES) {
+        expect(entitiesQueue.add).toHaveBeenCalledWith("generateApplicationExport", {
+          fundingProgrammeId: id
         });
       }
     }

@@ -274,11 +274,9 @@ describe("ScheduledJobsService", () => {
 
     expect(entitiesQueue.add).toHaveBeenCalledTimes(fps.length);
     for (const { id } of fps) {
-      for (const entityType of EXPORT_ENTITY_TYPES) {
-        expect(entitiesQueue.add).toHaveBeenCalledWith("generateApplicationExport", {
-          fundingProgrammeId: id
-        });
-      }
+      expect(entitiesQueue.add).toHaveBeenCalledWith("generateApplicationExport", {
+        fundingProgrammeId: id
+      });
     }
   });
 });

@@ -158,6 +158,9 @@ describe("SitePolygonsController", () => {
       data: [],
       included: []
     }));
+
+    // Controller chains .catch() on this Promise; ensure GH auto-validation path never receives undefined.
+    sitePolygonService.enqueuePolygonValidation.mockResolvedValue(undefined);
   });
 
   afterEach(() => {

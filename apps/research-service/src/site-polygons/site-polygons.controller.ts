@@ -168,6 +168,20 @@ export class SitePolygonsController {
     const { data: createdSitePolygons, included: validations } =
       await this.sitePolygonCreationService.createSitePolygons(batchRequest, userId, source, userFullName);
 
+    if (source === "greenhouse" && createdSitePolygons.length > 0) {
+      const polygonUuids = createdSitePolygons
+        .map(sp => sp.polygonUuid)
+        .filter((uuid): uuid is string => uuid != null && uuid !== "");
+      if (polygonUuids.length > 0) {
+        this.sitePolygonService
+          .enqueuePolygonValidation(polygonUuids, userId, {
+            siteUuid: createdSitePolygons[0]?.siteUuid ?? undefined,
+            triggerType: "gh_push"
+          })
+          .catch(err => this.logger.error("Failed to enqueue automated polygon validation after GH push", err));
+      }
+    }
+
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(createdSitePolygons, true);
 
@@ -897,6 +911,15 @@ export class SitePolygonsController {
         transaction
       );
     });
+
+    if (source === "greenhouse" && newVersion.polygonUuid != null) {
+      this.sitePolygonService
+        .enqueuePolygonValidation([newVersion.polygonUuid], userId, {
+          siteUuid: newVersion.siteUuid ?? undefined,
+          triggerType: "gh_push"
+        })
+        .catch(err => this.logger.error("Failed to enqueue automated polygon validation after GH version push", err));
+    }
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos([newVersion], true);

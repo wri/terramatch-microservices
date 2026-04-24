@@ -23,7 +23,14 @@ export interface ProjectValidationJobData {
   delayedJobId: number;
 }
 
-type ValidationJobData = SiteValidationJobData | ProjectValidationJobData;
+export interface PolygonValidationJobData {
+  polygonUuids: string[];
+  validationTypes: ValidationType[];
+  delayedJobId: number;
+  siteUuid?: string;
+}
+
+type ValidationJobData = SiteValidationJobData | ProjectValidationJobData | PolygonValidationJobData;
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
 @Processor("validation", {
@@ -41,6 +48,8 @@ export class ValidationProcessor extends DelayedJobWorker<ValidationJobData> {
   async processDelayedJob(job: Job<ValidationJobData>) {
     if ("projectId" in job.data) {
       return this.processProjectValidation(job as Job<ProjectValidationJobData>);
+    } else if ("polygonUuids" in job.data) {
+      return this.processPolygonValidation(job as Job<PolygonValidationJobData>);
     } else {
       return this.processSiteValidation(job as Job<SiteValidationJobData>);
     }
@@ -124,6 +133,50 @@ export class ValidationProcessor extends DelayedJobWorker<ValidationJobData> {
       `project-${projectId}`,
       populateDto(new ValidationSummaryDto(), {
         siteUuid: null,
+        totalPolygons: polygonUuids.length,
+        validatedPolygons: polygonUuids.length,
+        completedAt: new Date()
+      })
+    );
+    return {
+      processedContent: polygonUuids.length,
+      progressMessage: `Completed validation of ${polygonUuids.length} polygons`,
+      payload: document
+    };
+  }
+
+  private async processPolygonValidation(job: Job<PolygonValidationJobData>) {
+    const { polygonUuids, validationTypes, siteUuid } = job.data;
+
+    if (polygonUuids.length === 0) {
+      throw new DelayedJobException(400, "No polygon UUIDs provided for validation");
+    }
+
+    await this.updateJobProgress(job, {
+      totalContent: polygonUuids.length,
+      processedContent: 0,
+      progressMessage: `Starting validation of ${polygonUuids.length} polygons...`
+    });
+
+    const batchSize = 50;
+    let processed = 0;
+
+    for (let i = 0; i < polygonUuids.length; i += batchSize) {
+      const batch = polygonUuids.slice(i, i + batchSize);
+      await this.validationService.validatePolygonsBatch(batch, validationTypes);
+
+      processed += batch.length;
+      const progressPercentage = Math.floor((processed / polygonUuids.length) * 100);
+      await this.updateJobProgress(job, {
+        processedContent: processed,
+        progressMessage: `Validated ${processed} of ${polygonUuids.length} polygons (${progressPercentage}%)`
+      });
+    }
+
+    const document = buildJsonApi(ValidationSummaryDto).addData(
+      siteUuid ?? "auto",
+      populateDto(new ValidationSummaryDto(), {
+        siteUuid: siteUuid ?? null,
         totalPolygons: polygonUuids.length,
         validatedPolygons: polygonUuids.length,
         completedAt: new Date()

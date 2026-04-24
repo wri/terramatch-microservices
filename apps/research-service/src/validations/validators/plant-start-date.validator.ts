@@ -201,9 +201,9 @@ export class PlantStartDateValidator implements PolygonValidator {
         }
 
         const twoYearsBefore = siteStartDate.minus({ years: 2 });
-        const twoYearsAfter = siteStartDate.plus({ years: 2 });
+        const threeYearsAfter = siteStartDate.plus({ years: 3 });
 
-        if (plantStartDate < twoYearsBefore || plantStartDate > twoYearsAfter) {
+        if (plantStartDate < twoYearsBefore || plantStartDate > threeYearsAfter) {
           return {
             valid: false,
             extraInfo: {
@@ -215,7 +215,7 @@ export class PlantStartDateValidator implements PolygonValidator {
               site_start_date: siteStartDate.toISODate(),
               allowed_range: {
                 min: twoYearsBefore.toISODate(),
-                max: twoYearsAfter.toISODate()
+                max: threeYearsAfter.toISODate()
               }
             }
           };

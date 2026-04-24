@@ -5,7 +5,7 @@ import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { ResetPasswordService } from "./reset-password.service";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";

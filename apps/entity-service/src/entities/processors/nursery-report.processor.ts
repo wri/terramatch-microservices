@@ -1,8 +1,15 @@
-import { Media, Nursery, NurseryReport, ProjectReport, ProjectUser } from "@terramatch-microservices/database/entities";
+import {
+  Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  ProjectUser
+} from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op, literal, WhereOptions } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
@@ -194,6 +201,9 @@ export class NurseryReportProcessor extends ReportProcessor<
   async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<NurseryReport> = {};
     if (projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
       where["$nursery.project.uuid$"] = projectUuid;
     } else {
       const permissions = await this.entitiesService.getPermissions();
@@ -209,6 +219,7 @@ export class NurseryReportProcessor extends ReportProcessor<
         };
       }
     }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
     await this.entitiesService.entityFrameworkExport(
       "nurseryReports",
@@ -232,7 +243,7 @@ export class NurseryReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, projectUuid, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
     );
   }
 

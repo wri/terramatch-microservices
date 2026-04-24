@@ -319,6 +319,10 @@ describe("SiteProcessor", () => {
   });
 
   describe("exportAll", () => {
+    it("throws if the framework key is missing", async () => {
+      await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
+    });
+
     it("writes all sites to the CSV", async () => {
       policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       await Site.truncate();

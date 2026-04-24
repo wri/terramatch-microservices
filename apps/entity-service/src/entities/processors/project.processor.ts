@@ -27,7 +27,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
@@ -742,6 +742,8 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+
     const where: WhereOptions<Project> = { isTest: false, frameworkKey };
     const permissions = await this.entitiesService.getPermissions();
     if (permissions?.includes("manage-own")) {

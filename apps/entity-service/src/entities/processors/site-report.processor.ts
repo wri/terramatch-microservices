@@ -12,7 +12,7 @@ import {
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, literal, Op, WhereOptions } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
@@ -257,6 +257,7 @@ export class SiteReportProcessor extends ReportProcessor<
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
     }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
     const additionalDataForPage = async (page: SiteReport[]) =>
       (
         await Promise.all(
@@ -326,7 +327,7 @@ export class SiteReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, projectUuid, additionalDataForPage, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
     );
   }
 

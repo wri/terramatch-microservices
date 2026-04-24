@@ -1,9 +1,10 @@
+import { Response } from "express";
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { ProjectReportFullDto, ProjectReportLightDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op, WhereOptions } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
   Media,
@@ -268,6 +269,45 @@ export class ProjectReportProcessor extends ReportProcessor<
   }
 
   async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+    if (frameworkKey == null && projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+    }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+
+    const where: WhereOptions<ProjectReport> = {};
+    if (projectUuid != null) {
+      where["$project.uuid$"] = projectUuid;
+    } else {
+      const permissions = await this.entitiesService.getPermissions();
+      where.frameworkKey = frameworkKey;
+      where["$project.is_test$"] = false;
+      if (permissions?.includes("manage-own")) {
+        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+      } else if (permissions?.includes("projects-manage")) {
+        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+      }
+    }
+
+    await this.exportBuilder(
+      frameworkKey,
+      response,
+      new PaginatedQueryBuilder(ProjectReport, 10, [
+        {
+          association: "project",
+          attributes: ["name", "id", "uuid", "ppcExternalId"],
+          include: [{ association: "organisation", attributes: ["name", "type"] }]
+        }
+      ]).where(where)
+    );
+  }
+
+  protected async exportBuilder(
+    frameworkKey: FrameworkKey,
+    response: Response | undefined,
+    builder: PaginatedQueryBuilder<ProjectReport>
+  ) {
     const columns = {
       ...CSV_COLUMNS,
       ...(frameworkKey === "ppc"
@@ -275,11 +315,6 @@ export class ProjectReportProcessor extends ReportProcessor<
         : {})
     };
 
-    if (frameworkKey == null && projectUuid != null) {
-      frameworkKey =
-        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
-        undefined;
-    }
     const additionalDataForPage =
       frameworkKey === "ppc"
         ? async (page: ProjectReport[]) =>
@@ -307,33 +342,12 @@ export class ProjectReportProcessor extends ReportProcessor<
             )
         : undefined;
 
-    const where: WhereOptions<ProjectReport> = {};
-    if (projectUuid != null) {
-      where["$project.uuid$"] = projectUuid;
-    } else {
-      const permissions = await this.entitiesService.getPermissions();
-      where.frameworkKey = frameworkKey;
-      where["$project.is_test$"] = false;
-      if (permissions?.includes("manage-own")) {
-        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-      } else if (permissions?.includes("projects-manage")) {
-        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
-      }
-    }
-
-    await this.entitiesService.entityFrameworkExport(
-      "projectReports",
-      columns,
-      CSV_ATTRIBUTES,
-      new PaginatedQueryBuilder(ProjectReport, 10, [
-        {
-          association: "project",
-          attributes: ["name", "id", "uuid", "ppcExternalId"],
-          include: [{ association: "organisation", attributes: ["name", "type"] }]
-        }
-      ]).where(where),
-      { response, frameworkKey, projectUuid, additionalDataForPage, ability: response == null ? undefined : "read" }
-    );
+    await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, builder, {
+      response,
+      frameworkKey,
+      additionalDataForPage,
+      ability: response == null ? undefined : "read"
+    });
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {

@@ -128,19 +128,6 @@ describe("EntitiesService", () => {
   });
 
   describe("entityFrameworkExport", () => {
-    it("throws if the framework key and projectUUID are missing", async () => {
-      await expect(
-        service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {})
-      ).rejects.toThrowError("Framework key or project UUID is required for entity export");
-    });
-
-    it("throws if the project is missing a framework", async () => {
-      const { uuid } = await ProjectFactory.create({ frameworkKey: null });
-      await expect(
-        service.entityFrameworkExport("sites", {}, [], {} as PaginatedQueryBuilder<Project>, { projectUuid: uuid })
-      ).rejects.toThrowError(`No framework found for project [${uuid}]`);
-    });
-
     it("returns early if the form is missing", async () => {
       await service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {
         frameworkKey: "foo" as FrameworkKey

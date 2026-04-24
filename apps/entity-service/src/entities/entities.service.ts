@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor, ExportAllOptions } from "./processors/entity-processor";
@@ -11,7 +11,6 @@ import {
   FormQuestion,
   Invasive,
   Media,
-  Project,
   Seeding,
   Strata,
   Tracking,
@@ -66,6 +65,7 @@ import {
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -127,7 +127,9 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
+type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
+  frameworkKey: FrameworkKey;
+
   /**
    * If provided, is expected to provide additional data for the CSV mapping for the given page
    * keyed on entity id.
@@ -302,18 +304,8 @@ export class EntitiesService {
     columns: Dictionary<string>,
     attributes: string[],
     builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey, additionalDataForPage, ability, projectUuid }: EntityFrameworkExportOptions<T>
+    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
   ) {
-    if (frameworkKey == null && projectUuid == null) {
-      throw new InternalServerErrorException("Framework key or project UUID is required for entity export");
-    }
-    if (frameworkKey == null) {
-      frameworkKey =
-        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
-        undefined;
-      if (frameworkKey == null) throw new BadRequestException(`No framework found for project [${projectUuid}]`);
-    }
-
     const model = ENTITY_MODELS[type];
     const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
     if (form == null) {

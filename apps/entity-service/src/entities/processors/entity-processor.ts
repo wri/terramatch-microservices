@@ -92,6 +92,13 @@ export abstract class EntityProcessor<
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
 
+  // TODO make abstract once all have been implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async export(uuid: string, response: Response) {
+    throw new InternalServerErrorException("Not implemented");
+  }
+  abstract exportAll(opts: ExportAllOptions): Promise<void>;
+
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
 
@@ -195,11 +202,6 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async exportAll(opts: ExportAllOptions = {}) {
-    throw new BadRequestException("Export all not supported for this entity type");
   }
 
   protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {

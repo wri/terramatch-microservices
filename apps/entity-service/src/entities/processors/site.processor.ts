@@ -14,7 +14,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { BadRequestException, NotAcceptableException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op, WhereOptions } from "sequelize";
 import { Dictionary, groupBy, sumBy } from "lodash";
@@ -456,6 +456,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<Site> = {};
     if (projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
       where["$project.uuid$"] = projectUuid;
     } else {
       where.frameworkKey = frameworkKey;
@@ -467,6 +470,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
       }
     }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
     await this.entitiesService.entityFrameworkExport(
       "sites",
@@ -479,7 +483,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { response, frameworkKey, projectUuid, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
     );
   }
 }

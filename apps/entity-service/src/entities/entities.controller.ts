@@ -142,6 +142,25 @@ export class EntitiesController {
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 
+  @Get(":entity/:uuid/export")
+  @ApiOperation({
+    operationId: "entityExport",
+    summary: "Export a given entity as CSV."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityExport<T extends EntityModel>(
+    @Param() { entity, uuid }: SpecificEntityDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    await processor.export(uuid, response);
+  }
+
   @Delete(":entity/:uuid")
   @ApiOperation({
     operationId: "entityDelete",

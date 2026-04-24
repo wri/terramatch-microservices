@@ -466,5 +466,32 @@ describe("NurseryProcessor", () => {
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
     });
+
+    it("writes project nurseries to the CSV", async () => {
+      await Nursery.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const projects = [
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" })
+      ];
+      const nurseries = [
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      await EntityFormFactory.nursery(nurseries[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ projectUuid: projects[0].uuid });
+
+      expect(addRow).toHaveBeenCalledTimes(1);
+      const result1 = addRow.mock.calls[0][0] as Site;
+      expect(result1).toMatchObject({ uuid: nurseries[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(org.name);
+    });
   });
 });

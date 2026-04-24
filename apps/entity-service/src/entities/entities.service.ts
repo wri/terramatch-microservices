@@ -11,6 +11,7 @@ import {
   FormQuestion,
   Invasive,
   Media,
+  Project,
   Seeding,
   Strata,
   Tracking,
@@ -301,9 +302,17 @@ export class EntitiesService {
     columns: Dictionary<string>,
     attributes: string[],
     builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
+    { response, frameworkKey, additionalDataForPage, ability, projectUuid }: EntityFrameworkExportOptions<T>
   ) {
-    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
+    if (frameworkKey == null && projectUuid == null) {
+      throw new InternalServerErrorException("Framework key or project UUID is required for entity export");
+    }
+    if (frameworkKey == null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+      if (frameworkKey == null) throw new BadRequestException(`No framework found for project [${projectUuid}]`);
+    }
 
     const model = ENTITY_MODELS[type];
     const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
@@ -315,7 +324,7 @@ export class EntitiesService {
     const prefix = response == null ? "all-entity-records/" : "";
     const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
+    builder = builder.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
     await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
       for await (const page of batchFindAll(builder)) {
         if (ability != null) await this.policyService.authorize(ability, page);

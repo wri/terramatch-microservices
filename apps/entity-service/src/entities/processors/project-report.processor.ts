@@ -267,7 +267,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     return { id: projectReport.uuid, dto: new ProjectReportLightDto(projectReport) };
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const columns = {
       ...CSV_COLUMNS,
       ...(frameworkKey === "ppc"
@@ -275,6 +275,11 @@ export class ProjectReportProcessor extends ReportProcessor<
         : {})
     };
 
+    if (frameworkKey == null && projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+    }
     const additionalDataForPage =
       frameworkKey === "ppc"
         ? async (page: ProjectReport[]) =>
@@ -302,12 +307,18 @@ export class ProjectReportProcessor extends ReportProcessor<
             )
         : undefined;
 
-    const permissions = await this.entitiesService.getPermissions();
-    const where: WhereOptions<ProjectReport> = { "$project.is_test$": false, frameworkKey };
-    if (permissions?.includes("manage-own")) {
-      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-    } else if (permissions?.includes("projects-manage")) {
-      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    const where: WhereOptions<ProjectReport> = {};
+    if (projectUuid != null) {
+      where["$project.uuid$"] = projectUuid;
+    } else {
+      const permissions = await this.entitiesService.getPermissions();
+      where.frameworkKey = frameworkKey;
+      where["$project.is_test$"] = false;
+      if (permissions?.includes("manage-own")) {
+        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+      } else if (permissions?.includes("projects-manage")) {
+        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+      }
     }
 
     await this.entitiesService.entityFrameworkExport(
@@ -321,7 +332,7 @@ export class ProjectReportProcessor extends ReportProcessor<
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, projectUuid, additionalDataForPage, ability: response == null ? undefined : "read" }
     );
   }
 

@@ -453,13 +453,19 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (await this.findOne(site.uuid)) as Site;
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
-    const where: WhereOptions<Site> = { "$project.is_test$": false, frameworkKey };
-    const permissions = await this.entitiesService.getPermissions();
-    if (permissions?.includes("manage-own")) {
-      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-    } else if (permissions?.includes("projects-manage")) {
-      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+    const where: WhereOptions<Site> = {};
+    if (projectUuid != null) {
+      where["$project.uuid$"] = projectUuid;
+    } else {
+      where.frameworkKey = frameworkKey;
+      where["$project.is_test$"] = false;
+      const permissions = await this.entitiesService.getPermissions();
+      if (permissions?.includes("manage-own")) {
+        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+      } else if (permissions?.includes("projects-manage")) {
+        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+      }
     }
 
     await this.entitiesService.entityFrameworkExport(
@@ -473,7 +479,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, projectUuid, ability: response == null ? undefined : "read" }
     );
   }
 }

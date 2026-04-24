@@ -66,7 +66,10 @@ const getIndexData = (
 const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
 
 export type ExportAllOptions = {
+  // filter by framework
   frameworkKey?: FrameworkKey;
+  // filter by project
+  projectUuid?: string;
   // If undefined, the export will go to S3 instead.
   response?: Response;
 };

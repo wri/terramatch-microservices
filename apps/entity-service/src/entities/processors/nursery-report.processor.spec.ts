@@ -557,5 +557,36 @@ describe("NurseryReportProcessor", () => {
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
     });
+
+    it("writes project nursery reports to the CSV", async () => {
+      await NurseryReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const projects = [
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" })
+      ];
+      const nurseries = [
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund" })
+      ];
+      const reports = [
+        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund" }),
+        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund" })
+      ];
+      await EntityFormFactory.nurseryReport(reports[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ projectUuid: projects[0].uuid });
+
+      expect(addRow).toHaveBeenCalledTimes(1);
+      const result1 = addRow.mock.calls[0][0] as NurseryReport;
+      expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(org.name);
+    });
   });
 });

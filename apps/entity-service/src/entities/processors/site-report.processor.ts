@@ -1,5 +1,6 @@
 import {
   Media,
+  Project,
   ProjectReport,
   ProjectUser,
   Seeding,
@@ -243,7 +244,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const columns = {
       ...CSV_COLUMNS,
       ...(frameworkKey === "ppc"
@@ -251,6 +252,11 @@ export class SiteReportProcessor extends ReportProcessor<
         : {})
     };
 
+    if (frameworkKey == null && projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+    }
     const additionalDataForPage = async (page: SiteReport[]) =>
       (
         await Promise.all(
@@ -280,14 +286,22 @@ export class SiteReportProcessor extends ReportProcessor<
         )
       ).reduce((acc, { id, ...rest }) => ({ ...acc, [id]: rest }), {} as Record<number, CsvAdditional>);
 
-    const where: WhereOptions<SiteReport> = { "$site.project.is_test$": false, frameworkKey };
-    const permissions = await this.entitiesService.getPermissions();
-    if (permissions?.includes("manage-own")) {
-      where["$site.project.id$"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-    } else if (permissions?.includes("projects-manage")) {
-      where["$site.project.id$"] = {
-        [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number)
-      };
+    const where: WhereOptions<SiteReport> = {};
+    if (projectUuid != null) {
+      where["$site.project.uuid$"] = projectUuid;
+    } else {
+      const permissions = await this.entitiesService.getPermissions();
+      where.frameworkKey = frameworkKey;
+      where["$site.project.is_test$"] = false;
+      if (permissions?.includes("manage-own")) {
+        where["$site.project.id$"] = {
+          [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number)
+        };
+      } else if (permissions?.includes("projects-manage")) {
+        where["$site.project.id$"] = {
+          [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number)
+        };
+      }
     }
 
     await this.entitiesService.entityFrameworkExport(
@@ -312,7 +326,7 @@ export class SiteReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, projectUuid, additionalDataForPage, ability: response == null ? undefined : "read" }
     );
   }
 

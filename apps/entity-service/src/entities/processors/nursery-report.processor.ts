@@ -191,17 +191,23 @@ export class NurseryReportProcessor extends ReportProcessor<
     return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
-    const where: WhereOptions<NurseryReport> = { "$nursery.project.is_test$": false, frameworkKey };
-    const permissions = await this.entitiesService.getPermissions();
-    if (permissions?.includes("manage-own")) {
-      where["$nursery.project.id$"] = {
-        [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number)
-      };
-    } else if (permissions?.includes("projects-manage")) {
-      where["$nursery.project.id$"] = {
-        [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number)
-      };
+  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+    const where: WhereOptions<NurseryReport> = {};
+    if (projectUuid != null) {
+      where["$nursery.project.uuid$"] = projectUuid;
+    } else {
+      const permissions = await this.entitiesService.getPermissions();
+      where.frameworkKey = frameworkKey;
+      where["$nursery.project.is_test$"] = false;
+      if (permissions?.includes("manage-own")) {
+        where["$nursery.project.id$"] = {
+          [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number)
+        };
+      } else if (permissions?.includes("projects-manage")) {
+        where["$nursery.project.id$"] = {
+          [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number)
+        };
+      }
     }
 
     await this.entitiesService.entityFrameworkExport(
@@ -226,7 +232,7 @@ export class NurseryReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { response, frameworkKey, projectUuid, ability: response == null ? undefined : "read" }
     );
   }
 

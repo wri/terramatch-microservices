@@ -88,7 +88,7 @@ export class EntitiesController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async entityExportAll<T extends EntityModel>(
     @Param() { entity }: EntityIndexParamsDto,
-    @Query() { frameworkKey }: EntityExportQueryDto,
+    @Query() { frameworkKey, projectUuid }: EntityExportQueryDto,
     @Res({ passthrough: true }) response: Response
   ) {
     // if we're some kind of admin and we have a framework key set, the intention is to access the
@@ -107,7 +107,7 @@ export class EntitiesController {
     // to. Either way, it writes directly to the response, and the permissions are checked in
     // the processor.
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-    await processor.exportAll({ response, frameworkKey });
+    await processor.exportAll({ response, frameworkKey, projectUuid });
   }
 
   @Get(":entity/:uuid")

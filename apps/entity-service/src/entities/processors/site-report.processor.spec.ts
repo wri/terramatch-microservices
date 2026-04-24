@@ -620,5 +620,65 @@ describe("SiteReportProcessor", () => {
         totalSeedsPlantedReport: secondSeedSum
       });
     });
+
+    it("writes project site reports to the CSV", async () => {
+      await SiteReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const projects = [
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" })
+      ];
+      const sites = [
+        await SiteFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      const reports = [
+        await SiteReportFactory.create({ siteId: sites[0].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" })
+      ];
+      await EntityFormFactory.siteReport(reports[0]).create();
+
+      const firstTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[1]).createMany(2)).map(({ amount }) => amount)
+      );
+      const secondTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+      const firstSeedSum = sum((await SeedingFactory.siteReport(reports[1]).createMany(2)).map(({ amount }) => amount));
+      const secondSeedSum = sum(
+        (await SeedingFactory.siteReport(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ projectUuid: projects[1].uuid });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const [result1, additional1] = addRow.mock.calls[0] as [SiteReport, Dictionary<unknown>];
+      expect(result1).toMatchObject({ uuid: reports[1].uuid });
+      expect(result1.projectName).toEqual(projects[1].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(org.name);
+      expect(additional1).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: firstTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: firstSeedSum
+      });
+      const [result2, additional2] = addRow.mock.calls[1] as [SiteReport, Dictionary<unknown>];
+      expect(result2).toMatchObject({ uuid: reports[2].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result2.organisationName).toEqual(org.name);
+      expect(additional2).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: secondTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: secondSeedSum
+      });
+    });
   });
 });

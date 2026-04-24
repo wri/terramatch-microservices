@@ -1,4 +1,6 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { Test, TestingModule } from "@nestjs/testing";
+import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
 import { UsersService } from "./users.service";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -16,6 +18,9 @@ import { UserQueryDto } from "./dto/user-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+import { PasswordReset } from "@terramatch-microservices/database/entities";
+import { SendLoginDetailsEmail } from "@terramatch-microservices/common/email/send-login-details.email";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -27,8 +32,20 @@ describe("UsersService", () => {
     paginationTotal: jest.fn().mockResolvedValue(42)
   });
 
-  beforeEach(() => {
-    service = new UsersService();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        {
+          provide: getQueueToken("email"),
+          useValue: {
+            add: jest.fn()
+          }
+        }
+      ]
+    }).compile();
+
+    service = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -461,6 +478,59 @@ describe("UsersService", () => {
 
       await expect(service.delete(user)).rejects.toThrow(destroyError);
       expect(user.destroy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("sendLoginDetails", () => {
+    it("returns early when user is not found", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create");
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater");
+
+      await service.sendLoginDetails("missing@example.com");
+
+      expect(User.findOne).toHaveBeenCalledWith({
+        where: {
+          [Op.and]: [{ emailAddress: "missing@example.com" }, { password: { [Op.eq]: null } }]
+        },
+        attributes: ["id", "emailAddress", "locale", "firstName", "lastName"]
+      });
+      expect(passwordResetCreateSpy).not.toHaveBeenCalled();
+      expect(sendLaterSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns early when user has no email address", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: null } as unknown as User);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create");
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater");
+
+      await service.sendLoginDetails("empty@email.com");
+
+      expect(passwordResetCreateSpy).not.toHaveBeenCalled();
+      expect(sendLaterSpy).not.toHaveBeenCalled();
+    });
+
+    it("creates reset token and enqueues login details email", async () => {
+      const user = {
+        id: 12,
+        emailAddress: "test@example.com",
+        fullName: "Test User"
+      } as User;
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest
+        .spyOn(crypto, "randomBytes")
+        .mockImplementation(() => Buffer.from("a".repeat(32), "utf8") as unknown as never);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater").mockImplementation();
+
+      await service.sendLoginDetails("test@example.com");
+
+      const expectedToken = Buffer.from("a".repeat(32), "utf8").toString("hex");
+      expect(passwordResetCreateSpy).toHaveBeenCalledWith({
+        userId: 12,
+        token: expectedToken
+      } as PasswordReset);
+      expect(sendLaterSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

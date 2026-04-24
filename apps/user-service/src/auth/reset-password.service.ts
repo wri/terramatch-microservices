@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import bcrypt from "bcryptjs";
 import { JwtService } from "@nestjs/jwt";
-import { User } from "@terramatch-microservices/database/entities";
+import { PasswordReset, User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
@@ -42,7 +42,13 @@ export class ResetPasswordService {
       userGuid = payload.sub;
     } catch (error) {
       this.logger.error(error);
-      throw new BadRequestException("Provided token is invalid or expired");
+      const passwordReset = await PasswordReset.findOne({ where: { token: resetToken } });
+      const userWithUuid = await User.findOne({ where: { id: passwordReset?.userId }, attributes: ["uuid"] });
+      if (passwordReset != null) {
+        userGuid = userWithUuid?.uuid;
+      } else {
+        throw new BadRequestException("Provided token is invalid or expired");
+      }
     }
 
     const user = await User.findOne({

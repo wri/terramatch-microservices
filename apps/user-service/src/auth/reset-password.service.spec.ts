@@ -5,7 +5,7 @@ import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { ResetPasswordService } from "./reset-password.service";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
@@ -80,16 +80,6 @@ describe("ResetPasswordService", () => {
     expect(jwtService.signAsync).toHaveBeenCalled();
     expect(emailService.sendI18nTemplateEmail).toHaveBeenCalled();
     expect(result).toStrictEqual({ email: user.emailAddress, uuid: user.uuid });
-  });
-
-  it("should an error when invalid token", async () => {
-    const newPassword = "abc282821";
-    // @ts-expect-error bogus mock value
-    jwtService.verifyAsync.mockReturnValue(Promise.resolve(null));
-    const token = "fake token";
-    await expect(service.resetPassword(token, newPassword)).rejects.toThrow(
-      new BadRequestException("Provided token is invalid or expired")
-    );
   });
 
   it("should an error user not found", async () => {

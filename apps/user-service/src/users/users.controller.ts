@@ -38,6 +38,9 @@ import { UserCreationService } from "./user-creation.service";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UsersService } from "./users.service";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { SendLoginDetailsResponseDto } from "../auth/dto/verification-user-response.dto";
+import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -209,5 +212,21 @@ export class UsersController {
     }
 
     return document;
+  }
+
+  @Post("sendLoginDetails")
+  @ApiOperation({
+    operationId: "sendLoginDetails",
+    description: "Send login details to a user by email address"
+  })
+  @JsonApiResponse(SendLoginDetailsResponseDto, { status: HttpStatus.OK })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request" })
+  async sendLoginDetails(@Body() payload: SendLoginDetailsRequestDto) {
+    const { emailAddress } = payload.data.attributes;
+    await this.usersService.sendLoginDetails(emailAddress);
+    return buildJsonApi(SendLoginDetailsResponseDto).addData(
+      emailAddress,
+      populateDto(new SendLoginDetailsResponseDto(), { success: true })
+    );
   }
 }

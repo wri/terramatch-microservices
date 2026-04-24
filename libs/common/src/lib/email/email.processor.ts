@@ -25,6 +25,7 @@ import { OrganisationUserRejectedEmail } from "./organisation-user-rejected.emai
 import { OrganisationInviteEmail } from "./organisation-invite.email";
 import { AdminReportReminderEmail } from "./admin-report-reminder.email";
 import { AdminFinancialReportReminderEmail } from "./admin-financial-report-reminder.email";
+import { SendLoginDetailsEmail } from "./send-login-details.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -61,7 +62,8 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   AdminReportReminderEmail,
   AdminFinancialReportReminderEmail,
   TaskDigestEmail,
-  WeeklyPolygonUpdateEmail
+  WeeklyPolygonUpdateEmail,
+  SendLoginDetailsEmail
 ];
 
 /**

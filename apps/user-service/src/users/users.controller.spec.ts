@@ -17,6 +17,7 @@ import { ValidLocale } from "@terramatch-microservices/database/constants/locale
 import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
 import { UsersService } from "./users.service";
 import { User } from "@terramatch-microservices/database/entities";
+import { Queue } from "bullmq";
 
 const createRequest = (attributes: UserCreateAttributes = new UserCreateAttributes()) => ({
   data: { type: "users", attributes }
@@ -29,7 +30,7 @@ describe("UsersController", () => {
   let usersService: DeepMocked<UsersService>;
   let realUsersService: UsersService;
   beforeEach(async () => {
-    realUsersService = new UsersService();
+    realUsersService = new UsersService(createMock<Queue>());
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [

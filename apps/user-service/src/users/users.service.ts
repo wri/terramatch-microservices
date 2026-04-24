@@ -1,24 +1,30 @@
-import bcrypt from "bcryptjs";
+import { InjectQueue } from "@nestjs/bullmq";
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { Op } from "sequelize";
+import { UserDto, UserMonitoringPartnerProjectLightDto } from "@terramatch-microservices/common/dto";
+import { SendLoginDetailsEmail } from "@terramatch-microservices/common/email/send-login-details.email";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
   Framework,
   FrameworkUser,
   ModelHasRole,
+  PasswordReset,
   Project,
   ProjectUser,
   Role,
   User
 } from "@terramatch-microservices/database/entities";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { UserQueryDto } from "./dto/user-query.dto";
-import { UserDto, UserMonitoringPartnerProjectLightDto } from "@terramatch-microservices/common/dto";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { UserUpdateAttributes } from "./dto/user-update.dto";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
+import bcrypt from "bcryptjs";
+import { Queue } from "bullmq";
+import crypto from "node:crypto";
+import { Op } from "sequelize";
+import { UserQueryDto } from "./dto/user-query.dto";
+import { UserUpdateAttributes } from "./dto/user-update.dto";
 
 @Injectable()
 export class UsersService {
+  constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
   async getMonitoringPartnerProjectsByUserIds(userIds: number[]): Promise<Record<number, Project[]>> {
     const byUserId: Record<number, Project[]> = {};
     for (const id of userIds) {
@@ -219,5 +225,30 @@ export class UsersService {
 
   async delete(user: User): Promise<void> {
     await user.destroy();
+  }
+
+  async sendLoginDetails(emailAddress: string) {
+    const user = await User.findOne({
+      where: {
+        [Op.and]: [{ emailAddress }, { password: { [Op.eq]: null } }]
+      },
+      attributes: ["id", "emailAddress", "locale", "firstName", "lastName"]
+    });
+
+    if (user == null || user.emailAddress == null) {
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await PasswordReset.create({
+      userId: user.id,
+      token
+    } as PasswordReset);
+
+    new SendLoginDetailsEmail({
+      emailAddress: user.emailAddress,
+      userName: user.fullName as string,
+      token: token
+    }).sendLater(this.emailQueue);
   }
 }

@@ -1370,4 +1370,43 @@ describe("SitePolygonsService", () => {
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
   });
+
+  describe("enqueuePolygonValidation", () => {
+    it("no-ops when polygon UUID list is empty after filtering", async () => {
+      jest.spyOn(DelayedJob, "create").mockClear();
+      validationQueue.add.mockClear();
+
+      await service.enqueuePolygonValidation([], 1, { triggerType: "upload" });
+
+      expect(DelayedJob.create).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("dedupes UUIDs and skips Site lookup when siteUuid is not provided", async () => {
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 55,
+        uuid: "dj-55"
+      } as unknown as DelayedJob);
+      const findOneSpy = jest.spyOn(Site, "findOne");
+
+      await service.enqueuePolygonValidation(["dup", "dup", "b"], 9, { triggerType: "gh_push" });
+
+      expect(findOneSpy).not.toHaveBeenCalled();
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: null
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["dup", "b"],
+          delayedJobId: 55
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
+    });
+  });
 });

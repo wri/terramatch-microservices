@@ -569,6 +569,12 @@ export class SitePolygonsService {
 
     const { siteUuid, triggerType } = options;
 
+    let siteName: string | null = null;
+    if (siteUuid != null) {
+      const site = await Site.findOne({ where: { uuid: siteUuid }, attributes: ["id", "name"] });
+      siteName = site?.name ?? siteUuid;
+    }
+
     const fingerprint = [...polygonUuids].sort().join(",") + `|${triggerType}`;
     const jobId = createHash("sha256").update(fingerprint).digest("hex").slice(0, 32);
 
@@ -582,7 +588,7 @@ export class SitePolygonsService {
       metadata: {
         entity_id: null,
         entity_type: Site.LARAVEL_TYPE,
-        entity_name: siteUuid ?? null,
+        entity_name: siteName,
         trigger_type: triggerType
       } as Record<string, unknown>
     } as unknown as DelayedJob);

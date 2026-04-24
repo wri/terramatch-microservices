@@ -7,8 +7,10 @@ import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
-import { ScheduledJobsService } from "./scheduled-jobs.service";
+import { EXPORT_ENTITY_TYPES, ScheduledJobsService } from "./scheduled-jobs.service";
 import {
+  Framework,
+  FundingProgramme,
   Notification,
   PasswordReset,
   ScheduledJob,
@@ -19,18 +21,21 @@ import { ScheduledJobFactory } from "@terramatch-microservices/database/factorie
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
+import { FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
   let queue: DeepMocked<Queue>;
   let emailQueue: DeepMocked<Queue>;
+  let entitiesQueue: DeepMocked<Queue>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: (queue = createMock<Queue>()) },
-        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) }
+        { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
+        { provide: getQueueToken("entities"), useValue: (entitiesQueue = createMock<Queue>()) }
       ]
     }).compile();
 
@@ -245,6 +250,35 @@ describe("ScheduledJobsService", () => {
       loadSpy.mockRestore();
     });
   });
+
+  it("queues export generation for every framework and entity type", async () => {
+    await Promise.all((await Framework.findAll()).map(framework => framework.destroy()));
+    const frameworks = await FrameworkFactory.createMany(2);
+    await service.generateFrameworkEntityExports();
+
+    expect(entitiesQueue.add).toHaveBeenCalledTimes(frameworks.length * EXPORT_ENTITY_TYPES.length);
+    for (const { slug } of frameworks) {
+      for (const entityType of EXPORT_ENTITY_TYPES) {
+        expect(entitiesQueue.add).toHaveBeenCalledWith("generateFrameworkEntityExport", {
+          frameworkKey: slug,
+          entityType
+        });
+      }
+    }
+  });
+
+  it("queues application generation for every funding programme", async () => {
+    await FundingProgramme.truncate();
+    const fps = await FundingProgrammeFactory.createMany(2);
+    await service.generateApplicationExports();
+
+    expect(entitiesQueue.add).toHaveBeenCalledTimes(fps.length);
+    for (const { id } of fps) {
+      expect(entitiesQueue.add).toHaveBeenCalledWith("generateApplicationExport", {
+        fundingProgrammeId: id
+      });
+    }
+  });
 });
 
 describe("ScheduledJobsService maintenance cleanup", () => {
@@ -257,7 +291,8 @@ describe("ScheduledJobsService maintenance cleanup", () => {
       providers: [
         ScheduledJobsService,
         { provide: getQueueToken("scheduled-jobs"), useValue: createMock<Queue>() },
-        { provide: getQueueToken("email"), useValue: createMock<Queue>() }
+        { provide: getQueueToken("email"), useValue: createMock<Queue>() },
+        { provide: getQueueToken("entities"), useValue: createMock<Queue>() }
       ]
     }).compile();
     service = module.get(ScheduledJobsService);

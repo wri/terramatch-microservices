@@ -238,7 +238,7 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     }
 
     if (this.query.sort?.direction != null) {
-      this._queryBuilder.order(["createdAt", this.query.sort.direction]);
+      this._queryBuilder.order([["createdAt", this.query.sort.direction]]);
     }
     return this._queryBuilder;
   }

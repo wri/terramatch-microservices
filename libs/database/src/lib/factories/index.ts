@@ -43,6 +43,7 @@ export * from "./project-polygon.factory";
 export * from "./project-report.factory";
 export * from "./project-user.factory";
 export * from "./role.factory";
+export * from "./saved-export.factory";
 export * from "./seeding.factory";
 export * from "./site.factory";
 export * from "./site-polygon.factory";

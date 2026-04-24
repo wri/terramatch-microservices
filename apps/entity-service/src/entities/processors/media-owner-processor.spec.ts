@@ -8,7 +8,7 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { getBaseEntityByLaravelTypeAndId, MediaOwnerProcessor } from "./media-owner-processor";
 import { DataTypes } from "sequelize";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Project, Site } from "@terramatch-microservices/database/entities";
 
 describe("MediaOwnerProcessor", () => {
   const FAKE_UUID = "fake-uuid";
@@ -100,6 +100,18 @@ describe("getBaseEntityByLaravelTypeAndId", () => {
   afterEach(() => {
     jest.restoreAllMocks();
     MEDIA_OWNER_MODEL_LARAVEL_TYPES[LARAVEL_TYPE] = originalModel;
+  });
+
+  it("throws if the owner is unknown", async () => {
+    await expect(getBaseEntityByLaravelTypeAndId("unknown", 1)).rejects.toThrowError(
+      "Media owner type invalid: unknown"
+    );
+  });
+
+  it("throws if the model is not found", async () => {
+    await expect(getBaseEntityByLaravelTypeAndId(Site.LARAVEL_TYPE, -1)).rejects.toThrowError(
+      "Base entity not found: [Site, -1]"
+    );
   });
 
   it("should find and return the base entity with intersected attributes", async () => {

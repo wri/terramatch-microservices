@@ -15,10 +15,12 @@ import {
   FormSectionFactory,
   FormSubmissionFactory,
   FormTableHeaderFactory,
+  FundingProgrammeFactory,
   I18nItemFactory,
   MediaFactory,
   OrganisationFactory,
   ProjectPitchFactory,
+  StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -663,9 +665,77 @@ describe("FormsService", () => {
     });
   });
 
-  describe("exportAllSubmissions", () => {
+  describe("exportApplications", () => {
+    it("exports all submissions for a given funding programme", async () => {
+      const fp = await FundingProgrammeFactory.create();
+      const stage = await StageFactory.create({ fundingProgrammeId: fp.uuid });
+      const form = await FormFactory.create({ stageId: stage.uuid });
+      const orgs = orderBy(await OrganisationFactory.createMany(2), "id");
+      const pitches = orderBy(await ProjectPitchFactory.createMany(2), "id");
+      const applications = [
+        await ApplicationFactory.create({ organisationUuid: orgs[0].uuid, fundingProgrammeUuid: fp.uuid }),
+        await ApplicationFactory.create({ organisationUuid: orgs[1].uuid, fundingProgrammeUuid: fp.uuid })
+      ];
+
+      const logo = await MediaFactory.org(orgs[1]).create({ collectionName: "logo" });
+      const cover = await MediaFactory.org(orgs[1]).create({ collectionName: "cover" });
+
+      const submissions = [
+        await FormSubmissionFactory.create({
+          applicationId: applications[0].id,
+          organisationUuid: orgs[0].uuid,
+          projectPitchUuid: pitches[0].uuid,
+          formId: form.uuid
+        }),
+        await FormSubmissionFactory.create({
+          applicationId: applications[1].id,
+          organisationUuid: orgs[1].uuid,
+          projectPitchUuid: pitches[1].uuid,
+          formId: form.uuid
+        })
+      ];
+
+      csvExportService.collectFormCells.mockResolvedValue({});
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await service.exportApplications(fp);
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          uuid: submissions[0].uuid,
+          organisationUuid: orgs[0].uuid,
+          projectPitchUuid: pitches[0].uuid
+        }),
+        {
+          organisationLegalRegistration: [],
+          organisationCover: [],
+          organisationLogo: []
+        }
+      );
+      expect(addRow).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          uuid: submissions[1].uuid,
+          organisationUuid: orgs[1].uuid,
+          projectPitchUuid: pitches[1].uuid
+        }),
+        {
+          organisationLegalRegistration: [],
+          organisationCover: [expect.objectContaining({ uuid: cover.uuid })],
+          organisationLogo: [expect.objectContaining({ uuid: logo.uuid })]
+        }
+      );
+    });
+  });
+
+  describe("exportSubmissions", () => {
     it("throws if the form UUID is invalid", async () => {
-      await expect(service.exportAllSubmissions("invalid-uuid", {} as Response)).rejects.toThrowError(
+      await expect(service.exportSubmissions("invalid-uuid", {} as Response)).rejects.toThrowError(
         "Form with UUID invalid-uuid not found"
       );
     });
@@ -704,8 +774,10 @@ describe("FormsService", () => {
       csvExportService.collectFormCells.mockResolvedValue({});
 
       const addRow = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
-      await service.exportAllSubmissions(form.uuid, {} as Response);
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await service.exportSubmissions(form.uuid, {} as Response);
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(

@@ -5,6 +5,7 @@ import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
   NurseryFactory,
   NurseryReportFactory,
   OrganisationFactory,
@@ -18,16 +19,19 @@ import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await NurseryReport.truncate();
 
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("nurseryReports") as NurseryReportProcessor;
   });
 
@@ -508,6 +512,50 @@ describe("NurseryReportProcessor", () => {
         projectUuid: project.uuid,
         nurseryUuid: nursery.uuid
       });
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all nursery reports to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      await NurseryReport.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "terrafund" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "terrafund" })
+      ];
+      const nurseries = [
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund" })
+      ];
+      const reports = [
+        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund" }),
+        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund" })
+      ];
+      // non framework reports should be ignored
+      await NurseryReportFactory.create({ frameworkKey: "hbf" });
+      await EntityFormFactory.nurseryReport(reports[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ frameworkKey: "terrafund" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const result1 = addRow.mock.calls[0][0] as NurseryReport;
+      expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      const result2 = addRow.mock.calls[1][0] as NurseryReport;
+      expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
     });
   });
 });

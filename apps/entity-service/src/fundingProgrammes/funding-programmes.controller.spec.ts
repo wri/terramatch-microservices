@@ -3,12 +3,13 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { FundingProgrammesController } from "./funding-programmes.controller";
 import { PolicyService } from "@terramatch-microservices/common";
-import { FundingProgramme, Stage } from "@terramatch-microservices/database/entities";
+import { FundingProgramme, SavedExport, Stage } from "@terramatch-microservices/database/entities";
 import {
   FormFactory,
   FundingProgrammeFactory,
   OrganisationFactory,
   OrganisationUserFactory,
+  SavedExportFactory,
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
@@ -18,12 +19,17 @@ import { StoreFundingProgrammeAttributes } from "./dto/funding-programme.dto";
 import { faker } from "@faker-js/faker";
 import { FUNDING_PROGRAMME_STATUSES } from "@terramatch-microservices/database/constants/status";
 import { FRAMEWORK_KEYS, ORGANISATION_TYPES, OrganisationType } from "@terramatch-microservices/database/constants";
+import { NotFoundException } from "@nestjs/common";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { DateTime } from "luxon";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 
 describe("FundingProgrammesController", () => {
   let controller: FundingProgrammesController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: DeepMocked<PolicyService>;
   let localizationService: DeepMocked<LocalizationService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,7 +37,8 @@ describe("FundingProgrammesController", () => {
       providers: [
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
         { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) }
+        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
+        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) }
       ]
     }).compile();
 
@@ -303,6 +310,24 @@ describe("FundingProgrammesController", () => {
           organisationTypes: attributes.organisationTypes
         })
       ]);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("throws if the export is not found", async () => {
+      await SavedExport.truncate();
+      await expect(controller.exportAll({ uuid: "uuid" })).rejects.toThrow(NotFoundException);
+    });
+
+    it("returns the saved export url", async () => {
+      const fp = await FundingProgrammeFactory.create();
+      const exports = await SavedExportFactory.createMany(2, { fundingProgrammeId: fp.id });
+      exports[0].setDataValue("createdAt", DateTime.fromJSDate(exports[0].createdAt).minus({ days: 1 }).toJSDate());
+      await exports[0].save();
+
+      csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("test"));
+      await controller.exportAll({ uuid: fp.uuid });
+      expect(csvExportService.generateExportDto).toHaveBeenCalledWith(exports[1].name);
     });
   });
 });

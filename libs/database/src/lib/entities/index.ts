@@ -59,6 +59,7 @@ export * from "./project-report.entity";
 export * from "./project-user.entity";
 export * from "./role.entity";
 export * from "./role-has-permission.entity";
+export * from "./saved-export.entity";
 export * from "./scheduled-job.entity";
 export * from "./seeding.entity";
 export * from "./site.entity";

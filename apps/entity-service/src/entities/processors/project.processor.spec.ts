@@ -45,11 +45,13 @@ import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { EntityProcessor } from "./entity-processor";
 import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
   let mediaService: DeepMocked<MediaService>;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await Project.truncate();
@@ -57,6 +59,7 @@ describe("ProjectProcessor", () => {
     const module = await mockEntityService();
     mediaService = module.get(MediaService);
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
@@ -766,6 +769,46 @@ describe("ProjectProcessor", () => {
         expect.objectContaining({ uuid: pitchMedia.uuid }),
         expect.objectContaining({ uuid: project.uuid })
       );
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all projects to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await Project.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      // non-framework project should be ignored
+      await ProjectFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.project(projects[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const result1 = addRow.mock.calls[0][0] as Project;
+      expect(result1).toMatchObject({
+        uuid: projects[0].uuid,
+        name: projects[0].name
+      });
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      const result2 = addRow.mock.calls[1][0] as Project;
+      expect(result2).toMatchObject({
+        uuid: projects[1].uuid,
+        name: projects[1].name
+      });
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
     });
   });
 });

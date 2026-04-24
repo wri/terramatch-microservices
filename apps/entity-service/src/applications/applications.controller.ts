@@ -81,9 +81,9 @@ export class ApplicationsController {
     for (const column of FILTER_COLUMNS) if (query[column] != null) builder.where({ [column]: query[column] });
     if (query.sort?.field != null) {
       if (SORT_COLUMNS.includes(query.sort.field as (typeof SORT_COLUMNS)[number])) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

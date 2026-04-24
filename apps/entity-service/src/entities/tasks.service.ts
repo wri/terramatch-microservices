@@ -68,7 +68,7 @@ export class TasksService {
 
       if (query.sort == null) {
         // For non-admins, the default sort is dueAt descending
-        builder.order(["dueAt", "DESC"]);
+        builder.order([["dueAt", "DESC"]]);
       }
     }
 
@@ -80,11 +80,11 @@ export class TasksService {
 
     if (query.sort?.field != null) {
       if (["dueAt", "updatedAt", "status"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       }
     }
 

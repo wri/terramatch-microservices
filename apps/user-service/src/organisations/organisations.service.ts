@@ -57,7 +57,7 @@ export class OrganisationsService {
       });
 
       if (query.sort?.field == null) {
-        builder.order(["name", "ASC"]);
+        builder.order([["name", "ASC"]]);
       }
     } else if (!hasFrameworkPermission) {
       const userId = authenticatedUserId();
@@ -125,12 +125,12 @@ export class OrganisationsService {
       const validSortFields = ["createdAt", "name", "status", "type", "treesGrownTotal"];
 
       if (validSortFields.includes(entityField)) {
-        builder.order([entityField, direction]);
+        builder.order([[entityField, direction]]);
       } else if (entityField !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     } else if (query.view !== "public") {
-      builder.order(["createdAt", "DESC"]);
+      builder.order([["createdAt", "DESC"]]);
     }
   }
 

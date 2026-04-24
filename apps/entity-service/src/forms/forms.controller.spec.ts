@@ -121,7 +121,7 @@ describe("FormsController", () => {
     it("calls exportAllSubmissions on the service", async () => {
       const response = {} as Response;
       await controller.exportSubmissionsCsv("fake-uuid", response);
-      expect(service.exportAllSubmissions).toHaveBeenCalledWith("fake-uuid", response);
+      expect(service.exportSubmissions).toHaveBeenCalledWith("fake-uuid", response);
     });
   });
 });

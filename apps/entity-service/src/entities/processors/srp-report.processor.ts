@@ -1,12 +1,11 @@
 import { Media, Project, ProjectUser, SrpReport, Tracking } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Response } from "express";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -81,26 +80,31 @@ export class SrpReportProcessor extends ReportProcessor<
           query.sort.field
         )
       ) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
+      });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -157,7 +161,7 @@ export class SrpReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll(response: Response) {
+  async exportAll({ response }: ExportAllOptions = {}) {
     const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
@@ -170,6 +174,7 @@ export class SrpReportProcessor extends ReportProcessor<
       ]);
 
       for await (const page of batchFindAll(builder)) {
+        await this.entitiesService.authorize("export", page);
         const trackings = await Tracking.domain("demographics")
           .type("restoration-partners")
           .collection([DIRECT_OTHER, INDIRECT_OTHER])

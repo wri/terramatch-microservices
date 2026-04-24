@@ -36,11 +36,19 @@ import { FinancialReportFullDto, FinancialReportLightDto } from "./dto/financial
 import { DisturbanceReportFullDto, DisturbanceReportLightDto } from "./dto/disturbance-report.dto";
 import { EntityCreateBody } from "./dto/entity-create.dto";
 import { SrpReportFullDto, SrpReportLightDto } from "./dto/srp-report.dto";
+import { EntityExportQueryDto } from "./dto/entity-export-query.dto";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { kebabCase } from "lodash";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
 export class EntitiesController {
-  constructor(private readonly policyService: PolicyService, private readonly entitiesService: EntitiesService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly entitiesService: EntitiesService,
+    private readonly csvExportService: CsvExportService
+  ) {}
 
   @Get(":entity")
   @ApiOperation({
@@ -71,17 +79,35 @@ export class EntitiesController {
     operationId: "entityExportAll",
     summary: "Export all of a given entity as CSV."
   })
+  @JsonApiResponse(FileDownloadDto)
   @ApiResponse({
     status: 200,
     description: "CSV file",
     content: { "text/csv": { schema: { type: "string" } } }
   })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
-  async entityExportAll<T extends EntityModel>(@Param() { entity }: EntityIndexParamsDto, @Res() response: Response) {
-    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+  async entityExportAll<T extends EntityModel>(
+    @Param() { entity }: EntityIndexParamsDto,
+    @Query() { frameworkKey }: EntityExportQueryDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    // if we're some kind of admin and we have a framework key set, the intention is to access the
+    // automatically generated reports that are sent to S3.
+    const permissions = await this.policyService.getPermissions();
+    if (frameworkKey != null && permissions.find(p => p.startsWith("framework-")) != null) {
+      // These reports are generated twice a day and stored in S3
+      await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
+      const fileName = `all-entity-records/${kebabCase(entity)}-${frameworkKey}.csv`;
+      const dto = await this.csvExportService.generateExportDto(fileName);
+      return buildJsonApi(FileDownloadDto).addData(`${entity}Export`, dto);
+    }
 
-    await this.policyService.authorize("exportAll", ENTITY_MODELS[entity]);
-    await processor.exportAll(response);
+    // Otherwise, we're either an admin accessing an entity type that isn't framework specific, or
+    // we're a non-admin trying to get an export of all of the entities of this type we have access
+    // to. Either way, it writes directly to the response, and the permissions are checked in
+    // the processor.
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    await processor.exportAll({ response, frameworkKey });
   }
 
   @Get(":entity/:uuid")

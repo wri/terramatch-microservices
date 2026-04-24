@@ -181,11 +181,11 @@ export class ImpactStoryService {
 
     if (query.sort?.field != null) {
       if (["id", "title", "status", "createdAt"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organization.name") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organization.countries") {
-        builder.order(["organisation", "countries", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "countries", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }

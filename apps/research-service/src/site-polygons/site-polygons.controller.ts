@@ -105,7 +105,7 @@ export class SitePolygonsController {
     - Attributes (polyName, plantstart, practice, etc.) come from feature \`properties\`
     - Properties support both camelCase and snake_case
     - Do NOT provide \`baseSitePolygonUuid\` or \`attributeChanges\`
-    
+
     Version Creation (new version of existing polygon):
     - Provide \`baseSitePolygonUuid\` (required) + \`changeReason\` (optional, defaults to "Version created via API")
     - Then provide ONE of the following:
@@ -113,10 +113,10 @@ export class SitePolygonsController {
       - Attributes only: Provide \`attributeChanges\` object
       - Both: Provide both \`geometries\` and \`attributeChanges\`
     - At least one of \`geometries\` or \`attributeChanges\` must be provided
-    
-    Important: When creating versions, \`attributeChanges\` is the ONLY way to update attributes. 
+
+    Important: When creating versions, \`attributeChanges\` is the ONLY way to update attributes.
     Geometry properties are ignored during version creation - use \`attributeChanges\` instead.
-    
+
     Duplicate validation results are included in the \`included\` section of the JSON:API response when duplicates are found.
     Property naming: GeoJSON properties support both camelCase and snake_case.`
   })
@@ -195,7 +195,7 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "getSitePolygonsGeoJson",
     summary: "Export site polygons as GeoJSON",
-    description: `Export site polygons as GeoJSON FeatureCollection. 
+    description: `Export site polygons as GeoJSON FeatureCollection.
     Provide exactly one of: uuid (single polygon), siteUuid (all active polygons in a site), or projectUuid (all active polygons across all sites in a project).
     Use includeExtendedData to include additional data from site_polygon_data table.
     Use geometryOnly to return only geometry without properties (only applicable when using uuid).`
@@ -325,11 +325,11 @@ export class SitePolygonsController {
       const field = query.sort.field;
       if (["name", "status", "createdAt"].includes(field)) {
         if (field === "name") {
-          queryBuilder.order(["polyName", direction]);
+          queryBuilder.order([["polyName", direction]]);
         } else if (field === "status") {
-          queryBuilder.order(["status", direction]);
+          queryBuilder.order([["status", direction]]);
         } else {
-          queryBuilder.order(["createdAt", direction]);
+          queryBuilder.order([["createdAt", direction]]);
         }
       } else {
         throw new BadRequestException(`Invalid sort field: ${field}`);
@@ -422,10 +422,10 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "bulkDeleteSitePolygons",
     summary: "Bulk delete site polygons and all associated records",
-    description: `Deletes multiple site polygons and all their associated records including indicators, 
-       criteria site records, audit statuses, and geometry data. This operation soft deletes 
-       ALL related site polygons by primaryUuid (version management) and deletes polygon 
-       geometry for all related site polygons. The request body follows JSON:API format with 
+    description: `Deletes multiple site polygons and all their associated records including indicators,
+       criteria site records, audit statuses, and geometry data. This operation soft deletes
+       ALL related site polygons by primaryUuid (version management) and deletes polygon
+       geometry for all related site polygons. The request body follows JSON:API format with
        an array of resource identifiers (type and id).`
   })
   @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
@@ -600,9 +600,9 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "deleteSitePolygon",
     summary: "Delete a site polygon and all associated records",
-    description: `Deletes a site polygon and all its associated records including indicators, 
-       criteria site records, audit statuses, and geometry data. This operation soft deletes 
-       ALL related site polygons by primaryUuid (version management) and deletes polygon 
+    description: `Deletes a site polygon and all its associated records including indicators,
+       criteria site records, audit statuses, and geometry data. This operation soft deletes
+       ALL related site polygons by primaryUuid (version management) and deletes polygon
        geometry for all related site polygons.`
   })
   @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
@@ -742,7 +742,7 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "uploadGeometryFileWithVersions",
     summary: "Upload geometry file and create versions for existing polygons",
-    description: `Parses a geometry file and processes it with versioning enabled. 
+    description: `Parses a geometry file and processes it with versioning enabled.
       Features with UUIDs in properties.uuid that match existing active SitePolygons will create new versions.
       Features without matching UUIDs (or without UUIDs) will create new polygons.
       Attributes are extracted from GeoJSON feature properties for both versions and new polygons.

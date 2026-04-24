@@ -1,6 +1,5 @@
-import { Response } from "express";
 import { FinancialIndicator, FinancialReport, FundingType, Media } from "@terramatch-microservices/database/entities";
-import { ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
@@ -75,9 +74,9 @@ export class FinancialReportProcessor extends ReportProcessor<
           query.sort.field
         )
       ) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
@@ -122,7 +121,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
   }
 
-  async exportAll(response: Response) {
+  async exportAll({ response }: ExportAllOptions = {}) {
     const fileName = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
     await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(FinancialReport, 10, [
@@ -133,6 +132,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       ]);
 
       for await (const page of batchFindAll(builder)) {
+        await this.entitiesService.authorize("export", page);
         const orgUuids = uniq(page.map(report => report.organisationUuid).filter(isNotNull));
         const fundingTypes = await FundingType.findAll({
           where: { organisationId: orgUuids, financialReportId: null }

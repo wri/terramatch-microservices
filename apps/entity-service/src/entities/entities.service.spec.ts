@@ -1,4 +1,3 @@
-import { Response } from "express";
 import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DeepMocked } from "@golevelup/ts-jest";
@@ -14,6 +13,8 @@ import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockEntityService } from "./processors/entity.processor.spec";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -126,23 +127,18 @@ describe("EntitiesService", () => {
     });
   });
 
-  describe("writeCsv", () => {
-    it("closes the stream when there's an error", async () => {
-      const writeRows = async () => {
-        throw new Error("failed stream");
-      };
-      const close = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
-      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
-      expect(close).toHaveBeenCalled();
+  describe("entityFrameworkExport", () => {
+    it("throws if the framework key is missing", async () => {
+      await expect(
+        service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {})
+      ).rejects.toThrowError("Framework key is required for entity export");
     });
 
-    it("closes the stream on success", async () => {
-      const writeRows = () => Promise.resolve();
-      const close = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow: jest.fn(), close });
-      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
-      expect(close).toHaveBeenCalled();
+    it("returns early if the form is missing", async () => {
+      await service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {
+        frameworkKey: "foo" as FrameworkKey
+      });
+      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
     });
   });
 });

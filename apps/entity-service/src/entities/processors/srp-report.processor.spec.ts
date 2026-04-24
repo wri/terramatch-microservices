@@ -15,7 +15,6 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
-import { Response } from "express";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("SrpReportProcessor", () => {
@@ -218,8 +217,10 @@ describe("SrpReportProcessor", () => {
       });
 
       const addRow = jest.fn();
-      csvExportService.getResponseStreamWriter.mockReturnValue({ addRow, close: jest.fn() });
-      await processor.exportAll({} as Response);
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll();
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(

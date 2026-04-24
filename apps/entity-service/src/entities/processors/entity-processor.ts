@@ -19,6 +19,7 @@ import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.d
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { uniq } from "lodash";
 import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -63,6 +64,12 @@ const getIndexData = (
 };
 
 const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
+
+export type ExportAllOptions = {
+  frameworkKey?: FrameworkKey;
+  // If undefined, the export will go to S3 instead.
+  response?: Response;
+};
 
 export abstract class EntityProcessor<
   ModelType extends EntityModel,
@@ -188,7 +195,7 @@ export abstract class EntityProcessor<
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async exportAll(response: Response) {
+  async exportAll(opts: ExportAllOptions = {}) {
     throw new BadRequestException("Export all not supported for this entity type");
   }
 

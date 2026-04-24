@@ -1,7 +1,5 @@
-import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
 import {
-  Tracking,
-  TrackingEntry,
   Media,
   Project,
   ProjectUser,
@@ -11,18 +9,21 @@ import {
   SitePolygon,
   SiteReport,
   Task,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { Includeable, Op } from "sequelize";
-import { groupBy, sumBy } from "lodash";
+import { Includeable, Op, WhereOptions } from "sequelize";
+import { Dictionary, groupBy, sumBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -38,6 +39,22 @@ const ASSOCIATION_FIELD_MAP = {
   country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
+
+const CSV_COLUMNS: Dictionary<string> = {
+  exportId: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id"
+};
+
+const CSV_ATTRIBUTES = ["id", "ppcExternalId", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -70,27 +87,28 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     if (query.sort?.field != null) {
       if (["name", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) }
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
       });
     } else if (permissions?.includes("projects-manage")) {
       builder.where({
-        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) }
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
       });
     }
 
@@ -384,7 +402,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
   async delete(site: Site) {
     const permissions = await this.entitiesService.getPermissions();
-    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
+    const managesOwn = permissions?.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
     if (managesOwn) {
       const reportCount = await SiteReport.count({ where: { siteId: site.id } });
       if (reportCount > 0) {
@@ -433,5 +451,29 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     // Load the full site with necessary associations.
     return (await this.findOne(site.uuid)) as Site;
+  }
+
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const where: WhereOptions<Site> = { "$project.is_test$": false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
+
+    await this.entitiesService.entityFrameworkExport(
+      "sites",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(Site, 10, [
+        {
+          association: "project",
+          attributes: ["name", "id", "ppcExternalId"],
+          include: [{ association: "organisation", attributes: ["name", "type"] }]
+        }
+      ]).where(where),
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
+    );
   }
 }

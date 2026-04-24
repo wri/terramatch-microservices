@@ -19,7 +19,8 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
           "deleteFiles",
           "updateFiles",
           "updateAnswers",
-          "sendReminder"
+          "sendReminder",
+          "exportAll"
         ],
         ProjectReport,
         {

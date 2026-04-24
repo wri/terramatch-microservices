@@ -123,7 +123,7 @@ export class FilesController {
         const media = await this.mediaService.createMedia(
           model,
           entity,
-          this.entitiesService.userId,
+          this.entitiesService.userId as number,
           collection,
           file,
           payloadData.attributes,
@@ -185,9 +185,16 @@ export class FilesController {
     const mediaOwnerProcessor = this.entitiesService.createMediaOwnerProcessor(entity, uuid);
     const model = await mediaOwnerProcessor.getBaseEntity();
     await this.policyService.authorize("uploadFiles", model);
-    const media = await this.mediaService.createMedia(model, entity, this.entitiesService.userId, collection, file, {
-      ...payload.data.attributes
-    });
+    const media = await this.mediaService.createMedia(
+      model,
+      entity,
+      this.entitiesService.userId as number,
+      collection,
+      file,
+      {
+        ...payload.data.attributes
+      }
+    );
 
     if (payload.data.attributes.isCover) {
       const project = await this.mediaService.getProjectForModel(model);

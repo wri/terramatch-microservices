@@ -111,6 +111,10 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
+  get linkToTerramatch(): CreationOptional<string> {
+    return `https://www.terramatch.org/admin#/site/${this.uuid}/show`;
+  }
+
   @StateMachineColumn(EntityStatusStates)
   status: CreationOptional<EntityStatus>;
 
@@ -181,12 +185,20 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return this.project?.uuid;
   }
 
+  get projectExportId(): number | undefined {
+    return this.project?.exportId;
+  }
+
   get organisationName() {
     return this.project?.organisationName;
   }
 
   get organisationUuid() {
     return this.project?.organisationUuid;
+  }
+
+  get organisationReadableType() {
+    return this.project?.organisationReadableType;
   }
 
   @HasMany(() => TreeSpecies, {

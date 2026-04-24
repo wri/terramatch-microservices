@@ -1,5 +1,11 @@
+import { Response } from "express";
 import { Test } from "@nestjs/testing";
-import { CsvExportService, FormQuestionExportMapping } from "./csv-export.service";
+import {
+  CsvExportService,
+  FormQuestionExportMapping,
+  getAttributes,
+  getFormQuestionsForExport
+} from "./csv-export.service";
 import { FileService } from "../file/file.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "../media/media.service";
@@ -158,7 +164,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         await FormQuestionFactory.section(sections[1]).create({ linkedFieldKey: "pro-hectares-goal", order: 2 })
       ];
 
-      const mappings = await service.getFormQuestionsForExport(form);
+      const mappings = await getFormQuestionsForExport(form);
       expect(mappings).toEqual([
         { heading: "hectaresGoal", questionUuid: questions[3].uuid, attribute: undefined, config: expect.anything() },
         {
@@ -187,8 +193,8 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         { attribute: { model: "sites", attribute: "country" } }
       ] as FormQuestionExportMapping[];
 
-      expect(service.getAttributes(mappings, "sites")).toEqual(["name", "country"]);
-      expect(service.getAttributes(mappings, "projects")).toEqual(["uuid"]);
+      expect(getAttributes(mappings, "sites")).toEqual(["name", "country"]);
+      expect(getAttributes(mappings, "projects")).toEqual(["uuid"]);
     });
   });
 
@@ -208,12 +214,32 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
       await MediaFactory.site(site).createMany(2, { collectionName: "media" });
       mediaService.getUrl.mockReturnValue("url-for-media");
 
-      const mappings = await service.getFormQuestionsForExport(form);
+      const mappings = await getFormQuestionsForExport(form);
       const result = await service.collectFormCells(mappings, { sites: site }, "terrafund");
       expect(result).toEqual({
         history: site.history,
         media: ["url-for-media", "url-for-media"]
       });
+    });
+  });
+
+  describe("writeCsv", () => {
+    it("closes the stream when there's an error", async () => {
+      const writeRows = async () => {
+        throw new Error("failed stream");
+      };
+      const close = jest.fn();
+      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
+      expect(close).toHaveBeenCalled();
+    });
+
+    it("closes the stream on success", async () => {
+      const writeRows = () => Promise.resolve();
+      const close = jest.fn();
+      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
+      expect(close).toHaveBeenCalled();
     });
   });
 });

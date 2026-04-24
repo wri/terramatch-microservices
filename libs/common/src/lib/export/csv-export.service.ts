@@ -21,6 +21,7 @@ import { MediaService } from "../media/media.service";
 import { isField, isFile } from "@terramatch-microservices/database/constants/linked-fields";
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { TMLogger } from "../util/tm-logger";
 
 export type StreamWriter = {
   addRow: (model: Model, additional?: Dictionary<unknown>) => void;
@@ -34,8 +35,62 @@ export type FormQuestionExportMapping = {
   attribute?: ModelAttribute;
 };
 
+export const getFormQuestionsForExport = async (form: Form) => {
+  const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: [["order", "ASC"]] });
+  const questions = await FormQuestion.forForm(form.uuid).findAll({ order: [["order", "ASC"]] });
+  const sectionQuestions = groupBy(
+    questions.filter(({ parentId }) => parentId == null),
+    "formSectionId"
+  );
+  const childQuestions = groupBy(
+    questions.filter(({ parentId }) => parentId != null),
+    "parentId"
+  );
+
+  const mappings: FormQuestionExportMapping[] = [];
+
+  for (const section of sections) {
+    for (const question of sectionQuestions[`${section.id}`] ?? []) {
+      addQuestionToMapping(mappings, question);
+
+      for (const child of childQuestions[question.uuid] ?? []) {
+        addQuestionToMapping(mappings, child);
+      }
+    }
+  }
+
+  return mappings;
+};
+
+export const getAttributes = (mappings: FormQuestionExportMapping[], model: FormModelType) => {
+  return mappings
+    .filter(({ attribute }) => attribute?.model === model)
+    .map(({ attribute }) => attribute?.attribute)
+    .filter(isNotNull);
+};
+
+const addQuestionToMapping = (mappings: FormQuestionExportMapping[], question: FormQuestion) => {
+  if (question.linkedFieldKey == null || question.inputType === "tableInput" || question.inputType === "mapInput")
+    return;
+
+  const config = getLinkedFieldConfig(question.linkedFieldKey);
+  if (config == null) return;
+
+  mappings.push({
+    questionUuid: question.uuid,
+    heading: getExportHeading(config),
+    attribute: getModelAttribute(config),
+    config
+  });
+};
+
+export const getMappingsColumns = (mappings: FormQuestionExportMapping[]): Dictionary<string> =>
+  mappings.reduce((acc, { heading }) => ({ ...acc, [heading]: heading }), {});
+
 @Injectable()
 export class CsvExportService {
+  private readonly logger = new TMLogger(CsvExportService.name);
+
   constructor(
     private readonly fileService: FileService,
     private readonly configService: ConfigService,
@@ -72,38 +127,24 @@ export class CsvExportService {
     return this.createStreamWriter(response, columns);
   }
 
-  async getFormQuestionsForExport(form: Form) {
-    const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: [["order", "ASC"]] });
-    const questions = await FormQuestion.forForm(form.uuid).findAll({ order: [["order", "ASC"]] });
-    const sectionQuestions = groupBy(
-      questions.filter(({ parentId }) => parentId == null),
-      "formSectionId"
-    );
-    const childQuestions = groupBy(
-      questions.filter(({ parentId }) => parentId != null),
-      "parentId"
-    );
-
-    const mappings: FormQuestionExportMapping[] = [];
-
-    for (const section of sections) {
-      for (const question of sectionQuestions[`${section.id}`] ?? []) {
-        this.addQuestionToMapping(mappings, question);
-
-        for (const child of childQuestions[question.uuid] ?? []) {
-          this.addQuestionToMapping(mappings, child);
-        }
-      }
+  async writeCsv(
+    fileName: string,
+    response: Response | undefined,
+    columns: Dictionary<string>,
+    writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
+  ) {
+    const { addRow, close } =
+      response == null
+        ? this.getS3StreamWriter(fileName, columns)
+        : this.getResponseStreamWriter(fileName, response, columns);
+    try {
+      await writeRows(addRow);
+    } catch (error) {
+      this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
+      throw error;
+    } finally {
+      close();
     }
-
-    return mappings;
-  }
-
-  getAttributes(mappings: FormQuestionExportMapping[], model: FormModelType) {
-    return mappings
-      .filter(({ attribute }) => attribute?.model === model)
-      .map(({ attribute }) => attribute?.attribute)
-      .filter(isNotNull);
   }
 
   async collectFormCells(mappings: FormQuestionExportMapping[], models: FormModels, frameworkKey?: FrameworkKey) {
@@ -129,10 +170,7 @@ export class CsvExportService {
     }, {});
   }
 
-  private createStreamWriter<T extends NodeJS.WritableStream>(
-    destination: T,
-    columns: Dictionary<string>
-  ): StreamWriter {
+  private createStreamWriter(destination: NodeJS.WritableStream, columns: Dictionary<string>): StreamWriter {
     const stringifier = stringify({ header: true, columns });
     stringifier.pipe(destination);
 
@@ -160,19 +198,5 @@ export class CsvExportService {
       return JSON.stringify(value);
     }
     return value as string | number;
-  }
-
-  private addQuestionToMapping(mappings: FormQuestionExportMapping[], question: FormQuestion) {
-    if (question.linkedFieldKey == null || question.inputType === "tableInput") return;
-
-    const config = getLinkedFieldConfig(question.linkedFieldKey);
-    if (config == null) return;
-
-    mappings.push({
-      questionUuid: question.uuid,
-      heading: getExportHeading(config),
-      attribute: getModelAttribute(config),
-      config
-    });
   }
 }

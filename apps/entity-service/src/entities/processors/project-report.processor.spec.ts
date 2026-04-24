@@ -2,14 +2,16 @@
 import { ProjectReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
-import { reverse, sortBy } from "lodash";
+import { Dictionary, reverse, sortBy, sum } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
-  TrackingFactory
+  TrackingFactory,
+  TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { ProjectReportProcessor } from "./project-report.processor";
@@ -18,16 +20,19 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectReportLightDto } from "../dto/project-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await ProjectReport.truncate();
 
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
   });
 
@@ -499,6 +504,72 @@ describe("ProjectReportProcessor", () => {
       const result = document.serialize();
       expect(result.included?.length).toBe(2);
       expect(result.included!.filter(({ type }) => type === "trackings").length).toBe(2);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all project reports to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await ProjectReport.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      const reports = [
+        await ProjectReportFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await ProjectReportFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" }),
+        await ProjectReportFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      // non framework reports should be ignored
+      await ProjectReportFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.projectReport(reports[0]).create();
+
+      // For PPC, we do some calculations based on trees planted in the project reports
+      const firstReportSum = sum(
+        (await TreeSpeciesFactory.projectReportNurserySeedling(reports[1]).createMany(2)).map(({ amount }) => amount)
+      );
+      // make sure this report is "older" than the next
+      reports[1].setDataValue("createdAt", DateTime.fromJSDate(reports[0].createdAt).minus({ days: 1 }));
+      await reports[1].save();
+      const secondReportSum = sum(
+        (await TreeSpeciesFactory.projectReportNurserySeedling(reports[2]).createMany(2)).map(({ amount }) => amount)
+      );
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(3);
+      const [result1, additional1] = addRow.mock.calls[0] as [ProjectReport, Dictionary<unknown>];
+      expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      expect(additional1).toMatchObject({ totalSeedlingsGrownReport: null, totalSeedlingsGrown: null });
+      const [result2, additional2] = addRow.mock.calls[1] as [ProjectReport, Dictionary<unknown>];
+      expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
+      expect(additional2).toMatchObject({
+        totalSeedlingsGrownReport: firstReportSum,
+        totalSeedlingsGrown: firstReportSum
+      });
+      const [result3, additional3] = addRow.mock.calls[2] as [ProjectReport, Dictionary<unknown>];
+      expect(result3).toMatchObject({ uuid: reports[2].uuid });
+      expect(result3.projectName).toEqual(projects[1].name);
+      expect(result3.organisationReadableType).toEqual("For Profit Organization");
+      expect(result3.organisationName).toEqual(orgs[1].name);
+      expect(additional3).toMatchObject({
+        totalSeedlingsGrownReport: secondReportSum,
+        totalSeedlingsGrown: firstReportSum + secondReportSum
+      });
     });
   });
 });

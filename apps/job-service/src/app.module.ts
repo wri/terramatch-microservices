@@ -17,6 +17,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()]),
     BullModule.registerQueue({ name: "scheduled-jobs" }),
     BullModule.registerQueue({ name: "email" }),
+    BullModule.registerQueue({ name: "entities" }),
     CommonModule,
     HealthModule
   ],

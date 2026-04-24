@@ -1,8 +1,7 @@
-import { Response } from "express";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
-import { EntityProcessor } from "./processors/entity-processor";
+import { EntityProcessor, ExportAllOptions } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -20,7 +19,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { Dictionary, groupBy } from "lodash";
+import { Dictionary, groupBy, kebabCase, uniq } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
@@ -58,8 +57,14 @@ import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFie
 import { isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { ConfigService } from "@nestjs/config";
 import { LinkedAnswerCollector } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
-import { CsvExportService, StreamWriter } from "@terramatch-microservices/common/export/csv-export.service";
+import {
+  CsvExportService,
+  getAttributes,
+  getFormQuestionsForExport,
+  getMappingsColumns
+} from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -121,6 +126,19 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
+type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
+  /**
+   * If provided, is expected to provide additional data for the CSV mapping for the given page
+   * keyed on entity id.
+   */
+  additionalDataForPage?: (page: T[]) => Promise<Record<number, Dictionary<unknown>>>;
+
+  /**
+   * If provided, each record to be exported will be checked with the given ability.
+   */
+  ability?: string;
+};
+
 @Injectable()
 export class EntitiesService {
   protected logger = new TMLogger(EntitiesService.name);
@@ -134,8 +152,7 @@ export class EntitiesService {
   ) {}
 
   get userId() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.policyService.userId!;
+    return this.policyService.userId;
   }
 
   get isProd() {
@@ -143,7 +160,7 @@ export class EntitiesService {
   }
 
   async getPermissions() {
-    return await this.policyService.getPermissions();
+    return this.userId == null ? undefined : await this.policyService.getPermissions();
   }
 
   async authorize(action: string, subject: Model | Model[]) {
@@ -151,7 +168,8 @@ export class EntitiesService {
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
-    return (await this.getPermissions()).includes(`framework-${frameworkKey}`);
+    const permissions = await this.getPermissions();
+    return permissions == null ? false : permissions.includes(`framework-${frameworkKey}`);
   }
 
   /**
@@ -274,20 +292,42 @@ export class EntitiesService {
     return new LinkedAnswerCollector(this.mediaService);
   }
 
-  async writeCsv(
-    fileName: string,
-    response: Response,
+  writeCsv(...args: Parameters<CsvExportService["writeCsv"]>) {
+    return this.csvExportService.writeCsv(...args);
+  }
+
+  async entityFrameworkExport<T extends EntityModel>(
+    type: EntityType,
     columns: Dictionary<string>,
-    writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
+    attributes: string[],
+    builder: PaginatedQueryBuilder<T>,
+    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
   ) {
-    const { addRow, close } = this.csvExportService.getResponseStreamWriter(fileName, response, columns);
-    try {
-      await writeRows(addRow);
-    } catch (error) {
-      this.logger.error(`Error exporting CSV file: [${fileName}, ${error.message}]`, error.stack);
-      throw error;
-    } finally {
-      close();
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
+
+    const model = ENTITY_MODELS[type];
+    const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
+    if (form == null) {
+      this.logger.log(`No form found for [${model.name}, ${frameworkKey}]`);
+      return;
     }
+
+    const prefix = response == null ? "all-entity-records/" : "";
+    const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
+    const mappings = await getFormQuestionsForExport(form);
+    builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
+    await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
+      for await (const page of batchFindAll(builder)) {
+        if (ability != null) await this.policyService.authorize(ability, page);
+        const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
+        for (const entity of page) {
+          const additional = {
+            ...(await this.csvExportService.collectFormCells(mappings, { [type]: entity }, frameworkKey)),
+            ...pageData[entity.id]
+          };
+          addRow(entity, additional);
+        }
+      }
+    });
   }
 }

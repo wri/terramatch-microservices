@@ -20,7 +20,8 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           "deleteFiles",
           "updateFiles",
           "updateAnswers",
-          "sendReminder"
+          "sendReminder",
+          "exportAll"
         ],
         SiteReport,
         {

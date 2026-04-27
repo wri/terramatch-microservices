@@ -6,6 +6,8 @@ import { AirtableService } from "./airtable.service";
 import { AirtableProcessor } from "./airtable.processor";
 import { DataApiModule } from "@terramatch-microservices/data-api";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     CommonModule,
@@ -13,7 +15,7 @@ import { DataApiModule } from "@terramatch-microservices/data-api";
     BullModule.registerQueue({ name: "airtable" }),
     DataApiModule
   ],
-  providers: [AirtableService, AirtableProcessor],
+  providers: [AirtableService, ...(IS_REPL ? [] : [AirtableProcessor])],
   exports: [AirtableService]
 })
 export class AirtableModule {}

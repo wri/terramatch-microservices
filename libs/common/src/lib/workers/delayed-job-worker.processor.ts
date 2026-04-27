@@ -1,10 +1,11 @@
-import { WorkerHost } from "@nestjs/bullmq";
+import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { FAILED, SUCCEEDED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
 import { isString } from "lodash";
 import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "../util";
+import * as Sentry from "@sentry/nestjs";
 
 export type DelayedJobData = {
   delayedJobId: number;
@@ -36,6 +37,12 @@ const serializePayload = (result: DelayedJobResult) => ({
 
 export abstract class DelayedJobWorker<T extends DelayedJobData> extends WorkerHost {
   protected logger = new TMLogger(DelayedJobWorker.name);
+
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error) {
+    this.logger.error(`Job failed: ${job.id}`, error, job);
+    await Sentry.flush(2000);
+  }
 
   async process(job: Job<T>) {
     const delayedJob = await DelayedJob.findOne({ where: { id: job.data.delayedJobId } });

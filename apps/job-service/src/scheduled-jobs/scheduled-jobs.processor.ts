@@ -1,4 +1,4 @@
-import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
+import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Job, Queue } from "bullmq";
 import { Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
@@ -14,6 +14,7 @@ import {
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { TerrafundReportReminderEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "@terramatch-microservices/common/email/terrafund-site-and-nursery-reminder.email";
+import * as Sentry from "@sentry/nestjs";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
@@ -30,6 +31,12 @@ export class ScheduledJobsProcessor extends WorkerHost {
     private readonly reportGenerationService: ReportGenerationService
   ) {
     super();
+  }
+
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error) {
+    this.logger.error("Worker event failed", error, job);
+    await Sentry.flush(2000);
   }
 
   async process({ name, data: { id, taskDefinition } }: Job<ScheduledJobData>) {

@@ -16,7 +16,7 @@ export class TMLogger extends ConsoleLogger {
     });
   }
 
-  error(message: any, ...optionalParams: any[]) {
+  override error(message: any, ...optionalParams: any[]) {
     const error = optionalParams.find(param => param instanceof Error);
     if (error != null) {
       optionalParams = [error.stack, optionalParams.filter(param => !(param instanceof Error))];

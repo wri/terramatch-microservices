@@ -1,10 +1,11 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TotalSectionHeaderService } from "../dto/total-section-header.service";
 import { Job } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DashboardQueryDto } from "../dto/dashboard-query.dto";
 import { CacheService } from "../dto/cache.service";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
+import * as Sentry from "@sentry/nestjs";
 
 @Processor("dashboard")
 export class DashboardProcessor extends WorkerHost {
@@ -15,6 +16,12 @@ export class DashboardProcessor extends WorkerHost {
     private readonly cacheService: CacheService
   ) {
     super();
+  }
+
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error) {
+    this.logger.error("Worker event failed", error, job);
+    await Sentry.flush(2000);
   }
 
   async process(job: Job) {

@@ -140,6 +140,11 @@ type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions
    * If provided, each record to be exported will be checked with the given ability.
    */
   ability?: string;
+
+  /**
+   * If not provided, a filename will be generated based on the framework key and entity type.
+   */
+  fileName?: string;
 };
 
 @Injectable()
@@ -303,8 +308,8 @@ export class EntitiesService {
     type: EntityType,
     columns: Dictionary<string>,
     attributes: string[],
-    builder: PaginatedQueryBuilder<T>,
-    { target, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
+    source: PaginatedQueryBuilder<T> | T[],
+    { target, frameworkKey, additionalDataForPage, ability, fileName }: EntityFrameworkExportOptions<T>
   ) {
     const model = ENTITY_MODELS[type];
     const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
@@ -314,11 +319,13 @@ export class EntitiesService {
     }
 
     const prefix = target == null ? "all-entity-records/" : "";
-    const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
+    fileName ??= `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    builder = builder.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
+    if (source instanceof PaginatedQueryBuilder) {
+      source = source.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
+    }
     await this.writeCsv(fileName, target, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
-      for await (const page of batchFindAll(builder)) {
+      const processPage = async (page: T[]) => {
         if (ability != null) await this.policyService.authorize(ability, page);
         const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
         for (const entity of page) {
@@ -328,6 +335,14 @@ export class EntitiesService {
           };
           addRow(entity, additional);
         }
+      };
+
+      if (source instanceof PaginatedQueryBuilder) {
+        for await (const page of batchFindAll(source)) {
+          await processPage(page as T[]);
+        }
+      } else {
+        await processPage(source);
       }
     });
   }

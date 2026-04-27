@@ -95,7 +95,7 @@ export abstract class EntityProcessor<
 
   // TODO make abstract once all have been implemented
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async export(uuid: string, response: Response) {
+  async export(uuid: string, target: Response | Archiver) {
     throw new InternalServerErrorException("Not implemented");
   }
   abstract exportAll(opts: ExportAllOptions): Promise<void>;

@@ -42,10 +42,7 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$site.project.uuid$"
 };
 
-const CSV_COLUMNS: Dictionary<string> = {
-  id: "id",
-  uuid: "uuid",
-  linkToTerramatch: "link_to_terramatch",
+const PD_CSV_COLUMNS: Dictionary<string> = {
   organisationReadableType: "organization-readable_type",
   organisationName: "organization-name",
   projectName: "project_name",
@@ -59,6 +56,13 @@ const CSV_COLUMNS: Dictionary<string> = {
   siteName: "site-name",
   totalTreesPlantedReport: "total_trees_planted_report",
   totalTreesPlanted: "total_trees_planted"
+};
+
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
+  id: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  ...PD_CSV_COLUMNS
 };
 
 const CSV_ATTRIBUTES = ["id", "uuid", "siteId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
@@ -245,19 +249,22 @@ export class SiteReportProcessor extends ReportProcessor<
   }
 
   async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
-    const columns = {
-      ...CSV_COLUMNS,
-      ...(frameworkKey === "ppc"
-        ? { totalSeedsPlantedReport: "total_seeds_planted_report", totalSeedsPlanted: "total_seeds_planted" }
-        : {})
-    };
-
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+
+    const permissions = await this.entitiesService.getPermissions();
+    const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
+    const columns = {
+      ...(adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS),
+      ...(frameworkKey === "ppc"
+        ? { totalSeedsPlantedReport: "total_seeds_planted_report", totalSeedsPlanted: "total_seeds_planted" }
+        : {})
+    };
+
     const additionalDataForPage = async (page: SiteReport[]) =>
       (
         await Promise.all(

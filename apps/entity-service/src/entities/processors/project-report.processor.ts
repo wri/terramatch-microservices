@@ -4,7 +4,7 @@ import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { ProjectReportFullDto, ProjectReportLightDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op, WhereOptions } from "sequelize";
-import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
   Media,
@@ -31,6 +31,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Archiver } from "archiver";
+import { DateTime } from "luxon";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -63,7 +64,18 @@ function resolvePlantingStatus(
   return null;
 }
 
-const CSV_COLUMNS: Dictionary<string> = {
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "id",
   uuid: "uuid",
   organisationReadableType: "organization-readable_type",
@@ -77,6 +89,14 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectExportId: "project_id",
   projectUuid: "project_uuid"
 };
+
+const CSV_EXPORT_INCLUDES: Includeable[] = [
+  {
+    association: "project",
+    attributes: ["name", "id", "uuid", "ppcExternalId"],
+    include: [{ association: "organisation", attributes: ["name", "type"] }]
+  }
+];
 
 const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
 
@@ -269,6 +289,17 @@ export class ProjectReportProcessor extends ReportProcessor<
     return { id: projectReport.uuid, dto: new ProjectReportLightDto(projectReport) };
   }
 
+  async export(uuid: string, target: Response | Archiver) {
+    const report = await ProjectReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (report == null) throw new NotFoundException();
+    if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    const fileName = `${report.project?.name?.replace(/\/\\/g, "-")} - Project - ${DateTime.now().toFormat(
+      "yyyy-MM-dd HH:mm:ss"
+    )}.csv`;
+    await this.exportReports(report.frameworkKey, target, [report], fileName);
+  }
+
   async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
@@ -291,64 +322,65 @@ export class ProjectReportProcessor extends ReportProcessor<
       }
     }
 
-    await this.exportBuilder(
+    await this.exportReports(
       frameworkKey,
       target,
-      new PaginatedQueryBuilder(ProjectReport, 10, [
-        {
-          association: "project",
-          attributes: ["name", "id", "uuid", "ppcExternalId"],
-          include: [{ association: "organisation", attributes: ["name", "type"] }]
-        }
-      ]).where(where)
+      new PaginatedQueryBuilder(ProjectReport, 10, CSV_EXPORT_INCLUDES).where(where)
     );
   }
 
-  protected async exportBuilder(
+  protected async exportReports(
     frameworkKey: FrameworkKey,
     target: Archiver | Response | undefined,
-    builder: PaginatedQueryBuilder<ProjectReport>
+    source: PaginatedQueryBuilder<ProjectReport> | ProjectReport[],
+    fileName?: string
   ) {
+    const permissions = await this.entitiesService.getPermissions();
+    const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = {
-      ...CSV_COLUMNS,
+      ...(adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS),
       ...(frameworkKey === "ppc"
         ? { totalSeedlingsGrownReport: "total_seedlings_grown_report", totalSeedlingsGrown: "total_seedlings_grown" }
         : {})
     };
 
-    const additionalDataForPage =
-      frameworkKey === "ppc"
-        ? async (page: ProjectReport[]) =>
-            (
-              await Promise.all(
-                page.map(async ({ id, projectId, createdAt }) => {
-                  // PPC requires two values that are more efficient to get with two SQL queries per
-                  // row than by pulling all tree species records and doing it in memory.
-                  const totalSeedlingsGrownReport = await TreeSpecies.projectReports([id]).visible().sum("amount");
-                  const previousReports = Subquery.select(ProjectReport, "id")
-                    .eq("projectId", projectId)
-                    .lt("createdAt", createdAt).literal;
-                  const previousSum = await TreeSpecies.projectReports(previousReports).visible().sum("amount");
-                  const totalSeedlingsGrown =
-                    totalSeedlingsGrownReport == null ? previousSum : totalSeedlingsGrownReport + previousSum;
-                  return { id, totalSeedlingsGrownReport, totalSeedlingsGrown };
-                })
-              )
-            ).reduce(
-              (acc, { id, ...rest }) => ({ ...acc, [id]: rest }),
-              {} as Record<
-                number,
-                { totalSeedlingsGrownReport: number | undefined | null; totalSeedlingsGrown: number | undefined | null }
-              >
-            )
-        : undefined;
-
-    await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, builder, {
+    await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, source, {
       target,
       frameworkKey,
-      additionalDataForPage,
-      ability: target == null ? undefined : "read"
+      additionalDataForPage: this.exportAdditionalDataProcessor(frameworkKey),
+      ability: target == null ? undefined : "read",
+      fileName
     });
+  }
+
+  protected exportAdditionalDataProcessor(frameworkKey: FrameworkKey) {
+    if (frameworkKey === "ppc") {
+      return async (page: ProjectReport[]) =>
+        (
+          await Promise.all(
+            page.map(async ({ id, projectId, createdAt }) => {
+              // PPC requires two values that are more efficient to get with two SQL queries per
+              // row than by pulling all tree species records and doing it in memory.
+              const totalSeedlingsGrownReport = await TreeSpecies.projectReports([id]).visible().sum("amount");
+              const previousReports = Subquery.select(ProjectReport, "id")
+                .eq("projectId", projectId)
+                .lt("createdAt", createdAt).literal;
+              const previousSum = await TreeSpecies.projectReports(previousReports).visible().sum("amount");
+              const totalSeedlingsGrown =
+                totalSeedlingsGrownReport == null ? previousSum : totalSeedlingsGrownReport + previousSum;
+              return { id, totalSeedlingsGrownReport, totalSeedlingsGrown };
+            })
+          )
+        ).reduce(
+          (acc, { id, ...rest }) => ({ ...acc, [id]: rest }),
+          {} as Record<
+            number,
+            { totalSeedlingsGrownReport: number | undefined | null; totalSeedlingsGrown: number | undefined | null }
+          >
+        );
+    }
+
+    return undefined;
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {

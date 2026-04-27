@@ -40,6 +40,8 @@ import { ReportingFrameworksController } from "./reportingFrameworks/reporting-f
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 import { ExportImageService } from "./entities/export-image.service";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     SentryModule.forRoot(),
@@ -86,9 +88,9 @@ import { ExportImageService } from "./entities/export-image.service";
     AggregateReportsService,
     FormsService,
     FormDataService,
-    EntitiesQueueProcessor,
     ReportingFrameworksService,
-    ExportImageService
+    ExportImageService,
+    ...(IS_REPL ? [] : [EntitiesQueueProcessor])
   ]
 })
 export class AppModule {}

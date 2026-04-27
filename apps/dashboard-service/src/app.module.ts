@@ -28,6 +28,8 @@ import { DashboardSitePolygonsService } from "./dashboard/dashboard-sitepolygons
 import { DashboardImpactStoryService } from "./dashboard/dashboard-impact-story.service";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     SentryModule.forRoot(),
@@ -46,7 +48,7 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
       }
     }),
     BullModule.registerQueue({ name: "dashboard" }),
-    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()])
+    ...(IS_REPL ? [] : [ScheduleModule.forRoot()])
   ],
   controllers: [
     TotalSectionHeaderController,
@@ -61,7 +63,6 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     { provide: APP_FILTER, useClass: TMGlobalFilter },
     TotalSectionHeaderService,
     CacheService,
-    DashboardProcessor,
     TreeRestorationGoalService,
     TotalJobsCreatedService,
     DashboardCacheWarmupService,
@@ -70,7 +71,9 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
     UserContextInterceptor,
     DashboardProjectsService,
     DashboardSitePolygonsService,
-    DashboardImpactStoryService
+    DashboardImpactStoryService,
+
+    ...(IS_REPL ? [] : [DashboardProcessor])
   ]
 })
 export class AppModule {}

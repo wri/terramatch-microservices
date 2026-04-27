@@ -11,10 +11,12 @@ import { ScheduledJobsProcessor } from "./scheduled-jobs/scheduled-jobs.processo
 import { DelayedJobsService } from "./jobs/delayed-jobs.service";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     SentryModule.forRoot(),
-    ...(process.env.REPL === "true" ? [] : [ScheduleModule.forRoot()]),
+    ...(IS_REPL ? [] : [ScheduleModule.forRoot()]),
     BullModule.registerQueue({ name: "scheduled-jobs" }),
     BullModule.registerQueue({ name: "email" }),
     BullModule.registerQueue({ name: "entities" }),
@@ -25,8 +27,9 @@ import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
     ScheduledJobsService,
-    ScheduledJobsProcessor,
-    DelayedJobsService
+    DelayedJobsService,
+
+    ...(IS_REPL ? [] : [ScheduledJobsProcessor])
   ]
 })
 export class AppModule {}

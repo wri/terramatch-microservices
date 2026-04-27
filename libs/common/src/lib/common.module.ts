@@ -24,6 +24,7 @@ import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-noti
 import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
 
 export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
+const IS_REPL = process.env["REPL"] === "true";
 
 @Module({
   imports: [
@@ -69,13 +70,12 @@ export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
     TemplateService,
     SlackService,
     EventService,
-    EmailProcessor,
     ReportGenerationService,
     AnalyticsEventService,
-    AnalyticsProcessor,
     CsvExportService,
-    GreenhouseNotificationProcessor,
-    GreenhouseNotificationService
+    GreenhouseNotificationService,
+
+    ...(IS_REPL ? [] : [GreenhouseNotificationProcessor, EmailProcessor, AnalyticsProcessor])
   ],
   exports: [
     PolicyService,
@@ -89,8 +89,7 @@ export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
     ReportGenerationService,
     AnalyticsEventService,
     CsvExportService,
-    GreenhouseNotificationService,
-    GreenhouseNotificationProcessor
+    GreenhouseNotificationService
   ]
 })
 export class CommonModule {}

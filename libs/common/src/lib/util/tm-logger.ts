@@ -4,12 +4,13 @@ import { ConsoleLogger } from "@nestjs/common";
 import * as Sentry from "@sentry/nestjs";
 
 const IS_PROD = process.env["NODE_ENV"] === "production";
+const IS_REPL = process.env["REPL"] === "true";
 const IS_TEST = process.env["NODE_ENV"] === "test";
 
 export class TMLogger extends ConsoleLogger {
   constructor(context?: string) {
     super({
-      json: IS_PROD,
+      json: IS_PROD && !IS_REPL,
       logLevels: IS_TEST ? [] : IS_PROD ? ["log", "error", "warn"] : undefined,
       context
     });

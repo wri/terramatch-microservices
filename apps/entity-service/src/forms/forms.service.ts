@@ -412,8 +412,8 @@ export class FormsService {
             if (submission.organisation == null || submission.projectPitch == null || submission.formId == null)
               continue;
 
-            const { mappings, frameworkKey } = formIdMap[submission.formId];
-            if (mappings == null) {
+            const map = formIdMap[submission.formId];
+            if (map == null) {
               this.logger.warn(
                 `Missing mappings for submission [submissionId=${submission.id}, formId=${submission.formId}]`
               );
@@ -428,12 +428,12 @@ export class FormsService {
               organisationLogo: media.filter(({ collectionName }) => collectionName === "logo"),
               organisationCover: media.filter(({ collectionName }) => collectionName === "cover"),
               ...(await this.csvExportService.collectFormCells(
-                mappings,
+                map.mappings,
                 {
                   organisations: submission.organisation ?? undefined,
                   projectPitches: submission.projectPitch ?? undefined
                 },
-                frameworkKey ?? undefined
+                map.frameworkKey ?? undefined
               ))
             };
             addRow(submission, additional);

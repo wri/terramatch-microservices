@@ -304,7 +304,7 @@ export class EntitiesService {
     columns: Dictionary<string>,
     attributes: string[],
     builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
+    { target, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
   ) {
     const model = ENTITY_MODELS[type];
     const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
@@ -313,11 +313,11 @@ export class EntitiesService {
       return;
     }
 
-    const prefix = response == null ? "all-entity-records/" : "";
+    const prefix = target == null ? "all-entity-records/" : "";
     const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
     builder = builder.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
-    await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
+    await this.writeCsv(fileName, target, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
       for await (const page of batchFindAll(builder)) {
         if (ability != null) await this.policyService.authorize(ability, page);
         const pageData = (await additionalDataForPage?.(page as T[])) ?? {};

@@ -22,6 +22,9 @@ import { isField, isFile } from "@terramatch-microservices/database/constants/li
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { TMLogger } from "../util/tm-logger";
+import { ServerResponse } from "node:http";
+import { Archiver } from "archiver";
+import { PassThrough } from "node:stream";
 
 export type StreamWriter = {
   addRow: (model: Model, additional?: Dictionary<unknown>) => void;
@@ -111,14 +114,14 @@ export class CsvExportService {
     return new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, `exports/${fileName}`));
   }
 
-  getS3StreamWriter(fileName: string, columns: Dictionary<string>): StreamWriter {
+  getS3StreamWriter(fileName: string, columns: Dictionary<string>) {
     return this.createStreamWriter(
       this.fileService.uploadStream(this.bucket, `exports/${fileName}`, "text/csv"),
       columns
     );
   }
 
-  getResponseStreamWriter(fileName: string, response: Response, columns: Dictionary<string>): StreamWriter {
+  getResponseStreamWriter(fileName: string, response: Response, columns: Dictionary<string>) {
     response.set({
       "Content-Type": "text/csv",
       "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
@@ -127,16 +130,24 @@ export class CsvExportService {
     return this.createStreamWriter(response, columns);
   }
 
+  getArchiveWriter(fileName: string, archive: Archiver, columns: Dictionary<string>) {
+    const target = new PassThrough();
+    archive.append(target, { name: fileName });
+    return this.createStreamWriter(target, columns);
+  }
+
   async writeCsv(
     fileName: string,
-    response: Response | undefined,
+    target: Archiver | Response | undefined,
     columns: Dictionary<string>,
     writeRows: (addRow: StreamWriter["addRow"]) => Promise<void>
   ) {
     const { addRow, close } =
-      response == null
+      target == null
         ? this.getS3StreamWriter(fileName, columns)
-        : this.getResponseStreamWriter(fileName, response, columns);
+        : target instanceof ServerResponse
+        ? this.getResponseStreamWriter(fileName, target as Response, columns)
+        : this.getArchiveWriter(fileName, target, columns);
     try {
       await writeRows(addRow);
     } catch (error) {

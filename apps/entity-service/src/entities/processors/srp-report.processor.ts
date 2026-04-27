@@ -161,11 +161,11 @@ export class SrpReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll({ response }: ExportAllOptions = {}) {
+  async exportAll({ target }: ExportAllOptions = {}) {
     const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
-    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
+    await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(SrpReport, 10, [
         {
           association: "project",

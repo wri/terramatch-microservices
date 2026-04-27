@@ -198,7 +198,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
   }
 
-  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<NurseryReport> = {};
     if (projectUuid != null) {
       frameworkKey =
@@ -243,7 +243,7 @@ export class NurseryReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 

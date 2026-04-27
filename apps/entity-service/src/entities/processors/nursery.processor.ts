@@ -242,7 +242,7 @@ export class NurseryProcessor extends EntityProcessor<
     return (await this.findOne(nursery.uuid)) as Nursery;
   }
 
-  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<Nursery> = {};
     if (projectUuid != null) {
       frameworkKey =
@@ -271,7 +271,7 @@ export class NurseryProcessor extends EntityProcessor<
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 }

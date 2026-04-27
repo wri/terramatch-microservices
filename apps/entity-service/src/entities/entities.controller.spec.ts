@@ -100,9 +100,9 @@ describe("EntitiesController", () => {
     });
 
     it("should call exportAll on the processor", async () => {
-      const response = {} as Response;
-      await controller.entityExportAll({ entity: "projects" }, {}, response);
-      expect(processor.exportAll).toHaveBeenCalledWith({ response });
+      const target = {} as Response;
+      await controller.entityExportAll({ entity: "projects" }, {}, target);
+      expect(processor.exportAll).toHaveBeenCalledWith({ target });
     });
 
     it("should return a presigned url", async () => {

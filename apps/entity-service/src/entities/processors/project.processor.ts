@@ -741,7 +741,7 @@ export class ProjectProcessor extends EntityProcessor<
     return (await this.findOne(project.uuid)) as Project;
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey }: ExportAllOptions = {}) {
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
     const where: WhereOptions<Project> = { isTest: false, frameworkKey };
@@ -758,7 +758,7 @@ export class ProjectProcessor extends EntityProcessor<
       new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where(
         where
       ),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 

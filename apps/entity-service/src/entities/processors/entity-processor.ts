@@ -20,6 +20,7 @@ import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/link
 import { uniq } from "lodash";
 import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { Archiver } from "archiver";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -71,7 +72,7 @@ export type ExportAllOptions = {
   // filter by project
   projectUuid?: string;
   // If undefined, the export will go to S3 instead.
-  response?: Response;
+  target?: Response | Archiver;
 };
 
 export abstract class EntityProcessor<

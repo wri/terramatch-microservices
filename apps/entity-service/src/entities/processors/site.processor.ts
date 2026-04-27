@@ -453,7 +453,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (await this.findOne(site.uuid)) as Site;
   }
 
-  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<Site> = {};
     if (projectUuid != null) {
       frameworkKey =
@@ -483,7 +483,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      { target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 }

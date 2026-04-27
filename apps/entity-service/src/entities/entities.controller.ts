@@ -107,7 +107,7 @@ export class EntitiesController {
     // to. Either way, it writes directly to the response, and the permissions are checked in
     // the processor.
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-    await processor.exportAll({ response, frameworkKey, projectUuid });
+    await processor.exportAll({ target: response, frameworkKey, projectUuid });
   }
 
   @Get(":entity/:uuid")

@@ -121,9 +121,9 @@ export class FinancialReportProcessor extends ReportProcessor<
     return { id: financialReport.uuid, dto: new FinancialReportLightDto(financialReport, {}) };
   }
 
-  async exportAll({ response }: ExportAllOptions = {}) {
+  async exportAll({ target }: ExportAllOptions = {}) {
     const fileName = `Financial Reports Export ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
+    await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(FinancialReport, 10, [
         {
           association: "organisation",

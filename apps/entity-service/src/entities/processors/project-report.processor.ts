@@ -30,6 +30,7 @@ import {
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { Archiver } from "archiver";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -268,7 +269,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     return { id: projectReport.uuid, dto: new ProjectReportLightDto(projectReport) };
   }
 
-  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
@@ -292,7 +293,7 @@ export class ProjectReportProcessor extends ReportProcessor<
 
     await this.exportBuilder(
       frameworkKey,
-      response,
+      target,
       new PaginatedQueryBuilder(ProjectReport, 10, [
         {
           association: "project",
@@ -305,7 +306,7 @@ export class ProjectReportProcessor extends ReportProcessor<
 
   protected async exportBuilder(
     frameworkKey: FrameworkKey,
-    response: Response | undefined,
+    target: Archiver | Response | undefined,
     builder: PaginatedQueryBuilder<ProjectReport>
   ) {
     const columns = {
@@ -343,10 +344,10 @@ export class ProjectReportProcessor extends ReportProcessor<
         : undefined;
 
     await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, builder, {
-      response,
+      target,
       frameworkKey,
       additionalDataForPage,
-      ability: response == null ? undefined : "read"
+      ability: target == null ? undefined : "read"
     });
   }
 

@@ -244,7 +244,7 @@ export class SiteReportProcessor extends ReportProcessor<
     return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
   }
 
-  async exportAll({ response, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const columns = {
       ...CSV_COLUMNS,
       ...(frameworkKey === "ppc"
@@ -327,7 +327,7 @@ export class SiteReportProcessor extends ReportProcessor<
           ]
         }
       ]).where(where),
-      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
+      { target, frameworkKey, additionalDataForPage, ability: target == null ? undefined : "read" }
     );
   }
 

@@ -336,7 +336,7 @@ export class FormsService {
 
     if (forms.length == 0) {
       this.logger.warn(`No forms found for funding programme ${fundingProgramme.uuid}`);
-      return;
+      // Go ahead and fall through to generate a basically empty export.
     }
 
     // need to map this by form id

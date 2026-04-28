@@ -289,7 +289,13 @@ export class SiteReportProcessor extends ReportProcessor<
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
-  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
+  async exportAll({
+    target,
+    frameworkKey,
+    projectUuid,
+    siteId,
+    fileNamePrefix
+  }: ExportAllOptions & { siteId?: number } = {}) {
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
@@ -298,7 +304,9 @@ export class SiteReportProcessor extends ReportProcessor<
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
     const where: WhereOptions<SiteReport> = {};
-    if (projectUuid != null) {
+    if (siteId != null) {
+      where["siteId"] = siteId;
+    } else if (projectUuid != null) {
       where["$site.project.uuid$"] = projectUuid;
     } else {
       const permissions = await this.entitiesService.getPermissions();

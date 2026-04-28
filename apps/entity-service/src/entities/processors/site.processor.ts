@@ -14,7 +14,12 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { SiteFullDto, SiteLightDto, SiteMedia } from "../dto/site.dto";
-import { BadRequestException, InternalServerErrorException, NotAcceptableException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotAcceptableException,
+  NotFoundException
+} from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { Includeable, Op, WhereOptions } from "sequelize";
 import { Dictionary, groupBy, sumBy } from "lodash";
@@ -25,6 +30,11 @@ import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { Archiver } from "archiver";
+import { Response } from "express";
+import { SiteReportProcessor } from "./site-report.processor";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/response-zip-stream";
+import { ServerResponse } from "node:http";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -41,7 +51,7 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
-const CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   exportId: "id",
   uuid: "uuid",
   linkToTerramatch: "link_to_terramatch",
@@ -54,6 +64,24 @@ const CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "updated_at",
   projectExportId: "project_id"
 };
+
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const CSV_EXPORT_INCLUDES = [
+  {
+    association: "project",
+    attributes: ["name", "id", "ppcExternalId"],
+    include: [{ association: "organisation", attributes: ["name", "type"] }]
+  }
+];
 
 const CSV_ATTRIBUTES = ["id", "ppcExternalId", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
@@ -454,6 +482,34 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (await this.findOne(site.uuid)) as Site;
   }
 
+  async export(uuid: string, target: Response | Archiver) {
+    const site = await Site.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (site == null) throw new NotFoundException();
+
+    const { frameworkKey } = site;
+    if (frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    await this.entitiesService.authorize("read", site);
+
+    const fillArchive = async (archive: Archiver) => {
+      const fileNamePrefix = `${site.projectName} - ${site.name}`;
+      await this.entitiesService.entityExport("sites", PD_CSV_COLUMNS, [site], {
+        target: archive,
+        frameworkKey,
+        fileName: normalizedFileName(`${fileNamePrefix} - site establishment data`)
+      });
+
+      const reportProcessor = this.entitiesService.createEntityProcessor("siteReports") as SiteReportProcessor;
+      await reportProcessor.exportAll({ target: archive, frameworkKey, siteId: site.id, fileNamePrefix });
+    };
+
+    if (target instanceof ServerResponse) {
+      await streamZipToResponse(`${site.name} export`, target, fillArchive);
+    } else {
+      await fillArchive(target);
+    }
+  }
+
   async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
     const where: WhereOptions<Site> = {};
     if (projectUuid != null) {
@@ -475,14 +531,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     await this.entitiesService.entityExport(
       "sites",
-      CSV_COLUMNS,
-      new PaginatedQueryBuilder(Site, 10, [
-        {
-          association: "project",
-          attributes: ["name", "id", "ppcExternalId"],
-          include: [{ association: "organisation", attributes: ["name", "type"] }]
-        }
-      ]).where(where),
+      ADMIN_CSV_COLUMNS,
+      new PaginatedQueryBuilder(Site, 10, CSV_EXPORT_INCLUDES).where(where),
       {
         attributes: CSV_ATTRIBUTES,
         target,

@@ -128,7 +128,7 @@ export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
 type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
-  frameworkKey: FrameworkKey;
+  frameworkKey?: FrameworkKey;
 
   /**
    * If provided, is expected to provide additional data for the CSV mapping for the given page
@@ -307,12 +307,12 @@ export class EntitiesService {
   async entityFrameworkExport<T extends EntityModel>(
     type: EntityType,
     columns: Dictionary<string>,
-    attributes: string[],
+    attributes: string[] | undefined,
     source: PaginatedQueryBuilder<T> | T[],
     { target, frameworkKey, additionalDataForPage, ability, fileName }: EntityFrameworkExportOptions<T>
   ) {
     const model = ENTITY_MODELS[type];
-    const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
+    const form = await Form.for(model.build({ frameworkKey })).findOne();
     if (form == null) {
       this.logger.log(`No form found for [${model.name}, ${frameworkKey}]`);
       return;
@@ -321,7 +321,7 @@ export class EntitiesService {
     const prefix = target == null ? "all-entity-records/" : "";
     fileName ??= `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    if (source instanceof PaginatedQueryBuilder) {
+    if (source instanceof PaginatedQueryBuilder && attributes != null) {
       source = source.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
     }
     await this.writeCsv(fileName, target, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {

@@ -237,9 +237,9 @@ export class NurseryReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - Nursery Report - ${DateTime.now().toFormat(
+    const fileName = `${report.projectName} - ${report.nurseryName} - Nursery Report - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
-    )}.csv`;
+    )}.csv`.replace(/\/\\/g, "-");
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 

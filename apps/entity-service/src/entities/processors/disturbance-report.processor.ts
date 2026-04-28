@@ -7,7 +7,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { CreationAttributes, Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
@@ -318,6 +318,10 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
       })
     };
+  }
+
+  async export() {
+    throw new InternalServerErrorException("Individual export of disturbance report is not supported");
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {

@@ -32,6 +32,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Archiver } from "archiver";
 import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { ServerResponse } from "node:http";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -375,7 +376,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       target,
       frameworkKey,
       additionalDataForPage,
-      ability: target == null ? undefined : "read",
+      ability: target instanceof ServerResponse ? "read" : undefined,
       fileName
     });
   }

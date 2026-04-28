@@ -24,6 +24,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { ServerResponse } from "node:http";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -380,7 +381,7 @@ export class SiteReportProcessor extends ReportProcessor<
       target,
       frameworkKey,
       additionalDataForPage,
-      ability: target == null ? undefined : "read",
+      ability: target instanceof ServerResponse ? "read" : undefined,
       fileName
     });
   }

@@ -18,6 +18,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { ServerResponse } from "node:http";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -294,7 +295,7 @@ export class NurseryReportProcessor extends ReportProcessor<
       attributes: CSV_ATTRIBUTES,
       target,
       frameworkKey,
-      ability: target == null ? undefined : "read",
+      ability: target instanceof ServerResponse ? "read" : undefined,
       fileName
     });
   }

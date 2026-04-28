@@ -33,7 +33,7 @@ import { normalizedFileName } from "@terramatch-microservices/common/util/filena
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
-import { streamZipToResponse } from "@terramatch-microservices/common/util/response-zip-stream";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -546,7 +546,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         attributes: CSV_ATTRIBUTES,
         target,
         frameworkKey,
-        ability: target == null ? undefined : "read",
+        ability: target instanceof ServerResponse ? "read" : undefined,
         fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site establishment data`)
       }
     );

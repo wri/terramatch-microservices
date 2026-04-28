@@ -16,7 +16,11 @@ export const streamZipToResponse = async (
     "Access-Control-Expose-Headers": "Content-Disposition"
   });
 
-  return await new Promise<void>((resolve, reject) => {
+  return await streamZip(response, archiveFiller);
+};
+
+export const streamZip = (target: NodeJS.WritableStream, archiveFiller: (archive: Archiver) => Promise<void>) =>
+  new Promise<void>((resolve, reject) => {
     const archive = archiver("zip");
     archive.on("error", reject);
     archive.on("end", resolve);
@@ -28,10 +32,9 @@ export const streamZipToResponse = async (
       }
     });
 
-    archive.pipe(response);
+    archive.pipe(target);
 
     archiveFiller(archive)
       .then(() => archive.finalize())
       .catch(reject);
   });
-};

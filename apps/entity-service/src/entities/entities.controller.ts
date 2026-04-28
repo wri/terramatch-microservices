@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Patch,
@@ -44,6 +45,11 @@ import { EntityExportQueryDto } from "./dto/entity-export-query.dto";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { kebabCase } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto";
+import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "../jobs/entity-service-exports.processor";
+import { Queue } from "bullmq";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Project } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -51,7 +57,8 @@ export class EntitiesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly entitiesService: EntitiesService,
-    private readonly csvExportService: CsvExportService
+    private readonly csvExportService: CsvExportService,
+    @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
 
   @Get(":entity")
@@ -155,6 +162,7 @@ export class EntitiesController {
     operationId: "entityExport",
     summary: "Export a given entity as CSV or ZIP archive."
   })
+  @JsonApiResponse([FileDownloadDto, DelayedJobDto])
   @ApiResponse({
     status: 200,
     description: "CSV file",
@@ -165,6 +173,20 @@ export class EntitiesController {
     @Param() { entity, uuid }: SpecificEntityDto,
     @Res({ passthrough: true }) response: Response
   ) {
+    // All of our entity types generate quickly enough to do right on the response except for projects.
+    // It just includes too much and needs to go to a delayed job.
+    if (entity === "projects") {
+      const project = await Project.findOne({
+        where: { uuid },
+        attributes: ["id", "organisationId", "frameworkKey", "name"]
+      });
+      if (project == null) throw new NotFoundException();
+      if (project.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+      await this.policyService.authorize("read", project);
+
+      return await EntityServiceExportsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
+    }
+
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     await processor.export(uuid, response);
   }

@@ -27,7 +27,7 @@ import { Archiver } from "archiver";
 import { Response } from "express";
 import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
 import { ServerResponse } from "node:http";
-import { streamZipToResponse } from "@terramatch-microservices/common/util/response-zip-stream";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
@@ -325,7 +325,7 @@ export class NurseryProcessor extends EntityProcessor<
         attributes: CSV_ATTRIBUTES,
         target,
         frameworkKey,
-        ability: target == null ? undefined : "read",
+        ability: target instanceof ServerResponse ? "read" : undefined,
         fileName:
           fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
       }

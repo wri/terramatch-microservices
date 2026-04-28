@@ -45,7 +45,7 @@ import { Response } from "express";
 import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { ServerResponse } from "node:http";
-import { streamZipToResponse } from "@terramatch-microservices/common/util/response-zip-stream";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -779,7 +779,7 @@ export class ProjectProcessor extends EntityProcessor<
     const { frameworkKey } = project;
     if (frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    await this.entitiesService.authorize("read", project);
+    if (target instanceof ServerResponse) await this.entitiesService.authorize("read", project);
 
     const fillArchive = async (archive: Archiver) => {
       const fileNamePrefix = `${project.name}`;

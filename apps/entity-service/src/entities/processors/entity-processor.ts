@@ -73,6 +73,8 @@ export type ExportAllOptions = {
   projectUuid?: string;
   // If undefined, the export will go to S3 instead.
   target?: Response | Archiver;
+  // If undefined, the filename will be generated
+  fileNamePrefix?: string;
 };
 
 export abstract class EntityProcessor<

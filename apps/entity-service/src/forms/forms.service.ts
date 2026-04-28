@@ -65,9 +65,9 @@ import {
   getFormQuestionsForExport,
   getMappingsColumns
 } from "@terramatch-microservices/common/export/csv-export.service";
-import { DateTime } from "luxon";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -352,7 +352,7 @@ export class FormsService {
       (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
       {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
     );
-    const fileName = `${fundingProgramme.name} Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const fileName = timestampFileName(`${fundingProgramme.name} Export`);
     await this.writeSubmissionsCsv(
       fileName,
       undefined,
@@ -374,7 +374,7 @@ export class FormsService {
     if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
 
     const mappings = await getFormQuestionsForExport(form);
-    const fileName = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const fileName = timestampFileName(`${form?.title} Submission Export`);
     await this.writeSubmissionsCsv(
       fileName,
       response,

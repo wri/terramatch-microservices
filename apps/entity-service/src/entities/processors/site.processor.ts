@@ -24,6 +24,7 @@ import { PlantingStatus } from "@terramatch-microservices/database/constants/sta
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -453,7 +454,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return (await this.findOne(site.uuid)) as Site;
   }
 
-  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
     const where: WhereOptions<Site> = {};
     if (projectUuid != null) {
       frameworkKey =
@@ -482,7 +483,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
+      {
+        attributes: CSV_ATTRIBUTES,
+        target,
+        frameworkKey,
+        ability: target == null ? undefined : "read",
+        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - sites`)
+      }
     );
   }
 }

@@ -19,10 +19,10 @@ import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { Dictionary, flatten, kebabCase } from "lodash";
-import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const REPORT_ENTRIES = [
   {
@@ -325,7 +325,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = `Disturbance Reports Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
+    const fileName = timestampFileName("Disturbance Reports Export");
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {

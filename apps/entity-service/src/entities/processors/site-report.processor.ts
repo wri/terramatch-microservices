@@ -23,7 +23,7 @@ import { PAID_OTHER, VOLUNTEER_OTHER } from "@terramatch-microservices/database/
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
-import { DateTime } from "luxon";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -285,13 +285,11 @@ export class SiteReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.projectName} - ${report.siteName} - Site Report - ${DateTime.now().toFormat(
-      "yyyy-MM-dd HH:mm:ss"
-    )}.csv`.replace(/\/\\/g, "-");
+    const fileName = timestampFileName(`${report.projectName} - ${report.siteName} - Site Report`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
-  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
@@ -320,7 +318,8 @@ export class SiteReportProcessor extends ReportProcessor<
     await this.exportReports(
       frameworkKey,
       target,
-      new PaginatedQueryBuilder(SiteReport, 10, CSV_EXPORT_INCLUDES).where(where)
+      new PaginatedQueryBuilder(SiteReport, 10, CSV_EXPORT_INCLUDES).where(where),
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site reports`)
     );
   }
 

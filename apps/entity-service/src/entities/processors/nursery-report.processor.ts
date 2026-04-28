@@ -8,7 +8,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Includeable, Op, literal, WhereOptions } from "sequelize";
+import { Includeable, literal, Op, WhereOptions } from "sequelize";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
@@ -17,7 +17,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { DateTime } from "luxon";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -237,15 +237,21 @@ export class NurseryReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.projectName} - ${report.nurseryName} - Nursery Report - ${DateTime.now().toFormat(
-      "yyyy-MM-dd HH:mm:ss"
-    )}.csv`.replace(/\/\\/g, "-");
+    const fileName = timestampFileName(`${report.projectName} - ${report.nurseryName} - Nursery Report`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
-  async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
+  async exportAll({
+    target,
+    frameworkKey,
+    projectUuid,
+    nurseryId,
+    fileNamePrefix
+  }: ExportAllOptions & { nurseryId?: number } = {}) {
     const where: WhereOptions<NurseryReport> = {};
-    if (projectUuid != null) {
+    if (nurseryId != null) {
+      where["nurseryId"] = nurseryId;
+    } else if (projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
@@ -269,7 +275,8 @@ export class NurseryReportProcessor extends ReportProcessor<
     await this.exportReports(
       frameworkKey,
       target,
-      new PaginatedQueryBuilder(NurseryReport, 10, CSV_EXPORT_INCLUDES).where(where)
+      new PaginatedQueryBuilder(NurseryReport, 10, CSV_EXPORT_INCLUDES).where(where),
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery reports`)
     );
   }
 

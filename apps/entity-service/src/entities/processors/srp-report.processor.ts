@@ -11,6 +11,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -192,9 +193,7 @@ export class SrpReportProcessor extends ReportProcessor<
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
-      "yyyy-MM-dd HH:mm:ss"
-    )}.csv`;
+    const fileName = timestampFileName("Annual Socio Economic Restoration Reports Export");
     const builder = new PaginatedQueryBuilder(SrpReport, 10, CSV_EXPORT_INCLUDES);
     await this.entitiesService.entityExport("srpReports", ADMIN_CSV_COLUMNS, builder, {
       target,

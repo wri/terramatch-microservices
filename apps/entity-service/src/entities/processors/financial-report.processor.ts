@@ -14,7 +14,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { DateTime } from "luxon";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
 
@@ -138,9 +138,7 @@ export class FinancialReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.organisationName?.replace(/\/\\/g, "-")} - Financial Report - ${DateTime.now().toFormat(
-      "yyyy-MM-dd HH:mm:ss"
-    )}.csv`;
+    const fileName = timestampFileName(`${report.organisationName} - Financial Report`);
     await this.entitiesService.entityExport("financialReports", PD_CSV_COLUMNS, [report], {
       frameworkKey: report.frameworkKey,
       fileName,

@@ -54,8 +54,6 @@ const PD_CSV_COLUMNS: Dictionary<string> = {
   dueAt: "due_date",
   createdAt: "created_at",
   updatedAt: "updated_at",
-  projectExportId: "project_id",
-  siteExportId: "site-id",
   siteName: "site-name",
   totalTreesPlantedReport: "total_trees_planted_report",
   totalTreesPlanted: "total_trees_planted"
@@ -65,7 +63,19 @@ const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "id",
   uuid: "uuid",
   linkToTerramatch: "link_to_terramatch",
-  ...PD_CSV_COLUMNS
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id",
+  siteExportId: "site-id",
+  siteName: "site-name",
+  totalTreesPlantedReport: "total_trees_planted_report",
+  totalTreesPlanted: "total_trees_planted"
 };
 
 const CSV_EXPORT_INCLUDES = [
@@ -275,7 +285,7 @@ export class SiteReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.site?.project?.name?.replace(/\/\\/g, "-")} - Site - ${DateTime.now().toFormat(
+    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - Site Report - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
     await this.exportReports(report.frameworkKey, target, [report], fileName);

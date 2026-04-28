@@ -294,7 +294,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = `${report.project?.name?.replace(/\/\\/g, "-")} - Project - ${DateTime.now().toFormat(
+    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - Project Report - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
     await this.exportReports(report.frameworkKey, target, [report], fileName);

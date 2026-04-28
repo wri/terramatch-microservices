@@ -9,12 +9,15 @@ import {
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Includeable, Op, literal, WhereOptions } from "sequelize";
-import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { Archiver } from "archiver";
+import { Response } from "express";
+import { DateTime } from "luxon";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -34,7 +37,19 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$nursery.project.uuid$"
 };
 
-const CSV_COLUMNS: Dictionary<string> = {
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  nurseryName: "nursery-name"
+};
+
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "id",
   uuid: "uuid",
   linkToTerramatch: "link_to_terramatch",
@@ -50,6 +65,25 @@ const CSV_COLUMNS: Dictionary<string> = {
   nurseryId: "nursery-id",
   nurseryName: "nursery-name"
 };
+
+const CSV_EXPORT_INCLUDES = [
+  {
+    association: "nursery",
+    attributes: ["name", "id"],
+    include: [
+      {
+        association: "project",
+        attributes: ["name", "id", "ppcExternalId"],
+        include: [
+          {
+            association: "organisation",
+            attributes: ["name", "type"]
+          }
+        ]
+      }
+    ]
+  }
+];
 
 const CSV_ATTRIBUTES = ["id", "uuid", "nurseryId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
 
@@ -198,6 +232,17 @@ export class NurseryReportProcessor extends ReportProcessor<
     return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
   }
 
+  async export(uuid: string, target: Response | Archiver) {
+    const report = await NurseryReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (report == null) throw new NotFoundException();
+    if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - Nursery Report - ${DateTime.now().toFormat(
+      "yyyy-MM-dd HH:mm:ss"
+    )}.csv`;
+    await this.exportReports(report.frameworkKey, target, [report], fileName);
+  }
+
   async exportAll({ target, frameworkKey, projectUuid }: ExportAllOptions = {}) {
     const where: WhereOptions<NurseryReport> = {};
     if (projectUuid != null) {
@@ -221,30 +266,29 @@ export class NurseryReportProcessor extends ReportProcessor<
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
-    await this.entitiesService.entityFrameworkExport(
-      "nurseryReports",
-      CSV_COLUMNS,
-      CSV_ATTRIBUTES,
-      new PaginatedQueryBuilder(NurseryReport, 10, [
-        {
-          association: "nursery",
-          attributes: ["name", "id"],
-          include: [
-            {
-              association: "project",
-              attributes: ["name", "id", "ppcExternalId"],
-              include: [
-                {
-                  association: "organisation",
-                  attributes: ["name", "type"]
-                }
-              ]
-            }
-          ]
-        }
-      ]).where(where),
-      { target, frameworkKey, ability: target == null ? undefined : "read" }
+    await this.exportReports(
+      frameworkKey,
+      target,
+      new PaginatedQueryBuilder(NurseryReport, 10, CSV_EXPORT_INCLUDES).where(where)
     );
+  }
+
+  protected async exportReports(
+    frameworkKey: FrameworkKey,
+    target: Archiver | Response | undefined,
+    source: PaginatedQueryBuilder<NurseryReport> | NurseryReport[],
+    fileName?: string
+  ) {
+    const permissions = await this.entitiesService.getPermissions();
+    const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
+    const columns = adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS;
+
+    await this.entitiesService.entityFrameworkExport("nurseryReports", columns, CSV_ATTRIBUTES, source, {
+      target,
+      frameworkKey,
+      ability: target == null ? undefined : "read",
+      fileName
+    });
   }
 
   protected async getReportTitleBase(dueAt: Date | null, title: string) {

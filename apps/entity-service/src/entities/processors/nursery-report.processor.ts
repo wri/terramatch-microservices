@@ -252,7 +252,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     if (nurseryId != null) {
       where["nurseryId"] = nurseryId;
     } else if (projectUuid != null) {
-      frameworkKey =
+      frameworkKey ??=
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
       where["$nursery.project.uuid$"] = projectUuid;

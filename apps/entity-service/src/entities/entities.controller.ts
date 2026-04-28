@@ -153,7 +153,7 @@ export class EntitiesController {
   @Get(":entity/:uuid/export")
   @ApiOperation({
     operationId: "entityExport",
-    summary: "Export a given entity as CSV."
+    summary: "Export a given entity as CSV or ZIP archive."
   })
   @ApiResponse({
     status: 200,

@@ -83,7 +83,16 @@ const CSV_EXPORT_INCLUDES = [
   }
 ];
 
-const CSV_ATTRIBUTES = ["id", "ppcExternalId", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
+const CSV_ATTRIBUTES = [
+  "id",
+  "projectId",
+  "ppcExternalId",
+  "uuid",
+  "status",
+  "updateRequestStatus",
+  "createdAt",
+  "updatedAt"
+];
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
@@ -513,7 +522,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
     const where: WhereOptions<Site> = {};
     if (projectUuid != null) {
-      frameworkKey =
+      frameworkKey ??=
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
       where["$project.uuid$"] = projectUuid;
@@ -538,7 +547,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         target,
         frameworkKey,
         ability: target == null ? undefined : "read",
-        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - sites`)
+        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site establishment data`)
       }
     );
   }

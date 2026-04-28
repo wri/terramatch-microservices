@@ -95,11 +95,7 @@ export abstract class EntityProcessor<
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
 
-  // TODO make abstract once all have been implemented
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async export(uuid: string, target: Response | Archiver) {
-    throw new InternalServerErrorException("Not implemented");
-  }
+  abstract export(uuid: string, target: Response | Archiver): Promise<void>;
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {

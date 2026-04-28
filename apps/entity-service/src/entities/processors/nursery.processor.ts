@@ -77,7 +77,7 @@ const CSV_EXPORT_INCLUDES = [
   }
 ];
 
-const CSV_ATTRIBUTES = ["id", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
+const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
 export class NurseryProcessor extends EntityProcessor<
   Nursery,
@@ -302,7 +302,7 @@ export class NurseryProcessor extends EntityProcessor<
   async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
     const where: WhereOptions<Nursery> = {};
     if (projectUuid != null) {
-      frameworkKey =
+      frameworkKey ??=
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;
       where["$project.uuid$"] = projectUuid;
@@ -326,7 +326,8 @@ export class NurseryProcessor extends EntityProcessor<
         target,
         frameworkKey,
         ability: target == null ? undefined : "read",
-        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nurseries`)
+        fileName:
+          fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
       }
     );
   }

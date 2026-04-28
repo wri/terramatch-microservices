@@ -27,7 +27,12 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
-import { BadRequestException, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
@@ -35,6 +40,12 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { EntityDto } from "../dto/entity.dto";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { Archiver } from "archiver";
+import { Response } from "express";
+import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { ServerResponse } from "node:http";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/response-zip-stream";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -103,7 +114,7 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "landownerAgreement"
 ];
 
-const CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   exportId: "id",
   uuid: "uuid",
   organisationReadableType: "organization-readable_type",
@@ -114,6 +125,26 @@ const CSV_COLUMNS: Dictionary<string> = {
   createdAt: "created_at",
   updatedAt: "updated_at"
 };
+
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  name: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
+  "projectReports",
+  "sites",
+  "siteReports",
+  "nurseries",
+  "nurseryReports"
+];
+
+const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
 
 const CSV_ATTRIBUTES = [
   "id",
@@ -741,6 +772,36 @@ export class ProjectProcessor extends EntityProcessor<
     return (await this.findOne(project.uuid)) as Project;
   }
 
+  async export(uuid: string, target: Response | Archiver) {
+    const project = await Project.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (project == null) throw new NotFoundException();
+
+    const { frameworkKey } = project;
+    if (frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    await this.entitiesService.authorize("read", project);
+
+    const fillArchive = async (archive: Archiver) => {
+      const fileNamePrefix = `${project.name}`;
+      await this.entitiesService.entityExport("projects", PD_CSV_COLUMNS, [project], {
+        target: archive,
+        frameworkKey,
+        fileName: normalizedFileName(`${fileNamePrefix} - project establishment data`)
+      });
+
+      for (const entityType of CHILD_ENTITIES_FOR_EXPORT) {
+        const processor = this.entitiesService.createEntityProcessor(entityType);
+        await processor.exportAll({ target: archive, frameworkKey, projectUuid: uuid, fileNamePrefix });
+      }
+    };
+
+    if (target instanceof ServerResponse) {
+      await streamZipToResponse(`${project.name} full export`, target, fillArchive);
+    } else {
+      await fillArchive(target);
+    }
+  }
+
   async exportAll({ target, frameworkKey }: ExportAllOptions = {}) {
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
@@ -753,10 +814,8 @@ export class ProjectProcessor extends EntityProcessor<
     }
     await this.entitiesService.entityExport(
       "projects",
-      CSV_COLUMNS,
-      new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where(
-        where
-      ),
+      ADMIN_CSV_COLUMNS,
+      new PaginatedQueryBuilder(Project, 10, CSV_EXPORT_INCLUDES).where(where),
       { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }

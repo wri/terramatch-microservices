@@ -17,7 +17,7 @@ export const streamZipToResponse = async (
   });
 
   return await new Promise<void>((resolve, reject) => {
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    const archive = archiver("zip");
     archive.on("error", reject);
     archive.on("end", resolve);
     archive.on("warning", err => {

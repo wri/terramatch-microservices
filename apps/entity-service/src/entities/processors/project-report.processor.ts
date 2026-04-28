@@ -344,43 +344,40 @@ export class ProjectReportProcessor extends ReportProcessor<
         : {})
     };
 
+    const additionalDataForPage =
+      frameworkKey === "ppc"
+        ? async (page: ProjectReport[]) =>
+            (
+              await Promise.all(
+                page.map(async ({ id, projectId, createdAt }) => {
+                  // PPC requires two values that are more efficient to get with two SQL queries per
+                  // row than by pulling all tree species records and doing it in memory.
+                  const totalSeedlingsGrownReport = await TreeSpecies.projectReports([id]).visible().sum("amount");
+                  const previousReports = Subquery.select(ProjectReport, "id")
+                    .eq("projectId", projectId)
+                    .lt("createdAt", createdAt).literal;
+                  const previousSum = await TreeSpecies.projectReports(previousReports).visible().sum("amount");
+                  const totalSeedlingsGrown =
+                    totalSeedlingsGrownReport == null ? previousSum : totalSeedlingsGrownReport + previousSum;
+                  return { id, totalSeedlingsGrownReport, totalSeedlingsGrown };
+                })
+              )
+            ).reduce(
+              (acc, { id, ...rest }) => ({ ...acc, [id]: rest }),
+              {} as Record<
+                number,
+                { totalSeedlingsGrownReport: number | undefined | null; totalSeedlingsGrown: number | undefined | null }
+              >
+            )
+        : undefined;
+
     await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, source, {
       target,
       frameworkKey,
-      additionalDataForPage: this.exportAdditionalDataProcessor(frameworkKey),
+      additionalDataForPage,
       ability: target == null ? undefined : "read",
       fileName
     });
-  }
-
-  protected exportAdditionalDataProcessor(frameworkKey: FrameworkKey) {
-    if (frameworkKey === "ppc") {
-      return async (page: ProjectReport[]) =>
-        (
-          await Promise.all(
-            page.map(async ({ id, projectId, createdAt }) => {
-              // PPC requires two values that are more efficient to get with two SQL queries per
-              // row than by pulling all tree species records and doing it in memory.
-              const totalSeedlingsGrownReport = await TreeSpecies.projectReports([id]).visible().sum("amount");
-              const previousReports = Subquery.select(ProjectReport, "id")
-                .eq("projectId", projectId)
-                .lt("createdAt", createdAt).literal;
-              const previousSum = await TreeSpecies.projectReports(previousReports).visible().sum("amount");
-              const totalSeedlingsGrown =
-                totalSeedlingsGrownReport == null ? previousSum : totalSeedlingsGrownReport + previousSum;
-              return { id, totalSeedlingsGrownReport, totalSeedlingsGrown };
-            })
-          )
-        ).reduce(
-          (acc, { id, ...rest }) => ({ ...acc, [id]: rest }),
-          {} as Record<
-            number,
-            { totalSeedlingsGrownReport: number | undefined | null; totalSeedlingsGrown: number | undefined | null }
-          >
-        );
-    }
-
-    return undefined;
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {

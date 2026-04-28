@@ -54,7 +54,16 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectExportId: "project_id"
 };
 
-const CSV_ATTRIBUTES = ["id", "ppcExternalId", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
+const CSV_ATTRIBUTES = [
+  "id",
+  "projectId",
+  "ppcExternalId",
+  "uuid",
+  "status",
+  "updateRequestStatus",
+  "createdAt",
+  "updatedAt"
+];
 
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;

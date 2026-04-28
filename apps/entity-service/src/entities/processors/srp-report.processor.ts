@@ -184,7 +184,7 @@ export class SrpReportProcessor extends ReportProcessor<
     const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - SRP Report - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
-    await this.entitiesService.entityFrameworkExport("srpReports", PD_CSV_COLUMNS, undefined, [report], {
+    await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, [report], {
       target,
       fileName,
       ability: "export"
@@ -196,7 +196,7 @@ export class SrpReportProcessor extends ReportProcessor<
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
     const builder = new PaginatedQueryBuilder(SrpReport, 10, CSV_EXPORT_INCLUDES);
-    await this.entitiesService.entityFrameworkExport("srpReports", ADMIN_CSV_COLUMNS, undefined, builder, {
+    await this.entitiesService.entityExport("srpReports", ADMIN_CSV_COLUMNS, builder, {
       target,
       fileName,
       ability: "export"

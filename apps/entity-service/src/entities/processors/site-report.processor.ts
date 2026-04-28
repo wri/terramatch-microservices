@@ -368,7 +368,8 @@ export class SiteReportProcessor extends ReportProcessor<
         )
       ).reduce((acc, { id, ...rest }) => ({ ...acc, [id]: rest }), {} as Record<number, CsvAdditional>);
 
-    await this.entitiesService.entityFrameworkExport("siteReports", columns, CSV_ATTRIBUTES, source, {
+    await this.entitiesService.entityExport("siteReports", columns, source, {
+      attributes: CSV_ATTRIBUTES,
       target,
       frameworkKey,
       additionalDataForPage,

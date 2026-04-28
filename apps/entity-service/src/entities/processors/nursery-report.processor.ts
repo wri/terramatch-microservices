@@ -283,7 +283,8 @@ export class NurseryReportProcessor extends ReportProcessor<
     const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS;
 
-    await this.entitiesService.entityFrameworkExport("nurseryReports", columns, CSV_ATTRIBUTES, source, {
+    await this.entitiesService.entityExport("nurseryReports", columns, source, {
+      attributes: CSV_ATTRIBUTES,
       target,
       frameworkKey,
       ability: target == null ? undefined : "read",

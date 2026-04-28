@@ -129,7 +129,7 @@ describe("EntitiesService", () => {
 
   describe("entityFrameworkExport", () => {
     it("returns early if the form is missing", async () => {
-      await service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {
+      await service.entityExport("projects", {}, {} as PaginatedQueryBuilder<Project>, {
         frameworkKey: "foo" as FrameworkKey
       });
       expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();

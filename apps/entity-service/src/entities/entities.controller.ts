@@ -26,7 +26,11 @@ import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
-import { ENTITY_MODELS, EntityModel } from "@terramatch-microservices/database/constants/entities";
+import {
+  CACHED_EXPORT_ENTITY_TYPES,
+  ENTITY_MODELS,
+  EntityModel
+} from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
@@ -94,7 +98,11 @@ export class EntitiesController {
     // if we're some kind of admin and we have a framework key set, the intention is to access the
     // automatically generated reports that are sent to S3.
     const permissions = await this.policyService.getPermissions();
-    if (frameworkKey != null && permissions.find(p => p.startsWith("framework-")) != null) {
+    if (
+      CACHED_EXPORT_ENTITY_TYPES.includes(entity) &&
+      frameworkKey != null &&
+      permissions.find(p => p.startsWith("framework-")) != null
+    ) {
       // These reports are generated twice a day and stored in S3
       await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
       const fileName = `all-entity-records/${kebabCase(entity)}-${frameworkKey}.csv`;

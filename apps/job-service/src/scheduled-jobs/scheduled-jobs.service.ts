@@ -10,14 +10,14 @@ import {
   Verification
 } from "@terramatch-microservices/database/entities";
 import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
-import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { Op, QueryTypes, Transaction } from "sequelize";
+import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import {
   REPORT_REMINDER,
   SITE_AND_NURSERY_REMINDER,
   TASK_DUE
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
-import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
@@ -27,7 +27,7 @@ import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafun
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const TASK_DIGEST_CHUNK_SIZE = 100;
@@ -40,15 +40,6 @@ const MYSQL_LOCK_POLYGON_UPDATES_WEEKLY = "tm_job_svc_polygon_update_wk";
 const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
 const NOTIFICATION_RETENTION_DAYS = 90;
-
-export const EXPORT_ENTITY_TYPES: EntityType[] = [
-  "projects",
-  "sites",
-  "nurseries",
-  "projectReports",
-  "siteReports",
-  "nurseryReports"
-];
 
 @Injectable()
 export class ScheduledJobsService {
@@ -225,7 +216,7 @@ export class ScheduledJobsService {
   async generateFrameworkEntityExports() {
     const frameworks = (await Framework.findAll({ attributes: ["slug"] })).map(({ slug }) => slug).filter(isNotNull);
     for (const frameworkKey of frameworks) {
-      for (const entityType of EXPORT_ENTITY_TYPES) {
+      for (const entityType of CACHED_EXPORT_ENTITY_TYPES) {
         await this.entitiesQueue.add("generateFrameworkEntityExport", { frameworkKey, entityType });
       }
     }

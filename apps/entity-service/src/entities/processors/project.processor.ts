@@ -751,14 +751,13 @@ export class ProjectProcessor extends EntityProcessor<
     } else if (permissions?.includes("projects-manage")) {
       where["id"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
     }
-    await this.entitiesService.entityFrameworkExport(
+    await this.entitiesService.entityExport(
       "projects",
       CSV_COLUMNS,
-      CSV_ATTRIBUTES,
       new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where(
         where
       ),
-      { target, frameworkKey, ability: target == null ? undefined : "read" }
+      { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 

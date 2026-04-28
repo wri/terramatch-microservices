@@ -260,10 +260,9 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
-    await this.entitiesService.entityFrameworkExport(
+    await this.entitiesService.entityExport(
       "nurseries",
       CSV_COLUMNS,
-      CSV_ATTRIBUTES,
       new PaginatedQueryBuilder(Nursery, 10, [
         {
           association: "project",
@@ -271,7 +270,7 @@ export class NurseryProcessor extends EntityProcessor<
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { target, frameworkKey, ability: target == null ? undefined : "read" }
+      { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 }

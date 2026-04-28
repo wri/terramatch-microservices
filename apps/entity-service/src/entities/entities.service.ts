@@ -128,6 +128,9 @@ export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
 type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
+  // If not specified, all attributes will be fetched from the DB when using a query builder.
+  attributes?: string[];
+
   frameworkKey?: FrameworkKey;
 
   /**
@@ -304,12 +307,11 @@ export class EntitiesService {
     return this.csvExportService.writeCsv(...args);
   }
 
-  async entityFrameworkExport<T extends EntityModel>(
+  async entityExport<T extends EntityModel>(
     type: EntityType,
     columns: Dictionary<string>,
-    attributes: string[] | undefined,
     source: PaginatedQueryBuilder<T> | T[],
-    { target, frameworkKey, additionalDataForPage, ability, fileName }: EntityFrameworkExportOptions<T>
+    { attributes, target, frameworkKey, additionalDataForPage, ability, fileName }: EntityFrameworkExportOptions<T>
   ) {
     const model = ENTITY_MODELS[type];
     const form = await Form.for(model.build({ frameworkKey })).findOne();
@@ -321,7 +323,7 @@ export class EntitiesService {
     const prefix = target == null ? "all-entity-records/" : "";
     fileName ??= `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    if (source instanceof PaginatedQueryBuilder && attributes != null) {
+    if (attributes != null && source instanceof PaginatedQueryBuilder) {
       source = source.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
     }
     await this.writeCsv(fileName, target, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {

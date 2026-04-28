@@ -371,7 +371,8 @@ export class ProjectReportProcessor extends ReportProcessor<
             )
         : undefined;
 
-    await this.entitiesService.entityFrameworkExport("projectReports", columns, CSV_ATTRIBUTES, source, {
+    await this.entitiesService.entityExport("projectReports", columns, source, {
+      attributes: CSV_ATTRIBUTES,
       target,
       frameworkKey,
       additionalDataForPage,

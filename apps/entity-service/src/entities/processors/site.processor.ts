@@ -472,10 +472,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
-    await this.entitiesService.entityFrameworkExport(
+    await this.entitiesService.entityExport(
       "sites",
       CSV_COLUMNS,
-      CSV_ATTRIBUTES,
       new PaginatedQueryBuilder(Site, 10, [
         {
           association: "project",
@@ -483,7 +482,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           include: [{ association: "organisation", attributes: ["name", "type"] }]
         }
       ]).where(where),
-      { target, frameworkKey, ability: target == null ? undefined : "read" }
+      { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
   }
 }

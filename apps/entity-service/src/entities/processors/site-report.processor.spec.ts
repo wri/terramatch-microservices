@@ -588,6 +588,7 @@ describe("SiteReportProcessor", () => {
       expect(addRow).toHaveBeenCalledTimes(3);
       const [result1, additional1] = addRow.mock.calls[0] as [SiteReport, Dictionary<unknown>];
       expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(result1.linkToTerramatch).toEqual(`https://www.terramatch.org/admin#/siteReport/${reports[0].uuid}/show`);
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
@@ -599,6 +600,7 @@ describe("SiteReportProcessor", () => {
       });
       const [result2, additional2] = addRow.mock.calls[1] as [SiteReport, Dictionary<unknown>];
       expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(result2.linkToTerramatch).toEqual(`https://www.terramatch.org/admin#/siteReport/${reports[1].uuid}/show`);
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
@@ -610,6 +612,7 @@ describe("SiteReportProcessor", () => {
       });
       const [result3, additional3] = addRow.mock.calls[2] as [SiteReport, Dictionary<unknown>];
       expect(result3).toMatchObject({ uuid: reports[2].uuid });
+      expect(result3.linkToTerramatch).toEqual(`https://www.terramatch.org/admin#/siteReport/${reports[2].uuid}/show`);
       expect(result3.projectName).toEqual(projects[1].name);
       expect(result3.organisationReadableType).toEqual("For Profit Organization");
       expect(result3.organisationName).toEqual(orgs[1].name);

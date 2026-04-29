@@ -1,8 +1,9 @@
 import { Response } from "express";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
+  Application,
   Form,
   FormOptionList,
   FormOptionListOption,
@@ -84,10 +85,32 @@ type TranslationModelType =
 
 type TranslationParamsType = string | number;
 
-const FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   applicationUuid: "Application ID",
   organisationUuid: "Organisation ID",
   projectPitchUuid: "Project Pitch ID",
+  status: "Submission Status",
+  stageName: "Current Stage",
+  organisationType: "Organisation Type",
+  organisationName: "Organization Legal Name",
+  organisationPhone: "Organization WhatsApp Enabled Phone Number",
+  organisationStreet1: "Headquarters Street address",
+  organisationStreet2: "Headquarters street address 2",
+  organisationCity: "Headquarters address City",
+  organisationState: "Headquarters address State/Province",
+  organisationZipcode: "Headquarters address Zipcode",
+  organisationLegalRegistration: "Proof of local legal registration, incorporation, or right to operate",
+  organisationWebUrl: "Website URL (optional)",
+  organisationFacebookUrl: "Organization Facebook URL(optional)",
+  organisationInstagramUrl: "Organization Instagram URL(optional)",
+  organisationLinkedinUrl: "Organization LinkedIn URL(optional)",
+  organisationLogo: "Upload your organization logo(optional)",
+  organisationCover: "Upload a cover photo (optional)",
+  createdAt: "Created At",
+  updatedAt: "Updated At"
+};
+
+const PD_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   status: "Submission Status",
   stageName: "Current Stage",
   organisationType: "Organisation Type",
@@ -324,32 +347,23 @@ export class FormsService {
     return form;
   }
 
-  async exportApplications(fundingProgramme: FundingProgramme) {
-    const stages = await fundingProgramme.$get("stages", {
-      order: [["order", "DESC"]],
-      attributes: ["id"],
-      include: [{ association: "form" }]
-    });
-    const forms = stages.map(stage => stage.form).filter(isNotNull);
+  async exportApplication(application: Application, response: Response) {
+    const fundingProgramme = application.fundingProgramme ?? (await application.$get("fundingProgramme"));
+    if (fundingProgramme == null) throw new InternalServerErrorException("Application missing funding programme");
 
-    if (forms.length == 0) {
-      this.logger.warn(`No forms found for funding programme ${fundingProgramme.uuid}`);
-      // Go ahead and fall through to generate a basically empty export.
-    }
-
-    // need to map this by form id
-    const mappings = (
-      await Promise.all(
-        forms.map(async form => ({
-          uuid: form.uuid,
-          frameworkKey: form.frameworkKey,
-          mappings: await getFormQuestionsForExport(form)
-        }))
-      )
-    ).reduce(
-      (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
-      {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
+    const mappings = await this.getExportMappings(fundingProgramme);
+    const fileName = timestampFileName("Application Export");
+    await this.writeSubmissionsCsv(
+      fileName,
+      response,
+      mappings,
+      { applicationId: application.id },
+      { order: [["stage", "order", "ASC"]], csvColumns: PD_FORM_SUBMISSION_CSV_COLUMNS }
     );
+  }
+
+  async exportApplications(fundingProgramme: FundingProgramme) {
+    const mappings = await this.getExportMappings(fundingProgramme);
     const fileName = timestampFileName(`${fundingProgramme.name} Export`);
     await this.writeSubmissionsCsv(
       fileName,
@@ -358,10 +372,12 @@ export class FormsService {
       {
         "$application.funding_programme_uuid$": fundingProgramme.uuid
       },
-      [
-        ["application", "id", "ASC"],
-        ["stage", "order", "ASC"]
-      ]
+      {
+        order: [
+          ["application", "id", "ASC"],
+          ["stage", "order", "ASC"]
+        ]
+      }
     );
 
     return fileName;
@@ -381,12 +397,40 @@ export class FormsService {
     );
   }
 
+  private async getExportMappings(fundingProgramme: FundingProgramme) {
+    const stages = await fundingProgramme.$get("stages", {
+      order: [["order", "DESC"]],
+      attributes: ["id"],
+      include: [{ association: "form" }]
+    });
+    const forms = stages.map(stage => stage.form).filter(isNotNull);
+
+    if (forms.length == 0) {
+      this.logger.warn(`No forms found for funding programme ${fundingProgramme.uuid}`);
+      // Go ahead and fall through to generate a basically empty export.
+    }
+
+    // need to map this by form id
+    return (
+      await Promise.all(
+        forms.map(async form => ({
+          uuid: form.uuid,
+          frameworkKey: form.frameworkKey,
+          mappings: await getFormQuestionsForExport(form)
+        }))
+      )
+    ).reduce(
+      (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
+      {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
+    );
+  }
+
   private async writeSubmissionsCsv(
     fileName: string,
     response: Response | undefined,
     formIdMap: Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>,
     where: WhereOptions,
-    order?: OrderItem[]
+    { order, csvColumns }: { order?: OrderItem[]; csvColumns?: Dictionary<string> } = {}
   ) {
     const allMappings = Object.values(formIdMap).reduce((acc, { mappings }) => [...acc, ...mappings], []);
     const orgAttributes = uniq([...SUBMISSION_CSV_ORG_ATTRIBUTES, ...getAttributes(allMappings, "organisations")]);
@@ -401,7 +445,7 @@ export class FormsService {
     await this.csvExportService.writeCsv(
       fileName,
       response,
-      { ...FORM_SUBMISSION_CSV_COLUMNS, ...getMappingsColumns(allMappings) },
+      { ...(csvColumns ?? ADMIN_FORM_SUBMISSION_CSV_COLUMNS), ...getMappingsColumns(allMappings) },
       async addRow => {
         for await (const page of batchFindAll(builder)) {
           const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");

@@ -1,8 +1,8 @@
-import { Media, Project, ProjectUser, SrpReport } from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser, Site, SrpReport } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { Includeable, Op } from "sequelize";
+import { Includeable, Op, WhereOptions } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
@@ -194,7 +194,15 @@ export class SrpReportProcessor extends ReportProcessor<
 
   async exportAll({ target }: ExportAllOptions = {}) {
     const fileName = timestampFileName("Annual Socio Economic Restoration Reports Export");
-    const builder = new PaginatedQueryBuilder(SrpReport, 10, CSV_EXPORT_INCLUDES);
+    const where: WhereOptions<Site> = { "$project.is_test$": false };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
+
+    const builder = new PaginatedQueryBuilder(SrpReport, 10, CSV_EXPORT_INCLUDES).where(where);
     await this.entitiesService.entityExport("srpReports", ADMIN_CSV_COLUMNS, builder, {
       target,
       fileName,

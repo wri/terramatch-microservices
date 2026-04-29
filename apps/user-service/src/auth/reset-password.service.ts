@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import bcrypt from "bcryptjs";
 import { JwtService } from "@nestjs/jwt";
-import { User } from "@terramatch-microservices/database/entities";
+import { PasswordReset, User } from "@terramatch-microservices/database/entities";
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
@@ -37,12 +37,19 @@ export class ResetPasswordService {
 
   async resetPassword(resetToken: string, newPassword: string) {
     let userGuid;
+    let passwordReset;
     try {
       const payload = await this.jwtService.verifyAsync(resetToken);
       userGuid = payload.sub;
     } catch (error) {
       this.logger.error(error);
-      throw new BadRequestException("Provided token is invalid or expired");
+      passwordReset = await PasswordReset.findOne({ where: { token: resetToken } });
+      const userWithUuid = await User.findOne({ where: { id: passwordReset?.userId }, attributes: ["uuid"] });
+      if (passwordReset != null) {
+        userGuid = userWithUuid?.uuid;
+      } else {
+        throw new BadRequestException("Provided token is invalid or expired");
+      }
     }
 
     const user = await User.findOne({
@@ -62,6 +69,33 @@ export class ResetPasswordService {
 
     await User.update(updateBody, { where: { id: user.id } });
 
+    if (passwordReset != null) {
+      await PasswordReset.destroy({ where: { id: passwordReset.id } });
+    }
+
     return { email: user.emailAddress, uuid: user.uuid };
+  }
+
+  async getResetPassword(token: string) {
+    const passwordReset = await PasswordReset.findOne({ where: { token } });
+    if (passwordReset == null) {
+      return { emailAddress: null, uuid: null, tokenUsed: true };
+    }
+
+    const sevenDaysAgo = new Date(passwordReset.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (sevenDaysAgo < new Date()) {
+      await PasswordReset.destroy({ where: { id: passwordReset.id } });
+      return { emailAddress: null, uuid: null, tokenUsed: true };
+    }
+
+    const user = await User.findOne({
+      where: { id: passwordReset.userId },
+      attributes: ["emailAddress", "uuid", "locale"]
+    });
+    if (user == null) {
+      throw new NotFoundException("User not found");
+    }
+
+    return { emailAddress: user.emailAddress, uuid: user.uuid, locale: user.locale, tokenUsed: false };
   }
 }

@@ -9,7 +9,6 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["export"], SrpReport);
       this.builder.can(
         [
           "read",
@@ -21,7 +20,8 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
           "uploadFiles",
           "updateFiles",
           "updateAnswers",
-          "sendReminder"
+          "sendReminder",
+          "export"
         ],
         SrpReport,
         {
@@ -77,7 +77,8 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
               "uploadFiles",
               "updateFiles",
               "updateAnswers",
-              "sendReminder"
+              "sendReminder",
+              "export"
             ],
             SrpReport,
             {

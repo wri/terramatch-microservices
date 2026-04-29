@@ -90,11 +90,10 @@ const IS_REPL = process.env["REPL"] === "true";
     AggregateReportsService,
     FormsService,
     FormDataService,
-    EntitiesQueueProcessor,
     ReportingFrameworksService,
     ExportImageService,
 
-    ...(IS_REPL ? [] : [EntityServiceExportsProcessor])
+    ...(IS_REPL ? [] : [EntitiesQueueProcessor, EntityServiceExportsProcessor])
   ]
 })
 export class AppModule {}

@@ -11,7 +11,12 @@ import { GeometryValidationRequestBody } from "./dto/geometry-validation-request
 import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
-import { CRITERIA_ID_TO_VALIDATION_TYPE, ValidationType } from "@terramatch-microservices/database/constants";
+import {
+  CRITERIA_ID_TO_VALIDATION_TYPE,
+  NON_PERSISTENT_VALIDATION_TYPES,
+  ValidationType,
+  VALIDATION_TYPES
+} from "@terramatch-microservices/database/constants";
 
 describe("ValidationController", () => {
   let controller: ValidationController;
@@ -551,6 +556,50 @@ describe("ValidationController", () => {
         expect(singleData.attributes.criteriaList).toHaveLength(1);
       }
     });
+
+    it("uses all validation types when validationTypes is empty", async () => {
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validations",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: []
+          }
+        }
+      };
+      const polygon1Validation = new ValidationDto();
+      populateDto(polygon1Validation, {
+        polygonUuid: "polygon-1",
+        criteriaList: []
+      });
+      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
+
+      await controller.createPolygonValidations(request);
+
+      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], [...VALIDATION_TYPES]);
+    });
+
+    it("uses all validation types when validationTypes is null", async () => {
+      const request: ValidationRequestBody = {
+        data: {
+          type: "validations",
+          attributes: {
+            polygonUuids: ["polygon-1"],
+            validationTypes: null as unknown as ValidationType[]
+          }
+        }
+      };
+      const polygon1Validation = new ValidationDto();
+      populateDto(polygon1Validation, {
+        polygonUuid: "polygon-1",
+        criteriaList: []
+      });
+      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
+
+      await controller.createPolygonValidations(request);
+
+      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], [...VALIDATION_TYPES]);
+    });
   });
 
   describe("createSiteValidation", () => {
@@ -601,6 +650,34 @@ describe("ValidationController", () => {
       mockUserId(1);
       await controller.createSiteValidation(siteUuid, request);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
+    });
+
+    it("should use all validation types when validationTypes is an empty array", async () => {
+      const request: SiteValidationRequestBody = {
+        data: {
+          type: "validations",
+          attributes: { validationTypes: [] }
+        }
+      };
+      mockUserId(1);
+      await controller.createSiteValidation(siteUuid, request);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "siteValidation",
+        expect.objectContaining({ validationTypes: VALIDATION_TYPES, siteUuid })
+      );
+    });
+
+    it("throws NotFoundException when Site lookup returns null after polygons exist", async () => {
+      (Site.findOne as jest.Mock).mockResolvedValueOnce(null);
+      const request: SiteValidationRequestBody = {
+        data: {
+          type: "validations",
+          attributes: { validationTypes: ["SELF_INTERSECTION"] as ValidationType[] }
+        }
+      };
+      mockUserId(1);
+      await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
+      expect(DelayedJob.create).not.toHaveBeenCalled();
     });
   });
 
@@ -691,8 +768,7 @@ describe("ValidationController", () => {
 
       expect(mockValidationService.validateGeometries).toHaveBeenCalled();
       const callArgs = mockValidationService.validateGeometries.mock.calls[0];
-      expect(callArgs[1]).toBeDefined();
-      expect(Array.isArray(callArgs[1])).toBe(true);
+      expect(callArgs[1]).toEqual([...NON_PERSISTENT_VALIDATION_TYPES]);
     });
   });
 });

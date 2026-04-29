@@ -66,9 +66,8 @@ export class FundingProgrammesController {
     description: "User is not authorized to access these funding programmes"
   })
   async index(@Query() query: FundingProgrammeQueryDto) {
-    const permissions = await this.policyService.getPermissions();
     let fundingProgrammes: FundingProgramme[];
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
+    if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // non-admins only have access to FPs that match their org types
       const orgUuids = await User.orgUuids(authenticatedUserId());
       const types =

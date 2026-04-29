@@ -47,7 +47,7 @@ describe("NurseryProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -350,7 +350,7 @@ describe("NurseryProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a nursery", async () => {
       const nursery = await NurseryFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
@@ -358,13 +358,13 @@ describe("NurseryProcessor", () => {
     it("should not allow a non-admin to delete a nursery if it has reports", async () => {
       const nursery = await NurseryFactory.create();
       await NurseryReportFactory.create({ nurseryId: nursery.id });
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await expect(processor.delete(nursery)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a nursery if it has no reports", async () => {
       const nursery = await NurseryFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
@@ -434,7 +434,7 @@ describe("NurseryProcessor", () => {
     });
 
     it("writes all nurseries to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await Nursery.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

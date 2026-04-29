@@ -226,7 +226,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))

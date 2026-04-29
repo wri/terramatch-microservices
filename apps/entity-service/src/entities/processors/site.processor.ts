@@ -133,7 +133,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -439,7 +439,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async delete(site: Site) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const managesOwn = permissions?.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
     if (managesOwn) {
       const reportCount = await SiteReport.count({ where: { siteId: site.id } });
@@ -529,7 +529,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     } else {
       where.frameworkKey = frameworkKey;
       where["$project.is_test$"] = false;
-      const permissions = await this.entitiesService.getPermissions();
+      const permissions = this.entitiesService.permissions;
       if (permissions?.includes("manage-own")) {
         where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
       } else if (permissions?.includes("projects-manage")) {

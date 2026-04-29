@@ -61,12 +61,12 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload(); // this seems to be needed to get the matching object to what is returned from findOne()
-      entitiesService.getUserLocale.mockResolvedValue("es-MX");
+      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
 
       const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
-      expect(entitiesService.getUserLocale).toHaveBeenCalled();
+      expect(localeSpy).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
       expect(policyService.authorize).toHaveBeenCalledWith("read", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
@@ -104,7 +104,7 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload();
-      entitiesService.getUserLocale.mockResolvedValue("es-MX");
+      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
 
@@ -116,7 +116,7 @@ describe("FormDataController", () => {
         )
       );
       expect(service.storeEntityAnswers).toHaveBeenCalledWith(project, form, answers);
-      expect(entitiesService.getUserLocale).toHaveBeenCalled();
+      expect(localeSpy).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
       expect(policyService.authorize).toHaveBeenCalledWith("update", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);

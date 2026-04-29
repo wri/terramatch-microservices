@@ -104,11 +104,10 @@ export class EntitiesController {
   ) {
     // if we're some kind of admin and we have a framework key set, the intention is to access the
     // automatically generated reports that are sent to S3.
-    const permissions = await this.policyService.getPermissions();
     if (
       CACHED_EXPORT_ENTITY_TYPES.includes(entity) &&
       frameworkKey != null &&
-      permissions.find(p => p.startsWith("framework-")) != null
+      this.policyService.permissions.find(p => p.startsWith("framework-")) != null
     ) {
       // These reports are generated twice a day and stored in S3
       await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));

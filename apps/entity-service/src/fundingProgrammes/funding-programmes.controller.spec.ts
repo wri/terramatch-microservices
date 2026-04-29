@@ -52,7 +52,7 @@ describe("FundingProgrammesController", () => {
   describe("indexFundingProgrammes", () => {
     it("returns all funding programmes", async () => {
       await FundingProgramme.truncate();
-      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
       const programmes = await FundingProgrammeFactory.createMany(3);
       await controller.index({ translated: false });
       expect(policyService.authorize).toHaveBeenCalledWith(
@@ -69,7 +69,7 @@ describe("FundingProgrammesController", () => {
     it("returns no funding programmes if the user doesn't have an org", async () => {
       const user = await UserFactory.create();
       mockUserId(user.id);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await FundingProgrammeFactory.createMany(3);
       await controller.index({ translated: false });
       expect(policyService.authorize).toHaveBeenCalledWith("read", []);
@@ -82,7 +82,7 @@ describe("FundingProgrammesController", () => {
       const user = await UserFactory.create({ organisationId: org.id });
       await OrganisationUserFactory.create({ organisationId: org2.id, userId: user.id, status: "approved" });
       mockUserId(user.id);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await FundingProgramme.truncate();
       const programmes = [
         await FundingProgrammeFactory.create({

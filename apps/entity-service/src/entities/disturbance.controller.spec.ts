@@ -38,7 +38,7 @@ describe("DisturbanceController", () => {
         paginationTotal: 0,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
 
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
@@ -67,7 +67,7 @@ describe("DisturbanceController", () => {
         paginationTotal: 3,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
       const result = serialize(await controller.disturbancesIndex(new DisturbanceQueryDto()));

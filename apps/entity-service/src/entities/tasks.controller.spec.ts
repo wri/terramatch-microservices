@@ -42,7 +42,7 @@ describe("TasksController", () => {
 
   describe("taskIndex", () => {
     it("should call getTasks", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       const query: TaskQueryDto = { page: { number: 2 }, sort: { field: "projectName" }, status: "approved" };
       await controller.taskIndex(query);
       expect(service.getTasks).toHaveBeenCalledWith(query);

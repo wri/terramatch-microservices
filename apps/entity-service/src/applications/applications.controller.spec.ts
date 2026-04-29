@@ -48,7 +48,7 @@ describe("ApplicationsController", () => {
   describe("indexApplications", () => {
     it("returns all applications to admins", async () => {
       const apps = await ApplicationFactory.createMany(3);
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       const result = serialize(await controller.index({}));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(3);
@@ -65,7 +65,7 @@ describe("ApplicationsController", () => {
       await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
       await OrganisationUserFactory.create({ organisationId: orgs[2].id, userId: user.id, status: "pending" });
       mockUserId(user.id);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       const apps = await Promise.all(orgs.map(({ uuid }) => ApplicationFactory.create({ organisationUuid: uuid })));
       const userApps = apps.slice(0, 2); // the third is not a confirmed org association
       await ApplicationFactory.create();
@@ -80,7 +80,7 @@ describe("ApplicationsController", () => {
     });
 
     it("filters by submission status", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       const apps = await ApplicationFactory.createMany(2);
       const excluded = await ApplicationFactory.create();
       // included - only submission on this app
@@ -102,7 +102,7 @@ describe("ApplicationsController", () => {
     });
 
     it("filters on application fields", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       const apps = await ApplicationFactory.createMany(2);
       let result = serialize(await controller.index({ organisationUuid: apps[0].organisationUuid as string }));
       let dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
@@ -116,7 +116,7 @@ describe("ApplicationsController", () => {
     });
 
     it("throws with an invalid sort", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await expect(controller.index({ sort: { field: "foo" } })).rejects.toThrow("Invalid sort field: foo");
     });
 
@@ -134,7 +134,7 @@ describe("ApplicationsController", () => {
         clock.setSystemTime(now.minus({ days: 6 }).toJSDate());
         await app1.update({ updatedBy: 123 });
 
-        policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
 
         let result = serialize(await controller.index({ sort: { field: "createdAt" } }));
         let uuids = (result.data as Resource[]).map(({ id }) => id);
@@ -169,7 +169,7 @@ describe("ApplicationsController", () => {
       const org3 = await OrganisationFactory.create({ name: "Crops" });
       await ApplicationFactory.create({ organisationUuid: org3.uuid });
 
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
 
       let result = serialize(await controller.index({ search: "Test" }));
       let uuids = (result.data as Resource[]).map(({ id }) => id);

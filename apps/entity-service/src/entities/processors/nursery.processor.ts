@@ -121,7 +121,7 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -218,7 +218,7 @@ export class NurseryProcessor extends EntityProcessor<
   }
 
   async delete(nursery: Nursery) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const managesOwn =
       permissions?.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
     if (managesOwn) {
@@ -309,7 +309,7 @@ export class NurseryProcessor extends EntityProcessor<
     } else {
       where.frameworkKey = frameworkKey;
       where["$project.is_test$"] = false;
-      const permissions = await this.entitiesService.getPermissions();
+      const permissions = this.entitiesService.permissions;
       if (permissions?.includes("manage-own")) {
         where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
       } else if (permissions?.includes("projects-manage")) {

@@ -315,7 +315,7 @@ export class FormDataService {
     if (isReport(answersModel)) {
       answersModel.completion = this.calculateProgress(answers, questions);
 
-      const permissions = await this.policyService.getPermissions();
+      const permissions = this.policyService.permissions;
       const { frameworkKey } = answersModel;
       const isAdmin =
         frameworkKey == null

@@ -47,7 +47,7 @@ describe("ProjectReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -307,7 +307,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      policyService.getPermissions.mockResolvedValue([]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
   });
@@ -495,7 +495,7 @@ describe("ProjectReportProcessor", () => {
       await TrackingFactory.projectReportWorkday(projectReport).create();
       await TrackingFactory.projectReportJobs(projectReport).create();
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       const document = buildJsonApi(ProjectReportLightDto);
       await processor.addIndex(document, {
         sideloads: [{ entity: "trackings", pageSize: 5 }]
@@ -513,7 +513,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("writes all project reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await ProjectReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

@@ -20,7 +20,7 @@ import {
 } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
@@ -51,8 +51,7 @@ export class ApplicationsController {
       { association: "fundingProgramme", attributes: ["name"] }
     ]);
 
-    const permissions = await this.policyService.getPermissions();
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
+    if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // admins have access to everything, so we just filter what's available for non-admins
       const orgUuids = await User.orgUuids(authenticatedUserId());
       builder.where({ organisationUuid: { [Op.in]: orgUuids } });
@@ -158,7 +157,7 @@ export class ApplicationsController {
         await this.formDataService.addFundingProgrammeDtos(
           document,
           [fundingProgramme],
-          translated === false ? undefined : await User.findLocale(authenticatedUserId())
+          translated === false ? undefined : userLocale()
         );
       }
     }

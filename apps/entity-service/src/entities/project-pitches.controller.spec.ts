@@ -36,7 +36,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 0,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
 
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
@@ -54,7 +54,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 3,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
       const result = serialize(await controller.projectPitchIndex(new ProjectPitchQueryDto()));

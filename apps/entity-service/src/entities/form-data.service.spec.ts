@@ -187,7 +187,7 @@ describe("FormDataService", () => {
 
     it("does additional report processing", async () => {
       mockUserId(123);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       policyService.hasAccess.mockResolvedValue(true);
       const siteReport = await SiteReportFactory.create({ submittedAt: null, nothingToReport: true });
       const form = await EntityFormFactory.siteReport(siteReport).create();

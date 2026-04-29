@@ -107,7 +107,7 @@ export class SrpReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -195,7 +195,7 @@ export class SrpReportProcessor extends ReportProcessor<
   async exportAll({ target }: ExportAllOptions = {}) {
     const fileName = timestampFileName("Annual Socio Economic Restoration Reports Export");
     const where: WhereOptions<Site> = { "$project.is_test$": false };
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     if (permissions?.includes("manage-own")) {
       where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
     } else if (permissions?.includes("projects-manage")) {

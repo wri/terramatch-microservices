@@ -78,7 +78,7 @@ describe("ProjectProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -248,7 +248,7 @@ describe("ProjectProcessor", () => {
         { sortField: "organisationName", sortUp: false }
       );
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       await expect(processor.findMany({ sort: { field: "uuid" } })).rejects.toThrow(BadRequestException);
     });
 
@@ -260,14 +260,14 @@ describe("ProjectProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      policyService.getPermissions.mockResolvedValue([]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
 
     describe("processSideload", () => {
       it("throws if the sideloads includes something unsupported", async () => {
         const project = await ProjectFactory.create();
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
         const document = buildJsonApi(ProjectLightDto);
         await processor.loadAssociationData([project.id]);
         await expect(
@@ -279,7 +279,7 @@ describe("ProjectProcessor", () => {
         const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund" });
         await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund" });
         await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund" });
-        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
         const document = buildJsonApi(ProjectLightDto);
         await processor.addIndex(document, {
           sideloads: [
@@ -309,13 +309,13 @@ describe("ProjectProcessor", () => {
   describe("update", () => {
     it("can update the isTest flag", async () => {
       const project = await ProjectFactory.create({ isTest: false });
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       await expect(processor.update(project, { isTest: false })).rejects.toThrow(UnauthorizedException);
       expect(project.isTest).toBe(false);
       await processor.update(project, {});
       expect(project.isTest).toBe(false);
 
-      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([`framework-${project.frameworkKey}`]);
       await processor.update(project, { isTest: true });
       expect(project.isTest).toBe(true);
     });
@@ -337,7 +337,7 @@ describe("ProjectProcessor", () => {
         frameworkKey: "foofund" as FrameworkKey
       });
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       const { models } = await processor.findMany({});
       const { id, dto } = await processor.getLightDto(models[0], new ProjectLightDto());
       expect(id).toEqual(uuid);
@@ -381,7 +381,7 @@ describe("ProjectProcessor", () => {
         const { dto: fullDto } = await processor.getFullDto(project!);
         expect(fullDto.plantingStatus).toBe("replacement-planting");
 
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
         expect(lightDto.plantingStatus).toBe("replacement-planting");
@@ -394,7 +394,7 @@ describe("ProjectProcessor", () => {
         const { dto: fullDto } = await processor.getFullDto(project!);
         expect(fullDto.plantingStatus).toBeNull();
 
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
         expect(lightDto.plantingStatus).toBeNull();
@@ -778,7 +778,7 @@ describe("ProjectProcessor", () => {
     });
 
     it("writes all projects to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await Project.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

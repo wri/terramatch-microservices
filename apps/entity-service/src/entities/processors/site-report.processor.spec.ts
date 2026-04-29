@@ -50,7 +50,7 @@ describe("SiteReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -481,7 +481,7 @@ describe("SiteReportProcessor", () => {
       const siteReport = await SiteReportFactory.create();
       await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       const document = buildJsonApi(SiteReportLightDto);
       await processor.addIndex(document, {
         sideloads: [{ entity: "treeSpecies", pageSize: 5 }]
@@ -502,7 +502,7 @@ describe("SiteReportProcessor", () => {
 
   describe("getReportTitleBase", () => {
     beforeEach(() => {
-      processor["entitiesService"].getUserLocale = jest.fn(async () => "en-US");
+      jest.spyOn(processor["entitiesService"], "userLocale", "get").mockReturnValue("en-US");
       processor["entitiesService"].localizeText = jest.fn(async str => str);
     });
 
@@ -549,7 +549,7 @@ describe("SiteReportProcessor", () => {
     });
 
     it("writes all site reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await SiteReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

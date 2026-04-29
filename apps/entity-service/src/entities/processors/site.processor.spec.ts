@@ -53,7 +53,7 @@ describe("SiteProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -164,7 +164,7 @@ describe("SiteProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      policyService.getPermissions.mockResolvedValue([]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
 
@@ -180,7 +180,7 @@ describe("SiteProcessor", () => {
 
     describe("processSideloads", () => {
       it("should throw", async () => {
-        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
         await SiteFactory.create({ frameworkKey: "terrafund" });
         await expect(
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
@@ -240,7 +240,7 @@ describe("SiteProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a site", async () => {
       const site = await SiteFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -248,13 +248,13 @@ describe("SiteProcessor", () => {
     it("should not allow a non-admin to delete a site if it has reports", async () => {
       const site = await SiteFactory.create();
       await SiteReportFactory.create({ siteId: site.id });
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a site if it has no reports", async () => {
       const site = await SiteFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -324,7 +324,7 @@ describe("SiteProcessor", () => {
     });
 
     it("writes all sites to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await Site.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

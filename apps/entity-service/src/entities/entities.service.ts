@@ -14,8 +14,7 @@ import {
   Seeding,
   Strata,
   Tracking,
-  TreeSpecies,
-  User
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
@@ -50,7 +49,6 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { EntityCreateData } from "./dto/entity-create.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -66,6 +64,7 @@ import {
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -170,8 +169,8 @@ export class EntitiesService {
     return this.configService.get<string>("DEPLOY_ENV") === "prod";
   }
 
-  async getPermissions() {
-    return this.userId == null ? undefined : await this.policyService.getPermissions();
+  get permissions() {
+    return this.userId == null ? undefined : this.policyService.permissions;
   }
 
   async authorize(action: string, subject: Model | Model[]) {
@@ -179,7 +178,7 @@ export class EntitiesService {
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
-    const permissions = await this.getPermissions();
+    const permissions = this.permissions;
     return permissions == null ? false : permissions.includes(`framework-${frameworkKey}`);
   }
 
@@ -209,16 +208,12 @@ export class EntitiesService {
     );
   }
 
-  private _userLocale?: ValidLocale;
-  async getUserLocale() {
-    if (this._userLocale == null) {
-      this._userLocale = (await User.findLocale(this.userId)) ?? "en-US";
-    }
-    return this._userLocale;
+  get userLocale() {
+    return userLocale() ?? "en-US";
   }
 
   async localizeText(text: string, params?: ITranslateParams) {
-    return await this.localizationService.localizeText(text, await this.getUserLocale(), params);
+    return await this.localizationService.localizeText(text, this.userLocale, params);
   }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {

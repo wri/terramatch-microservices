@@ -50,7 +50,7 @@ describe("NurseryReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -521,7 +521,7 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("writes all nursery reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
       await NurseryReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

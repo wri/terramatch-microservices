@@ -54,7 +54,7 @@ describe("FormsController", () => {
 
   describe("delete", () => {
     beforeEach(() => {
-      policyService.getPermissions.mockResolvedValue(["custom-forms_manage"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["custom-forms_manage"]);
     });
 
     it("deletes a published form", async () => {

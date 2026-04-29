@@ -174,7 +174,7 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -310,7 +310,7 @@ export class SiteReportProcessor extends ReportProcessor<
     } else if (projectUuid != null) {
       where["$site.project.uuid$"] = projectUuid;
     } else {
-      const permissions = await this.entitiesService.getPermissions();
+      const permissions = this.entitiesService.permissions;
       where.frameworkKey = frameworkKey;
       where["$site.project.is_test$"] = false;
       if (permissions?.includes("manage-own")) {
@@ -338,7 +338,7 @@ export class SiteReportProcessor extends ReportProcessor<
     source: PaginatedQueryBuilder<SiteReport> | SiteReport[],
     fileName?: string
   ) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = {
       ...(adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS),
@@ -389,7 +389,7 @@ export class SiteReportProcessor extends ReportProcessor<
   protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {
     if (dueAt == null) return title ?? "";
 
-    const locale = await this.entitiesService.getUserLocale();
+    const locale = this.entitiesService.userLocale;
 
     const getRangeTitle = async () => {
       const adjustedDate = new Date(dueAt);

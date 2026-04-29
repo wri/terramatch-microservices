@@ -46,7 +46,7 @@ describe("EntityAssociationsController", () => {
 
   describe("associationIndex", () => {
     it("should call getBaseEntity", async () => {
-      policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["view-dashboard"]);
       const pr = await ProjectReportFactory.create();
       const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport, entitiesService);
       entitiesService.createAssociationProcessor.mockImplementation(() => processor);
@@ -78,7 +78,7 @@ describe("EntityAssociationsController", () => {
     });
 
     it("should throw if the base entity is not found", async () => {
-      policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["view-dashboard"]);
       await expect(
         controller.associationIndex(
           {

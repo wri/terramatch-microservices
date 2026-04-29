@@ -155,7 +155,7 @@ export class NurseryReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -258,7 +258,7 @@ export class NurseryReportProcessor extends ReportProcessor<
         undefined;
       where["$nursery.project.uuid$"] = projectUuid;
     } else {
-      const permissions = await this.entitiesService.getPermissions();
+      const permissions = this.entitiesService.permissions;
       where.frameworkKey = frameworkKey;
       where["$nursery.project.is_test$"] = false;
       if (permissions?.includes("manage-own")) {
@@ -287,7 +287,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     source: PaginatedQueryBuilder<NurseryReport> | NurseryReport[],
     fileName?: string
   ) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS;
 
@@ -305,7 +305,7 @@ export class NurseryReportProcessor extends ReportProcessor<
 
     const adjustedDate = new Date(dueAt);
     adjustedDate.setMonth(adjustedDate.getMonth() - 1);
-    const locale = await this.entitiesService.getUserLocale();
+    const locale = this.entitiesService.userLocale;
     const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
 
     adjustedDate.setMonth(adjustedDate.getMonth() - 5);

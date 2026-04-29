@@ -14,8 +14,7 @@ import {
   FundingProgramme,
   LocalizationKey,
   Media,
-  Stage,
-  User
+  Stage
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -55,7 +54,7 @@ import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
@@ -67,7 +66,6 @@ import {
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
-import { getRequestCached } from "@terramatch-microservices/common/util/request";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -510,16 +508,13 @@ export class FormsService {
     ];
   }
 
-  private async getUserLocale() {
-    return await getRequestCached("userLocale", async () => {
-      const userId = authenticatedUserId();
-      const locale = userId == null ? undefined : await User.findLocale(userId);
-      if (locale == null) {
-        throw new BadRequestException("Locale is required");
-      }
+  private get userLocale() {
+    const locale = userLocale();
+    if (locale == null) {
+      throw new BadRequestException("Locale is required");
+    }
 
-      return locale;
-    });
+    return locale;
   }
 
   private async getTranslationsForFullDto(
@@ -544,7 +539,7 @@ export class FormsService {
         uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds, optionI18nIds])),
         isNotNull
       ),
-      await this.getUserLocale()
+      this.userLocale
     );
   }
 

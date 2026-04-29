@@ -79,7 +79,7 @@ describe("TasksService", () => {
         paginationTotal = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; paginationTotal?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { tasks, total } = await service.getTasks(query);
       expect(tasks.length).toBe(expected.length);
       expect(total).toBe(paginationTotal);
@@ -230,7 +230,7 @@ describe("TasksService", () => {
     it("should add all task details", async () => {
       const project = await ProjectFactory.create();
       const task = await TaskFactory.create({ projectId: project.id });
-      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([`framework-${project.frameworkKey}`]);
       const projectReport = await ProjectReportFactory.create({
         taskId: task.id,
         projectId: project.id,
@@ -311,7 +311,7 @@ describe("TasksService", () => {
 
     it("should throw if there is an incomplete report", async () => {
       const project = await ProjectFactory.create();
-      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([`framework-${project.frameworkKey}`]);
       const task = await TaskFactory.create({ projectId: project.id });
       await ProjectReportFactory.create({
         taskId: task.id,
@@ -324,7 +324,7 @@ describe("TasksService", () => {
 
     it("should ensure all reports are in a complete state", async () => {
       const project = await ProjectFactory.create();
-      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue([`framework-${project.frameworkKey}`]);
       const task = await TaskFactory.create({ projectId: project.id });
       const projectReport = await ProjectReportFactory.create({
         taskId: task.id,

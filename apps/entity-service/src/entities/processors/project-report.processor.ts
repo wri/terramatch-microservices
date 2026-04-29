@@ -150,7 +150,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -311,7 +311,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (projectUuid != null) {
       where["$project.uuid$"] = projectUuid;
     } else {
-      const permissions = await this.entitiesService.getPermissions();
+      const permissions = this.entitiesService.permissions;
       where.frameworkKey = frameworkKey;
       where["$project.is_test$"] = false;
       if (permissions?.includes("manage-own")) {
@@ -335,7 +335,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     source: PaginatedQueryBuilder<ProjectReport> | ProjectReport[],
     fileName?: string
   ) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = {
       ...(adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS),

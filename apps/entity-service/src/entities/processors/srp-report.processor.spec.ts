@@ -67,7 +67,7 @@ describe("SrpReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -206,7 +206,7 @@ describe("SrpReportProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await SrpReport.truncate();
       const projects = orderBy(await ProjectFactory.createMany(2, { frameworkKey: "ppc" }), "id");
       const reports = [

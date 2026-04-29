@@ -195,7 +195,7 @@ export class ProjectProcessor extends EntityProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -806,7 +806,7 @@ export class ProjectProcessor extends EntityProcessor<
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
     const where: WhereOptions<Project> = { isTest: false, frameworkKey };
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     if (permissions?.includes("manage-own")) {
       where["id"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
     } else if (permissions?.includes("projects-manage")) {

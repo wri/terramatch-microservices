@@ -18,7 +18,6 @@ import {
   Nursery,
   NurseryReport,
   Organisation,
-  Permission,
   Project,
   ProjectPitch,
   ProjectPolygon,
@@ -60,11 +59,10 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
-import { authenticatedUserId } from "../guards/auth.guard";
+import { authenticatedUserId, permissions, policyBuilder } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
-import { getRequestCached } from "../util/request";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,7 +105,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [User, UserPolicy]
 ];
 
-class PolicyBuilder {
+export class PolicyBuilder {
   private builder: AbilityBuilder<MongoAbility>;
   private loadedPolicyClasses: PolicyClass[] = [];
   private ability: MongoAbility | undefined;
@@ -140,11 +138,11 @@ export class PolicyService {
     return authenticatedUserId();
   }
 
-  async getPermissions() {
-    return await getRequestCached("permissions", async () => {
-      if (this.userId == null) throw new UnauthorizedException();
-      return await Permission.getUserPermissionNames(this.userId);
-    });
+  get permissions() {
+    const value = permissions();
+    if (value == null) throw new UnauthorizedException();
+
+    return value;
   }
 
   async hasAccess(action: string, subject: Model | EntityClass | Model[]) {
@@ -167,10 +165,9 @@ export class PolicyService {
   }
 
   private async getAbilityWith(policyClass: PolicyClass) {
-    const builder = await getRequestCached(
-      "policyBuilder",
-      async () => new PolicyBuilder(this.userId as number, await this.getPermissions())
-    );
+    const builder = policyBuilder();
+    if (builder == null) throw new UnauthorizedException();
+
     return await builder.getAbilityWith(policyClass);
   }
 }

@@ -34,6 +34,7 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
   update = jest.fn(() => Promise.resolve());
   create = jest.fn(() => Promise.resolve(new Project()));
   loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
+  export = jest.fn(() => Promise.resolve());
   exportAll = jest.fn(() => Promise.resolve());
 }
 
@@ -65,7 +66,7 @@ describe("EntitiesController", () => {
 
   describe("entityIndex", () => {
     it("should call findMany", async () => {
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" } as EntityQueryDto;
       await controller.entityIndex({ entity: "projects" }, query);
       expect(processor.findMany).toHaveBeenCalledWith(query);
@@ -79,7 +80,7 @@ describe("EntitiesController", () => {
         number,
         ProjectLightDto
       >);
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
       policyService.authorize.mockResolvedValue();
 
       const result = serialize(await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto));
@@ -93,7 +94,7 @@ describe("EntitiesController", () => {
   describe("entityExportAll", () => {
     it("should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
       await expect(
         controller.entityExportAll({ entity: "projects" }, { frameworkKey: "ppc" }, {} as Response)
       ).rejects.toThrow(UnauthorizedException);

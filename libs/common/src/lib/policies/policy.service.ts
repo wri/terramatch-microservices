@@ -31,7 +31,7 @@ import {
   Tracking,
   User
 } from "@terramatch-microservices/database/entities";
-import { AbilityBuilder, createMongoAbility } from "@casl/ability";
+import { AbilityBuilder, createMongoAbility, MongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
@@ -107,6 +107,24 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [User, UserPolicy]
 ];
 
+class PolicyBuilder {
+  private builder: AbilityBuilder<MongoAbility>;
+  private loadedPolicyClasses: PolicyClass[] = [];
+  private ability: MongoAbility | undefined;
+
+  constructor(private readonly userId: number, private readonly permissions: string[]) {
+    this.builder = new AbilityBuilder(createMongoAbility);
+  }
+
+  async getAbilityWith(policyClass: PolicyClass) {
+    if (this.ability != null && this.loadedPolicyClasses.includes(policyClass)) return this.ability;
+
+    await new policyClass(this.userId, this.permissions, this.builder).addRules();
+    this.loadedPolicyClasses.push(policyClass);
+    return (this.ability = this.builder.build());
+  }
+}
+
 /**
  * A service for finding the correct policy given an entity subject, building rules for the currently
  * authenticated user and checking the given action and subject against those rules.
@@ -149,13 +167,10 @@ export class PolicyService {
   }
 
   private async getAbilityWith(policyClass: PolicyClass) {
-    const builder = await getRequestCached("policyBuilder", async () => new AbilityBuilder(createMongoAbility));
-    const loadedPolicyClasses = await getRequestCached<PolicyClass[]>("loadedPolicyClasses", async () => []);
-    if (!loadedPolicyClasses.includes(policyClass) && this.userId != null) {
-      await new policyClass(this.userId, await this.getPermissions(), builder).addRules();
-      loadedPolicyClasses.push(policyClass);
-    }
-
-    return builder.build();
+    const builder = await getRequestCached(
+      "policyBuilder",
+      async () => new PolicyBuilder(this.userId as number, await this.getPermissions())
+    );
+    return await builder.getAbilityWith(policyClass);
   }
 }

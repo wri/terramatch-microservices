@@ -8,7 +8,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 describe("ProjectPolicy", () => {
   let service: PolicyService;
@@ -26,22 +26,19 @@ describe("ProjectPolicy", () => {
   });
 
   it("allows reading all projects with projects-read permissions", async () => {
-    mockUserId(123);
-    mockPermissions("projects-read");
+    mockRequestContext({ userId: 123, permissions: ["projects-read"] });
     await expectCan(service, "read", new Project());
     await expectCannot(service, "delete", new Project());
   });
 
   it("allows reading all projects with view-dashboard permissions", async () => {
-    mockUserId(123);
-    mockPermissions("view-dashboard");
+    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new Project());
     await expectCannot(service, "delete", new Project());
   });
 
   it("allows managing projects in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
     const tf = await ProjectFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -51,10 +48,9 @@ describe("ProjectPolicy", () => {
   });
 
   it("allows managing own projects", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
 
     const p1 = await ProjectFactory.create({ status: "started", organisationId: org.id });
     const p2 = await ProjectFactory.create({ status: "started" });
@@ -79,9 +75,8 @@ describe("ProjectPolicy", () => {
   });
 
   it("allows reading and deleting managed projects", async () => {
-    mockPermissions("projects-manage");
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });

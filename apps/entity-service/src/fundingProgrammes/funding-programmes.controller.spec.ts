@@ -13,7 +13,7 @@ import {
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { StoreFundingProgrammeAttributes } from "./dto/funding-programme.dto";
 import { faker } from "@faker-js/faker";
@@ -68,7 +68,7 @@ describe("FundingProgrammesController", () => {
 
     it("returns no funding programmes if the user doesn't have an org", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await FundingProgrammeFactory.createMany(3);
       await controller.index({ translated: false });
@@ -81,7 +81,7 @@ describe("FundingProgrammesController", () => {
       const org2 = await OrganisationFactory.create({ type: "gov" });
       const user = await UserFactory.create({ organisationId: org.id });
       await OrganisationUserFactory.create({ organisationId: org2.id, userId: user.id, status: "approved" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       await FundingProgramme.truncate();
       const programmes = [
@@ -112,7 +112,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       await FundingProgramme.truncate();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       await controller.index({});
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
@@ -142,7 +142,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       const programme = await FundingProgrammeFactory.create();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       await controller.get({ uuid: programme.uuid }, {});
       await programme.reload();
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(

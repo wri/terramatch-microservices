@@ -16,7 +16,7 @@ import {
   FundingTypeFactory
 } from "@terramatch-microservices/database/factories";
 import { Organisation, Media, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -60,7 +60,7 @@ describe("OrganisationsService", () => {
     });
 
     it("should throw error if non-admin user is not authenticated", async () => {
-      mockUserId(undefined);
+      mockRequestContext();
       jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       await expect(service.findMany({})).rejects.toThrow(BadRequestException);
     });
@@ -73,7 +73,7 @@ describe("OrganisationsService", () => {
       const project = await ProjectFactory.create({ organisationId: org2.id });
       await user.$add("projects", project);
 
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       const result = await service.findMany({});
 
@@ -122,7 +122,7 @@ describe("OrganisationsService", () => {
         isTest: false,
         name: "Public Org"
       });
-      mockUserId(999);
+      mockRequestContext({ userId: 999 });
       jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       const result = await service.findMany({ view: "public" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);

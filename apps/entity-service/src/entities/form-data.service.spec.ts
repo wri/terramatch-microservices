@@ -33,7 +33,11 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
-import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import {
+  mockTranslateFieldsWithOriginal,
+  mockRequestContext,
+  serialize
+} from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
   RelationResourceCollector
@@ -120,7 +124,7 @@ describe("FormDataService", () => {
     it("creates an update request if the user cannot update answers", async () => {
       const site = await SiteFactory.create();
       policyService.hasAccess.mockResolvedValue(false);
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
 
@@ -186,8 +190,7 @@ describe("FormDataService", () => {
     });
 
     it("does additional report processing", async () => {
-      mockUserId(123);
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      mockRequestContext({ userId: 123, permissions: ["manage-own"] });
       policyService.hasAccess.mockResolvedValue(true);
       const siteReport = await SiteReportFactory.create({ submittedAt: null, nothingToReport: true });
       const form = await EntityFormFactory.siteReport(siteReport).create();
@@ -428,7 +431,7 @@ describe("FormDataService", () => {
       const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       const stage = await StageFactory.create({});
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       const submission = await FormSubmissionFactory.create({
         answers: { [conditional.uuid]: true },
         organisationUuid: org.uuid,

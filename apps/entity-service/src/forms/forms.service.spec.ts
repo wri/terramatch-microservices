@@ -33,7 +33,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import {
+  mockTranslateFieldsWithOriginal,
+  mockRequestContext,
+  serialize
+} from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
@@ -159,7 +163,7 @@ describe("FormsService", () => {
 
   describe("addFullDto", () => {
     const setupTestForm = async (translated: boolean) => {
-      mockUserId((await UserFactory.create()).id);
+      mockRequestContext({ userId: (await UserFactory.create()).id });
       mediaService.getUrl.mockReturnValue("fake-url");
       localizationService.translateIds.mockResolvedValue({
         1: "First Translation",
@@ -306,7 +310,7 @@ describe("FormsService", () => {
     };
 
     it("throws if the user ID is invalid", async () => {
-      mockUserId(0);
+      mockRequestContext({ userId: 0 });
       await expect(
         service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), await FormFactory.create(), true)
       ).rejects.toThrow(BadRequestException);
@@ -329,7 +333,7 @@ describe("FormsService", () => {
 
   describe("store", () => {
     beforeEach(() => {
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       localizationService.generateI18nId.mockResolvedValue(1);
     });
 

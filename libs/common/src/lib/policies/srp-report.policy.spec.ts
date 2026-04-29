@@ -5,11 +5,11 @@ import { SrpReport } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
   ProjectFactory,
-  SrpReportFactory,
   ProjectUserFactory,
+  SrpReportFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 describe("SrpReportPolicy", () => {
   let service: PolicyService;
@@ -27,15 +27,13 @@ describe("SrpReportPolicy", () => {
   });
 
   it("allows reading all disturbance reports with view-dashboard permissions", async () => {
-    mockUserId(123);
-    mockPermissions("view-dashboard");
+    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new SrpReport());
     await expectCannot(service, "delete", new SrpReport());
   });
 
   it("allows managing disturbance reports in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await SrpReportFactory.create({ frameworkKey: "ppc" });
     const tf = await SrpReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -45,10 +43,9 @@ describe("SrpReportPolicy", () => {
   });
 
   it("allows managing disturbance reports for own projects", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -78,9 +75,8 @@ describe("SrpReportPolicy", () => {
   });
 
   it("allows managing disturbance reports for managed projects", async () => {
-    mockPermissions("projects-manage");
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

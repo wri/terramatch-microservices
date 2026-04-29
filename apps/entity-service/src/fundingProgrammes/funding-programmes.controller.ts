@@ -35,7 +35,7 @@ import {
   getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
 import { difference, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -93,7 +93,7 @@ export class FundingProgrammesController {
       fundingProgrammes = await FundingProgramme.findAll();
     }
 
-    const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
+    const locale = query.translated === false ? undefined : userLocale();
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
       requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`
@@ -113,7 +113,7 @@ export class FundingProgrammesController {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
-    const locale = translated === false ? undefined : await User.findLocale(authenticatedUserId());
+    const locale = translated === false ? undefined : userLocale();
     await this.policyService.authorize("read", fundingProgramme);
 
     return await this.formDataService.addFundingProgrammeDtos(

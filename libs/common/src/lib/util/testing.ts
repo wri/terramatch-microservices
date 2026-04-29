@@ -1,7 +1,6 @@
 /* istanbul ignore file */
 import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "./json-api-builder";
 import { RequestContext } from "nestjs-request-context";
-import { Permission } from "@terramatch-microservices/database/entities";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { LinkedField, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -11,6 +10,8 @@ import { Dictionary } from "lodash";
 import { LocalizationService, Translations } from "../localization/localization.service";
 import { Model } from "sequelize-typescript";
 import { Attributes } from "sequelize";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { PolicyBuilder } from "../policies/policy.service";
 
 /**
  * A utility for unit tests that can take any likely response from a standard v3 controller and
@@ -25,18 +26,20 @@ export const serialize = (data: JsonApiDocument | DocumentBuilder | ResourceBuil
 /**
  * Mock the request context userId, which is relied on in many controllers and services
  */
-export function mockUserId(userId?: number) {
-  jest
-    .spyOn(RequestContext, "currentContext", "get")
-    .mockReturnValue({ req: { authenticatedUserId: userId }, res: {} });
-}
-
-/**
- * Mock the permissions returned from the `getUserPermissionNames` method on the Permission entity,
- * effectively setting the permissions for the currently logged in user.
- */
-export function mockPermissions(...permissions: string[]) {
-  Permission.getUserPermissionNames = jest.fn().mockResolvedValue(permissions);
+export function mockRequestContext({
+  userId,
+  permissions = [],
+  locale
+}: { userId?: number; permissions?: string[] | null; locale?: ValidLocale } = {}) {
+  jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
+    req: {
+      authenticatedUserId: userId,
+      permissions: permissions,
+      userLocale: locale,
+      policyBuilder: userId == null || permissions == null ? undefined : new PolicyBuilder(userId, permissions)
+    },
+    res: {}
+  });
 }
 
 export const getRelation = (key: string) => getLinkedFieldConfig(key)?.field as LinkedRelation;

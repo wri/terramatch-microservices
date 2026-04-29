@@ -16,7 +16,7 @@ import {
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { sortBy } from "lodash";
 import FakeTimers from "@sinonjs/fake-timers";
@@ -64,7 +64,7 @@ describe("ApplicationsController", () => {
       const user = await UserFactory.create({ organisationId: orgs[0].id });
       await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
       await OrganisationUserFactory.create({ organisationId: orgs[2].id, userId: user.id, status: "pending" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
       const apps = await Promise.all(orgs.map(({ uuid }) => ApplicationFactory.create({ organisationUuid: uuid })));
       const userApps = apps.slice(0, 2); // the third is not a confirmed org association
@@ -222,7 +222,7 @@ describe("ApplicationsController", () => {
       const app = await ApplicationFactory.create({ fundingProgrammeUuid: fundingProgramme.uuid });
       const stage = await StageFactory.create({});
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       const submissions = [
         await FormSubmissionFactory.create({
           applicationId: app.id,

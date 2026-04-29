@@ -8,7 +8,7 @@ import {
   TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 describe("TaskPolicy", () => {
   let service: PolicyService;
@@ -26,8 +26,7 @@ describe("TaskPolicy", () => {
   });
 
   it("allows reading and updating tasks in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
     const ppcTask = await TaskFactory.create({ projectId: ppc.id });
     ppcTask.project = ppc;
@@ -42,10 +41,9 @@ describe("TaskPolicy", () => {
   });
 
   it("allows reading and updating tasks for own projects", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -74,9 +72,8 @@ describe("TaskPolicy", () => {
   });
 
   it("allows reading and updating tasks for managed projects", async () => {
-    mockPermissions("projects-manage");
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

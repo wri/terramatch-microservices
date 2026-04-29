@@ -1,23 +1,18 @@
 import { OptionLabelModel, OptionLabelsController } from "./option-labels.controller";
 import { Test } from "@nestjs/testing";
-import { FormOptionList, FormOptionListOption, FormQuestion, User } from "@terramatch-microservices/database/entities";
+import { FormOptionList, FormOptionListOption, FormQuestion } from "@terramatch-microservices/database/entities";
 import {
   FormOptionListFactory,
   FormOptionListOptionFactory,
   FormQuestionOptionFactory
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
-
-const mockLocale = (locale: ValidLocale) => {
-  jest.spyOn(User, "findOne").mockResolvedValue({ locale } as User);
-};
 
 describe("OptionsLabelsController", () => {
   let controller: OptionLabelsController;
@@ -40,12 +35,12 @@ describe("OptionsLabelsController", () => {
 
   describe("optionLabelsIndex", () => {
     it("should throw an error if ids is empty", async () => {
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       await expect(controller.optionLabelsIndex([])).rejects.toThrow("Set of ids is required");
     });
 
     it("should throw if no locale is found", async () => {
-      mockUserId(-1);
+      mockRequestContext({ userId: -1 });
       await expect(controller.optionLabelsIndex(["1"])).rejects.toThrow("Locale is required");
     });
 
@@ -54,8 +49,7 @@ describe("OptionsLabelsController", () => {
       options.push(await FormOptionListOptionFactory.create({ imageUrl: faker.internet.url() }));
       await FormOptionListOptionFactory.create();
 
-      mockLocale("en-US");
-      mockUserId(123);
+      mockRequestContext({ userId: 123, locale: "en-US" });
       const document = serialize(await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[]));
       expect(document.data).toHaveLength(options.length);
       for (const { slug, label, imageUrl } of options) {
@@ -73,8 +67,7 @@ describe("OptionsLabelsController", () => {
       await FormOptionListOptionFactory.create();
       options.push((await FormQuestionOptionFactory.forQuestion().create()) as OptionLabelModel);
 
-      mockLocale("en-US");
-      mockUserId(123);
+      mockRequestContext({ userId: 123, locale: "en-US" });
       const document = serialize(await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[]));
       expect(document.data).toHaveLength(options.length);
       for (const { slug, label, imageUrl } of options) {
@@ -87,8 +80,7 @@ describe("OptionsLabelsController", () => {
     });
 
     it("should throw an error if no ids are found", async () => {
-      mockLocale("en-US");
-      mockUserId(123);
+      mockRequestContext({ userId: 123, locale: "en-US" });
       await expect(controller.optionLabelsIndex(["1", "2"])).rejects.toThrow("No records matching the given ids exist");
     });
 
@@ -100,8 +92,7 @@ describe("OptionsLabelsController", () => {
       const options = [listOption, questionOption];
       const translations = [translation1, translation2];
 
-      mockLocale("es-MX");
-      mockUserId(123);
+      mockRequestContext({ userId: 123, locale: "es-MX" });
       const document = serialize(await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[]));
       expect(document.data).toHaveLength(options.length);
       for (const { slug, labelId, imageUrl } of options) {
@@ -127,25 +118,25 @@ describe("OptionsLabelsController", () => {
     });
 
     it("should throw an error if listKey does not exist", async () => {
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       await expect(controller.findList("fake-list-key")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw an error if the listKey has no associated options", async () => {
       const { key } = await FormOptionListFactory.create();
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       await expect(controller.findList(key)).rejects.toThrow(NotFoundException);
     });
 
     it("should throw if no locale is found", async () => {
-      mockUserId(-1);
+      mockRequestContext({ userId: -1 });
       await expect(controller.findList("fake-list-key")).rejects.toThrow("Locale is required");
     });
 
     it("should return the options associated with the listKey", async () => {
       const { key, id } = await FormOptionListFactory.create();
       const options = await FormOptionListOptionFactory.createMany(5, { formOptionListId: id });
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       const document = serialize(await controller.findList(key));
       expect(document.data).toHaveLength(options.length);
       for (const { slug, label, imageUrl } of options) {

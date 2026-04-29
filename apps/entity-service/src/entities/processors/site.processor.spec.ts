@@ -23,11 +23,13 @@ import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
   let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     await Site.truncate();
@@ -35,6 +37,10 @@ describe("SiteProcessor", () => {
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
+    configService = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) =>
+      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+    );
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });
 

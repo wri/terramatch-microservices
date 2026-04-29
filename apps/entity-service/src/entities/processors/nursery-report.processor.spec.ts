@@ -20,11 +20,13 @@ import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
   let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     await NurseryReport.truncate();
@@ -32,6 +34,10 @@ describe("NurseryReportProcessor", () => {
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
+    configService = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) =>
+      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+    );
     processor = module.get(EntitiesService).createEntityProcessor("nurseryReports") as NurseryReportProcessor;
   });
 

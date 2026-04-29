@@ -24,11 +24,13 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
   let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     await SiteReport.truncate();
@@ -36,6 +38,10 @@ describe("SiteReportProcessor", () => {
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
+    configService = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) =>
+      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+    );
     processor = module.get(EntitiesService).createEntityProcessor("siteReports") as SiteReportProcessor;
   });
 

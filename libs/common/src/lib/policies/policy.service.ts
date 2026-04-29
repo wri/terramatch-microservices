@@ -1,10 +1,9 @@
-import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
   AnrPlotGeometry,
   Application,
   AuditStatus,
-  Tracking,
   Disturbance,
   DisturbanceReport,
   FinancialIndicator,
@@ -29,6 +28,7 @@ import {
   SiteReport,
   SrpReport,
   Task,
+  Tracking,
   User
 } from "@terramatch-microservices/database/entities";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
@@ -64,6 +64,7 @@ import { authenticatedUserId } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
+import { getRequestCached } from "../util/request";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,20 +114,19 @@ const POLICIES: [EntityClass, PolicyClass][] = [
  * @throws UnauthorizedException if there is no authenticated user id, there's no policy defined for
  *   the subject, or if the requested action is not allowed against the subject for this user.
  */
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class PolicyService {
   private readonly log = new TMLogger(PolicyService.name);
-  private permissions?: string[];
 
   get userId() {
     return authenticatedUserId();
   }
 
   async getPermissions() {
-    if (this.permissions != null) return this.permissions;
-
-    if (this.userId == null) throw new UnauthorizedException();
-    return (this.permissions = await Permission.getUserPermissionNames(this.userId));
+    return await getRequestCached("permissions", async () => {
+      if (this.userId == null) throw new UnauthorizedException();
+      return await Permission.getUserPermissionNames(this.userId);
+    });
   }
 
   async hasAccess(action: string, subject: Model | EntityClass | Model[]) {
@@ -140,14 +140,22 @@ export class PolicyService {
       return false;
     }
 
-    const builder = new AbilityBuilder(createMongoAbility);
-    await new PolicyClass(this.userId, await this.getPermissions(), builder).addRules();
-
-    const ability = builder.build();
+    const ability = await this.getAbilityWith(PolicyClass);
     return subjects.find(subject => ability.cannot(action, subject)) == null;
   }
 
   async authorize(action: string, subject: Model | EntityClass | Model[]) {
     if (!(await this.hasAccess(action, subject))) throw new UnauthorizedException();
+  }
+
+  private async getAbilityWith(policyClass: PolicyClass) {
+    const builder = await getRequestCached("policyBuilder", async () => new AbilityBuilder(createMongoAbility));
+    const loadedPolicyClasses = await getRequestCached<PolicyClass[]>("loadedPolicyClasses", async () => []);
+    if (!loadedPolicyClasses.includes(policyClass) && this.userId != null) {
+      await new policyClass(this.userId, await this.getPermissions(), builder).addRules();
+      loadedPolicyClasses.push(policyClass);
+    }
+
+    return builder.build();
   }
 }

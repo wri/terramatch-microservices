@@ -1,8 +1,7 @@
 import { Response } from "express";
-import { Injectable, NotFoundException, Scope } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import {
   Form,
   FormOptionList,
@@ -68,6 +67,7 @@ import {
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { getRequestCached } from "@terramatch-microservices/common/util/request";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -131,7 +131,7 @@ const SUBMISSION_CSV_ORG_ATTRIBUTES = [
 
 const SUBMISSION_CSV_PITCH_ATTRIBUTES = ["id", "uuid"];
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
 
@@ -510,16 +510,16 @@ export class FormsService {
     ];
   }
 
-  private _userLocale?: ValidLocale;
   private async getUserLocale() {
-    if (this._userLocale == null) {
+    return await getRequestCached("userLocale", async () => {
       const userId = authenticatedUserId();
-      this._userLocale = userId == null ? undefined : await User.findLocale(userId);
-      if (this._userLocale == null) {
+      const locale = userId == null ? undefined : await User.findLocale(userId);
+      if (locale == null) {
         throw new BadRequestException("Locale is required");
       }
-    }
-    return this._userLocale;
+
+      return locale;
+    });
   }
 
   private async getTranslationsForFullDto(

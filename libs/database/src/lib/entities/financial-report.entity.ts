@@ -118,7 +118,7 @@ export class FinancialReport extends Model<FinancialReport> {
   currency: string | null;
 
   @BelongsTo(() => Organisation)
-  organisation: Organisation;
+  organisation: Organisation | null;
 
   @HasMany(() => FinancialIndicator, {
     foreignKey: "financialReportId",

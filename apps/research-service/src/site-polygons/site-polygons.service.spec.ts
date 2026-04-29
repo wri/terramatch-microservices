@@ -1194,7 +1194,7 @@ describe("SitePolygonsService", () => {
       });
     });
 
-    it("should not trigger validation for non-approved status", async () => {
+    it("should not enqueue polygon validation on submit when polygons have no geometry UUID", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
       const status = "submitted";
       const comment = "comment";
@@ -1206,8 +1206,129 @@ describe("SitePolygonsService", () => {
       jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
 
       await service.updateBulkStatus(status, data, comment, user);
+      await new Promise<void>(resolve => setImmediate(resolve));
 
       expect(SitePolygon.update).toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should enqueue polygon validation on submit when user and polygon geometry UUIDs are present", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "submitted";
+      const comment = "comment";
+      const user = { id: 42 } as User;
+      const sitePolygon = {
+        id: 1,
+        uuid: "polygon-1",
+        siteUuid: "site-uuid-1",
+        polygonUuid: "geom-uuid-1"
+      } as SitePolygon;
+      const site = { id: 10, uuid: "site-uuid-1", name: "River Valley Site" } as Site;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(Site, "findOne").mockResolvedValue(site);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 99,
+        uuid: "job-uuid",
+        name: "Polygon Validation",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Queued for automated validation...",
+        createdBy: user.id,
+        metadata: {
+          entity_id: null,
+          entity_type: Site.LARAVEL_TYPE,
+          entity_name: site.name,
+          trigger_type: "submitted"
+        }
+      } as unknown as DelayedJob);
+
+      await service.updateBulkStatus(status, data, comment, user);
+      await new Promise<void>(resolve => setImmediate(resolve));
+
+      expect(SitePolygon.update).toHaveBeenCalled();
+      expect(Site.findOne).toHaveBeenCalledWith({
+        where: { uuid: "site-uuid-1" },
+        attributes: ["id", "name"]
+      });
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Polygon Validation",
+          metadata: expect.objectContaining({
+            entity_name: "River Valley Site"
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["geom-uuid-1"],
+          delayedJobId: 99,
+          siteUuid: "site-uuid-1"
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
+    });
+
+    it("should use site UUID as delayed job entity_name when site row is not found", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "submitted";
+      const comment = "comment";
+      const user = { id: 42 } as User;
+      const sitePolygon = {
+        id: 1,
+        uuid: "polygon-1",
+        siteUuid: "site-uuid-missing",
+        polygonUuid: "geom-uuid-2"
+      } as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 100,
+        uuid: "job-uuid-2",
+        name: "Polygon Validation",
+        totalContent: 1,
+        processedContent: 0,
+        progressMessage: "Queued for automated validation...",
+        createdBy: user.id,
+        metadata: {}
+      } as unknown as DelayedJob);
+
+      await service.updateBulkStatus(status, data, comment, user);
+      await new Promise<void>(resolve => setImmediate(resolve));
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "site-uuid-missing"
+          })
+        })
+      );
+    });
+
+    it("should not enqueue polygon validation on submit when user is null", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "submitted";
+      const comment = "comment";
+      const sitePolygon = {
+        id: 1,
+        uuid: "polygon-1",
+        siteUuid: "site-1",
+        polygonUuid: "geom-uuid-1"
+      } as SitePolygon;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      await service.updateBulkStatus(status, data, comment, null);
+      await new Promise<void>(resolve => setImmediate(resolve));
+
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
 
@@ -1247,6 +1368,45 @@ describe("SitePolygonsService", () => {
 
       expect(SitePolygon.update).toHaveBeenCalled();
       expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("enqueuePolygonValidation", () => {
+    it("no-ops when polygon UUID list is empty after filtering", async () => {
+      jest.spyOn(DelayedJob, "create").mockClear();
+      validationQueue.add.mockClear();
+
+      await service.enqueuePolygonValidation([], 1, { triggerType: "upload" });
+
+      expect(DelayedJob.create).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("dedupes UUIDs and skips Site lookup when siteUuid is not provided", async () => {
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 55,
+        uuid: "dj-55"
+      } as unknown as DelayedJob);
+      const findOneSpy = jest.spyOn(Site, "findOne");
+
+      await service.enqueuePolygonValidation(["dup", "dup", "b"], 9, { triggerType: "gh_push" });
+
+      expect(findOneSpy).not.toHaveBeenCalled();
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: null
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["dup", "b"],
+          delayedJobId: 55
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
     });
   });
 });

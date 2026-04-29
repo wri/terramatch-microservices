@@ -1,12 +1,13 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PolygonGeometry } from "@terramatch-microservices/database/entities";
-import { InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { Geometry } from "@terramatch-microservices/database/constants";
 import { Transaction } from "sequelize";
 import { Polygon } from "geojson";
 
 import { QueryTypes } from "sequelize";
+import { LINEAR_RING_ERROR_MESSAGE } from "../validations/utils/linear-ring.util";
 
 describe("PolygonGeometryCreationService", () => {
   let service: PolygonGeometryCreationService;
@@ -539,6 +540,25 @@ describe("PolygonGeometryCreationService", () => {
 
       expect(result.uuids).toHaveLength(2);
       expect(result.areas).toHaveLength(2);
+    });
+
+    it("should reject Polygon with invalid linear ring before insert", async () => {
+      const geometries: Geometry[] = [
+        {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        }
+      ];
+
+      await expect(service.createGeometriesFromFeatures(geometries, 1)).rejects.toThrow(BadRequestException);
+      await expect(service.createGeometriesFromFeatures(geometries, 1)).rejects.toThrow(LINEAR_RING_ERROR_MESSAGE);
+      expect(mockBulkCreate).not.toHaveBeenCalled();
     });
   });
 

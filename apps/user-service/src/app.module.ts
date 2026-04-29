@@ -21,14 +21,28 @@ import { BullModule } from "@nestjs/bullmq";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 import { UserAssociationController } from "./user-association/user-association.controller";
 import { UserAssociationService } from "./user-association/user-association.service";
+import { USER_SERVICE_EXPORT_QUEUE, UserServiceExportsProcessor } from "./exports/user-service-exports.processor";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+
+const IS_REPL = process.env["REPL"] === "true";
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     CommonModule,
     HealthModule,
-    CommonModule,
-    BullModule.registerQueue({ name: "email" })
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get("REDIS_HOST"),
+          port: configService.get("REDIS_PORT")
+        }
+      })
+    }),
+    BullModule.registerQueue({ name: "email" }),
+    BullModule.registerQueue({ name: USER_SERVICE_EXPORT_QUEUE })
   ],
   controllers: [
     LoginController,
@@ -49,7 +63,9 @@ import { UserAssociationService } from "./user-association/user-association.serv
     OrganisationsService,
     OrganisationCreationService,
     ActionsService,
-    UserAssociationService
+    UserAssociationService,
+
+    ...(IS_REPL ? [] : [UserServiceExportsProcessor])
   ]
 })
 export class AppModule {}

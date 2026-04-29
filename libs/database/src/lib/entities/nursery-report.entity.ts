@@ -127,6 +127,10 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
+  get linkToTerramatch(): CreationOptional<string> {
+    return `https://www.terramatch.org/admin#/nurseryReport/${this.uuid}/show`;
+  }
+
   @AllowNull
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
@@ -165,12 +169,20 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
     return this.nursery?.project?.uuid;
   }
 
+  get projectExportId(): number | undefined {
+    return this.nursery?.project?.exportId;
+  }
+
   get organisationName() {
     return this.nursery?.project?.organisationName;
   }
 
   get organisationUuid() {
     return this.nursery?.project?.organisationUuid;
+  }
+
+  get organisationReadableType() {
+    return this.nursery?.project?.organisationReadableType;
   }
 
   get nurseryName() {

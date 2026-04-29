@@ -4,7 +4,7 @@ import { RelationResourceCollector } from "./index";
 import { Dictionary } from "lodash";
 import { Op } from "sequelize";
 import { EmbeddedLeadershipDto } from "../../dto/leadership.dto";
-import { scopedSync } from "./utils";
+import { pickAttributesForExport, scopedSync } from "./utils";
 
 export function leadershipsCollector(logger: LoggerService): RelationResourceCollector {
   // This has to be created when the collector factory is created instead at module init because
@@ -41,7 +41,7 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       questions[field.collection] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations == null) {
         throw new InternalServerErrorException("missing org for leaderships");
       }
@@ -56,7 +56,18 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       for (const [collection, questionUuid] of Object.entries(questions)) {
         answers[questionUuid] = leaderships
           .filter(leadership => leadership.collection === collection)
-          .map(leadership => new EmbeddedLeadershipDto(leadership));
+          .map(leadership =>
+            forExport
+              ? pickAttributesForExport(leadership, [
+                  "firstName",
+                  "lastName",
+                  "nationality",
+                  "position",
+                  "gender",
+                  "age"
+                ])
+              : new EmbeddedLeadershipDto(leadership)
+          );
       }
     },
 

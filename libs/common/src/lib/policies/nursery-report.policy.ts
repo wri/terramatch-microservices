@@ -20,7 +20,8 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
           "deleteFiles",
           "updateFiles",
           "updateAnswers",
-          "sendReminder"
+          "sendReminder",
+          "exportAll"
         ],
         NurseryReport,
         {

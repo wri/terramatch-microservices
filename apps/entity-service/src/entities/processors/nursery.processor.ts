@@ -8,14 +8,16 @@ import {
   Task
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
-import { EntityProcessor } from "./entity-processor";
+import { EntityProcessor, ExportAllOptions } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { col, fn, Includeable, Op } from "sequelize";
+import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, NotAcceptableException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
+import { Dictionary } from "lodash";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -31,6 +33,22 @@ const ASSOCIATION_FIELD_MAP = {
   country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
+
+const CSV_COLUMNS: Dictionary<string> = {
+  id: "id",
+  uuid: "uuid",
+  linkToTerramatch: "link_to_terramatch",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+  projectExportId: "project_id"
+};
+
+const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
 export class NurseryProcessor extends EntityProcessor<
   Nursery,
@@ -64,26 +82,31 @@ export class NurseryProcessor extends EntityProcessor<
     const builder = await this.entitiesService.buildQuery(Nursery, query, [projectAssociation]);
     if (query.sort?.field != null) {
       if (["name", "startDate", "status", "updateRequestStatus", "createdAt"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["project", "organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "projectName") {
-        builder.order(["project", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["project", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      ?.filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
-    if (frameworkPermissions?.length > 0) {
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
     } else if (permissions?.includes("manage-own")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
+      });
     } else if (permissions?.includes("projects-manage")) {
-      builder.where({ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
+      });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -167,7 +190,8 @@ export class NurseryProcessor extends EntityProcessor<
 
   async delete(nursery: Nursery) {
     const permissions = await this.entitiesService.getPermissions();
-    const managesOwn = permissions.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
+    const managesOwn =
+      permissions?.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
     if (managesOwn) {
       const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
       if (reportCount > 0) {
@@ -216,5 +240,28 @@ export class NurseryProcessor extends EntityProcessor<
 
     // Load the full nursery with necessary associations.
     return (await this.findOne(nursery.uuid)) as Nursery;
+  }
+
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const where: WhereOptions<Nursery> = { "$project.is_test$": false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
+    await this.entitiesService.entityFrameworkExport(
+      "nurseries",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(Nursery, 10, [
+        {
+          association: "project",
+          attributes: ["name", "id", "ppcExternalId"],
+          include: [{ association: "organisation", attributes: ["name", "type"] }]
+        }
+      ]).where(where),
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
+    );
   }
 }

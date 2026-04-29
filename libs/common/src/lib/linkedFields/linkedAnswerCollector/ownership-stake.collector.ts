@@ -2,7 +2,7 @@ import { Organisation, OwnershipStake } from "@terramatch-microservices/database
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { RelationResourceCollector } from "./index";
 import { EmbeddedOwnershipStakeDto } from "../../dto/ownership-stake.dto";
-import { scopedSync } from "./utils";
+import { attributeExporter, scopedSync } from "./utils";
 
 export function ownershipStakeCollector(logger: LoggerService): RelationResourceCollector {
   // This has to be created when the collector factory is created instead at module init because
@@ -32,13 +32,15 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
       questionUuid = addQuestionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations == null) {
         throw new InternalServerErrorException("missing org for ownership stake");
       }
 
       const stakes = await OwnershipStake.organisation(models.organisations.uuid).findAll();
-      answers[questionUuid] = stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
+      answers[questionUuid] = forExport
+        ? stakes.map(attributeExporter(["firstName", "lastName", "title", "gender", "percentOwnership", "yearOfBirth"]))
+        : stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
     },
 
     syncRelation: (...args) => ownershipStakeSync(...args, logger),

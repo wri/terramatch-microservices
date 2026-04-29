@@ -1,8 +1,6 @@
-import { Aggregate, aggregateColumns, EntityProcessor } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
 import {
   Application,
-  Tracking,
-  TrackingEntry,
   Form,
   FormSubmission,
   Media,
@@ -17,15 +15,17 @@ import {
   Site,
   SitePolygon,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
 import { Dictionary, groupBy, sumBy } from "lodash";
-import { Attributes, CreationAttributes, Op, Sequelize } from "sequelize";
+import { Attributes, CreationAttributes, Op, Sequelize, WhereOptions } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
-import { PlantingStatus } from "@terramatch-microservices/database/constants";
+import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ProcessableEntity } from "../entities.service";
@@ -33,8 +33,8 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { EntityDto } from "../dto/entity.dto";
-import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -103,6 +103,29 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "landownerAgreement"
 ];
 
+const CSV_COLUMNS: Dictionary<string> = {
+  exportId: "id",
+  uuid: "uuid",
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  name: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const CSV_ATTRIBUTES = [
+  "id",
+  "ppcExternalId",
+  "uuid",
+  "name",
+  "status",
+  "updateRequestStatus",
+  "createdAt",
+  "updatedAt"
+];
+
 export class ProjectProcessor extends EntityProcessor<
   Project,
   ProjectLightDto,
@@ -133,24 +156,25 @@ export class ProjectProcessor extends EntityProcessor<
 
     if (query.sort?.field != null) {
       if (["name", "plantingStartDate", "country", "shortName"].includes(query.sort.field)) {
-        builder.order([query.sort.field, query.sort.direction ?? "ASC"]);
+        builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
-        builder.order(["organisation", "name", query.sort.direction ?? "ASC"]);
+        builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field !== "id") {
         throw new BadRequestException(`Invalid sort field: ${query.sort.field}`);
       }
     }
 
     const permissions = await this.entitiesService.getPermissions();
-    const frameworkPermissions = permissions
-      .filter(name => name.startsWith("framework-"))
-      .map(name => name.substring("framework-".length) as FrameworkKey);
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
     if (frameworkPermissions.length > 0) {
       builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
-    } else if (permissions.includes("manage-own")) {
-      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId) } });
-    } else if (permissions.includes("projects-manage")) {
-      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId) } });
+    } else if (permissions?.includes("manage-own")) {
+      builder.where({ id: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) } });
+    } else if (permissions?.includes("projects-manage")) {
+      builder.where({ id: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) } });
     }
 
     for (const term of SIMPLE_FILTERS) {
@@ -270,6 +294,9 @@ export class ProjectProcessor extends EntityProcessor<
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
     const plantingStatus = resolveReportPlantingStatus(lastReport);
 
+    const treesToBePlantedSpeciesGoalTotal =
+      (await TreeSpecies.visible().collection("tree-planted").for(project).sum("amount")) ?? 0;
+
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
       plantingStatus,
@@ -278,6 +305,7 @@ export class ProjectProcessor extends EntityProcessor<
       totalNurseries: await Nursery.approved().project(projectId).count(),
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
       totalProjectReports: await ProjectReport.project(projectId).count(),
+      treesToBePlantedSpeciesGoalTotal,
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
@@ -344,12 +372,25 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
+    const treesPlantedGoalYears = sumBy(
+      (trees?.entries ?? []).filter(({ type }) => type === "years"),
+      "amount"
+    );
+    const survivalRateFraction = (project.survivalRate ?? 0) / 100;
+    const treesToBeRestoredGoal = Math.round(treesPlantedGoalYears * survivalRateFraction + goalTreesRestoredAnr);
+
     const seedsGrownGoal = sumBy(
       (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
       "amount"
     );
 
-    return { totalHectaresRestoredGoal, treesGrownGoal, goalTreesRestoredAnr, seedsGrownGoal };
+    return {
+      totalHectaresRestoredGoal,
+      treesGrownGoal,
+      goalTreesRestoredAnr,
+      seedsGrownGoal,
+      treesToBeRestoredGoal
+    };
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {
@@ -691,11 +732,32 @@ export class ProjectProcessor extends EntityProcessor<
         }))
       );
     } else {
-      await ProjectUser.create({ projectId: project.id, userId: this.entitiesService.userId, status: "active" });
+      const userId = this.entitiesService.userId;
+      if (userId == null) throw new BadRequestException("Authenticated user is required");
+      await ProjectUser.create({ projectId: project.id, userId, status: "active" });
     }
 
     // Load the full project with necessary associations.
     return (await this.findOne(project.uuid)) as Project;
+  }
+
+  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+    const where: WhereOptions<Project> = { isTest: false, frameworkKey };
+    const permissions = await this.entitiesService.getPermissions();
+    if (permissions?.includes("manage-own")) {
+      where["id"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["id"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
+    await this.entitiesService.entityFrameworkExport(
+      "projects",
+      CSV_COLUMNS,
+      CSV_ATTRIBUTES,
+      new PaginatedQueryBuilder(Project, 10, [{ association: "organisation", attributes: ["name", "type"] }]).where(
+        where
+      ),
+      { response, frameworkKey, ability: response == null ? undefined : "read" }
+    );
   }
 
   private async getProjectCreationOrg(application: Application | undefined) {

@@ -123,7 +123,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
     valueMap: async ({ elpProject }) => elpProject === 1
   },
   "consortium",
-  "landownerAgreement"
+  "landownerAgreement",
+  "bioeconomyProductList",
+  "bioeconomyProductDescription"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

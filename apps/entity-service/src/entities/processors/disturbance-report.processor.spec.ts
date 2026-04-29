@@ -1,46 +1,36 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { DisturbanceReport } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   DisturbanceReportEntryFactory,
   DisturbanceReportFactory,
+  MediaFactory,
   ProjectFactory,
-  ProjectUserFactory,
-  UserFactory
+  ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 describe("DisturbanceReportProcessor", () => {
   let processor: DisturbanceReportProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
+  let csvExportService: DeepMocked<CsvExportService>;
+  let mediaService: DeepMocked<MediaService>;
 
   beforeEach(async () => {
     await DisturbanceReport.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
+    mediaService = module.get(MediaService);
     processor = module.get(EntitiesService).createEntityProcessor("disturbanceReports") as DisturbanceReportProcessor;
   });
 
@@ -146,7 +136,12 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const projectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
       await DisturbanceReportFactory.createMany(5);
@@ -165,7 +160,7 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should returns own project disturbance reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const ownProjectReports = await DisturbanceReportFactory.createMany(3, { projectId: project.id });
       await DisturbanceReportFactory.createMany(5);
 
@@ -316,6 +311,65 @@ describe("DisturbanceReportProcessor", () => {
       const entries = await processor.getDisturbanceReportEntries(disturbanceReport);
 
       expect(entries).toHaveLength(0);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all reports to the CSV", async () => {
+      await DisturbanceReport.truncate();
+      const disturbanceReport = [await DisturbanceReportFactory.create(), await DisturbanceReportFactory.create()];
+
+      const intensity = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "intensity",
+        value: "low",
+        inputType: "select"
+      });
+      const dateOfDisturbance = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "date-of-disturbance",
+        value: "2023-10-01",
+        inputType: "date"
+      });
+      await DisturbanceReportEntryFactory.report(disturbanceReport[1]).create({
+        name: "site-affected",
+        value: JSON.stringify([{ siteName: "Alderaan" }, { siteName: "Tatooine" }]),
+        inputType: "disturbanceAffectedSite"
+      });
+      await DisturbanceReportEntryFactory.report(disturbanceReport[1]).create({
+        name: "polygon-affected",
+        value: JSON.stringify([{}, [{ polyName: "Poly1" }], [{ polyName: "Poly2" }, { polyName: "Poly3" }]]),
+        inputType: "disturbanceAffectedPolygon"
+      });
+
+      const media = [
+        await MediaFactory.disturbanceReport(disturbanceReport[1]).create({ collectionName: "media" }),
+        await MediaFactory.disturbanceReport(disturbanceReport[1]).create({ collectionName: "media" })
+      ];
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      mediaService.getUrl.mockReturnValue("media-url");
+      await processor.exportAll();
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ uuid: disturbanceReport[0].uuid }),
+        expect.objectContaining({
+          "date-of-disturbance": [dateOfDisturbance.value],
+          intensity: [intensity.value]
+        })
+      );
+      expect(addRow).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ uuid: disturbanceReport[1].uuid }),
+        expect.objectContaining({
+          media: [`media-url (${media[0].name})`, `media-url (${media[1].name})`],
+          "site-affected": ["Alderaan; Tatooine"],
+          "polygon-affected": ["Poly1; Poly2; Poly3"]
+        })
+      );
     });
   });
 });

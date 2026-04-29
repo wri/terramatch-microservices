@@ -26,9 +26,15 @@ import { disturbanceReportEntriesCollector } from "./disturbance-report-entries.
 import { TMLogger } from "../../util/tm-logger";
 import { FormQuestion } from "@terramatch-microservices/database/entities";
 import { getLinkedFieldConfig } from "../index";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
 export type FormTypeMap<T> = Partial<Record<FormModelType, T>>;
 export type FormModels = FormTypeMap<FormModel>;
+
+export type CollectOptions = {
+  forExport?: boolean;
+  frameworkKey?: FrameworkKey;
+};
 
 export interface ResourceCollector<TField extends LinkedField | LinkedFile | LinkedRelation> {
   /**
@@ -39,7 +45,7 @@ export interface ResourceCollector<TField extends LinkedField | LinkedFile | Lin
   /**
    * Execute as few queries as possible to satisfy all current answer data for this form.
    */
-  collect(answers: Dictionary<unknown>, models: FormModels): Promise<void>;
+  collect(answers: Dictionary<unknown>, models: FormModels, opts: CollectOptions): Promise<void>;
 }
 
 export interface FieldResourceCollector extends ResourceCollector<LinkedField> {
@@ -145,10 +151,10 @@ export class LinkedAnswerCollector {
     return answers;
   }
 
-  async collect(answers: Dictionary<unknown>, models: FormModels) {
+  async collect(answers: Dictionary<unknown>, models: FormModels, opts: CollectOptions = {}) {
     await Promise.all(
       [this.fields, this.files, ...Object.values(this.relationCollectors)].map(collector =>
-        collector.collect(answers, models)
+        collector.collect(answers, models, opts)
       )
     );
   }

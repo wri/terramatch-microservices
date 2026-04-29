@@ -1,4 +1,14 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  HasOne,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
 import {
   BIGINT,
   CreationOptional,
@@ -12,6 +22,7 @@ import {
   UUIDV4
 } from "sequelize";
 import { FundingProgramme } from "./funding-programme.entity";
+import { Form } from "./form.entity";
 
 @Table({ tableName: "stages", underscored: true, paranoid: true })
 export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes<Stage>> {
@@ -44,6 +55,9 @@ export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes
   @AllowNull
   @Column(DATE)
   deadlineAt: Date | null;
+
+  @HasOne(() => Form, { foreignKey: "stageId", sourceKey: "uuid", constraints: false })
+  form: Form | null;
 
   /**
    * Resolves to true if this stage is not in a funding programme, or if it's the last stage in its funding programme.

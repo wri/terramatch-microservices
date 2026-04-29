@@ -1,4 +1,5 @@
 import {
+  DisturbanceReport,
   FinancialIndicator,
   Form,
   FormQuestionOption,
@@ -24,6 +25,7 @@ import { FormFactory } from "./form.factory";
 import { FormQuestionOptionFactory } from "./form-question-option.factory";
 import { OrganisationFactory } from "./organisation.factory";
 import { FinancialIndicatorFactory } from "./financial-indicator.factory";
+import { DisturbanceReportFactory } from "./disturbance-report.factory";
 
 const defaultAttributesFactory = async () => ({
   collectionName: faker.lorem.words(1),
@@ -106,5 +108,11 @@ export const MediaFactory = {
       ...(await defaultAttributesFactory()),
       modelType: FundingProgramme.LARAVEL_TYPE,
       modelId: (fp?.id as number) ?? FinancialIndicatorFactory.report().associate("id")
+    })),
+  disturbanceReport: (report?: DisturbanceReport) =>
+    FactoryGirl.define(Media, async () => ({
+      ...(await defaultAttributesFactory()),
+      modelType: DisturbanceReport.LARAVEL_TYPE,
+      modelId: (report?.id as number) ?? DisturbanceReportFactory.associate("id")
     }))
 };

@@ -18,6 +18,7 @@ export const DisturbanceReportConfiguration: LinkedFieldConfiguration<Disturbanc
   relations: {
     "dis-rep-entries": {
       label: "Disturbance Entries",
+      exportHeading: "entries",
       resource: "disturbanceReportEntries",
       inputType: "disturbanceReportEntries"
     }

@@ -6,6 +6,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { Application } from "./application.entity";
 import { Subquery } from "../util/subquery.builder";
 import { removeMedia } from "../hooks/remove-media";
+import { Dictionary } from "lodash";
 
 type OrganisationMedia =
   | "logo"
@@ -36,6 +37,12 @@ type OrganisationMedia =
   | "ownershipDocuments"
   | "carbonCreditsProof"
   | "additionalFinancialDocumentation";
+
+const READABLE_TYPES: Dictionary<string> = {
+  "for-profit-organization": "For Profit Organization",
+  "non-profit-organization": "Non Profit Organization",
+  "government-agency": "Government Agency"
+};
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
 export class Organisation extends Model<Organisation> {
@@ -104,6 +111,10 @@ export class Organisation extends Model<Organisation> {
   @AllowNull
   @Column(STRING)
   type: string | null;
+
+  get readableType(): string {
+    return (this.type != null ? READABLE_TYPES[this.type] : undefined) ?? "Unknown";
+  }
 
   @Default(false)
   @Column(BOOLEAN)

@@ -25,6 +25,7 @@ import { OrganisationUserRejectedEmail } from "./organisation-user-rejected.emai
 import { OrganisationInviteEmail } from "./organisation-invite.email";
 import { AdminReportReminderEmail } from "./admin-report-reminder.email";
 import { AdminFinancialReportReminderEmail } from "./admin-financial-report-reminder.email";
+import { SendLoginDetailsEmail } from "./send-login-details.email";
 
 export type SpecificEntityData = {
   type: EntityType;
@@ -61,7 +62,8 @@ const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME:
   AdminReportReminderEmail,
   AdminFinancialReportReminderEmail,
   TaskDigestEmail,
-  WeeklyPolygonUpdateEmail
+  WeeklyPolygonUpdateEmail,
+  SendLoginDetailsEmail
 ];
 
 /**
@@ -87,7 +89,7 @@ export class EmailProcessor extends WorkerHost {
 
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
-    Sentry.captureException(error);
-    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
+    this.logger.error("Worker event failed", error, job);
+    await Sentry.flush(2000);
   }
 }

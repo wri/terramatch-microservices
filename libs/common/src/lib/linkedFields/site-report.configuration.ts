@@ -75,6 +75,7 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
         collections: ["paid-other-activities", "volunteer-other-activities"]
       },
       label: "Other Activities Description",
+      exportHeading: "otherWorkdaysDescription",
       inputType: "long-text"
     },
     "site-rep-num-trees-regenerating": {
@@ -172,107 +173,125 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
   relations: {
     "site-rep-rel-replanting-tree-species": {
       label: "Replanting Species + Count",
+      exportHeading: "replantingTreeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "replanting"
     },
     "site-rep-rel-tree-species": {
       label: "Tree Species",
+      exportHeading: "treeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "site-rep-rel-non-tree-species": {
       label: "Non Tree Species",
+      exportHeading: "nonTreeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "non-tree"
     },
     "site-rep-rel-anr-tree-species": {
       label: "Regenerating Species",
+      exportHeading: "anrTreeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "anr"
     },
     "site-rep-rel-disturbances": {
       label: "Disturbances",
+      exportHeading: "disturbances",
       resource: "disturbances",
       inputType: "disturbances",
       collection: "disturbance"
     },
     "site-rep-rel-seedings": {
       label: "Seedings",
+      exportHeading: "seedings",
       resource: "seedings",
       inputType: "seedings"
     },
     "site-rep-rel-paid-site-establishment": {
       label: "Paid Site Establishment",
+      exportHeading: "workdaysPaidSiteEstablishment",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-establishment"
     },
     "site-rep-rel-paid-planting": {
       label: "Paid Planting",
+      exportHeading: "workdaysPaidPlanting",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-planting"
     },
     "site-rep-rel-paid-site-maintenance": {
       label: "Paid Site Maintenance",
+      exportHeading: "workdaysPaidSiteMaintenance",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-maintenance"
     },
     "site-rep-rel-paid-site-monitoring": {
       label: "Paid Site Monitoring",
+      exportHeading: "workdaysPaidSiteMonitoring",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-site-monitoring"
     },
     "site-rep-rel-paid-other-activities": {
       label: "Paid Other Activities",
+      exportHeading: "workdaysPaidOtherActivities",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "site-rep-rel-volunteer-site-establishment": {
       label: "Volunteer Site Establishment",
+      exportHeading: "workdaysVolunteerSiteEstablishment",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-establishment"
     },
     "site-rep-rel-volunteer-planting": {
       label: "Volunteer Planting",
+      exportHeading: "workdaysVolunteerPlanting",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-planting"
     },
     "site-rep-rel-volunteer-site-maintenance": {
       label: "volunteer Site Maintenance",
+      exportHeading: "workdaysVolunteerSiteMaintenance",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-maintenance"
     },
     "site-rep-rel-volunteer-site-monitoring": {
       label: "Volunteer Site Monitoring",
+      exportHeading: "workdaysVolunteerSiteMonitoring",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-site-monitoring"
     },
     "site-rep-rel-volunteer-other-activities": {
       label: "Volunteer Other Activities",
+      exportHeading: "workdaysVolunteerOtherActivities",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "site-rep-direct-workdays": {
       label: "Direct Workday",
+      exportHeading: "workdaysDirect",
       resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "site-rep-convergence-workdays": {
       label: "Convergence Workday",
+      exportHeading: "workdaysConvergence",
       resource: "demographics",
       inputType: "workdays",
       collection: "convergence"

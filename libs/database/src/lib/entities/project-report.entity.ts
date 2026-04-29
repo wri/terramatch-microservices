@@ -323,12 +323,20 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.uuid;
   }
 
+  get projectExportId(): number | undefined {
+    return this.project?.exportId;
+  }
+
   get organisationName() {
     return this.project?.organisationName;
   }
 
   get organisationUuid() {
-    return this.project?.organisation?.uuid;
+    return this.project?.organisationUuid;
+  }
+
+  get organisationReadableType() {
+    return this.project?.organisationReadableType;
   }
 
   get taskUuid() {

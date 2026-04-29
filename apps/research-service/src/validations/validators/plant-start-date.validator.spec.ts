@@ -183,15 +183,34 @@ describe("PlantStartDateValidator", () => {
         site_start_date: "2021-01-01",
         allowed_range: {
           min: "2019-01-01",
-          max: "2023-01-01"
+          max: "2024-01-01"
         }
       });
+    });
+
+    it("should return valid when plant start is on the 3-year boundary after site start", async () => {
+      const mockSitePolygon = {
+        polyName: "Test Polygon",
+        plantStart: "2022-01-01", // Exactly 3 years after 2019-01-01
+        siteUuid: "site-uuid-1",
+        site: {
+          name: "Test Site",
+          startDate: new Date("2019-01-01")
+        }
+      } as unknown as SitePolygon;
+
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(mockSitePolygon);
+
+      const result = await validator.validatePolygon("test-uuid");
+
+      expect(result.valid).toBe(true);
+      expect(result.extraInfo).toBeNull();
     });
 
     it("should return invalid when plant start date is outside site range (too late)", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        plantStart: "2022-01-01", // 3 years after site start
+        plantStart: "2022-01-02", // Past 3 years after site start
         siteUuid: "site-uuid-1",
         site: {
           name: "Test Site",
@@ -209,11 +228,11 @@ describe("PlantStartDateValidator", () => {
         polygon_uuid: "test-uuid",
         polygon_name: "Test Polygon",
         site_name: "Test Site",
-        provided_value: "2022-01-01",
+        provided_value: "2022-01-02",
         site_start_date: "2019-01-01",
         allowed_range: {
           min: "2017-01-01",
-          max: "2021-01-01"
+          max: "2022-01-01"
         }
       });
     });
@@ -221,7 +240,7 @@ describe("PlantStartDateValidator", () => {
     it("should return valid when plant start date is within site range", async () => {
       const mockSitePolygon = {
         polyName: "Test Polygon",
-        plantStart: "2020-06-15", // Within 2 years of site start
+        plantStart: "2020-06-15", // Within 2y before / 3y after site start
         siteUuid: "site-uuid-1",
         site: {
           name: "Test Site",

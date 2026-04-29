@@ -126,7 +126,7 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
     return chainScope(this, "type", type) as typeof Tracking;
   }
 
-  static collection(collection: string) {
+  static collection(collection: string | string[]) {
     return chainScope(this, "collection", collection) as typeof Tracking;
   }
 

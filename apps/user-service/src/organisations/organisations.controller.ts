@@ -17,7 +17,12 @@ import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import { OrganisationFullDto, OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
+import {
+  DelayedJobDto,
+  OrganisationFullDto,
+  OrganisationLightDto,
+  UserDto
+} from "@terramatch-microservices/common/dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { USER_ORG_RELATIONSHIP } from "../users/users.controller";
 import { OrganisationCreationService } from "./organisation-creation.service";
@@ -25,8 +30,8 @@ import { ApiOperation } from "@nestjs/swagger";
 import {
   buildDeletedResponse,
   buildJsonApi,
-  getStableRequestQuery,
-  getDtoType
+  getDtoType,
+  getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { Organisation } from "@terramatch-microservices/database/entities";
 import { OrganisationIndexQueryDto } from "./dto/organisation-query.dto";
@@ -43,6 +48,10 @@ import { authenticatedUserId } from "@terramatch-microservices/common/guards/aut
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { DateTime } from "luxon";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { USER_SERVICE_EXPORT_QUEUE, UserServiceExportsProcessor } from "../exports/user-service-exports.processor";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -50,9 +59,11 @@ export class OrganisationsController {
 
   constructor(
     private readonly policyService: PolicyService,
+    private readonly csvExportService: CsvExportService,
     private readonly organisationsService: OrganisationsService,
     private readonly organisationCreationService: OrganisationCreationService,
-    @InjectQueue("email") private readonly emailQueue: Queue
+    @InjectQueue("email") private readonly emailQueue: Queue,
+    @InjectQueue(USER_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
 
   @Get()
@@ -84,6 +95,28 @@ export class OrganisationsController {
         pageNumber: query.page?.number ?? 1
       })
     );
+  }
+
+  @Get("export")
+  @ApiOperation({
+    operationId: "organisationExportCsv",
+    summary: "Export organisations as CSV"
+  })
+  @JsonApiResponse([FileDownloadDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Organisation export not allowed." })
+  async exportCsv() {
+    await this.policyService.authorize("export", Organisation);
+
+    const date = DateTime.now().toISODate();
+    const fileName = `organisations - ${date}.csv`;
+    if (await this.csvExportService.exportExists(fileName)) {
+      return buildJsonApi(FileDownloadDto).addData(
+        "organisationsExport",
+        await this.csvExportService.generateExportDto(fileName)
+      );
+    }
+
+    return UserServiceExportsProcessor.queueOrganisationExport(this.exportQueue, fileName);
   }
 
   @Get(":uuid")

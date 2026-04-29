@@ -100,6 +100,7 @@ describe("FilesController", () => {
       expect(policyService.authorize).toHaveBeenCalledWith("read", model);
       expect(exportImageService.exportImage).toHaveBeenCalledWith(media);
       expect(res.set).toHaveBeenCalledWith({
+        "Access-Control-Expose-Headers": "Content-Disposition",
         "Content-Type": "image/jpeg",
         "Content-Disposition": `attachment; filename="photo.jpg"`,
         "Content-Length": exportResult.buffer.length

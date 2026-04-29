@@ -20,7 +20,8 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
           "uploadFiles",
           "updateFiles",
           "updateAnswers",
-          "sendReminder"
+          "sendReminder",
+          "export"
         ],
         SrpReport,
         {
@@ -40,9 +41,13 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
           ...user.projects.map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
-          this.builder.can(["read", "update", "create", "deleteFiles", "uploadFiles", "updateFiles"], SrpReport, {
-            projectId: { $in: projectIds }
-          });
+          this.builder.can(
+            ["read", "update", "create", "deleteFiles", "uploadFiles", "updateFiles", "export"],
+            SrpReport,
+            {
+              projectId: { $in: projectIds }
+            }
+          );
           this.builder.can("updateAnswers", SrpReport, {
             projectId: { $in: projectIds },
             status: { $in: [STARTED, DUE] }
@@ -72,7 +77,8 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
               "uploadFiles",
               "updateFiles",
               "updateAnswers",
-              "sendReminder"
+              "sendReminder",
+              "export"
             ],
             SrpReport,
             {

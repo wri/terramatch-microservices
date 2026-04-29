@@ -1,17 +1,12 @@
 import { EntitiesService } from "../entities.service";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock } from "@golevelup/ts-jest";
-import { Test, TestingModule } from "@nestjs/testing";
-import { PolicyService } from "@terramatch-microservices/common/policies/policy.service";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import {
   MediaFactory,
-  ProjectFactory,
-  SiteFactory,
   NurseryFactory,
+  NurseryReportFactory,
+  ProjectFactory,
   ProjectReportFactory,
-  SiteReportFactory,
-  NurseryReportFactory
+  SiteFactory,
+  SiteReportFactory
 } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
@@ -19,11 +14,11 @@ import { MediaProcessor } from "./media.processor";
 import { Media } from "@terramatch-microservices/database/entities";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { MediaQueryDto } from "../dto/media-query.dto";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
 
 describe("MediaProcessor", () => {
   let processor: MediaProcessor;
-  let module: TestingModule;
+  let service: EntitiesService;
 
   async function expectMediasEntries(
     response: Media[],
@@ -52,15 +47,7 @@ describe("MediaProcessor", () => {
   }
 
   beforeEach(async () => {
-    module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: createMock<PolicyService>() },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
+    service = (await mockEntityService()).get(EntitiesService);
   });
 
   afterEach(async () => {
@@ -75,9 +62,7 @@ describe("MediaProcessor", () => {
       const projectMedia = await MediaFactory.project(project).create();
       const siteMedia = await MediaFactory.site(site).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", {}) as MediaProcessor;
 
       const document = buildJsonApi(MediaDto, { forceDataArray: true });
       await processor.addDtos(document);
@@ -96,9 +81,7 @@ describe("MediaProcessor", () => {
       const project = await ProjectFactory.create();
       const media = await MediaFactory.project(project).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", {}) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid);
     });
@@ -107,9 +90,7 @@ describe("MediaProcessor", () => {
       const site = await SiteFactory.create();
       const media = await MediaFactory.site(site).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("sites", site.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor("sites", site.uuid, "media", {}) as MediaProcessor;
 
       await expectMediasEntries([media], "sites", site.uuid);
     });
@@ -118,9 +99,7 @@ describe("MediaProcessor", () => {
       const nursery = await NurseryFactory.create();
       const media = await MediaFactory.nursery(nursery).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("nurseries", nursery.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor("nurseries", nursery.uuid, "media", {}) as MediaProcessor;
 
       await expectMediasEntries([media], "nurseries", nursery.uuid);
     });
@@ -134,9 +113,12 @@ describe("MediaProcessor", () => {
       await NurseryReportFactory.create({ nurseryId: nursery.id, dueAt: projectReport.dueAt });
       const media = await MediaFactory.projectReport(projectReport).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projectReports", projectReport.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor(
+        "projectReports",
+        projectReport.uuid,
+        "media",
+        {}
+      ) as MediaProcessor;
 
       await expectMediasEntries([media], "projectReports", projectReport.uuid);
     });
@@ -145,9 +127,7 @@ describe("MediaProcessor", () => {
       const siteReport = await SiteReportFactory.create();
       const media = await MediaFactory.siteReport(siteReport).create();
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("siteReports", siteReport.uuid, "media", {}) as MediaProcessor;
+      processor = service.createAssociationProcessor("siteReports", siteReport.uuid, "media", {}) as MediaProcessor;
 
       await expectMediasEntries([media], "siteReports", siteReport.uuid);
     });
@@ -161,9 +141,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { isGeotagged: true };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
     });
@@ -175,9 +153,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { isGeotagged: false };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
     });
@@ -189,9 +165,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { isPublic: true };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
     });
@@ -203,9 +177,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { fileType: media.fileType ?? undefined };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
     });
@@ -218,9 +190,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { modelType: "sites" };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       const document = buildJsonApi(MediaDto, { forceDataArray: true });
       await processor.addDtos(document);
@@ -244,9 +214,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { modelType: "projectReports" };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       const document = buildJsonApi(MediaDto, { forceDataArray: true });
       await processor.addDtos(document);
@@ -267,9 +235,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { direction: "ASC" };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media, media2], "projects", project.uuid, query);
     });
@@ -281,9 +247,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { direction: "DESC" };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media2, media], "projects", project.uuid, query);
     });
@@ -299,9 +263,7 @@ describe("MediaProcessor", () => {
 
       const query: MediaQueryDto = { search };
 
-      processor = module
-        .get(EntitiesService)
-        .createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
+      processor = service.createAssociationProcessor("projects", project.uuid, "media", query) as MediaProcessor;
 
       await expectMediasEntries([media], "projects", project.uuid, query);
     });

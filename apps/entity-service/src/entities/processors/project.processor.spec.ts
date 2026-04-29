@@ -1,21 +1,18 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
-  Tracking,
-  TrackingEntry,
   Project,
   ProjectReport,
   ProjectUser,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { ProjectProcessor } from "./project.processor";
-import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities.service";
 import {
   ApplicationFactory,
-  TrackingEntryFactory,
-  TrackingFactory,
   EntityFormFactory,
   FormSubmissionFactory,
   MediaFactory,
@@ -30,10 +27,12 @@ import {
   SiteFactory,
   SitePolygonFactory,
   SiteReportFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   TreeSpeciesFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { Dictionary, flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
@@ -44,33 +43,23 @@ import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constan
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { EntityProcessor } from "./entity-processor";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("ProjectProcessor", () => {
   let processor: ProjectProcessor;
   let mediaService: DeepMocked<MediaService>;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await Project.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    mediaService = module.get(MediaService);
+    policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
@@ -102,7 +91,7 @@ describe("ProjectProcessor", () => {
     it("returns my projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId, projectId: id });
+        await ProjectUserFactory.create({ userId: policyService.userId, projectId: id });
       }
       await ProjectFactory.createMany(5);
 
@@ -112,7 +101,12 @@ describe("ProjectProcessor", () => {
     it("returns managed projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId, projectId: id, isMonitoring: false, isManaging: true });
+        await ProjectUserFactory.create({
+          userId: policyService.userId,
+          projectId: id,
+          isMonitoring: false,
+          isManaging: true
+        });
       }
       await ProjectFactory.createMany(5);
 
@@ -539,6 +533,26 @@ describe("ProjectProcessor", () => {
         ),
         "amount"
       );
+      const treesPlantedGoalYears = sumBy(
+        treeEntries.filter(({ type }) => type === "years"),
+        "amount"
+      );
+      const goalTreesRestoredAnr = sumBy(
+        treeEntries.filter(({ type, subtype }) => type === "strategy" && subtype === "anr"),
+        "amount"
+      );
+      const seedsGrownGoal = sumBy(
+        treeEntries.filter(({ type, subtype }) => type === "strategy" && subtype === "direct-seeding"),
+        "amount"
+      );
+      const treesToBeRestoredGoal = Math.round(
+        treesPlantedGoalYears * ((project.survivalRate ?? 0) / 100) + goalTreesRestoredAnr
+      );
+
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 400 });
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 75 });
+      await TreeSpeciesFactory.projectTreePlanted(project).create({ amount: 999, hidden: true });
+      const treesToBePlantedSpeciesGoalTotal = 475;
 
       project = (await processor.findOne(uuid)) as Project;
       const { id, dto } = await processor.getFullDto(project);
@@ -580,7 +594,11 @@ describe("ProjectProcessor", () => {
           projectPitchUuid: null
         },
         totalHectaresRestoredGoal,
-        treesGrownGoal
+        treesGrownGoal,
+        goalTreesRestoredAnr,
+        seedsGrownGoal,
+        treesToBeRestoredGoal,
+        treesToBePlantedSpeciesGoalTotal
       });
     });
   });
@@ -751,6 +769,46 @@ describe("ProjectProcessor", () => {
         expect.objectContaining({ uuid: pitchMedia.uuid }),
         expect.objectContaining({ uuid: project.uuid })
       );
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all projects to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await Project.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      // non-framework project should be ignored
+      await ProjectFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.project(projects[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const result1 = addRow.mock.calls[0][0] as Project;
+      expect(result1).toMatchObject({
+        uuid: projects[0].uuid,
+        name: projects[0].name
+      });
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      const result2 = addRow.mock.calls[1][0] as Project;
+      expect(result2).toMatchObject({
+        uuid: projects[1].uuid,
+        name: projects[1].name
+      });
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
     });
   });
 });

@@ -6,10 +6,12 @@ import {
   CriteriaSiteHistoric,
   PolygonGeometry,
   SitePolygon,
-  Site
+  Site,
+  Project
 } from "@terramatch-microservices/database/entities";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
+import * as GeoJsonStructure from "./utils/geojson-structure-validator";
 
 interface MockSelfIntersectionValidator {
   validatePolygon: jest.MockedFunction<(polygonUuid: string) => Promise<{ valid: boolean; extraInfo: object | null }>>;
@@ -378,6 +380,41 @@ describe("ValidationService", () => {
     });
   });
 
+  describe("getProjectPolygonUuidsForValidation", () => {
+    it("throws NotFoundException when project is not found", async () => {
+      (Project.findByPk as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.getProjectPolygonUuidsForValidation(404)).rejects.toThrow(NotFoundException);
+      expect(Project.findByPk).toHaveBeenCalledWith(404, { attributes: ["id"] });
+      expect(Site.findAll).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty array when the project has no sites", async () => {
+      (Project.findByPk as jest.Mock).mockResolvedValue({ id: 10 });
+      (Site.findAll as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getProjectPolygonUuidsForValidation(10);
+
+      expect(result).toEqual([]);
+      expect(SitePolygon.findAll).not.toHaveBeenCalled();
+    });
+
+    it("returns active polygon UUIDs with validation status across project sites", async () => {
+      (Project.findByPk as jest.Mock).mockResolvedValue({ id: 2 });
+      (Site.findAll as jest.Mock).mockResolvedValue([{ uuid: "site-a" }, { uuid: "site-b" }]);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([
+        { polygonUuid: "poly-1" },
+        { polygonUuid: "" },
+        { polygonUuid: null }
+      ]);
+
+      const result = await service.getProjectPolygonUuidsForValidation(2);
+
+      expect(SitePolygon.findAll).toHaveBeenCalled();
+      expect(result).toEqual(["poly-1"]);
+    });
+  });
+
   describe("validatePolygonsBatch", () => {
     it("should use batch validation when available", async () => {
       mockSelfIntersectionValidator.validatePolygons.mockResolvedValue([
@@ -422,6 +459,13 @@ describe("ValidationService", () => {
       expect(
         ((VALIDATORS as Record<string, unknown>).POLYGON_SIZE as { validatePolygon: jest.Mock }).validatePolygon
       ).toHaveBeenCalledWith("uuid-1");
+    });
+
+    it("skips validators that are not polygon validators (e.g. geometry-only types)", async () => {
+      await service.validatePolygonsBatch(["uuid-1"], ["GEOMETRY_TYPE"]);
+
+      expect(CriteriaSite.findAll).not.toHaveBeenCalled();
+      expect(CriteriaSite.bulkCreate).not.toHaveBeenCalled();
     });
   });
 
@@ -1320,6 +1364,43 @@ describe("ValidationService", () => {
       const result = await service.validateGeometries([featureCollection], ["GEOMETRY_TYPE"]);
       (VALIDATORS as Record<string, unknown>).GEOMETRY_TYPE = originalValidator;
       expect(result).toHaveLength(0);
+    });
+
+    it("skips collections whose features are not an array when structure check is bypassed", async () => {
+      const spy = jest.spyOn(GeoJsonStructure, "validateFeatureCollectionStructure").mockReturnValue({ valid: true });
+      mockGeometryTypeValidator.validateGeometry.mockResolvedValue({ valid: true, extraInfo: null });
+      const malformed = { type: "FeatureCollection", features: "not-an-array" as unknown as [] };
+      const result = await service.validateGeometries([malformed], ["GEOMETRY_TYPE"]);
+      spy.mockRestore();
+      expect(result).toHaveLength(0);
+    });
+
+    it("records unknown error message when validateGeometry throws a non-Error value", async () => {
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                  [0, 0]
+                ]
+              ]
+            },
+            properties: { id: "feature-1" }
+          }
+        ]
+      };
+      mockGeometryTypeValidator.validateGeometry.mockRejectedValue("boom");
+      const result = await service.validateGeometries([featureCollection], ["GEOMETRY_TYPE"]);
+      expect(result[0].attributes.criteriaList[0].valid).toBe(false);
+      expect(result[0].attributes.criteriaList[0].extraInfo).toEqual({ error: "Unknown error occurred" });
     });
   });
 

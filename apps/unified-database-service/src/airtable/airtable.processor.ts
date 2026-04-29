@@ -131,9 +131,9 @@ export class AirtableProcessor extends WorkerHost {
   /* istanbul ignore next */
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
-    Sentry.captureException(error);
-    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
+    this.logger.error("Worker event failed", error, job);
     await this.sendSlackUpdate(`:warning: ERROR: Job processing failed: ${JSON.stringify(job)}`);
+    await Sentry.flush(2000);
   }
 
   private async updateEntities({ entityType, startPage, updatedSince }: UpdateEntitiesData) {

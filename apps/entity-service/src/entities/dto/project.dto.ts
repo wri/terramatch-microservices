@@ -303,6 +303,18 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Number })
   goalTreesRestoredAnr: number | null;
 
+  @ApiProperty({
+    description:
+      "Expected trees restored from project tree goals: (sum of trees-goal tracking entries with type years) × (survivalRate / 100) + ANR strategy goal, rounded to the nearest integer."
+  })
+  treesToBeRestoredGoal: number;
+
+  @ApiProperty({
+    description:
+      "Sum of visible project-level tree-planted species goal amounts (v2_tree_species on this project, collection tree-planted)."
+  })
+  treesToBePlantedSpeciesGoalTotal: number;
+
   @ApiProperty({ nullable: true, type: Number })
   seedsGrownGoal: number | null;
 

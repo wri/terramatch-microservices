@@ -16,7 +16,11 @@ import {
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiOperation, ApiParam } from "@nestjs/swagger";
-import { OrganisationLightDto, UserDto } from "@terramatch-microservices/common/dto";
+import {
+  OrganisationLightDto,
+  UserDto,
+  UserMonitoringPartnerProjectLightDto
+} from "@terramatch-microservices/common/dto";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
@@ -34,6 +38,9 @@ import { UserCreationService } from "./user-creation.service";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UsersService } from "./users.service";
 import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { SendLoginDetailsResponseDto } from "../auth/dto/verification-user-response.dto";
+import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
+import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -45,6 +52,7 @@ export const USER_ORG_RELATIONSHIP = {
     }
   }
 };
+
 const USER_RESPONSE_SHAPE = {
   data: {
     type: UserDto,
@@ -185,9 +193,14 @@ export class UsersController {
   }
 
   private async addUserResource(document: DocumentBuilder, user: User) {
+    const monitoringByUser = await this.usersService.getMonitoringPartnerProjectsByUserIds([user.id]);
+    const monitoringPartnerProjects = (monitoringByUser[user.id] ?? []).map(
+      project => new UserMonitoringPartnerProjectLightDto(project)
+    );
+
     const userResource = document.addData(
       user.uuid ?? "no-uuid",
-      new UserDto(user, user.frameworks, await user.myFrameworks())
+      new UserDto(user, user.frameworks, await user.myFrameworks(), monitoringPartnerProjects)
     );
 
     const org = await user.primaryOrganisation();
@@ -199,5 +212,21 @@ export class UsersController {
     }
 
     return document;
+  }
+
+  @Post("sendLoginDetails")
+  @ApiOperation({
+    operationId: "sendLoginDetails",
+    description: "Send login details to a user by email address"
+  })
+  @JsonApiResponse(SendLoginDetailsResponseDto, { status: HttpStatus.OK })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request" })
+  async sendLoginDetails(@Body() payload: SendLoginDetailsRequestDto) {
+    const { emailAddress } = payload.data.attributes;
+    await this.usersService.sendLoginDetails(emailAddress);
+    return buildJsonApi(SendLoginDetailsResponseDto).addData(
+      emailAddress,
+      populateDto(new SendLoginDetailsResponseDto(), { success: true })
+    );
   }
 }

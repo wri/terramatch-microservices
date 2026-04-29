@@ -27,7 +27,11 @@ describe("LeadershipsCollector", () => {
 
     it("throws when the field does not have a collection", async () => {
       expect(() =>
-        collector.addField({ inputType: "leaderships", label: "", resource: "leaderships" }, "organisations", "one")
+        collector.addField(
+          { inputType: "leaderships", label: "", resource: "leaderships", exportHeading: "" },
+          "organisations",
+          "one"
+        )
       ).toThrow("collection not found for leaderships");
     });
 
@@ -67,7 +71,7 @@ describe("LeadershipsCollector", () => {
       await expect(
         collector.syncRelation(
           new Organisation(),
-          { inputType: "leaderships", label: "", resource: "leaderships" },
+          { inputType: "leaderships", label: "", resource: "leaderships", exportHeading: "" },
           [],
           false
         )

@@ -142,10 +142,9 @@ export class UserCreationService {
         );
       }
 
-      const reloadedUser = await user.reload({
+      return await user.reload({
         include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }, { association: "frameworks" }]
       });
-      return reloadedUser;
     } catch (error) {
       this.logger.error(error);
       throw new InternalServerErrorException("User creation failed");

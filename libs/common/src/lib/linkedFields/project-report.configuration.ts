@@ -227,6 +227,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
         collections: ["paid-other-activities", "volunteer-other-activities"]
       },
       label: "Other Activities Description",
+      exportHeading: "otherWorkdaysDescription",
       inputType: "long-text"
     },
     "pro-rep-local-engagement-description": {
@@ -252,6 +253,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
         collections: ["direct-other", "indirect-other"]
       },
       label: "Other Restoration Partners Description",
+      exportHeading: "otherRestorationPartnersDescription",
       inputType: "long-text"
     },
     "pro-rep-total-unique-restoration-partners": {
@@ -439,234 +441,273 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
   relations: {
     "pro-rep-rel-tree-species": {
       label: "Tree Species (Nursery Seedling)",
+      exportHeading: "treeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "nursery-seedling"
     },
     "pro-rep-rel-paid-nursery-operations": {
       label: "Paid Nursery Operations",
+      exportHeading: "workdaysPaidNurseryOperations",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-nursery-operations"
     },
     "pro-rep-rel-paid-project-management": {
       label: "Paid Project Management",
+      exportHeading: "workdaysPaidProjectManagement",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-project-management"
     },
     "pro-rep-rel-paid-other-activities": {
       label: "Paid Other Activities",
+      exportHeading: "workdaysPaidOtherActivities",
       resource: "demographics",
       inputType: "workdays",
       collection: "paid-other-activities"
     },
     "pro-rep-rel-volunteer-nursery-operations": {
       label: "Volunteer Nursery Operations",
+      exportHeading: "workdaysVolunteerNurseryOperations",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-nursery-operations"
     },
     "pro-rep-rel-volunteer-project-management": {
       label: "Volunteer Project Management",
+      exportHeading: "workdaysVolunteerProjectManagement",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-project-management"
     },
     "pro-rep-rel-volunteer-other-activities": {
       label: "Volunteer Other Activities",
+      exportHeading: "workdaysVolunteerOtherActivities",
       resource: "demographics",
       inputType: "workdays",
       collection: "volunteer-other-activities"
     },
     "pro-rep-direct-workdays": {
       label: "Direct Workday",
+      exportHeading: "workdaysDirect",
       resource: "demographics",
       inputType: "workdays",
       collection: "direct"
     },
     "pro-rep-convergence-workdays": {
       label: "Convergence Workday",
+      exportHeading: "workdaysConvergence",
       resource: "demographics",
       inputType: "workdays",
       collection: "convergence"
     },
     "pro-rep-direct-income-partners": {
       label: "Direct Income Restoration Partners",
+      exportHeading: "restorationPartnersDirectIncome",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-income"
     },
     "pro-rep-indirect-income-partners": {
       label: "Indirect Income Restoration Partners",
+      exportHeading: "restorationPartnersIndirectIncome",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-income"
     },
     "pro-rep-direct-benefits-partners": {
       label: "Direct In-kind Benefits Restoration Partners",
+      exportHeading: "restorationPartnersDirectBenefits",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-benefits"
     },
     "pro-rep-indirect-benefits-partners": {
       label: "Indirect In-kind Benefits Restoration Partners",
+      exportHeading: "restorationPartnersIndirectBenefits",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-benefits"
     },
     "pro-rep-direct-conservation-payments-partners": {
       label: "Direct Conservation Agreement Payment Restoration Partners",
+      exportHeading: "restorationPartnersDirectConservationPayments",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-conservation-payments"
     },
     "pro-rep-indirect-conservation-payments-partners": {
       label: "Indirect Conservation Agreement Payment Restoration Partners",
+      exportHeading: "restorationPartnersIndirectConservationPayments",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-conservation-payments"
     },
     "pro-rep-direct-market-access-partners": {
       label: "Direct Increased Market Access Restoration Partners",
+      exportHeading: "restorationPartnersDirectMarketAccess",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-market-access"
     },
     "pro-rep-indirect-market-access-partners": {
       label: "Indirect Increased Market Access Restoration Partners",
+      exportHeading: "restorationPartnersIndirectMarketAccess",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-market-access"
     },
     "pro-rep-direct-capacity-partners": {
       label: "Direct Increased Capacity Restoration Partners",
+      exportHeading: "restorationPartnersDirectCapacity",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-capacity"
     },
     "pro-rep-indirect-capacity-partners": {
       label: "Indirect Capacity Restoration Partners",
+      exportHeading: "restorationPartnersIndirectCapacity",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-capacity"
     },
     "pro-rep-direct-training-partners": {
       label: "Direct Training Restoration Partners",
+      exportHeading: "restorationPartnersDirectTraining",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-training"
     },
     "pro-rep-indirect-training-partners": {
       label: "Indirect Training Restoration Partners",
+      exportHeading: "restorationPartnersIndirectTraining",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-training"
     },
     "pro-rep-direct-land-title-partners": {
       label: "Direct Newly Secured Land Title Restoration Partners",
+      exportHeading: "restorationPartnersDirectLandTitle",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-land-title"
     },
     "pro-rep-indirect-land-title-partners": {
       label: "Indirect Newly Secured Land Title Restoration Partners",
+      exportHeading: "restorationPartnersIndirectLandTitle",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-land-title"
     },
     "pro-rep-direct-livelihoods-partners": {
       label: "Direct Traditional Livelihoods or Customer Rights Restoration Partners",
+      exportHeading: "restorationPartnersDirectLivelihoods",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-livelihoods"
     },
     "pro-rep-indirect-livelihoods-partners": {
       label: "Indirect Traditional Livelihoods or Customer Rights Restoration Partners",
+      exportHeading: "restorationPartnersIndirectLivelihoods",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-livelihoods"
     },
     "pro-rep-direct-productivity-partners": {
       label: "Direct Increased Productivity Restoration Partners",
+      exportHeading: "restorationPartnersDirectProductivity",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-productivity"
     },
     "pro-rep-indirect-productivity-partners": {
       label: "Indirect Increased Productivity Restoration Partners",
+      exportHeading: "restorationPartnersIndirectProductivity",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-productivity"
     },
     "pro-rep-direct-other-partners": {
       label: "Direct Other Restoration Partners",
+      exportHeading: "restorationPartnersDirectOther",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "direct-other"
     },
     "pro-rep-indirect-other-partners": {
       label: "Indirect Other Restoration Partners",
+      exportHeading: "restorationPartnersIndirectOther",
       resource: "demographics",
       inputType: "restorationPartners",
       collection: "indirect-other"
     },
     "pro-rep-full-time-jobs": {
       label: "Full-time Jobs",
+      exportHeading: "jobsFullTime",
       resource: "demographics",
       inputType: "jobs",
       collection: "full-time"
     },
     "pro-rep-full-time-clt-jobs": {
       label: "Full-time CLT Jobs",
+      exportHeading: "jobsFullTimeClt",
       resource: "demographics",
       inputType: "jobs",
       collection: "full-time-clt"
     },
     "pro-rep-part-time-jobs": {
       label: "Part-time Jobs",
+      exportHeading: "jobsPartTime",
       resource: "demographics",
       inputType: "jobs",
       collection: "part-time"
     },
     "pro-rep-part-time-clt-jobs": {
       label: "Part-time CLT Jobs",
+      exportHeading: "jobsPartTimeClt",
       resource: "demographics",
       inputType: "jobs",
       collection: "part-time-clt"
     },
     "pro-rep-volunteers": {
       label: "Volunteers",
+      exportHeading: "volunteers",
       resource: "demographics",
       inputType: "volunteers",
       collection: "volunteer"
     },
     "pro-rep-beneficiaries-all": {
       label: "All Beneficiaries",
+      exportHeading: "allBeneficiaries",
       resource: "demographics",
       inputType: "allBeneficiaries",
       collection: "all"
     },
     "pro-rep-beneficiaries-training": {
       label: "Training Beneficiaries",
+      exportHeading: "trainingBeneficiaries",
       resource: "demographics",
       inputType: "trainingBeneficiaries",
       collection: "training"
     },
     "pro-rep-associates": {
       label: "Associates",
+      exportHeading: "associates",
       resource: "demographics",
       inputType: "associates",
       collection: "all"
     },
     "pro-rep-elp-beneficiaries": {
       label: "ELP Beneficiaries",
+      exportHeading: "elpBeneficiaries",
       resource: "demographics",
       inputType: "elpBeneficiaries",
       collection: "elp"
     },
     "pro-rep-livelihood-activities": {
       label: "Livelihood Activities",
+      exportHeading: "livelihoodActivities",
       resource: "demographics",
       inputType: "livelihoodActivities",
       collection: "all"

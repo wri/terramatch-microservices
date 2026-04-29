@@ -171,3 +171,15 @@ out
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Minio
+data
+
+# geoserver
+*.pbf
+docker/geoserver/geoserver_data/gwc/**
+docker/geoserver/geoserver_data/**/geowebcache.xml
+docker/geoserver/geoserver_data/gwc/**/*.pbf
+docker/geoserver/geoserver_data/legendsamples/**
+docker/geoserver/geoserver_data/logs/**
+docker/geoserver/geoserver_data/temp/**

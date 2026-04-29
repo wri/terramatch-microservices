@@ -10,7 +10,18 @@ export class NurseryPolicy extends UserPermissionsPolicy {
 
     if (this.frameworks.length > 0) {
       this.builder.can(
-        ["read", "delete", "create", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "create",
+          "update",
+          "approve",
+          "uploadFiles",
+          "deleteFiles",
+          "updateFiles",
+          "updateAnswers",
+          "exportAll"
+        ],
         Nursery,
         {
           frameworkKey: { $in: this.frameworks }

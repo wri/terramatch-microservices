@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import {
   AuditStatus,
@@ -32,7 +33,7 @@ import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { INDICATOR_SLUGS, PolygonStatus } from "@terramatch-microservices/database/constants";
+import { INDICATOR_SLUGS, PolygonStatus, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
@@ -543,7 +544,69 @@ export class SitePolygonsService {
       await this.triggerProjectValidationJobs(sitePolygons, user.id);
     }
 
+    if (status === "submitted" && user != null) {
+      const polygonUuids = sitePolygons
+        .map(sp => sp.polygonUuid)
+        .filter((uuid): uuid is string => uuid != null && uuid !== "");
+      if (polygonUuids.length > 0) {
+        const siteUuid = sitePolygons[0]?.siteUuid ?? undefined;
+        this.enqueuePolygonValidation(polygonUuids, user.id, { siteUuid, triggerType: "submitted" }).catch(err =>
+          this.logger.error("Failed to enqueue automated polygon validation on submit", err)
+        );
+      }
+    }
+
     return sitePolygons;
+  }
+
+  async enqueuePolygonValidation(
+    rawPolygonUuids: string[],
+    userId: number,
+    options: { siteUuid?: string; triggerType: "submitted" | "gh_push" | "upload" }
+  ): Promise<void> {
+    const polygonUuids = [...new Set(rawPolygonUuids.filter(uuid => uuid.length > 0))];
+    if (polygonUuids.length === 0) return;
+
+    const { siteUuid, triggerType } = options;
+
+    let siteName: string | null = null;
+    if (siteUuid != null) {
+      const site = await Site.findOne({ where: { uuid: siteUuid }, attributes: ["id", "name"] });
+      siteName = site?.name ?? siteUuid;
+    }
+
+    const fingerprint = [...polygonUuids].sort().join(",") + `|${triggerType}`;
+    const jobId = createHash("sha256").update(fingerprint).digest("hex").slice(0, 32);
+
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Polygon Validation",
+      totalContent: polygonUuids.length,
+      processedContent: 0,
+      progressMessage: "Queued for automated validation...",
+      createdBy: userId,
+      metadata: {
+        entity_id: null,
+        entity_type: Site.LARAVEL_TYPE,
+        entity_name: siteName,
+        trigger_type: triggerType
+      } as Record<string, unknown>
+    } as unknown as DelayedJob);
+
+    await this.validationQueue.add(
+      "polygonValidation",
+      {
+        polygonUuids,
+        validationTypes: [...VALIDATION_TYPES],
+        delayedJobId: delayedJob.id,
+        siteUuid
+      },
+      { jobId }
+    );
+
+    this.logger.log(
+      `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, jobId: ${jobId})`
+    );
   }
 
   async triggerProjectValidationJobs(sitePolygons: SitePolygon[], userId: number): Promise<void> {

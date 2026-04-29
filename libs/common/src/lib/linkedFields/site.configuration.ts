@@ -147,35 +147,41 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
   relations: {
     "site-rel-tree-species": {
       label: "Tree Species",
+      exportHeading: "treeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
     "site-rel-non-tree-species": {
       label: "Non Tree Species",
+      exportHeading: "nonTreeSpecies",
       resource: "treeSpecies",
       inputType: "treeSpecies",
       collection: "non-tree"
     },
     "site-rel-disturbances": {
       label: "Disturbances",
+      exportHeading: "disturbances",
       resource: "disturbances",
       inputType: "disturbances",
       collection: "disturbance"
     },
     "site-rel-invasive": {
       label: "Invasives",
+      exportHeading: "invasives",
       resource: "invasives",
       inputType: "invasive",
       collection: "invasive"
     },
     "site-rel-seedings": {
       label: "Seedings",
+      exportHeading: "seedings",
       resource: "seedings",
       inputType: "seedings"
     },
     "site-rel-stratas": {
       label: "Stratas",
+      exportHeading: "stratas",
       resource: "stratas",
       inputType: "stratas"
     }

@@ -12,7 +12,15 @@ import {
 } from "@nestjs/common";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { PolicyService } from "@terramatch-microservices/common";
-import { Form, FundingProgramme, Organisation, Stage, User } from "@terramatch-microservices/database/entities";
+import {
+  Application,
+  Form,
+  FundingProgramme,
+  Organisation,
+  SavedExport,
+  Stage,
+  User
+} from "@terramatch-microservices/database/entities";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import {
@@ -36,13 +44,16 @@ import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorat
 import { ApplicationDto } from "../applications/dto/application.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 
 @Controller("fundingProgrammes/v3/fundingProgrammes")
 export class FundingProgrammesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly formDataService: FormDataService,
-    private readonly localizationService: LocalizationService
+    private readonly localizationService: LocalizationService,
+    private readonly csvExportService: CsvExportService
   ) {}
 
   @Get()
@@ -252,5 +263,36 @@ export class FundingProgrammesController {
     }
 
     return await this.formDataService.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [fundingProgramme]);
+  }
+
+  @Get(":uuid/exportAll")
+  @ApiOperation({
+    operationId: "fundingProgrammeExportAll",
+    summary: "Export all applications for a funding programme."
+  })
+  @JsonApiResponse(FileDownloadDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  @ExceptionResponse(NotFoundException, { description: "Saved export not found" })
+  async exportAll(@Param() { uuid }: SingleResourceDto) {
+    await this.policyService.authorize("exportAll", Application);
+
+    const fundingProgramme = await FundingProgramme.findOne({
+      where: { uuid },
+      attributes: ["id"]
+    });
+    const savedExport =
+      fundingProgramme == null
+        ? undefined
+        : await SavedExport.findOne({
+            where: { fundingProgrammeId: fundingProgramme.id },
+            order: [["createdAt", "DESC"]]
+          });
+    if (savedExport?.name == null) throw new NotFoundException("Saved export not found");
+
+    let name = savedExport.name;
+    if (name.startsWith("exports/")) name = name.substring("exports/".length);
+
+    const dto = await this.csvExportService.generateExportDto(name);
+    return buildJsonApi(FileDownloadDto).addData(`fundingProgrammeExport|${uuid}`, dto);
   }
 }

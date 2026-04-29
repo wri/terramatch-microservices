@@ -37,6 +37,8 @@ import { ProjectPolygonGeometryService } from "./project-polygons/project-polygo
 import { AnrPlotGeometryController } from "./site-polygons/anr-plot-geometry.controller";
 import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.service";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     SentryModule.forRoot(),
@@ -82,18 +84,16 @@ import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.servic
     GeometryUploadComparisonService,
     BoundingBoxService,
     ValidationService,
-    ValidationProcessor,
-    GeometryUploadProcessor,
-    IndicatorsProcessor,
     DuplicateGeometryValidator,
     VoronoiService,
     PolygonClippingService,
-    ClippingProcessor,
     GeoJsonExportService,
     ProjectPolygonsService,
     ProjectPolygonCreationService,
     ProjectPolygonGeometryService,
-    AnrPlotGeometryService
+    AnrPlotGeometryService,
+
+    ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
   ]
 })
 export class AppModule {}

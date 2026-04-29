@@ -83,6 +83,7 @@ export class IndicatorsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   @Header("Content-Type", "text/csv")
   @Header("Content-Disposition", "attachment; filename=indicator-export.csv")
+  @Header("Access-Control-Expose-Headers", "Content-Disposition")
   async exportIndicator(@Param() { entityType, entityUuid, slug }: IndicatorExportQueryDto): Promise<string> {
     return await this.indicatorsService.exportIndicatorToCsv(entityType, entityUuid, slug);
   }

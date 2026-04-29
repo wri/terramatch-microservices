@@ -12,6 +12,10 @@ import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Response } from "express";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { Resource, ResourceBuilder } from "@terramatch-microservices/common/util";
+import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -30,12 +34,14 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
   update = jest.fn(() => Promise.resolve());
   create = jest.fn(() => Promise.resolve(new Project()));
   loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
+  exportAll = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {
   let controller: EntitiesController;
   let entitiesService: DeepMocked<EntitiesService>;
   let policyService: DeepMocked<PolicyService>;
+  let csvExportService: DeepMocked<CsvExportService>;
   let processor: StubProcessor;
 
   beforeEach(async () => {
@@ -43,7 +49,8 @@ describe("EntitiesController", () => {
       controllers: [EntitiesController],
       providers: [
         { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId: 123 })) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId: 123 })) },
+        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) }
       ]
     }).compile();
 
@@ -80,6 +87,37 @@ describe("EntitiesController", () => {
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("entityExportAll", () => {
+    it("should throw an error if the policy does not authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await expect(
+        controller.entityExportAll({ entity: "projects" }, { frameworkKey: "ppc" }, {} as Response)
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should call exportAll on the processor", async () => {
+      const response = {} as Response;
+      await controller.entityExportAll({ entity: "projects" }, {}, response);
+      expect(processor.exportAll).toHaveBeenCalledWith({ response });
+    });
+
+    it("should return a presigned url", async () => {
+      csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
+      const result = serialize(
+        (await controller.entityExportAll(
+          { entity: "projects" },
+          { frameworkKey: "ppc" },
+          {} as Response
+        )) as ResourceBuilder
+      );
+      expect(csvExportService.generateExportDto).toHaveBeenCalledTimes(1);
+      expect((result.data as Resource).type).toEqual("fileDownloads");
+      expect((result.data as Resource).id).toEqual("projectsExport");
+      expect((result.data as Resource).attributes.url).toEqual("fake-url");
     });
   });
 

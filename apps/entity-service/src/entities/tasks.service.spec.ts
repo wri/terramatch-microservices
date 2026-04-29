@@ -32,6 +32,7 @@ import { AuditStatus } from "@terramatch-microservices/database/entities/audit-s
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { SiteReport, NurseryReport } from "@terramatch-microservices/database/entities";
 import { ConfigService } from "@nestjs/config";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -54,6 +55,7 @@ describe("TasksService", () => {
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         { provide: ConfigService, useValue: createMock<ConfigService>() },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         EntitiesService,
         TasksService
       ]

@@ -1,51 +1,38 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Nursery, NurseryReport, ScheduledJob } from "@terramatch-microservices/database/entities";
-import { Test } from "@nestjs/testing";
-import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { Nursery, NurseryReport, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
+import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
   NurseryFactory,
   NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
-  TaskFactory,
-  UserFactory
+  TaskFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
 import { NotAcceptableException } from "@nestjs/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
-import { ConfigService } from "@nestjs/config";
+import { mockEntityService } from "./entity.processor.spec";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
   let policyService: DeepMocked<PolicyService>;
-  let userId: number;
-
-  beforeAll(async () => {
-    userId = (await UserFactory.create()).id;
-  });
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     await Nursery.truncate();
 
-    const module = await Test.createTestingModule({
-      providers: [
-        { provide: MediaService, useValue: createMock<MediaService>() },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ userId })) },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        EntitiesService
-      ]
-    }).compile();
-
+    const module = await mockEntityService();
+    policyService = module.get(PolicyService);
+    csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("nurseries") as NurseryProcessor;
   });
 
@@ -72,7 +59,7 @@ describe("NurseryProcessor", () => {
 
     it("should return nurseries the user is allowed to manage", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
       const managedNurseries = await NurseryFactory.createMany(3, { projectId: project.id });
       await NurseryFactory.createMany(5);
       await expectNurseries(managedNurseries, {}, { permissions: ["manage-own"] });
@@ -80,7 +67,12 @@ describe("NurseryProcessor", () => {
 
     it("should return nurseries managed by the user for the project", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: project.id, isMonitoring: false, isManaging: true });
+      await ProjectUserFactory.create({
+        userId: policyService.userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
       await ProjectFactory.create();
       const nurseries = await NurseryFactory.createMany(3, { projectId: project.id });
       await NurseryFactory.createMany(5);
@@ -108,8 +100,8 @@ describe("NurseryProcessor", () => {
     it("should return nurseries filtered by the update request status or project", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
 
       const first = await NurseryFactory.create({
         name: "first nursery",
@@ -433,6 +425,46 @@ describe("NurseryProcessor", () => {
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+  });
+
+  describe("exportAll", () => {
+    it("writes all nurseries to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      await Nursery.truncate();
+      const orgs = [
+        await OrganisationFactory.create({ type: "non-profit-organization" }),
+        await OrganisationFactory.create({ type: "for-profit-organization" })
+      ];
+      const projects = [
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
+      ];
+      const nurseries = [
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      // non-framework nursery should be ignored
+      await NurseryFactory.create({ frameworkKey: "terrafund" });
+      await EntityFormFactory.nursery(nurseries[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const result1 = addRow.mock.calls[0][0] as Site;
+      expect(result1).toMatchObject({ uuid: nurseries[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(orgs[0].name);
+      const result2 = addRow.mock.calls[1][0] as Site;
+      expect(result2).toMatchObject({ uuid: nurseries[1].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("For Profit Organization");
+      expect(result2.organisationName).toEqual(orgs[1].name);
     });
   });
 });

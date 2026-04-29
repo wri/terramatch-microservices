@@ -9,6 +9,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
+      this.builder.can(["export"], DisturbanceReport);
       this.builder.can(
         ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles", "updateFiles", "updateAnswers"],
         DisturbanceReport,

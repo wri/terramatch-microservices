@@ -1,4 +1,6 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { Test, TestingModule } from "@nestjs/testing";
+import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
 import { UsersService } from "./users.service";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -7,12 +9,18 @@ import {
   FrameworkUser,
   ModelHasRole,
   Organisation,
+  Project,
+  ProjectUser,
   Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
+import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+import { PasswordReset } from "@terramatch-microservices/database/entities";
+import { SendLoginDetailsEmail } from "@terramatch-microservices/common/email/send-login-details.email";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -24,8 +32,20 @@ describe("UsersService", () => {
     paginationTotal: jest.fn().mockResolvedValue(42)
   });
 
-  beforeEach(() => {
-    service = new UsersService();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        {
+          provide: getQueueToken("email"),
+          useValue: {
+            add: jest.fn()
+          }
+        }
+      ]
+    }).compile();
+
+    service = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -48,7 +68,7 @@ describe("UsersService", () => {
           expect.objectContaining({ association: "roles" })
         ])
       );
-      expect(builder.order).toHaveBeenCalledWith(["createdAt", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
       expect(result).toEqual({
         users: [{ id: 1 }],
         paginationTotal: 42
@@ -118,7 +138,7 @@ describe("UsersService", () => {
         sort: { field: "firstName", direction: "ASC" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["firstName", "ASC"]);
+      expect(builder.order).toHaveBeenCalledWith([["firstName", "ASC"]]);
     });
 
     it("should sort by organisation name", async () => {
@@ -130,7 +150,7 @@ describe("UsersService", () => {
         sort: { field: "organisationName", direction: "DESC" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["organisation", "name", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["organisation", "name", "DESC"]]);
     });
 
     it("should default sort direction to DESC when direction is missing", async () => {
@@ -142,7 +162,7 @@ describe("UsersService", () => {
         sort: { field: "emailAddress" }
       } as UserQueryDto);
 
-      expect(builder.order).toHaveBeenCalledWith(["emailAddress", "DESC"]);
+      expect(builder.order).toHaveBeenCalledWith([["emailAddress", "DESC"]]);
     });
 
     it("should allow id sort field without adding explicit order", async () => {
@@ -170,13 +190,90 @@ describe("UsersService", () => {
     });
   });
 
+  describe("getMonitoringPartnerProjectsByUserIds", () => {
+    it("groups projects per user and sorts by name", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([
+        { userId: 1, projectId: 10 },
+        { userId: 2, projectId: 11 },
+        { userId: 1, projectId: 11 }
+      ] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([
+        { id: 10, uuid: "p-a", name: "Beta" },
+        { id: 11, uuid: "p-b", name: "Alpha" }
+      ] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1, 2]);
+
+      expect(result[1].map(p => p.uuid)).toEqual(["p-b", "p-a"]);
+      expect(result[2].map(p => p.uuid)).toEqual(["p-b"]);
+    });
+
+    it("returns empty arrays when there are no links", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([]);
+      const projectSpy = jest.spyOn(Project, "findAll");
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([3, 4]);
+
+      expect(result[3]).toEqual([]);
+      expect(result[4]).toEqual([]);
+      expect(projectSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty object when no user ids are requested", async () => {
+      const projectUserSpy = jest.spyOn(ProjectUser, "findAll");
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([]);
+
+      expect(result).toEqual({});
+      expect(projectUserSpy).not.toHaveBeenCalled();
+    });
+
+    it("dedupes repeated project links for the same user", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([
+        { userId: 1, projectId: 10 },
+        { userId: 1, projectId: 10 }
+      ] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([{ id: 10, uuid: "p1", name: "Only" }] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1]).toHaveLength(1);
+      expect(result[1][0].uuid).toBe("p1");
+    });
+
+    it("omits projects missing from the database or without uuid", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([
+        { userId: 1, projectId: 10 },
+        { userId: 1, projectId: 11 }
+      ] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([
+        { id: 10, uuid: null, name: "A" },
+        { id: 11, uuid: "ok", name: "B" }
+      ] as Project[]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1].map(p => p.uuid)).toEqual(["ok"]);
+    });
+
+    it("returns no projects when link rows exist but no project rows load", async () => {
+      jest.spyOn(ProjectUser, "findAll").mockResolvedValue([{ userId: 1, projectId: 10 }] as ProjectUser[]);
+      jest.spyOn(Project, "findAll").mockResolvedValue([]);
+
+      const result = await service.getMonitoringPartnerProjectsByUserIds([1]);
+
+      expect(result[1]).toEqual([]);
+    });
+  });
+
   describe("addUsersToDocument", () => {
     it("should add each user with uuid key", async () => {
       const document = {
         addData: jest.fn()
       } as unknown as DocumentBuilder;
 
-      const users = [{ uuid: "user-1" } as User, { uuid: "user-2" } as User];
+      const users = [{ id: 1, uuid: "user-1" } as User, { id: 2, uuid: "user-2" } as User];
+      jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({ 1: [], 2: [] });
 
       const result = await service.addUsersToDocument(document, users);
 
@@ -190,10 +287,35 @@ describe("UsersService", () => {
         addData: jest.fn()
       } as unknown as DocumentBuilder;
 
-      const users = [{ uuid: null } as unknown as User];
+      const users = [{ id: 5, uuid: null } as unknown as User];
+      jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({ 5: [] });
+
       await service.addUsersToDocument(document, users);
 
       expect(document.addData).toHaveBeenCalledWith("no-uuid", expect.anything());
+    });
+
+    it("does not add data when the user list is empty", async () => {
+      const document = { addData: jest.fn() } as unknown as DocumentBuilder;
+      const batchSpy = jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({});
+
+      await service.addUsersToDocument(document, []);
+
+      expect(batchSpy).toHaveBeenCalledWith([]);
+      expect(document.addData).not.toHaveBeenCalled();
+    });
+
+    it("includes monitoring partner projects on each UserDto when present", async () => {
+      const document = { addData: jest.fn() } as unknown as DocumentBuilder;
+      const project = { id: 7, uuid: "proj-uuid", name: "P" } as Project;
+      const user = { id: 3, uuid: "user-uuid", frameworks: [] } as unknown as User;
+      jest.spyOn(service, "getMonitoringPartnerProjectsByUserIds").mockResolvedValue({ 3: [project] });
+
+      await service.addUsersToDocument(document, [user]);
+
+      const dto = (document.addData as jest.Mock).mock.calls[0][1] as { monitoringPartnerProjects: { uuid: string }[] };
+      expect(dto.monitoringPartnerProjects).toHaveLength(1);
+      expect(dto.monitoringPartnerProjects[0].uuid).toBe("proj-uuid");
     });
   });
 
@@ -325,6 +447,16 @@ describe("UsersService", () => {
         new NotFoundException("Role not found")
       );
     });
+
+    it("should update password when password is provided", async () => {
+      const user = createUserMock();
+      const update = { password: "new-password" };
+      (jest.spyOn(bcrypt, "hash") as unknown as jest.SpyInstance<Promise<string>>).mockResolvedValue("hashed-password");
+
+      const result = await service.update(user, update);
+
+      expect(result.password).toBe("hashed-password");
+    });
   });
 
   describe("delete", () => {
@@ -346,6 +478,59 @@ describe("UsersService", () => {
 
       await expect(service.delete(user)).rejects.toThrow(destroyError);
       expect(user.destroy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("sendLoginDetails", () => {
+    it("returns early when user is not found", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create");
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater");
+
+      await service.sendLoginDetails("missing@example.com");
+
+      expect(User.findOne).toHaveBeenCalledWith({
+        where: {
+          [Op.and]: [{ emailAddress: "missing@example.com" }, { password: { [Op.eq]: null } }]
+        },
+        attributes: ["id", "emailAddress", "locale", "firstName", "lastName"]
+      });
+      expect(passwordResetCreateSpy).not.toHaveBeenCalled();
+      expect(sendLaterSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns early when user has no email address", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: null } as unknown as User);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create");
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater");
+
+      await service.sendLoginDetails("empty@email.com");
+
+      expect(passwordResetCreateSpy).not.toHaveBeenCalled();
+      expect(sendLaterSpy).not.toHaveBeenCalled();
+    });
+
+    it("creates reset token and enqueues login details email", async () => {
+      const user = {
+        id: 12,
+        emailAddress: "test@example.com",
+        fullName: "Test User"
+      } as User;
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest
+        .spyOn(crypto, "randomBytes")
+        .mockImplementation(() => Buffer.from("a".repeat(32), "utf8") as unknown as never);
+      const passwordResetCreateSpy = jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
+      const sendLaterSpy = jest.spyOn(SendLoginDetailsEmail.prototype, "sendLater").mockImplementation();
+
+      await service.sendLoginDetails("test@example.com");
+
+      const expectedToken = Buffer.from("a".repeat(32), "utf8").toString("hex");
+      expect(passwordResetCreateSpy).toHaveBeenCalledWith({
+        userId: 12,
+        token: expectedToken
+      } as PasswordReset);
+      expect(sendLaterSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -98,12 +98,20 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
     return this.application?.uuid ?? null;
   }
 
+  get fundingProgrammeUuid() {
+    return this.application?.fundingProgrammeUuid ?? null;
+  }
+
   @AllowNull
   @Column(UUID)
   projectPitchUuid: string | null;
 
   @BelongsTo(() => ProjectPitch, { foreignKey: "projectPitchUuid", targetKey: "uuid", constraints: false })
   projectPitch: ProjectPitch | null;
+
+  get projectName() {
+    return this.projectPitch?.projectName;
+  }
 
   @AllowNull
   @Column(UUID)
@@ -147,5 +155,53 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   get organisationName(): string | null {
     return this.organisation?.name ?? null;
+  }
+
+  get organisationType(): string | null {
+    return this.organisation?.type ?? null;
+  }
+
+  get organisationPhone(): string | null {
+    return this.organisation?.phone ?? null;
+  }
+
+  get organisationStreet1(): string | null {
+    return this.organisation?.hqStreet1 ?? null;
+  }
+
+  get organisationStreet2(): string | null {
+    return this.organisation?.hqStreet2 ?? null;
+  }
+
+  get organisationCity(): string | null {
+    return this.organisation?.hqCity ?? null;
+  }
+
+  get organisationState(): string | null {
+    return this.organisation?.hqState ?? null;
+  }
+
+  get organisationZipcode(): string | null {
+    return this.organisation?.hqZipcode ?? null;
+  }
+
+  get organisationWebUrl(): string | null {
+    return this.organisation?.webUrl ?? null;
+  }
+
+  get organisationFacebookUrl(): string | null {
+    return this.organisation?.facebookUrl ?? null;
+  }
+
+  get organisationInstagramUrl(): string | null {
+    return this.organisation?.instagramUrl ?? null;
+  }
+
+  get organisationLinkedinUrl(): string | null {
+    return this.organisation?.linkedinUrl ?? null;
+  }
+
+  get organisationTwitterUrl(): string | null {
+    return this.organisation?.twitterUrl ?? null;
   }
 }

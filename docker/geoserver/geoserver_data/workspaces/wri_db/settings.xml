@@ -1,0 +1,45 @@
+<settings>
+  <id>SettingsInfoImpl-7dde99a5:19d97049406:-7ff9</id>
+  <workspace>
+    <id>WorkspaceInfoImpl-7dde99a5:19d97049406:-7ffc</id>
+    <name>wri_db</name>
+    <isolated>false</isolated>
+    <dateCreated>2026-04-16 16:32:09.102 UTC</dateCreated>
+    <dateModified>2026-04-16 16:44:16.540 UTC</dateModified>
+  </workspace>
+  <contact>
+    <id>contact</id>
+    <internationalAddress class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressCity class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressCountry class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressDeliveryPoint class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressPostalCode class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressState class="org.geotools.util.GrowableInternationalString"/>
+    <internationalAddressType class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactEmail class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactFacsimile class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactOrganization class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactPerson class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactPosition class="org.geotools.util.GrowableInternationalString"/>
+    <internationalContactVoice class="org.geotools.util.GrowableInternationalString"/>
+    <internationalOnlineResource class="org.geotools.util.GrowableInternationalString"/>
+    <internationalWelcome class="org.geotools.util.GrowableInternationalString"/>
+  </contact>
+  <charset>UTF-8</charset>
+  <numDecimals>4</numDecimals>
+  <verbose>true</verbose>
+  <verboseExceptions>true</verboseExceptions>
+  <metadata>
+    <map>
+      <entry>
+        <string>quietOnNotFound</string>
+        <boolean>false</boolean>
+      </entry>
+    </map>
+  </metadata>
+  <localWorkspaceIncludesPrefix>false</localWorkspaceIncludesPrefix>
+  <showCreatedTimeColumnsInAdminList>false</showCreatedTimeColumnsInAdminList>
+  <showModifiedTimeColumnsInAdminList>false</showModifiedTimeColumnsInAdminList>
+  <showModifiedUserAdminList>false</showModifiedUserAdminList>
+  <useHeadersProxyURL>false</useHeadersProxyURL>
+</settings>

@@ -37,12 +37,13 @@ export class ResetPasswordService {
 
   async resetPassword(resetToken: string, newPassword: string) {
     let userGuid;
+    let passwordReset;
     try {
       const payload = await this.jwtService.verifyAsync(resetToken);
       userGuid = payload.sub;
     } catch (error) {
       this.logger.error(error);
-      const passwordReset = await PasswordReset.findOne({ where: { token: resetToken } });
+      passwordReset = await PasswordReset.findOne({ where: { token: resetToken } });
       const userWithUuid = await User.findOne({ where: { id: passwordReset?.userId }, attributes: ["uuid"] });
       if (passwordReset != null) {
         userGuid = userWithUuid?.uuid;
@@ -68,6 +69,33 @@ export class ResetPasswordService {
 
     await User.update(updateBody, { where: { id: user.id } });
 
+    if (passwordReset != null) {
+      await PasswordReset.destroy({ where: { id: passwordReset.id } });
+    }
+
     return { email: user.emailAddress, uuid: user.uuid };
+  }
+
+  async getResetPassword(token: string) {
+    const passwordReset = await PasswordReset.findOne({ where: { token } });
+    if (passwordReset == null) {
+      return { emailAddress: null, uuid: null, tokenUsed: true };
+    }
+
+    const sevenDaysAgo = new Date(passwordReset.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (sevenDaysAgo < new Date()) {
+      await PasswordReset.destroy({ where: { id: passwordReset.id } });
+      return { emailAddress: null, uuid: null, tokenUsed: true };
+    }
+
+    const user = await User.findOne({
+      where: { id: passwordReset.userId },
+      attributes: ["emailAddress", "uuid", "locale"]
+    });
+    if (user == null) {
+      throw new NotFoundException("User not found");
+    }
+
+    return { emailAddress: user.emailAddress, uuid: user.uuid, locale: user.locale, tokenUsed: false };
   }
 }

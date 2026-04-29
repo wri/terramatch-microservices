@@ -206,8 +206,9 @@ describe("SrpReportProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
+      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
       await SrpReport.truncate();
-      const projects = orderBy(await ProjectFactory.createMany(2), "id");
+      const projects = orderBy(await ProjectFactory.createMany(2, { frameworkKey: "ppc" }), "id");
       const reports = [
         await SrpReportFactory.create({ projectId: projects[0].id }),
         await SrpReportFactory.create({ projectId: projects[1].id })

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, HttpStatus, Param, Post, Put } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, HttpStatus, Param, Post, Put } from "@nestjs/common";
 import { ResetPasswordService } from "./reset-password.service";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -42,6 +42,22 @@ export class ResetPasswordController {
     return buildJsonApi(ResetPasswordResponseDto).addData(
       uuid ?? "no-uuid",
       populateDto(new ResetPasswordResponseDto(), { emailAddress: email })
+    );
+  }
+
+  @Get(":token")
+  @NoBearerAuth
+  @ApiOperation({
+    operationId: "getResetPassword",
+    description: "Get the reset password status for a token"
+  })
+  @JsonApiResponse(ResetPasswordResponseDto)
+  @ExceptionResponse(BadRequestException, { description: "Invalid or expired token." })
+  async getResetPassword(@Param("token") token: string) {
+    const { emailAddress, tokenUsed, locale } = await this.resetPasswordService.getResetPassword(token);
+    return buildJsonApi(ResetPasswordResponseDto).addData(
+      token,
+      populateDto(new ResetPasswordResponseDto(), { emailAddress: emailAddress as string, tokenUsed, locale })
     );
   }
 }

@@ -1,4 +1,5 @@
-import { InjectQueue, Processor, WorkerHost } from "@nestjs/bullmq";
+import * as Sentry from "@sentry/nestjs";
+import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job, Queue } from "bullmq";
 import { EntitiesService } from "../entities.service";
 import { isNumber } from "lodash";
@@ -13,6 +14,7 @@ import { FormSubmissionFeedbackEmail } from "@terramatch-microservices/common/em
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { FormsService } from "../../forms/forms.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 export const CREATE_PROJECT_FOR_APPLICATION = "createProjectForApplication";
 export const GENERATE_FRAMEWORK_ENTITY_EXPORT = "generateFrameworkEntityExport";
@@ -20,12 +22,20 @@ export const GENERATE_APPLICATION_EXPORT = "generateApplicationExport";
 
 @Processor("entities")
 export class EntitiesQueueProcessor extends WorkerHost {
+  private readonly logger = new TMLogger(EntitiesQueueProcessor.name);
+
   constructor(
     private readonly entitiesService: EntitiesService,
     private readonly formsService: FormsService,
     @InjectQueue("email") private readonly emailQueue: Queue
   ) {
     super();
+  }
+
+  @OnWorkerEvent("failed")
+  async onFailed(job: Job, error: Error) {
+    this.logger.error("Job failed", error, job);
+    await Sentry.flush(2000);
   }
 
   async process(job: Job) {

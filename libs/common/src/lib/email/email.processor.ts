@@ -89,7 +89,7 @@ export class EmailProcessor extends WorkerHost {
 
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
-    Sentry.captureException(error);
-    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
+    this.logger.error("Worker event failed", error, job);
+    await Sentry.flush(2000);
   }
 }

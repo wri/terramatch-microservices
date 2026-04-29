@@ -2,7 +2,7 @@ import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TMLogger } from "../util/tm-logger";
 import { AnalyticsEventService } from "./analytics-events.service";
 import { Job } from "bullmq";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/nestjs";
 
 type AnalyticsData = {
   uuid: string;
@@ -27,7 +27,7 @@ export class AnalyticsProcessor extends WorkerHost {
 
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
-    Sentry.captureException(error);
-    this.logger.error(`Worker event failed: ${JSON.stringify(job)}`, error.stack);
+    this.logger.error("Worker event failed", error, job);
+    await Sentry.flush(2000);
   }
 }

@@ -48,7 +48,7 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectExportId: "project_id"
 };
 
-const CSV_ATTRIBUTES = ["id", "uuid", "status", "updateRequestStatus", "createdAt", "updatedAt"];
+const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
 export class NurseryProcessor extends EntityProcessor<
   Nursery,

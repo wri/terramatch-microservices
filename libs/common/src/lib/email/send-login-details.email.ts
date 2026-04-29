@@ -21,7 +21,7 @@ export class SendLoginDetailsEmail extends EmailSender<SendLoginDetailsEmailData
   async send(emailService: EmailService) {
     const baseUrl = emailService.getFrontEndUrl();
     const encodedToken = encodeURIComponent(this.data.token);
-    const link = `${baseUrl}/auth/reset-password?token=${encodedToken}`;
+    const link = `${baseUrl}/auth/set-password/${encodedToken}`;
     const i18nReplacements: Dictionary<string> = {
       "{userName}": this.data.userName,
       "{mail}": this.data.emailAddress

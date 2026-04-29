@@ -24,6 +24,8 @@ import { UserAssociationService } from "./user-association/user-association.serv
 import { USER_SERVICE_EXPORT_QUEUE, UserServiceExportsProcessor } from "./exports/user-service-exports.processor";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
+const IS_REPL = process.env["REPL"] === "true";
+
 @Module({
   imports: [
     SentryModule.forRoot(),
@@ -62,7 +64,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
     OrganisationCreationService,
     ActionsService,
     UserAssociationService,
-    UserServiceExportsProcessor
+
+    ...(IS_REPL ? [] : [UserServiceExportsProcessor])
   ]
 })
 export class AppModule {}

@@ -29,6 +29,7 @@ import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
+import { ConfigService } from "@nestjs/config";
 
 describe("SiteReportProcessor", () => {
   let module: TestingModule;
@@ -37,6 +38,7 @@ describe("SiteReportProcessor", () => {
   const policyService = () => module.get(PolicyService);
   const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
   const entitiesService = () => module.get(EntitiesService);
+  const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
 
   beforeEach(async () => {
     await SiteReport.truncate();
@@ -573,6 +575,12 @@ describe("SiteReportProcessor", () => {
   });
 
   describe("exportAll", () => {
+    beforeEach(() => {
+      configService().get.mockImplementation((key: string) =>
+        key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+      );
+    });
+
     it("throws if the framework key is missing", async () => {
       await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
     });
@@ -621,6 +629,9 @@ describe("SiteReportProcessor", () => {
       expect(addRow).toHaveBeenCalledTimes(3);
       const [result1, additional1] = addRow.mock.calls[0] as [SiteReport, Dictionary<unknown>];
       expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect((additional1 as { linkToTerramatch: string }).linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/siteReport/${reports[0].uuid}/show`
+      );
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
@@ -632,6 +643,9 @@ describe("SiteReportProcessor", () => {
       });
       const [result2, additional2] = addRow.mock.calls[1] as [SiteReport, Dictionary<unknown>];
       expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect((additional2 as { linkToTerramatch: string }).linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/siteReport/${reports[1].uuid}/show`
+      );
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
@@ -643,6 +657,9 @@ describe("SiteReportProcessor", () => {
       });
       const [result3, additional3] = addRow.mock.calls[2] as [SiteReport, Dictionary<unknown>];
       expect(result3).toMatchObject({ uuid: reports[2].uuid });
+      expect((additional3 as { linkToTerramatch: string }).linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/siteReport/${reports[2].uuid}/show`
+      );
       expect(result3.projectName).toEqual(projects[1].name);
       expect(result3.organisationReadableType).toEqual("For Profit Organization");
       expect(result3.organisationName).toEqual(orgs[1].name);

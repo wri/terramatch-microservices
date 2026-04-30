@@ -25,6 +25,7 @@ import { Response } from "express";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
 import { Op } from "sequelize";
+import { ConfigService } from "@nestjs/config";
 
 describe("NurseryReportProcessor", () => {
   let module: TestingModule;
@@ -33,6 +34,7 @@ describe("NurseryReportProcessor", () => {
   const policyService = () => module.get(PolicyService);
   const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
   const entitiesService = () => module.get(EntitiesService);
+  const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
 
   beforeEach(async () => {
     await NurseryReport.truncate();
@@ -544,6 +546,12 @@ describe("NurseryReportProcessor", () => {
   });
 
   describe("exportAll", () => {
+    beforeEach(() => {
+      configService().get.mockImplementation((key: string) =>
+        key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+      );
+    });
+
     it("throws if the framework key is missing", async () => {
       await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
     });
@@ -578,13 +586,19 @@ describe("NurseryReportProcessor", () => {
       await processor.exportAll({ frameworkKey: "terrafund" });
 
       expect(addRow).toHaveBeenCalledTimes(2);
-      const result1 = addRow.mock.calls[0][0] as NurseryReport;
+      const [result1, additional1] = addRow.mock.calls[0] as [NurseryReport, { linkToTerramatch: string }];
       expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(additional1.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nurseryReport/${reports[0].uuid}/show`
+      );
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
-      const result2 = addRow.mock.calls[1][0] as NurseryReport;
+      const [result2, additional2] = addRow.mock.calls[1] as [NurseryReport, { linkToTerramatch: string }];
       expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(additional2.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nurseryReport/${reports[1].uuid}/show`
+      );
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);

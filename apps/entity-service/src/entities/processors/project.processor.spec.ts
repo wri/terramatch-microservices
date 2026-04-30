@@ -8,7 +8,7 @@ import {
   TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ProjectProcessor } from "./project.processor";
+import { CHILD_ENTITIES_FOR_EXPORT, ProjectProcessor } from "./project.processor";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities.service";
 import {
@@ -34,32 +34,43 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Dictionary, flatten, reverse, sortBy, sum, sumBy } from "lodash";
+import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { EntityProcessor } from "./entity-processor";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { mockRequestForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { Op } from "sequelize";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { Archiver } from "archiver";
+import { ProjectReportProcessor } from "./project-report.processor";
 
 describe("ProjectProcessor", () => {
+  let module: TestingModule;
   let processor: ProjectProcessor;
-  let mediaService: DeepMocked<MediaService>;
-  let policyService: DeepMocked<PolicyService>;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const mediaService = (): DeepMocked<MediaService> => module.get(MediaService);
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await Project.truncate();
 
-    const module = await mockEntityService();
-    mediaService = module.get(MediaService);
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
@@ -78,7 +89,7 @@ describe("ProjectProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -91,7 +102,7 @@ describe("ProjectProcessor", () => {
     it("returns my projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId: policyService.userId, projectId: id });
+        await ProjectUserFactory.create({ userId: policyService().userId, projectId: id });
       }
       await ProjectFactory.createMany(5);
 
@@ -102,7 +113,7 @@ describe("ProjectProcessor", () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
         await ProjectUserFactory.create({
-          userId: policyService.userId,
+          userId: policyService().userId,
           projectId: id,
           isMonitoring: false,
           isManaging: true
@@ -248,7 +259,7 @@ describe("ProjectProcessor", () => {
         { sortField: "organisationName", sortUp: false }
       );
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      setMockedPermissions("projects-read");
       await expect(processor.findMany({ sort: { field: "uuid" } })).rejects.toThrow(BadRequestException);
     });
 
@@ -260,14 +271,14 @@ describe("ProjectProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      policyService.getPermissions.mockResolvedValue([]);
+      setMockedPermissions();
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
 
     describe("processSideload", () => {
       it("throws if the sideloads includes something unsupported", async () => {
         const project = await ProjectFactory.create();
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        setMockedPermissions("projects-read");
         const document = buildJsonApi(ProjectLightDto);
         await processor.loadAssociationData([project.id]);
         await expect(
@@ -279,7 +290,7 @@ describe("ProjectProcessor", () => {
         const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund" });
         await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund" });
         await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund" });
-        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        setMockedPermissions("framework-terrafund");
         const document = buildJsonApi(ProjectLightDto);
         await processor.addIndex(document, {
           sideloads: [
@@ -309,13 +320,13 @@ describe("ProjectProcessor", () => {
   describe("update", () => {
     it("can update the isTest flag", async () => {
       const project = await ProjectFactory.create({ isTest: false });
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      setMockedPermissions("projects-read");
       await expect(processor.update(project, { isTest: false })).rejects.toThrow(UnauthorizedException);
       expect(project.isTest).toBe(false);
       await processor.update(project, {});
       expect(project.isTest).toBe(false);
 
-      policyService.getPermissions.mockResolvedValue([`framework-${project.frameworkKey}`]);
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       await processor.update(project, { isTest: true });
       expect(project.isTest).toBe(true);
     });
@@ -337,7 +348,7 @@ describe("ProjectProcessor", () => {
         frameworkKey: "foofund" as FrameworkKey
       });
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      setMockedPermissions("projects-read");
       const { models } = await processor.findMany({});
       const { id, dto } = await processor.getLightDto(models[0], new ProjectLightDto());
       expect(id).toEqual(uuid);
@@ -381,7 +392,7 @@ describe("ProjectProcessor", () => {
         const { dto: fullDto } = await processor.getFullDto(project!);
         expect(fullDto.plantingStatus).toBe("replacement-planting");
 
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
         expect(lightDto.plantingStatus).toBe("replacement-planting");
@@ -394,7 +405,7 @@ describe("ProjectProcessor", () => {
         const { dto: fullDto } = await processor.getFullDto(project!);
         expect(fullDto.plantingStatus).toBeNull();
 
-        policyService.getPermissions.mockResolvedValue(["projects-read"]);
+        setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
         expect(lightDto.plantingStatus).toBeNull();
@@ -645,7 +656,7 @@ describe("ProjectProcessor", () => {
     it("creates a test project if the org is a test org", async () => {
       const org = await OrganisationFactory.create({ isTest: true });
       const user = await UserFactory.create({ organisationId: org.id });
-      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      mockRequestForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(true);
@@ -654,7 +665,7 @@ describe("ProjectProcessor", () => {
     it("creates blank project if there is no application", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      mockRequestForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(false);
@@ -665,7 +676,7 @@ describe("ProjectProcessor", () => {
     it("establishes a project user connection", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      (policyService as unknown as Dictionary<unknown>).userId = user.id;
+      mockRequestForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
@@ -764,17 +775,64 @@ describe("ProjectProcessor", () => {
         );
       }
 
-      expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
-      expect(mediaService.duplicateMedia).toHaveBeenCalledWith(
+      expect(mediaService().duplicateMedia).toHaveBeenCalledTimes(1);
+      expect(mediaService().duplicateMedia).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: pitchMedia.uuid }),
         expect.objectContaining({ uuid: project.uuid })
       );
     });
   });
 
+  describe("export", () => {
+    it("should throw if the site is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the site is missing a framework", async () => {
+      const { uuid } = await ProjectFactory.create({ frameworkKey: null });
+      await expect(processor.export(uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should fill the archive with site and report exports", async () => {
+      const mockSubProcessor = {
+        exportAll: jest.fn()
+      } as unknown as ProjectReportProcessor;
+      const authSpy = jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      const { uuid, frameworkKey, name } = await ProjectFactory.create();
+      const target = {} as Archiver;
+      await processor.export(uuid, {} as Archiver);
+      expect(authSpy).not.toHaveBeenCalled();
+      expect(exportSpy).toHaveBeenCalledWith(
+        "projects",
+        expect.anything(),
+        [expect.objectContaining({ uuid })],
+        expect.anything()
+      );
+      expect(createSpy).toHaveBeenCalledTimes(CHILD_ENTITIES_FOR_EXPORT.length);
+      expect(mockSubProcessor.exportAll).toHaveBeenCalledTimes(CHILD_ENTITIES_FOR_EXPORT.length);
+      for (const child of CHILD_ENTITIES_FOR_EXPORT) {
+        expect(createSpy).toHaveBeenCalledWith(child);
+        expect(mockSubProcessor.exportAll).toHaveBeenCalledWith(
+          expect.objectContaining({
+            projectUuid: uuid,
+            target,
+            frameworkKey,
+            fileNamePrefix: expect.stringContaining(`${name}`)
+          })
+        );
+      }
+    });
+  });
+
   describe("exportAll", () => {
+    it("throws if the framework key is missing", async () => {
+      await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
+    });
+
     it("writes all projects to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await Project.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),
@@ -789,7 +847,7 @@ describe("ProjectProcessor", () => {
       await EntityFormFactory.project(projects[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -809,6 +867,22 @@ describe("ProjectProcessor", () => {
       });
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        isTest: false,
+        frameworkKey: "ppc",
+        id: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        isTest: false,
+        frameworkKey: "ppc",
+        id: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

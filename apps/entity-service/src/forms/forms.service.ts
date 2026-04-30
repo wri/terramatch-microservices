@@ -1,9 +1,9 @@
 import { Response } from "express";
-import { Injectable, NotFoundException, Scope } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import {
+  Application,
   Form,
   FormOptionList,
   FormOptionListOption,
@@ -15,8 +15,7 @@ import {
   FundingProgramme,
   LocalizationKey,
   Media,
-  Stage,
-  User
+  Stage
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -56,7 +55,7 @@ import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
@@ -65,9 +64,9 @@ import {
   getFormQuestionsForExport,
   getMappingsColumns
 } from "@terramatch-microservices/common/export/csv-export.service";
-import { DateTime } from "luxon";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -86,10 +85,32 @@ type TranslationModelType =
 
 type TranslationParamsType = string | number;
 
-const FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   applicationUuid: "Application ID",
   organisationUuid: "Organisation ID",
   projectPitchUuid: "Project Pitch ID",
+  status: "Submission Status",
+  stageName: "Current Stage",
+  organisationType: "Organisation Type",
+  organisationName: "Organization Legal Name",
+  organisationPhone: "Organization WhatsApp Enabled Phone Number",
+  organisationStreet1: "Headquarters Street address",
+  organisationStreet2: "Headquarters street address 2",
+  organisationCity: "Headquarters address City",
+  organisationState: "Headquarters address State/Province",
+  organisationZipcode: "Headquarters address Zipcode",
+  organisationLegalRegistration: "Proof of local legal registration, incorporation, or right to operate",
+  organisationWebUrl: "Website URL (optional)",
+  organisationFacebookUrl: "Organization Facebook URL(optional)",
+  organisationInstagramUrl: "Organization Instagram URL(optional)",
+  organisationLinkedinUrl: "Organization LinkedIn URL(optional)",
+  organisationLogo: "Upload your organization logo(optional)",
+  organisationCover: "Upload a cover photo (optional)",
+  createdAt: "Created At",
+  updatedAt: "Updated At"
+};
+
+const PD_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   status: "Submission Status",
   stageName: "Current Stage",
   organisationType: "Organisation Type",
@@ -131,7 +152,7 @@ const SUBMISSION_CSV_ORG_ATTRIBUTES = [
 
 const SUBMISSION_CSV_PITCH_ATTRIBUTES = ["id", "uuid"];
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
 
@@ -326,7 +347,57 @@ export class FormsService {
     return form;
   }
 
+  async exportApplication(application: Application, response: Response) {
+    const fundingProgramme = application.fundingProgramme ?? (await application.$get("fundingProgramme"));
+    if (fundingProgramme == null) throw new InternalServerErrorException("Application missing funding programme");
+
+    const mappings = await this.getExportMappings(fundingProgramme);
+    const fileName = timestampFileName("Application Export");
+    await this.writeSubmissionsCsv(
+      fileName,
+      response,
+      mappings,
+      { applicationId: application.id },
+      { order: [["stage", "order", "ASC"]], csvColumns: PD_FORM_SUBMISSION_CSV_COLUMNS }
+    );
+  }
+
   async exportApplications(fundingProgramme: FundingProgramme) {
+    const mappings = await this.getExportMappings(fundingProgramme);
+    const fileName = timestampFileName(`${fundingProgramme.name} Export`);
+    await this.writeSubmissionsCsv(
+      fileName,
+      undefined,
+      mappings,
+      {
+        "$application.funding_programme_uuid$": fundingProgramme.uuid
+      },
+      {
+        order: [
+          ["application", "id", "ASC"],
+          ["stage", "order", "ASC"]
+        ]
+      }
+    );
+
+    return fileName;
+  }
+
+  async exportSubmissions(formUuid: string, response: Response) {
+    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["uuid", "title"] });
+    if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
+
+    const mappings = await getFormQuestionsForExport(form);
+    const fileName = timestampFileName(`${form?.title} Submission Export`);
+    await this.writeSubmissionsCsv(
+      fileName,
+      response,
+      { [form.uuid]: { mappings, frameworkKey: form.frameworkKey } },
+      { formId: formUuid }
+    );
+  }
+
+  private async getExportMappings(fundingProgramme: FundingProgramme) {
     const stages = await fundingProgramme.$get("stages", {
       order: [["order", "DESC"]],
       attributes: ["id"],
@@ -340,7 +411,7 @@ export class FormsService {
     }
 
     // need to map this by form id
-    const mappings = (
+    return (
       await Promise.all(
         forms.map(async form => ({
           uuid: form.uuid,
@@ -352,35 +423,6 @@ export class FormsService {
       (acc, { uuid, ...rest }) => ({ ...acc, [uuid]: rest }),
       {} as Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>
     );
-    const fileName = `${fundingProgramme.name} Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    await this.writeSubmissionsCsv(
-      fileName,
-      undefined,
-      mappings,
-      {
-        "$application.funding_programme_uuid$": fundingProgramme.uuid
-      },
-      [
-        ["application", "id", "ASC"],
-        ["stage", "order", "ASC"]
-      ]
-    );
-
-    return fileName;
-  }
-
-  async exportSubmissions(formUuid: string, response: Response) {
-    const form = await Form.findOne({ where: { uuid: formUuid }, attributes: ["uuid", "title"] });
-    if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
-
-    const mappings = await getFormQuestionsForExport(form);
-    const fileName = `${form?.title} Submission Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    await this.writeSubmissionsCsv(
-      fileName,
-      response,
-      { [form.uuid]: { mappings, frameworkKey: form.frameworkKey } },
-      { formId: formUuid }
-    );
   }
 
   private async writeSubmissionsCsv(
@@ -388,7 +430,7 @@ export class FormsService {
     response: Response | undefined,
     formIdMap: Dictionary<{ mappings: FormQuestionExportMapping[]; frameworkKey: FrameworkKey | null }>,
     where: WhereOptions,
-    order?: OrderItem[]
+    { order, csvColumns }: { order?: OrderItem[]; csvColumns?: Dictionary<string> } = {}
   ) {
     const allMappings = Object.values(formIdMap).reduce((acc, { mappings }) => [...acc, ...mappings], []);
     const orgAttributes = uniq([...SUBMISSION_CSV_ORG_ATTRIBUTES, ...getAttributes(allMappings, "organisations")]);
@@ -403,7 +445,7 @@ export class FormsService {
     await this.csvExportService.writeCsv(
       fileName,
       response,
-      { ...FORM_SUBMISSION_CSV_COLUMNS, ...getMappingsColumns(allMappings) },
+      { ...(csvColumns ?? ADMIN_FORM_SUBMISSION_CSV_COLUMNS), ...getMappingsColumns(allMappings) },
       async addRow => {
         for await (const page of batchFindAll(builder)) {
           const orgs = uniqBy(page.map(submission => submission.organisation).filter(isNotNull), "id");
@@ -510,16 +552,13 @@ export class FormsService {
     ];
   }
 
-  private _userLocale?: ValidLocale;
-  private async getUserLocale() {
-    if (this._userLocale == null) {
-      const userId = authenticatedUserId();
-      this._userLocale = userId == null ? undefined : await User.findLocale(userId);
-      if (this._userLocale == null) {
-        throw new BadRequestException("Locale is required");
-      }
+  private get userLocale() {
+    const locale = userLocale();
+    if (locale == null) {
+      throw new BadRequestException("Locale is required");
     }
-    return this._userLocale;
+
+    return locale;
   }
 
   private async getTranslationsForFullDto(
@@ -544,7 +583,7 @@ export class FormsService {
         uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds, optionI18nIds])),
         isNotNull
       ),
-      await this.getUserLocale()
+      this.userLocale
     );
   }
 

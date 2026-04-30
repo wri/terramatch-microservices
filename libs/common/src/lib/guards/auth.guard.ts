@@ -1,8 +1,10 @@
 import { CanActivate, ExecutionContext, Injectable, SetMetadata, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Reflector } from "@nestjs/core";
-import { User } from "@terramatch-microservices/database/entities";
+import { Permission, User } from "@terramatch-microservices/database/entities";
 import { RequestContext } from "nestjs-request-context";
+import { PolicyBuilder } from "../policies/policy.service";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 const NO_BEARER_AUTH = "noBearerAuth";
 export const NoBearerAuth = SetMetadata(NO_BEARER_AUTH, true);
@@ -11,6 +13,9 @@ const OPTIONAL_BEARER_AUTH = "optionalBearerAuth";
 export const OptionalBearerAuth = SetMetadata(OPTIONAL_BEARER_AUTH, true);
 
 export const authenticatedUserId = () => RequestContext.currentContext?.req?.authenticatedUserId as number | undefined;
+export const permissions = () => RequestContext.currentContext?.req?.permissions as string[] | undefined;
+export const policyBuilder = () => RequestContext.currentContext?.req?.policyBuilder as PolicyBuilder | undefined;
+export const userLocale = () => RequestContext.currentContext?.req?.userLocale as ValidLocale | undefined;
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -41,9 +46,12 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    // Most requests won't need the actual user object; instead, the roles and permissions
-    // are fetched from other (smaller) tables, and only the user id is needed.
+    // Most requests won't need the actual user object; Instead, we cache the user id and a couple
+    // of other frequently needed values on the request object.
     request.authenticatedUserId = userId;
+    request.permissions = await Permission.getUserPermissionNames(userId);
+    request.policyBuilder = new PolicyBuilder(userId, request.permissions);
+    request.userLocale = await User.findLocale(userId);
     return true;
   }
 

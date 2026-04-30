@@ -1,33 +1,38 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { faker } from "@faker-js/faker";
 import { SrpReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { orderBy, reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  FormFactory,
   ProjectFactory,
   ProjectUserFactory,
-  SrpReportFactory,
-  TrackingFactory
+  SrpReportFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 describe("SrpReportProcessor", () => {
+  let module: TestingModule;
   let processor: SrpReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await SrpReport.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("srpReports") as SrpReportProcessor;
   });
 
@@ -67,7 +72,7 @@ describe("SrpReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -134,7 +139,7 @@ describe("SrpReportProcessor", () => {
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -157,7 +162,7 @@ describe("SrpReportProcessor", () => {
 
     it("should returns own project disturbance reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const ownProjectReports = await SrpReportFactory.createMany(3, { projectId: project.id });
       await SrpReportFactory.createMany(5);
 
@@ -204,21 +209,38 @@ describe("SrpReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await SrpReportFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "srpReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await SrpReport.truncate();
       const projects = orderBy(await ProjectFactory.createMany(2, { frameworkKey: "ppc" }), "id");
       const reports = [
-        await SrpReportFactory.create({ projectId: projects[0].id }),
-        await SrpReportFactory.create({ projectId: projects[1].id })
+        await SrpReportFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SrpReportFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
-      const tracking = await TrackingFactory.srpReportDirectOtherRestorationPartners(reports[1]).create({
-        description: faker.lorem.sentence()
-      });
+
+      await FormFactory.create({ type: "srp-report" });
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll();
@@ -231,9 +253,7 @@ describe("SrpReportProcessor", () => {
           projectUuid: projects[0].uuid,
           projectName: projects[0].name
         }),
-        {
-          otherRestorationPartnersDescription: undefined
-        }
+        expect.anything()
       );
       expect(addRow).toHaveBeenNthCalledWith(
         2,
@@ -242,10 +262,22 @@ describe("SrpReportProcessor", () => {
           projectUuid: projects[1].uuid,
           projectName: projects[1].name
         }),
-        {
-          otherRestorationPartnersDescription: tracking.description
-        }
+        expect.anything()
       );
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        projectId: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        projectId: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

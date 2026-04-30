@@ -78,6 +78,15 @@ export const hasNothingToReport = (entity: Model): entity is NothingToReportMode
 export const hasTaskId = (entity: Model): entity is TaskModel =>
   TASK_MODELS.find(model => entity instanceof model) != null;
 
+export const CACHED_EXPORT_ENTITY_TYPES: EntityType[] = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+];
+
 /**
  * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.
  *

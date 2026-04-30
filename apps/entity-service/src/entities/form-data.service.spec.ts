@@ -33,7 +33,12 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
-import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import {
+  mockTranslateFieldsWithOriginal,
+  mockRequestContext,
+  serialize,
+  mockRequestForUser
+} from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
   RelationResourceCollector
@@ -82,7 +87,7 @@ jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector",
 describe("FormDataService", () => {
   let service: FormDataService;
   let mediaService: DeepMocked<MediaService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let localizationService: DeepMocked<LocalizationService>;
   let collector: LinkedAnswerCollector;
 
@@ -92,15 +97,18 @@ describe("FormDataService", () => {
     const module = await Test.createTestingModule({
       providers: [
         FormDataService,
+        PolicyService,
         { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) }
       ]
     }).compile();
 
     service = module.get(FormDataService);
+    policyService = module.get(PolicyService);
     // @ts-expect-error Passing an extra param to the stubbed mock singleton collector
     collector = new LinkedAnswerCollector(mediaService, true);
+
+    mockRequestContext({ userId: 123 });
   });
 
   afterEach(() => {
@@ -119,8 +127,8 @@ describe("FormDataService", () => {
 
     it("creates an update request if the user cannot update answers", async () => {
       const site = await SiteFactory.create();
-      policyService.hasAccess.mockResolvedValue(false);
-      mockUserId(123);
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
+      mockRequestContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
 
@@ -152,7 +160,7 @@ describe("FormDataService", () => {
         linkedFieldKey: "site-rel-tree-species",
         collection: "tree-planted"
       });
-      policyService.hasAccess.mockResolvedValue(true);
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
       await service.storeEntityAnswers(site, await form.reload(), {
         [conditional.uuid]: true,
         [name.uuid]: "Site Name",
@@ -177,7 +185,7 @@ describe("FormDataService", () => {
         linkedFieldKey: "pro-rep-planting-status"
       });
 
-      policyService.hasAccess.mockResolvedValue(true);
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
       await service.storeEntityAnswers(report, await form.reload(), {
         [plantingStatusQuestion.uuid]: "Yes"
       });
@@ -186,9 +194,8 @@ describe("FormDataService", () => {
     });
 
     it("does additional report processing", async () => {
-      mockUserId(123);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
-      policyService.hasAccess.mockResolvedValue(true);
+      mockRequestContext({ userId: 123, permissions: ["manage-own"] });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
       const siteReport = await SiteReportFactory.create({ submittedAt: null, nothingToReport: true });
       const form = await EntityFormFactory.siteReport(siteReport).create();
       const section = await FormSectionFactory.form(form).create();
@@ -428,7 +435,7 @@ describe("FormDataService", () => {
       const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       const stage = await StageFactory.create({});
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestForUser(user);
       const submission = await FormSubmissionFactory.create({
         answers: { [conditional.uuid]: true },
         organisationUuid: org.uuid,

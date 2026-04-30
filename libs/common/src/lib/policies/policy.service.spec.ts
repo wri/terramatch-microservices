@@ -3,7 +3,7 @@ import { PolicyService } from "./policy.service";
 import { UnauthorizedException } from "@nestjs/common";
 import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
 import { isArray } from "lodash";
-import { mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 type Subject = Parameters<PolicyService["authorize"]>[1];
 export async function expectCan(service: PolicyService, action: string | string[], subject: Subject) {
@@ -46,13 +46,13 @@ describe("PolicyService", () => {
   });
 
   it("should throw an error if no authed user is found", async () => {
-    mockUserId();
+    mockRequestContext({ permissions: null });
     await expect(service.authorize("foo", new User())).rejects.toThrow(UnauthorizedException);
-    await expect(service.getPermissions()).rejects.toThrow(UnauthorizedException);
+    expect(() => service.permissions).toThrow(UnauthorizedException);
   });
 
   it("should throw an error if there is no policy defined", async () => {
-    mockUserId(123);
+    mockRequestContext({ userId: 123 });
     await expect(service.authorize("foo", new ModelHasRole())).rejects.toThrow(UnauthorizedException);
   });
 });

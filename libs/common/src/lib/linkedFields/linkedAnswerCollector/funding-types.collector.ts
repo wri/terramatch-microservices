@@ -5,7 +5,6 @@ import { Dictionary } from "lodash";
 import { EmbeddedFundingTypeDto } from "../../dto/funding-type.dto";
 import { Op, WhereAttributeHash } from "sequelize";
 import { FormModel } from "@terramatch-microservices/database/constants/entities";
-import { attributeExporter } from "./utils";
 
 export function fundingTypesCollector(logger: LoggerService): RelationResourceCollector {
   const questions: Dictionary<string> = {};
@@ -51,7 +50,7 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
       });
 
       answers[Object.values(questions)[0]] = forExport
-        ? fundingTypes.map(attributeExporter(["type", "source", "amount", "year"]))
+        ? fundingTypes.map(({ type, source, amount, year }) => `${type}:${source}:${amount}(${year})`)
         : fundingTypes.map(fundingType => new EmbeddedFundingTypeDto(fundingType));
     },
 

@@ -39,6 +39,7 @@ import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 import { ExportImageService } from "./entities/export-image.service";
+import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "./jobs/entity-service-exports.processor";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -48,7 +49,8 @@ const IS_REPL = process.env["REPL"] === "true";
     CommonModule,
     HealthModule,
     BullModule.registerQueue({ name: "email" }),
-    BullModule.registerQueue({ name: "entities" })
+    BullModule.registerQueue({ name: "entities" }),
+    BullModule.registerQueue({ name: ENTITY_SERVICE_EXPORT_QUEUE })
   ],
   // Note: Any controller that provides a path under the entities namespace ("entities/v3/something")
   // needs to be provided in this list before EntitiesController, or it will be superseded by the
@@ -90,7 +92,8 @@ const IS_REPL = process.env["REPL"] === "true";
     FormDataService,
     ReportingFrameworksService,
     ExportImageService,
-    ...(IS_REPL ? [] : [EntitiesQueueProcessor])
+
+    ...(IS_REPL ? [] : [EntitiesQueueProcessor, EntityServiceExportsProcessor])
   ]
 })
 export class AppModule {}

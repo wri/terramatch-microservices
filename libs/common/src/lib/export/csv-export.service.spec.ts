@@ -25,6 +25,8 @@ import {
 import { faker } from "@faker-js/faker";
 import { Media } from "@terramatch-microservices/database/entities";
 import { DateTime } from "luxon";
+import { Archiver } from "archiver";
+import { PassThrough } from "node:stream";
 
 const mockResponse = () => {
   const response = createResponse({ eventEmitter: EventEmitter });
@@ -97,6 +99,14 @@ describe("CsvExportService", () => {
     it("gets an upload stream from the file service", () => {
       service.getS3StreamWriter("test.csv", {});
       expect(fileService.uploadStream).toHaveBeenCalledWith("test-bucket", "exports/test.csv", "text/csv");
+    });
+  });
+
+  describe("getArchiveWriter", () => {
+    it("gets a stream for an archive file", () => {
+      const append = jest.fn();
+      service.getArchiveWriter("test.csv", { append } as unknown as Archiver, { name: "Name" });
+      expect(append).toHaveBeenCalledWith(expect.any(PassThrough), { name: "test.csv" });
     });
   });
 
@@ -229,7 +239,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         throw new Error("failed stream");
       };
       const close = jest.fn();
-      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      jest.spyOn(service, "getArchiveWriter").mockReturnValue({ addRow: jest.fn(), close });
       await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
       expect(close).toHaveBeenCalled();
     });
@@ -237,7 +247,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
     it("closes the stream on success", async () => {
       const writeRows = () => Promise.resolve();
       const close = jest.fn();
-      jest.spyOn(service, "getResponseStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
+      jest.spyOn(service, "getArchiveWriter").mockReturnValue({ addRow: jest.fn(), close });
       await service.writeCsv("test.csv", {} as Response, {}, writeRows);
       expect(close).toHaveBeenCalled();
     });

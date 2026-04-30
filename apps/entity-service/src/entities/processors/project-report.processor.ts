@@ -1,9 +1,10 @@
+import { Response } from "express";
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { ProjectReportFullDto, ProjectReportLightDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op, WhereOptions } from "sequelize";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import {
   Media,
@@ -29,6 +30,9 @@ import {
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { Archiver } from "archiver";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { ServerResponse } from "node:http";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -61,7 +65,18 @@ function resolvePlantingStatus(
   return null;
 }
 
-const CSV_COLUMNS: Dictionary<string> = {
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  dueAt: "due_date",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "id",
   uuid: "uuid",
   organisationReadableType: "organization-readable_type",
@@ -75,6 +90,14 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectExportId: "project_id",
   projectUuid: "project_uuid"
 };
+
+const CSV_EXPORT_INCLUDES: Includeable[] = [
+  {
+    association: "project",
+    attributes: ["name", "id", "uuid", "ppcExternalId"],
+    include: [{ association: "organisation", attributes: ["name", "type"] }]
+  }
+];
 
 const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt", "dueAt"];
 
@@ -127,7 +150,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -267,9 +290,55 @@ export class ProjectReportProcessor extends ReportProcessor<
     return { id: projectReport.uuid, dto: new ProjectReportLightDto(projectReport) };
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
+  async export(uuid: string, target: Response | Archiver) {
+    const report = await ProjectReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (report == null) throw new NotFoundException();
+    if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    const fileName = timestampFileName(`${report.projectName?.replace(/\/\\/g, "-")} - Project Report`);
+    await this.exportReports(report.frameworkKey, target, [report], fileName);
+  }
+
+  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
+    if (frameworkKey == null && projectUuid != null) {
+      frameworkKey =
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+    }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+
+    const where: WhereOptions<ProjectReport> = {};
+    if (projectUuid != null) {
+      where["$project.uuid$"] = projectUuid;
+    } else {
+      const permissions = this.entitiesService.permissions;
+      where.frameworkKey = frameworkKey;
+      where["$project.is_test$"] = false;
+      if (permissions?.includes("manage-own")) {
+        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+      } else if (permissions?.includes("projects-manage")) {
+        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+      }
+    }
+
+    await this.exportReports(
+      frameworkKey,
+      target,
+      new PaginatedQueryBuilder(ProjectReport, 10, CSV_EXPORT_INCLUDES).where(where),
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - project reports`)
+    );
+  }
+
+  protected async exportReports(
+    frameworkKey: FrameworkKey,
+    target: Archiver | Response | undefined,
+    source: PaginatedQueryBuilder<ProjectReport> | ProjectReport[],
+    fileName?: string
+  ) {
+    const permissions = this.entitiesService.permissions;
+    const adminExport = permissions == null || permissions.includes(`framework-${frameworkKey}`);
     const columns = {
-      ...CSV_COLUMNS,
+      ...(adminExport ? ADMIN_CSV_COLUMNS : PD_CSV_COLUMNS),
       ...(frameworkKey === "ppc"
         ? { totalSeedlingsGrownReport: "total_seedlings_grown_report", totalSeedlingsGrown: "total_seedlings_grown" }
         : {})
@@ -302,27 +371,14 @@ export class ProjectReportProcessor extends ReportProcessor<
             )
         : undefined;
 
-    const permissions = await this.entitiesService.getPermissions();
-    const where: WhereOptions<ProjectReport> = { "$project.is_test$": false, frameworkKey };
-    if (permissions?.includes("manage-own")) {
-      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-    } else if (permissions?.includes("projects-manage")) {
-      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
-    }
-
-    await this.entitiesService.entityFrameworkExport(
-      "projectReports",
-      columns,
-      CSV_ATTRIBUTES,
-      new PaginatedQueryBuilder(ProjectReport, 10, [
-        {
-          association: "project",
-          attributes: ["name", "id", "uuid", "ppcExternalId"],
-          include: [{ association: "organisation", attributes: ["name", "type"] }]
-        }
-      ]).where(where),
-      { response, frameworkKey, additionalDataForPage, ability: response == null ? undefined : "read" }
-    );
+    await this.entitiesService.entityExport("projectReports", columns, source, {
+      attributes: CSV_ATTRIBUTES,
+      target,
+      frameworkKey,
+      additionalDataForPage,
+      ability: target instanceof ServerResponse ? "read" : undefined,
+      fileName
+    });
   }
 
   protected async getReportTitle(projectReport: ProjectReport) {

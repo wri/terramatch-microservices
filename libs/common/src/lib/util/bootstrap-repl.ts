@@ -14,6 +14,7 @@ import { SequelizeStorage, Umzug } from "umzug";
 import { migrations } from "@terramatch-microservices/database/migrations";
 import { User } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { PaginatedQueryBuilder } from "./paginated-query.builder";
 
 const logger = new TMLogger("REPL");
 
@@ -48,6 +49,7 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
     Op,
     Reflect,
     Subquery,
+    PaginatedQueryBuilder,
     ...replServer.context["get"](Sequelize).models,
     ...context
   };

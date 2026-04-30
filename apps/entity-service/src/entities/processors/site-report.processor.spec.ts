@@ -22,26 +22,28 @@ import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 
 describe("SiteReportProcessor", () => {
+  let module: TestingModule;
   let processor: SiteReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
-  let csvExportService: DeepMocked<CsvExportService>;
-  let configService: DeepMocked<ConfigService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
+  const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
 
   beforeEach(async () => {
     await SiteReport.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
-    configService = module.get(ConfigService);
-    configService.get.mockImplementation((key: string) =>
-      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
-    );
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("siteReports") as SiteReportProcessor;
   });
 
@@ -56,7 +58,7 @@ describe("SiteReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -69,7 +71,7 @@ describe("SiteReportProcessor", () => {
     it("should returns site reports", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const managedSiteReports = await SiteReportFactory.createMany(3, { siteId: site.id });
       await SiteReportFactory.createMany(5);
       await expectSiteReports(managedSiteReports, {}, { permissions: ["manage-own"] });
@@ -78,7 +80,7 @@ describe("SiteReportProcessor", () => {
     it("should returns managed site reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -125,8 +127,8 @@ describe("SiteReportProcessor", () => {
     it("should return site reports filtered by the update request status, country, site and project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
       const s1 = await SiteFactory.create({ projectId: p1.id });
       const s2 = await SiteFactory.create({ projectId: p2.id });
       s1.project = await s1.$get("project");
@@ -185,7 +187,7 @@ describe("SiteReportProcessor", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const task1 = await TaskFactory.create({ projectId: project.id });
       const task2 = await TaskFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
 
       const task1Reports = await SiteReportFactory.createMany(2, { siteId: site.id, taskId: task1.id });
       await SiteReportFactory.createMany(3, { siteId: site.id, taskId: task2.id });
@@ -487,7 +489,7 @@ describe("SiteReportProcessor", () => {
       const siteReport = await SiteReportFactory.create();
       await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
 
-      policyService.getPermissions.mockResolvedValue(["projects-read"]);
+      setMockedPermissions("projects-read");
       const document = buildJsonApi(SiteReportLightDto);
       await processor.addIndex(document, {
         sideloads: [{ entity: "treeSpecies", pageSize: 5 }]
@@ -508,7 +510,7 @@ describe("SiteReportProcessor", () => {
 
   describe("getReportTitleBase", () => {
     beforeEach(() => {
-      processor["entitiesService"].getUserLocale = jest.fn(async () => "en-US");
+      jest.spyOn(processor["entitiesService"], "userLocale", "get").mockReturnValue("en-US");
       processor["entitiesService"].localizeText = jest.fn(async str => str);
     });
 
@@ -549,9 +551,42 @@ describe("SiteReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws if the report is missing a framework key", async () => {
+      const report = await SiteReportFactory.create({ frameworkKey: null });
+      await expect(processor.export(report.uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await SiteReportFactory.create({ frameworkKey: "ppc" });
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "siteReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
+    beforeEach(() => {
+      configService().get.mockImplementation((key: string) =>
+        key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+      );
+    });
+
+    it("throws if the framework key is missing", async () => {
+      await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
+    });
+
     it("writes all site reports to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await SiteReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),
@@ -586,7 +621,7 @@ describe("SiteReportProcessor", () => {
       );
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -634,6 +669,82 @@ describe("SiteReportProcessor", () => {
         totalSeedsPlanted: firstSeedSum + secondSeedSum,
         totalSeedsPlantedReport: secondSeedSum
       });
+    });
+
+    it("writes project site reports to the CSV", async () => {
+      await SiteReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const projects = [
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" })
+      ];
+      const sites = [
+        await SiteFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      const reports = [
+        await SiteReportFactory.create({ siteId: sites[0].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" }),
+        await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" })
+      ];
+      await EntityFormFactory.siteReport(reports[0]).create();
+
+      const firstTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[1]).createMany(2)).map(({ amount }) => amount)
+      );
+      const secondTreeSum = sum(
+        (await TreeSpeciesFactory.siteReportTreePlanted(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+      const firstSeedSum = sum((await SeedingFactory.siteReport(reports[1]).createMany(2)).map(({ amount }) => amount));
+      const secondSeedSum = sum(
+        (await SeedingFactory.siteReport(reports[2]).createMany(3)).map(({ amount }) => amount)
+      );
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ projectUuid: projects[1].uuid });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      const [result1, additional1] = addRow.mock.calls[0] as [SiteReport, Dictionary<unknown>];
+      expect(result1).toMatchObject({ uuid: reports[1].uuid });
+      expect(result1.projectName).toEqual(projects[1].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(org.name);
+      expect(additional1).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: firstTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: firstSeedSum
+      });
+      const [result2, additional2] = addRow.mock.calls[1] as [SiteReport, Dictionary<unknown>];
+      expect(result2).toMatchObject({ uuid: reports[2].uuid });
+      expect(result2.projectName).toEqual(projects[1].name);
+      expect(result2.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result2.organisationName).toEqual(org.name);
+      expect(additional2).toMatchObject({
+        totalTreesPlanted: firstTreeSum + secondTreeSum,
+        totalTreesPlantedReport: secondTreeSum,
+        totalSeedsPlanted: firstSeedSum + secondSeedSum,
+        totalSeedsPlantedReport: secondSeedSum
+      });
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$site.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$site.project.id$": { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$site.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$site.project.id$": { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

@@ -85,7 +85,7 @@ describe("EntitiesQueueProcessor", () => {
     it("throws if the submission is missing", async () => {
       const frameworkKey = faker.lorem.slug() as FrameworkKey;
       const form = await EntityFormFactory.project().create({ frameworkKey });
-      const framework = await FrameworkFactory.create({ projectFormUuid: form.uuid });
+      const framework = await FrameworkFactory.create({ slug: frameworkKey, projectFormUuid: form.uuid });
       const fp = await FundingProgrammeFactory.create({ frameworkKey: framework.slug });
       const application = await ApplicationFactory.create({ fundingProgrammeUuid: fp.uuid });
       await expect(

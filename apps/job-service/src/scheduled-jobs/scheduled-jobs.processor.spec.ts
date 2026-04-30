@@ -11,7 +11,7 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { Job, Queue } from "bullmq";
 import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Nursery, Project, Site } from "@terramatch-microservices/database/entities";
 import { NurseryFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { DateTime } from "luxon";
 
@@ -132,6 +132,9 @@ describe("ScheduledJobsProcessor", () => {
     });
 
     it("should add to the email queue with all appropriate project ids", async () => {
+      await Project.truncate();
+      await Site.truncate();
+      await Nursery.truncate();
       const projects = await ProjectFactory.createMany(3, { frameworkKey: "terrafund", status: "approved" });
       const siteProject = await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
       await SiteFactory.create({ projectId: siteProject.id });

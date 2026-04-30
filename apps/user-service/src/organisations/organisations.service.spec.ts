@@ -27,14 +27,13 @@ import { OrganisationFullDto } from "@terramatch-microservices/common/dto";
 
 describe("OrganisationsService", () => {
   let service: OrganisationsService;
-  let policyService: DeepMocked<PolicyService>;
   let mediaService: DeepMocked<MediaService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
         OrganisationsService,
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
+        PolicyService,
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         { provide: getQueueToken("email"), useValue: {} }
@@ -51,7 +50,7 @@ describe("OrganisationsService", () => {
   describe("findMany", () => {
     it("should return organisations for admin user", async () => {
       await OrganisationFactory.createMany(2);
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
 
       const result = await service.findMany({});
 
@@ -61,7 +60,6 @@ describe("OrganisationsService", () => {
 
     it("should throw error if non-admin user is not authenticated", async () => {
       mockRequestContext();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       await expect(service.findMany({})).rejects.toThrow(BadRequestException);
     });
 
@@ -74,7 +72,6 @@ describe("OrganisationsService", () => {
       await user.$add("projects", project);
 
       mockRequestContext({ userId: user.id });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       const result = await service.findMany({});
 
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
@@ -82,27 +79,27 @@ describe("OrganisationsService", () => {
 
     it("should filter by funding programme UUID", async () => {
       const programmeUuid = faker.string.uuid();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await service.findMany({ fundingProgrammeUuid: programmeUuid });
     });
 
     it("should filter by search query", async () => {
       await OrganisationFactory.create({ name: "Test Organisation" });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ search: "Test" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by status", async () => {
       await OrganisationFactory.create({ status: "pending" });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ status: "pending" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by type", async () => {
       await OrganisationFactory.create({ type: "non-profit-organization" });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ type: "non-profit-organization" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
@@ -110,7 +107,7 @@ describe("OrganisationsService", () => {
     it("should filter by hqCountry", async () => {
       const country = faker.location.countryCode("alpha-3");
       await OrganisationFactory.create({ hqCountry: country });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ hqCountry: country });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
@@ -123,34 +120,33 @@ describe("OrganisationsService", () => {
         name: "Public Org"
       });
       mockRequestContext({ userId: 999 });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
       const result = await service.findMany({ view: "public" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
       expect(result.organisations.every(o => o.status === "approved" && !o.private && !o.isTest)).toBe(true);
     });
 
     it("should sort by valid field", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "name", direction: "ASC" } });
     });
 
     it("should sort by mapped field", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "created_at", direction: "ASC" } });
     });
 
     it("should handle descending sort", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "-name" } });
     });
 
     it("should throw error for invalid sort field", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await expect(service.findMany({ sort: { field: "invalidField" } })).rejects.toThrow(BadRequestException);
     });
 
     it("should allow sorting by id field", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-test"]);
+      mockRequestContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "id" } });
     });
   });

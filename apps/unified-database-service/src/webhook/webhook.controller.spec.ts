@@ -31,7 +31,7 @@ describe("WebhookController", () => {
 
     it("should call into the service with query params", async () => {
       const updatedSince = new Date();
-      mockRequestContext({ userId: 1 });
+      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
       let result = await controller.updateRecords({ entityType: "projects", startPage: 2, updatedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.updateAirtable).toHaveBeenCalledWith("projects", 2, updatedSince);
@@ -52,7 +52,7 @@ describe("WebhookController", () => {
 
     it("should call into the service with query params", async () => {
       const deletedSince = new Date();
-      mockRequestContext({ userId: 1 });
+      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
       const result = await controller.removeDeletedRecords({ entityType: "projects", deletedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.deleteFromAirtable).toHaveBeenCalledWith("projects", deletedSince);
@@ -67,7 +67,7 @@ describe("WebhookController", () => {
 
     it("should call into the service with query params", async () => {
       const updatedSince = new Date();
-      mockRequestContext({ userId: 1 });
+      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
       const result = await controller.updateAll({ updatedSince: updatedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.updateAll).toHaveBeenCalledWith(updatedSince);

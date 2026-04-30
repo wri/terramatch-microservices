@@ -11,22 +11,20 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       });
     }
 
-    if (this.permissions.includes("manage-own")) {
-      const user = await this.getUser();
-      if (user != null) {
-        this.builder.can(["read", "delete", "update", "approve"], FinancialReport, {
-          organisationId: user.organisationId
-        });
-        this.builder.can("updateAnswers", FinancialReport, {
-          organisationId: user.organisationId,
-          status: { $in: [STARTED, DUE] }
-        });
-        this.builder.can("updateAnswers", FinancialReport, {
-          organisationId: user.organisationId,
-          status: AWAITING_APPROVAL,
-          nothingToReport: true
-        });
-      }
+    const user = await this.getUser();
+    if (user != null) {
+      this.builder.can(["read", "delete", "update", "approve"], FinancialReport, {
+        organisationId: user.organisationId
+      });
+      this.builder.can("updateAnswers", FinancialReport, {
+        organisationId: user.organisationId,
+        status: { $in: [STARTED, DUE] }
+      });
+      this.builder.can("updateAnswers", FinancialReport, {
+        organisationId: user.organisationId,
+        status: AWAITING_APPROVAL,
+        nothingToReport: true
+      });
     }
 
     if (this.permissions.includes("reports-manage")) {

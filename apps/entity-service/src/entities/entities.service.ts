@@ -11,11 +11,7 @@ import {
   FormQuestion,
   Invasive,
   Media,
-  Nursery,
-  NurseryReport,
   Seeding,
-  Site,
-  SiteReport,
   Strata,
   Tracking,
   TreeSpecies,
@@ -29,7 +25,12 @@ import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
 import { NurseryProcessor } from "./processors/nursery.processor";
-import { ENTITY_MODELS, EntityModel, EntityType } from "@terramatch-microservices/database/constants/entities";
+import {
+  ENTITY_MODELS,
+  EntityModel,
+  EntityType,
+  isLinkedEntityModel
+} from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
 import { NurseryReportProcessor } from "./processors/nursery-report.processor";
 import { SiteReportProcessor } from "./processors/site-report.processor";
@@ -153,7 +154,7 @@ export class EntitiesService {
     private readonly localizationService: LocalizationService,
     private readonly configService: ConfigService,
     private readonly csvExportService: CsvExportService
-  ) { }
+  ) {}
 
   get userId() {
     return this.policyService.userId;
@@ -285,8 +286,8 @@ export class EntitiesService {
         [collection]: multiple
           ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { entityType, entityUuid }))
           : grouped[dbCollection] == null
-            ? null
-            : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
+          ? null
+          : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
       }),
       {}
     );
@@ -308,7 +309,7 @@ export class EntitiesService {
     { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
   ) {
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
-    const frontendUrl = this.configService.get("APP_FRONT_END") ?? "https://www.terramatch.org";
+    const frontendUrl = this.configService.get<string>("APP_FRONT_END") ?? "https://www.terramatch.org";
 
     const model = ENTITY_MODELS[type];
     const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
@@ -326,24 +327,17 @@ export class EntitiesService {
         if (ability != null) await this.policyService.authorize(ability, page);
         const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
         for (const entity of page) {
-          const linkToTerramatch =
-            this.getTerramatchLink(type, entity, frontendUrl);
+          const entityModel = entity as T;
           const additional = {
-            ...{ linkToTerramatch },
-            ...(await this.csvExportService.collectFormCells(mappings, { [type]: entity }, frameworkKey)),
+            ...(isLinkedEntityModel(entityModel)
+              ? { linkToTerramatch: entityModel.linkToTerramatch(frontendUrl) }
+              : {}),
+            ...(await this.csvExportService.collectFormCells(mappings, { [type]: entityModel }, frameworkKey)),
             ...pageData[entity.id]
           };
           addRow(entity, additional);
         }
       }
     });
-  }
-
-  private getTerramatchLink(type: EntityType, entity: Model, frontendUrl: string): string | undefined {
-    if (type === "sites") return (entity as Site).linkToTerramatch(frontendUrl);
-    if (type === "nurseries") return (entity as Nursery).linkToTerramatch(frontendUrl);
-    if (type === "siteReports") return (entity as SiteReport).linkToTerramatch(frontendUrl);
-    if (type === "nurseryReports") return (entity as NurseryReport).linkToTerramatch(frontendUrl);
-    return undefined;
   }
 }

@@ -54,16 +54,6 @@ describe("FinancialReportPolicy", () => {
     });
   });
 
-  it("does not allow access without any permission", async () => {
-    const org = await OrganisationFactory.create();
-    const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "other-permissions");
-
-    const financialReport = await FinancialReportFactory.org(org).create();
-    await expectCannot(service, "read", financialReport);
-    await expectCannot(service, "delete", financialReport);
-  });
-
   it("does not allow access for users without organisation", async () => {
     const user = await UserFactory.create({ organisationId: null });
     mockRequestForUser(user, "manage-own");

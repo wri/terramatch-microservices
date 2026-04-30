@@ -17,13 +17,16 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
 import { PolicyService } from "@terramatch-microservices/common";
-import { NotAcceptableException } from "@nestjs/common";
+import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockRequestContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { Archiver } from "archiver";
+import { NurseryReportProcessor } from "./nursery-report.processor";
 
 describe("NurseryProcessor", () => {
   let module: TestingModule;
@@ -432,6 +435,45 @@ describe("NurseryProcessor", () => {
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+  });
+
+  describe("export", () => {
+    it("should throw if the site is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the site is missing a framework", async () => {
+      const { uuid } = await NurseryFactory.create({ frameworkKey: null });
+      await expect(processor.export(uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should fill the archive with site and report exports", async () => {
+      const mockSubProcessor = {
+        exportAll: jest.fn()
+      } as unknown as NurseryReportProcessor;
+      const authSpy = jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      const { id, uuid, frameworkKey, name } = await NurseryFactory.create();
+      const target = {} as Archiver;
+      await processor.export(uuid, {} as Archiver);
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ uuid }));
+      expect(exportSpy).toHaveBeenCalledWith(
+        "nurseries",
+        expect.anything(),
+        [expect.objectContaining({ uuid })],
+        expect.anything()
+      );
+      expect(createSpy).toHaveBeenCalledWith("nurseryReports");
+      expect(mockSubProcessor.exportAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nurseryId: id,
+          target,
+          frameworkKey,
+          fileNamePrefix: expect.stringContaining(`${name}`)
+        })
+      );
     });
   });
 

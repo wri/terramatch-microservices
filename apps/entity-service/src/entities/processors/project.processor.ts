@@ -136,7 +136,7 @@ const PD_CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "updated_at"
 };
 
-const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
+export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
   "projectReports",
   "sites",
   "siteReports",

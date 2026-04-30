@@ -8,7 +8,7 @@ import {
   TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ProjectProcessor } from "./project.processor";
+import { CHILD_ENTITIES_FOR_EXPORT, ProjectProcessor } from "./project.processor";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { EntitiesService } from "../entities.service";
 import {
@@ -38,7 +38,12 @@ import { flatten, reverse, sortBy, sum, sumBy } from "lodash";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { BadRequestException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
@@ -49,6 +54,9 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { mockRequestForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { Archiver } from "archiver";
+import { ProjectReportProcessor } from "./project-report.processor";
 
 describe("ProjectProcessor", () => {
   let module: TestingModule;
@@ -772,6 +780,49 @@ describe("ProjectProcessor", () => {
         expect.objectContaining({ uuid: pitchMedia.uuid }),
         expect.objectContaining({ uuid: project.uuid })
       );
+    });
+  });
+
+  describe("export", () => {
+    it("should throw if the site is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the site is missing a framework", async () => {
+      const { uuid } = await ProjectFactory.create({ frameworkKey: null });
+      await expect(processor.export(uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should fill the archive with site and report exports", async () => {
+      const mockSubProcessor = {
+        exportAll: jest.fn()
+      } as unknown as ProjectReportProcessor;
+      const authSpy = jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      const { uuid, frameworkKey, name } = await ProjectFactory.create();
+      const target = {} as Archiver;
+      await processor.export(uuid, {} as Archiver);
+      expect(authSpy).not.toHaveBeenCalled();
+      expect(exportSpy).toHaveBeenCalledWith(
+        "projects",
+        expect.anything(),
+        [expect.objectContaining({ uuid })],
+        expect.anything()
+      );
+      expect(createSpy).toHaveBeenCalledTimes(CHILD_ENTITIES_FOR_EXPORT.length);
+      expect(mockSubProcessor.exportAll).toHaveBeenCalledTimes(CHILD_ENTITIES_FOR_EXPORT.length);
+      for (const child of CHILD_ENTITIES_FOR_EXPORT) {
+        expect(createSpy).toHaveBeenCalledWith(child);
+        expect(mockSubProcessor.exportAll).toHaveBeenCalledWith(
+          expect.objectContaining({
+            projectUuid: uuid,
+            target,
+            frameworkKey,
+            fileNamePrefix: expect.stringContaining(`${name}`)
+          })
+        );
+      }
     });
   });
 

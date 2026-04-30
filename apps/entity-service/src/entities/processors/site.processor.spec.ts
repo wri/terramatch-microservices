@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ScheduledJob, Site, SiteReport } from "@terramatch-microservices/database/entities";
+import { Response } from "express";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
@@ -18,7 +19,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
-import { NotAcceptableException } from "@nestjs/common";
+import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
@@ -26,6 +27,8 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
+import { SiteReportProcessor } from "./site-report.processor";
+import { Archiver } from "archiver";
 
 describe("SiteProcessor", () => {
   let module: TestingModule;
@@ -322,6 +325,45 @@ describe("SiteProcessor", () => {
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+  });
+
+  describe("export", () => {
+    it("should throw if the site is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the site is missing a framework", async () => {
+      const { uuid } = await SiteFactory.create({ frameworkKey: null });
+      await expect(processor.export(uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should fill the archive with site and report exports", async () => {
+      const mockSubProcessor = {
+        exportAll: jest.fn()
+      } as unknown as SiteReportProcessor;
+      const authSpy = jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      const { id, uuid, frameworkKey, name } = await SiteFactory.create();
+      const target = {} as Archiver;
+      await processor.export(uuid, {} as Archiver);
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ uuid }));
+      expect(exportSpy).toHaveBeenCalledWith(
+        "sites",
+        expect.anything(),
+        [expect.objectContaining({ uuid })],
+        expect.anything()
+      );
+      expect(createSpy).toHaveBeenCalledWith("siteReports");
+      expect(mockSubProcessor.exportAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          siteId: id,
+          target,
+          frameworkKey,
+          fileNamePrefix: expect.stringContaining(`${name}`)
+        })
+      );
     });
   });
 

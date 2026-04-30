@@ -99,13 +99,6 @@ export class ApiGatewayStack extends Stack {
         this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
       }
     }
-
-    // The PHP Monolith proxy keeps `/api/` in its path to avoid conflict with the newer
-    // namespace-driven design of the v3 API space, and to minimize disruption with existing
-    // consumers (like Greenhouse and the web TM frontend) as we migrate to this API Gateway.
-    this.addProxy("PHP Monolith", "/api/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
-    this.addProxy("PHP OpenAPI Docs", "/documentation/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
-    this.addProxy("PHP Images", "/images/", { targetHost: process.env.PHP_PROXY_TARGET ?? "" });
   }
 
   private addProxy(name: string, path: string, { targetHost, service }: AddProxyProps) {

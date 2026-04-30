@@ -126,7 +126,8 @@ export class ScheduledJobsProcessor extends WorkerHost {
             { id: { [Op.notIn]: Subquery.select(Site, "projectId").literal } },
             { id: { [Op.notIn]: Subquery.select(Nursery, "projectId").literal } }
           ]
-        }
+        },
+        attributes: ["id"]
       })
     ).map(({ id }) => id);
 

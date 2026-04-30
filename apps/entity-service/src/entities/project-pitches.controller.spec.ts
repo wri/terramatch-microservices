@@ -6,22 +6,23 @@ import { ProjectPitchService } from "./project-pitch.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("ProjectPitchesController", () => {
   let controller: ProjectPitchesController;
   let projectPitchService: DeepMocked<ProjectPitchService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [ProjectPitchesController],
       providers: [
-        { provide: ProjectPitchService, useValue: (projectPitchService = createMock<ProjectPitchService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        PolicyService,
+        { provide: ProjectPitchService, useValue: (projectPitchService = createMock<ProjectPitchService>()) }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(ProjectPitchesController);
   });
 
@@ -36,7 +37,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 0,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      mockRequestContext({ permissions: ["framework-ppc"] });
 
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
@@ -54,7 +55,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 3,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
       const result = serialize(await controller.projectPitchIndex(new ProjectPitchQueryDto()));
@@ -85,6 +86,7 @@ describe("ProjectPitchesController", () => {
           totalHectares: 200
         } as ProjectPitch);
         projectPitchService.getProjectPitch.mockResolvedValue(mockProjectPitch);
+        jest.spyOn(policyService, "authorize").mockResolvedValue();
 
         const result = serialize(await controller.projectPitchGet({ uuid: "1" }));
         expect(result).toBeDefined();

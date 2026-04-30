@@ -8,23 +8,24 @@ import { SiteReportFactory } from "@terramatch-microservices/database/factories"
 import { DisturbancesController } from "./disturbances.controller";
 import { DisturbanceService } from "./disturbance.service";
 import { DisturbanceQueryDto } from "./dto/disturbance-query.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("DisturbanceController", () => {
   let controller: DisturbancesController;
   let disturbanceService: DeepMocked<DisturbanceService>;
-  let policyService: DeepMocked<PolicyService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [DisturbancesController],
       providers: [
-        { provide: DisturbanceService, useValue: (disturbanceService = createMock<DisturbanceService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        PolicyService,
+        { provide: DisturbanceService, useValue: (disturbanceService = createMock<DisturbanceService>()) }
       ]
     }).compile();
 
     controller = module.get(DisturbancesController);
+
+    mockRequestContext({ userId: 123 });
   });
 
   afterEach(() => {
@@ -38,7 +39,7 @@ describe("DisturbanceController", () => {
         paginationTotal: 0,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
 
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
@@ -67,7 +68,7 @@ describe("DisturbanceController", () => {
         paginationTotal: 3,
         pageNumber: 1
       };
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       disturbanceService.getDisturbances.mockResolvedValue(mockResponse);
 
       const result = serialize(await controller.disturbancesIndex(new DisturbanceQueryDto()));

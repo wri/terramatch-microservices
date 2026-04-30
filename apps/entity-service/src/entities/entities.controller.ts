@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   NotFoundException,
   Param,
   Patch,
@@ -26,7 +27,11 @@ import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
 import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
-import { ENTITY_MODELS, EntityModel } from "@terramatch-microservices/database/constants/entities";
+import {
+  CACHED_EXPORT_ENTITY_TYPES,
+  ENTITY_MODELS,
+  EntityModel
+} from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
 import { SiteReportFullDto, SiteReportLightDto } from "./dto/site-report.dto";
@@ -40,6 +45,11 @@ import { EntityExportQueryDto } from "./dto/entity-export-query.dto";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { kebabCase } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto";
+import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "../jobs/entity-service-exports.processor";
+import { Queue } from "bullmq";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Project } from "@terramatch-microservices/database/entities";
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -47,7 +57,8 @@ export class EntitiesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly entitiesService: EntitiesService,
-    private readonly csvExportService: CsvExportService
+    private readonly csvExportService: CsvExportService,
+    @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
 
   @Get(":entity")
@@ -88,13 +99,16 @@ export class EntitiesController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async entityExportAll<T extends EntityModel>(
     @Param() { entity }: EntityIndexParamsDto,
-    @Query() { frameworkKey }: EntityExportQueryDto,
+    @Query() { frameworkKey, projectUuid }: EntityExportQueryDto,
     @Res({ passthrough: true }) response: Response
   ) {
     // if we're some kind of admin and we have a framework key set, the intention is to access the
     // automatically generated reports that are sent to S3.
-    const permissions = await this.policyService.getPermissions();
-    if (frameworkKey != null && permissions.find(p => p.startsWith("framework-")) != null) {
+    if (
+      CACHED_EXPORT_ENTITY_TYPES.includes(entity) &&
+      frameworkKey != null &&
+      this.policyService.permissions.find(p => p.startsWith("framework-")) != null
+    ) {
       // These reports are generated twice a day and stored in S3
       await this.policyService.authorize("exportAll", ENTITY_MODELS[entity].build({ frameworkKey }));
       const fileName = `all-entity-records/${kebabCase(entity)}-${frameworkKey}.csv`;
@@ -107,7 +121,7 @@ export class EntitiesController {
     // to. Either way, it writes directly to the response, and the permissions are checked in
     // the processor.
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-    await processor.exportAll({ response, frameworkKey });
+    await processor.exportAll({ target: response, frameworkKey, projectUuid });
   }
 
   @Get(":entity/:uuid")
@@ -140,6 +154,40 @@ export class EntitiesController {
 
     const { id, dto } = await processor.getFullDto(model);
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
+  }
+
+  @Get(":entity/:uuid/export")
+  @ApiOperation({
+    operationId: "entityExport",
+    summary: "Export a given entity as CSV or ZIP archive."
+  })
+  @JsonApiResponse([FileDownloadDto, DelayedJobDto])
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityExport<T extends EntityModel>(
+    @Param() { entity, uuid }: SpecificEntityDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    // All of our entity types generate quickly enough to do right on the response except for projects.
+    // It just includes too much and needs to go to a delayed job.
+    if (entity === "projects") {
+      const project = await Project.findOne({
+        where: { uuid },
+        attributes: ["id", "organisationId", "frameworkKey", "name"]
+      });
+      if (project == null) throw new NotFoundException();
+      if (project.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+      await this.policyService.authorize("read", project);
+
+      return await EntityServiceExportsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
+    }
+
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    await processor.export(uuid, response);
   }
 
   @Delete(":entity/:uuid")

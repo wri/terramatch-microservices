@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { ScheduledJob, Site, SiteReport } from "@terramatch-microservices/database/entities";
+import { Response } from "express";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { SiteProcessor } from "./site.processor";
@@ -18,29 +19,31 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
-import { NotAcceptableException } from "@nestjs/common";
+import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { Op } from "sequelize";
+import { TestingModule } from "@nestjs/testing";
+import { SiteReportProcessor } from "./site-report.processor";
+import { Archiver } from "archiver";
 import { ConfigService } from "@nestjs/config";
 
 describe("SiteProcessor", () => {
+  let module: TestingModule;
   let processor: SiteProcessor;
-  let policyService: DeepMocked<PolicyService>;
-  let csvExportService: DeepMocked<CsvExportService>;
-  let configService: DeepMocked<ConfigService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
+  const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
 
   beforeEach(async () => {
     await Site.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
-    configService = module.get(ConfigService);
-    configService.get.mockImplementation((key: string) =>
-      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
-    );
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });
 
@@ -59,7 +62,7 @@ describe("SiteProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      policyService.getPermissions.mockResolvedValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -71,7 +74,7 @@ describe("SiteProcessor", () => {
 
     it("should returns sites", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const managedSites = await SiteFactory.createMany(3, { projectId: project.id });
       await SiteFactory.createMany(5);
       await expectSites(managedSites, {}, { permissions: ["manage-own"] });
@@ -80,7 +83,7 @@ describe("SiteProcessor", () => {
     it("should returns managed sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -104,8 +107,8 @@ describe("SiteProcessor", () => {
     it("filters", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
       const first = await SiteFactory.create({
         name: "first site",
@@ -170,7 +173,7 @@ describe("SiteProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      policyService.getPermissions.mockResolvedValue([]);
+      setMockedPermissions();
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
 
@@ -186,7 +189,7 @@ describe("SiteProcessor", () => {
 
     describe("processSideloads", () => {
       it("should throw", async () => {
-        policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+        setMockedPermissions("framework-terrafund");
         await SiteFactory.create({ frameworkKey: "terrafund" });
         await expect(
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
@@ -246,7 +249,7 @@ describe("SiteProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a site", async () => {
       const site = await SiteFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -254,13 +257,13 @@ describe("SiteProcessor", () => {
     it("should not allow a non-admin to delete a site if it has reports", async () => {
       const site = await SiteFactory.create();
       await SiteReportFactory.create({ siteId: site.id });
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a site if it has no reports", async () => {
       const site = await SiteFactory.create();
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -284,6 +287,7 @@ describe("SiteProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       expect(site.projectId).toBe(project.id);
       expect(site.frameworkKey).toBe(project.frameworkKey);
@@ -297,6 +301,7 @@ describe("SiteProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
@@ -317,6 +322,7 @@ describe("SiteProcessor", () => {
           dueAt: DateTime.now().plus({ weeks: 5 }).toISO()
         }
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
@@ -324,9 +330,58 @@ describe("SiteProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("should throw if the site is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the site is missing a framework", async () => {
+      const { uuid } = await SiteFactory.create({ frameworkKey: null });
+      await expect(processor.export(uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should fill the archive with site and report exports", async () => {
+      const mockSubProcessor = {
+        exportAll: jest.fn()
+      } as unknown as SiteReportProcessor;
+      const authSpy = jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      const { id, uuid, frameworkKey, name } = await SiteFactory.create();
+      const target = {} as Archiver;
+      await processor.export(uuid, {} as Archiver);
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ uuid }));
+      expect(exportSpy).toHaveBeenCalledWith(
+        "sites",
+        expect.anything(),
+        [expect.objectContaining({ uuid })],
+        expect.anything()
+      );
+      expect(createSpy).toHaveBeenCalledWith("siteReports");
+      expect(mockSubProcessor.exportAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          siteId: id,
+          target,
+          frameworkKey,
+          fileNamePrefix: expect.stringContaining(`${name}`)
+        })
+      );
+    });
+  });
+
   describe("exportAll", () => {
+    beforeEach(() => {
+      configService().get.mockImplementation((key: string) =>
+        key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+      );
+    });
+
+    it("throws if the framework key is missing", async () => {
+      await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
+    });
+
     it("writes all sites to the CSV", async () => {
-      policyService.getPermissions.mockResolvedValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await Site.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),
@@ -345,7 +400,7 @@ describe("SiteProcessor", () => {
       await EntityFormFactory.site(sites[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -363,6 +418,49 @@ describe("SiteProcessor", () => {
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
+    });
+
+    it("writes project sites to the CSV", async () => {
+      await Site.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const projects = [
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" })
+      ];
+      const sites = [
+        await SiteFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
+      ];
+      await EntityFormFactory.site(sites[0]).create();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ projectUuid: projects[0].uuid });
+
+      expect(addRow).toHaveBeenCalledTimes(1);
+      const result1 = addRow.mock.calls[0][0] as Site;
+      expect(result1).toMatchObject({ uuid: sites[0].uuid });
+      expect(result1.projectName).toEqual(projects[0].name);
+      expect(result1.organisationReadableType).toEqual("Non Profit Organization");
+      expect(result1.organisationName).toEqual(org.name);
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        frameworkKey: "ppc",
+        projectId: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        frameworkKey: "ppc",
+        projectId: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

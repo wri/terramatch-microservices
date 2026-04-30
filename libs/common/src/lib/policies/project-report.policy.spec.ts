@@ -9,7 +9,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("ProjectReportPolicy", () => {
   let service: PolicyService;
@@ -27,15 +27,13 @@ describe("ProjectReportPolicy", () => {
   });
 
   it("allows reading all project reports with view-dashboard permissions", async () => {
-    mockUserId(123);
-    mockPermissions("view-dashboard");
+    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new ProjectReport());
     await expectCannot(service, "delete", new ProjectReport());
   });
 
   it("allows managing project reports in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectReportFactory.create({ frameworkKey: "ppc" });
     const tf = await ProjectReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -45,10 +43,9 @@ describe("ProjectReportPolicy", () => {
   });
 
   it("allows managing project reports for own projects", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -78,9 +75,8 @@ describe("ProjectReportPolicy", () => {
   });
 
   it("allows managing project reports for managed projects", async () => {
-    mockPermissions("projects-manage");
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestForUser(user, "projects-manage");
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

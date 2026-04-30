@@ -1,7 +1,7 @@
-import { Media, Project, ProjectUser, Site, SrpReport, Tracking } from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser, Site, SrpReport } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Includeable, Op, WhereOptions } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { SrpReportFullDto, SrpReportLightDto, SrpReportMedia } from "../dto/srp-report.dto";
@@ -9,8 +9,9 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants/frame
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
-import { DIRECT_OTHER, INDIRECT_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
+import { Archiver } from "archiver";
+import { Response } from "express";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -27,7 +28,7 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
-const CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "ID",
   uuid: "UUID",
   projectUuid: "Project UUID",
@@ -40,6 +41,22 @@ const CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "Updated At",
   submittedAt: "Submitted At"
 };
+
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  projectName: "Project Name",
+  status: "Status",
+  year: "Year",
+  createdAt: "Created At",
+  updatedAt: "Updated At",
+  submittedAt: "Submitted At"
+};
+
+const CSV_EXPORT_INCLUDES = [
+  {
+    association: "project",
+    attributes: ["id", "uuid", "name"]
+  }
+];
 
 export class SrpReportProcessor extends ReportProcessor<
   SrpReport,
@@ -90,7 +107,7 @@ export class SrpReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -161,46 +178,35 @@ export class SrpReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll({ response }: ExportAllOptions = {}) {
-    const fileName = `Annual Socio Economic Restoration Reports Export - ${DateTime.now().toFormat(
+  async export(uuid: string, target: Response | Archiver) {
+    const report = await SrpReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (report == null) throw new NotFoundException();
+
+    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - SRP Report - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
-    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
-      const where: WhereOptions<Site> = { "$project.is_test$": false };
-      const permissions = await this.entitiesService.getPermissions();
-      if (permissions?.includes("manage-own")) {
-        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-      } else if (permissions?.includes("projects-manage")) {
-        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
-      }
+    await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, [report], {
+      target,
+      fileName,
+      ability: "export"
+    });
+  }
 
-      const builder = new PaginatedQueryBuilder(SrpReport, 10, [
-        {
-          association: "project",
-          attributes: ["id", "uuid", "name"]
-        }
-      ]).where(where);
+  async exportAll({ target }: ExportAllOptions = {}) {
+    const fileName = timestampFileName("Annual Socio Economic Restoration Reports Export");
+    const where: WhereOptions<Site> = { "$project.is_test$": false };
+    const permissions = this.entitiesService.permissions;
+    if (permissions?.includes("manage-own")) {
+      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+    } else if (permissions?.includes("projects-manage")) {
+      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+    }
 
-      for await (const page of batchFindAll(builder)) {
-        await this.entitiesService.authorize("export", page);
-        const trackings = await Tracking.domain("demographics")
-          .type("restoration-partners")
-          .collection([DIRECT_OTHER, INDIRECT_OTHER])
-          .findAll({
-            where: {
-              trackableType: SrpReport.LARAVEL_TYPE,
-              trackableId: page.map(({ id }) => id),
-              description: { [Op.not]: null }
-            },
-            attributes: ["trackableId", "description"]
-          });
-        for (const report of page) {
-          addRow(report, {
-            otherRestorationPartnersDescription: trackings.find(({ trackableId }) => trackableId === report.id)
-              ?.description
-          });
-        }
-      }
+    const builder = new PaginatedQueryBuilder(SrpReport, 10, CSV_EXPORT_INCLUDES).where(where);
+    await this.entitiesService.entityExport("srpReports", ADMIN_CSV_COLUMNS, builder, {
+      target,
+      fileName,
+      ability: "export"
     });
   }
 }

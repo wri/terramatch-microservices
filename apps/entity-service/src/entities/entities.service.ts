@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor, ExportAllOptions } from "./processors/entity-processor";
@@ -14,8 +14,7 @@ import {
   Seeding,
   Strata,
   Tracking,
-  TreeSpecies,
-  User
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
@@ -55,7 +54,6 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { MediaOwnerProcessor } from "./processors/media-owner-processor";
 import { DisturbanceReportProcessor } from "./processors/disturbance-report.processor";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { EntityCreateData } from "./dto/entity-create.dto";
 import { SrpReportProcessor } from "./processors/srp-report.processor";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -70,6 +68,8 @@ import {
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -131,7 +131,12 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
+type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
+  // If not specified, all attributes will be fetched from the DB when using a query builder.
+  attributes?: string[];
+
+  frameworkKey?: FrameworkKey;
+
   /**
    * If provided, is expected to provide additional data for the CSV mapping for the given page
    * keyed on entity id.
@@ -142,6 +147,11 @@ type EntityFrameworkExportOptions<T extends EntityModel> = ExportAllOptions & {
    * If provided, each record to be exported will be checked with the given ability.
    */
   ability?: string;
+
+  /**
+   * If not provided, a filename will be generated based on the framework key and entity type.
+   */
+  fileName?: string;
 };
 
 @Injectable()
@@ -164,8 +174,8 @@ export class EntitiesService {
     return this.configService.get<string>("DEPLOY_ENV") === "prod";
   }
 
-  async getPermissions() {
-    return this.userId == null ? undefined : await this.policyService.getPermissions();
+  get permissions() {
+    return this.userId == null ? undefined : this.policyService.permissions;
   }
 
   async authorize(action: string, subject: Model | Model[]) {
@@ -173,7 +183,7 @@ export class EntitiesService {
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {
-    const permissions = await this.getPermissions();
+    const permissions = this.permissions;
     return permissions == null ? false : permissions.includes(`framework-${frameworkKey}`);
   }
 
@@ -203,16 +213,12 @@ export class EntitiesService {
     );
   }
 
-  private _userLocale?: ValidLocale;
-  async getUserLocale() {
-    if (this._userLocale == null) {
-      this._userLocale = (await User.findLocale(this.userId)) ?? "en-US";
-    }
-    return this._userLocale;
+  get userLocale() {
+    return userLocale() ?? "en-US";
   }
 
   async localizeText(text: string, params?: ITranslateParams) {
-    return await this.localizationService.localizeText(text, await this.getUserLocale(), params);
+    return await this.localizationService.localizeText(text, this.userLocale, params);
   }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {
@@ -301,29 +307,28 @@ export class EntitiesService {
     return this.csvExportService.writeCsv(...args);
   }
 
-  async entityFrameworkExport<T extends EntityModel>(
+  async entityExport<T extends EntityModel>(
     type: EntityType,
     columns: Dictionary<string>,
-    attributes: string[],
-    builder: PaginatedQueryBuilder<T>,
-    { response, frameworkKey, additionalDataForPage, ability }: EntityFrameworkExportOptions<T>
+    source: PaginatedQueryBuilder<T> | T[],
+    { attributes, target, frameworkKey, additionalDataForPage, ability, fileName }: EntityFrameworkExportOptions<T>
   ) {
-    if (frameworkKey == null) throw new InternalServerErrorException("Framework key is required for entity export");
-    const frontendUrl = this.configService.get<string>("APP_FRONT_END") ?? "https://www.terramatch.org";
-
     const model = ENTITY_MODELS[type];
-    const form = await Form.findOne({ where: { model: model.LARAVEL_TYPE, frameworkKey } });
+    const form = await Form.for(model.build({ frameworkKey })).findOne();
     if (form == null) {
       this.logger.log(`No form found for [${model.name}, ${frameworkKey}]`);
       return;
     }
 
-    const prefix = response == null ? "all-entity-records/" : "";
-    const fileName = `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
+    const frontendUrl = this.configService.get<string>("APP_FRONT_END") ?? "https://www.terramatch.org";
+    const prefix = target == null ? "all-entity-records/" : "";
+    fileName ??= `${prefix}${kebabCase(type)}-${frameworkKey}.csv`;
     const mappings = await getFormQuestionsForExport(form);
-    builder = builder.attributes(uniq(["id", ...attributes, ...getAttributes(mappings, type)]));
-    await this.writeCsv(fileName, response, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
-      for await (const page of batchFindAll(builder)) {
+    if (attributes != null && source instanceof PaginatedQueryBuilder) {
+      source = source.attributes(uniq(["id", "frameworkKey", ...attributes, ...getAttributes(mappings, type)]));
+    }
+    await this.writeCsv(fileName, target, { ...columns, ...getMappingsColumns(mappings) }, async addRow => {
+      const processPage = async (page: T[]) => {
         if (ability != null) await this.policyService.authorize(ability, page);
         const pageData = (await additionalDataForPage?.(page as T[])) ?? {};
         for (const entity of page) {
@@ -337,6 +342,14 @@ export class EntitiesService {
           };
           addRow(entity, additional);
         }
+      };
+
+      if (source instanceof PaginatedQueryBuilder) {
+        for await (const page of batchFindAll(source)) {
+          await processPage(page as T[]);
+        }
+      } else {
+        await processPage(source);
       }
     });
   }

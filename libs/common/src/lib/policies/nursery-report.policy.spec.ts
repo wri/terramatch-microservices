@@ -10,7 +10,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("NurseryReportPolicy", () => {
   let service: PolicyService;
@@ -28,15 +28,13 @@ describe("NurseryReportPolicy", () => {
   });
 
   it("allows reading all nursery reports with view-dashboard permissions", async () => {
-    mockUserId(123);
-    mockPermissions("view-dashboard");
+    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new NurseryReport());
     await expectCannot(service, "delete", new NurseryReport());
   });
 
   it("allows managing nursery reports in your framework", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await NurseryReportFactory.create({ frameworkKey: "ppc" });
     const tf = await NurseryReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -46,10 +44,9 @@ describe("NurseryReportPolicy", () => {
   });
 
   it("allows managing nursery reports for own projects", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -84,9 +81,8 @@ describe("NurseryReportPolicy", () => {
   });
 
   it("allows managing nursery reports for managed projects", async () => {
-    mockPermissions("projects-manage");
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestForUser(user, "projects-manage");
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

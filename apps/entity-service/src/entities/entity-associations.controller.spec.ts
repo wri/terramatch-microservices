@@ -1,4 +1,4 @@
-import { Tracking, ProjectReport } from "@terramatch-microservices/database/entities";
+import { ProjectReport, Tracking } from "@terramatch-microservices/database/entities";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -6,9 +6,9 @@ import { Test } from "@nestjs/testing";
 import { EntityAssociationsController } from "./entity-associations.controller";
 import { AssociationProcessor } from "./processors/association-processor";
 import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
-import { TrackingFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
+import { ProjectReportFactory, TrackingFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 class StubProcessor extends AssociationProcessor<Tracking, TrackingDto> {
   DTO = TrackingDto;
@@ -20,24 +20,24 @@ class StubProcessor extends AssociationProcessor<Tracking, TrackingDto> {
 describe("EntityAssociationsController", () => {
   let controller: EntityAssociationsController;
   let entitiesService: DeepMocked<EntitiesService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [EntityAssociationsController],
       providers: [
-        { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
-        {
-          provide: PolicyService,
-          useValue: (policyService = createMock<PolicyService>({ userId: 123 }))
-        }
+        PolicyService,
+        { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(EntityAssociationsController);
     entitiesService.createAssociationProcessor.mockImplementation((entity, uuid) => {
       return new StubProcessor(entity, uuid, ProjectReport, entitiesService);
     });
+
+    mockRequestContext({ userId: 123 });
   });
 
   afterEach(() => {
@@ -46,7 +46,7 @@ describe("EntityAssociationsController", () => {
 
   describe("associationIndex", () => {
     it("should call getBaseEntity", async () => {
-      policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
+      setMockedPermissions("view-dashboard");
       const pr = await ProjectReportFactory.create();
       const processor = new StubProcessor("projectReports", pr.uuid, ProjectReport, entitiesService);
       entitiesService.createAssociationProcessor.mockImplementation(() => processor);
@@ -63,7 +63,7 @@ describe("EntityAssociationsController", () => {
     });
 
     it("should throw if the policy does not authorize", async () => {
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      jest.spyOn(policyService, "authorize").mockRejectedValue(new UnauthorizedException());
       const pr = await ProjectReportFactory.create();
       await expect(
         controller.associationIndex(
@@ -78,7 +78,7 @@ describe("EntityAssociationsController", () => {
     });
 
     it("should throw if the base entity is not found", async () => {
-      policyService.getPermissions.mockResolvedValue(["view-dashboard"]);
+      setMockedPermissions("view-dashboard");
       await expect(
         controller.associationIndex(
           {
@@ -93,6 +93,7 @@ describe("EntityAssociationsController", () => {
 
     it("should add all DTOs to the document", async () => {
       const pr = await ProjectReportFactory.create();
+      setMockedPermissions(`framework-${pr.frameworkKey}`);
       await TrackingFactory.projectReportWorkday(pr).create();
       await TrackingFactory.projectReportJobs(pr).create();
       const result = serialize(

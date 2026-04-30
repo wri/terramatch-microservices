@@ -3,7 +3,7 @@ import { ValidationController } from "./validation.controller";
 import { ValidationService } from "./validation.service";
 import { ValidationDto } from "./dto/validation.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { SiteValidationQueryDto } from "./dto/site-validation-query.dto";
 import { ValidationRequestBody } from "./dto/validation-request.dto";
 import { SiteValidationRequestBody } from "./dto/site-validation-request.dto";
@@ -614,7 +614,7 @@ describe("ValidationController", () => {
           }
         }
       };
-      mockUserId(1);
+      mockRequestContext({ userId: 1 });
       const result = serialize(await controller.createSiteValidation(siteUuid, request));
 
       expect(mockValidationService.getSitePolygonUuids).toHaveBeenCalledWith(siteUuid);
@@ -636,7 +636,7 @@ describe("ValidationController", () => {
           }
         }
       };
-      mockUserId(1);
+      mockRequestContext({ userId: 1 });
       await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
     });
 
@@ -647,7 +647,7 @@ describe("ValidationController", () => {
           attributes: {}
         }
       };
-      mockUserId(1);
+      mockRequestContext({ userId: 1 });
       await controller.createSiteValidation(siteUuid, request);
       expect(mockQueue.add).toHaveBeenCalledWith("siteValidation", expect.objectContaining({ siteUuid }));
     });
@@ -659,7 +659,7 @@ describe("ValidationController", () => {
           attributes: { validationTypes: [] }
         }
       };
-      mockUserId(1);
+      mockRequestContext({ userId: 1 });
       await controller.createSiteValidation(siteUuid, request);
       expect(mockQueue.add).toHaveBeenCalledWith(
         "siteValidation",
@@ -675,7 +675,7 @@ describe("ValidationController", () => {
           attributes: { validationTypes: ["SELF_INTERSECTION"] as ValidationType[] }
         }
       };
-      mockUserId(1);
+      mockRequestContext({ userId: 1 });
       await expect(controller.createSiteValidation(siteUuid, request)).rejects.toThrow(NotFoundException);
       expect(DelayedJob.create).not.toHaveBeenCalled();
     });

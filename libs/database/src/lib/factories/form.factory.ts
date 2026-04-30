@@ -2,6 +2,8 @@ import { FactoryGirl } from "factory-girl-ts";
 import { Form, Nursery, NurseryReport, Project, ProjectReport, Site, SiteReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { UserFactory } from "./user.factory";
+import { EntityModel } from "../constants/entities";
+import { laravelType } from "../types/util";
 
 const defaultAttributesFactory = async () => ({
   frameworkKey: "ppc",
@@ -22,6 +24,13 @@ const defaultAttributesFactory = async () => ({
 export const FormFactory = FactoryGirl.define(Form, async () => defaultAttributesFactory());
 
 export const EntityFormFactory = {
+  for: (entity: EntityModel) =>
+    FactoryGirl.define(Form, async () => ({
+      ...(await defaultAttributesFactory()),
+      frameworkKey: entity?.frameworkKey ?? "ppc",
+      model: laravelType(entity)
+    })),
+
   project: (project?: Project) =>
     FactoryGirl.define(Form, async () => ({
       ...(await defaultAttributesFactory()),

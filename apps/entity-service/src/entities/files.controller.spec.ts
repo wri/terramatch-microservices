@@ -33,7 +33,7 @@ describe("FilesController", () => {
 
     policyService = {
       authorize: jest.fn(),
-      getPermissions: jest.fn()
+      permissions: []
     } as unknown as jest.Mocked<PolicyService>;
     mediaService = {
       getUrl: jest.fn(),
@@ -296,7 +296,6 @@ describe("FilesController", () => {
 
   describe("mediaBulkDelete", () => {
     it("should call the media service to delete the media", async () => {
-      policyService.getPermissions.mockResolvedValue(["media-manage"]);
       policyService.authorize.mockResolvedValue();
       const media1: Media = { uuid: "test-uuid-1", createdBy: 123 } as Media;
       const media2: Media = { uuid: "test-uuid-2", createdBy: 123 } as Media;
@@ -307,7 +306,7 @@ describe("FilesController", () => {
     });
 
     it("should return the deleted media", async () => {
-      policyService.getPermissions.mockResolvedValue(["media-manage"]);
+      policyService.authorize.mockResolvedValue();
       mediaService.getMedias.mockResolvedValue([{ uuid: "test-uuid" } as Media]);
       const media = await controller.mediaBulkDelete({ uuids: ["test-uuid"] });
       expect(media).toEqual({

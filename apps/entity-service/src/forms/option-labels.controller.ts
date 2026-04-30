@@ -4,17 +4,12 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { OptionLabelDto } from "./dto/option-label.dto";
 import { filter, isEmpty, uniqBy } from "lodash";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import {
-  FormOptionList,
-  FormOptionListOption,
-  FormQuestionOption,
-  User
-} from "@terramatch-microservices/database/entities";
+import { FormOptionList, FormOptionListOption, FormQuestionOption } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 
 export type OptionLabelModel = {
   slug: string;
@@ -36,7 +31,7 @@ export class OptionLabelsController {
   async optionLabelsIndex(@Query("ids") ids: string[]) {
     if (isEmpty(ids)) throw new BadRequestException("Set of ids is required");
 
-    const locale = await User.findLocale(authenticatedUserId());
+    const locale = userLocale();
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const listOptions = (await FormOptionListOption.findAll({
@@ -73,7 +68,7 @@ export class OptionLabelsController {
   @ExceptionResponse(NotFoundException, { description: "List for listKey not found" })
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   async findList(@Param("listKey") listKey: string) {
-    const locale = await User.findLocale(authenticatedUserId());
+    const locale = userLocale();
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const list = await FormOptionList.findOne({

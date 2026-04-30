@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { Application } from "@terramatch-microservices/database/entities";
 import {
@@ -26,16 +26,14 @@ describe("ApplicationPolicy", () => {
   });
 
   it("allows reading applications for all admins", async () => {
-    mockUserId(123);
-    mockPermissions("framework-terrafund");
+    mockRequestContext({ userId: 123, permissions: ["framework-terrafund"] });
     await expectCan(service, "read", new Application());
   });
 
   it("allows reading own org applications", async () => {
-    mockPermissions("manage-own");
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockUserId(user.id);
+    mockRequestForUser(user, "manage-own");
     let application = await ApplicationFactory.create({ organisationUuid: org.uuid });
     await expectCan(service, "read", application);
     application = await ApplicationFactory.create();
@@ -43,11 +41,10 @@ describe("ApplicationPolicy", () => {
   });
 
   it("allows reading associated org applications", async () => {
-    mockPermissions("manage-own");
     const associatedOrg = await OrganisationFactory.create();
     const pendingOrg = await OrganisationFactory.create();
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestForUser(user, "manage-own");
     await OrganisationUserFactory.create({ organisationId: associatedOrg.id, userId: user.id, status: "approved" });
     await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "requested" });
     const associatedSubmission = await ApplicationFactory.create({ organisationUuid: associatedOrg.uuid });

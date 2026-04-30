@@ -45,7 +45,7 @@ export class UserDto {
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
       monitoringPartnerProjects,
-      canLogIn: user.password == null
+      canLogIn: user.password != null
     });
   }
 

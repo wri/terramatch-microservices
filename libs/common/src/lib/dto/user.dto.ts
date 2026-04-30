@@ -45,7 +45,7 @@ export class UserDto {
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
       monitoringPartnerProjects,
-      passwordEmpty: user.password != null
+      canLogIn: user.password == null
     });
   }
 
@@ -111,5 +111,5 @@ export class UserDto {
   monitoringPartnerProjects: UserMonitoringPartnerProjectLightDto[];
 
   @ApiProperty({ type: Boolean })
-  passwordEmpty: boolean;
+  canLogIn: boolean;
 }

@@ -127,7 +127,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
-  linkToTerramatch(frontendUrl: string): CreationOptional<string> {
+  linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/nurseryReport/${this.uuid}/show`;
   }
 

@@ -164,7 +164,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
-  linkToTerramatch(frontendUrl: string): CreationOptional<string> {
+  linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/site/${this.uuid}/show`;
   }
 

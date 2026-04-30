@@ -20,11 +20,13 @@ import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
   let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     await NurseryReport.truncate();
@@ -32,6 +34,10 @@ describe("NurseryReportProcessor", () => {
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
+    configService = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) =>
+      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+    );
     processor = module.get(EntitiesService).createEntityProcessor("nurseryReports") as NurseryReportProcessor;
   });
 
@@ -546,13 +552,19 @@ describe("NurseryReportProcessor", () => {
       await processor.exportAll({ frameworkKey: "terrafund" });
 
       expect(addRow).toHaveBeenCalledTimes(2);
-      const result1 = addRow.mock.calls[0][0] as NurseryReport;
+      const [result1, additional1] = addRow.mock.calls[0] as [NurseryReport, { linkToTerramatch: string }];
       expect(result1).toMatchObject({ uuid: reports[0].uuid });
+      expect(additional1.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nurseryReport/${reports[0].uuid}/show`
+      );
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
-      const result2 = addRow.mock.calls[1][0] as NurseryReport;
+      const [result2, additional2] = addRow.mock.calls[1] as [NurseryReport, { linkToTerramatch: string }];
       expect(result2).toMatchObject({ uuid: reports[1].uuid });
+      expect(additional2.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nurseryReport/${reports[1].uuid}/show`
+      );
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);

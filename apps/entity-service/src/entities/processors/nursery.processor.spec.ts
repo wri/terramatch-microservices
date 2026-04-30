@@ -21,11 +21,13 @@ import { NotAcceptableException } from "@nestjs/common";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ConfigService } from "@nestjs/config";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
   let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let configService: DeepMocked<ConfigService>;
 
   beforeEach(async () => {
     await Nursery.truncate();
@@ -33,6 +35,10 @@ describe("NurseryProcessor", () => {
     const module = await mockEntityService();
     policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
+    configService = module.get(ConfigService);
+    configService.get.mockImplementation((key: string) =>
+      key === "APP_FRONT_END" ? "https://www.terramatch.org" : undefined
+    );
     processor = module.get(EntitiesService).createEntityProcessor("nurseries") as NurseryProcessor;
   });
 
@@ -455,13 +461,19 @@ describe("NurseryProcessor", () => {
       await processor.exportAll({ frameworkKey: "ppc" });
 
       expect(addRow).toHaveBeenCalledTimes(2);
-      const result1 = addRow.mock.calls[0][0] as Site;
+      const [result1, additional1] = addRow.mock.calls[0] as [Site, { linkToTerramatch: string }];
       expect(result1).toMatchObject({ uuid: nurseries[0].uuid });
+      expect(additional1.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nursery/${nurseries[0].uuid}/show`
+      );
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(orgs[0].name);
-      const result2 = addRow.mock.calls[1][0] as Site;
+      const [result2, additional2] = addRow.mock.calls[1] as [Site, { linkToTerramatch: string }];
       expect(result2).toMatchObject({ uuid: nurseries[1].uuid });
+      expect(additional2.linkToTerramatch).toEqual(
+        `https://www.terramatch.org/admin#/nursery/${nurseries[1].uuid}/show`
+      );
       expect(result2.projectName).toEqual(projects[1].name);
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);

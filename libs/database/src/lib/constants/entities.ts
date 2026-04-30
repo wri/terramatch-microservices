@@ -46,6 +46,8 @@ export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] 
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export type EntityModel = ReportModel | Project | Site | Nursery;
+export type LinkedEntityModel = EntityModel & { linkToTerramatch: (frontEndUrl: string) => string };
+export const isLinkedEntityModel = (model: EntityModel): model is LinkedEntityModel => "linkToTerramatch" in model;
 export type EntityClass<T extends EntityModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const ENTITY_MODELS: Record<EntityType, EntityClass<EntityModel>> = {
   ...REPORT_MODELS,

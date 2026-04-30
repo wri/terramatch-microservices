@@ -18,12 +18,13 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { DateTime } from "luxon";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Response } from "express";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
+import { Op } from "sequelize";
 
 describe("NurseryReportProcessor", () => {
   let module: TestingModule;
@@ -618,6 +619,22 @@ describe("NurseryReportProcessor", () => {
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(org.name);
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$nursery.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$nursery.project.id$": { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$nursery.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$nursery.project.id$": { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

@@ -44,23 +44,25 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { EntityProcessor } from "./entity-processor";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockRequestForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { Op } from "sequelize";
+import { TestingModule } from "@nestjs/testing";
 
 describe("ProjectProcessor", () => {
+  let module: TestingModule;
   let processor: ProjectProcessor;
-  let mediaService: DeepMocked<MediaService>;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const mediaService = (): DeepMocked<MediaService> => module.get(MediaService);
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await Project.truncate();
 
-    const module = await mockEntityService();
-    mediaService = module.get(MediaService);
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("projects") as ProjectProcessor;
   });
 
@@ -92,7 +94,7 @@ describe("ProjectProcessor", () => {
     it("returns my projects", async () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
-        await ProjectUserFactory.create({ userId: policyService.userId, projectId: id });
+        await ProjectUserFactory.create({ userId: policyService().userId, projectId: id });
       }
       await ProjectFactory.createMany(5);
 
@@ -103,7 +105,7 @@ describe("ProjectProcessor", () => {
       const projects = await ProjectFactory.createMany(3);
       for (const { id } of projects) {
         await ProjectUserFactory.create({
-          userId: policyService.userId,
+          userId: policyService().userId,
           projectId: id,
           isMonitoring: false,
           isManaging: true
@@ -765,8 +767,8 @@ describe("ProjectProcessor", () => {
         );
       }
 
-      expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
-      expect(mediaService.duplicateMedia).toHaveBeenCalledWith(
+      expect(mediaService().duplicateMedia).toHaveBeenCalledTimes(1);
+      expect(mediaService().duplicateMedia).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: pitchMedia.uuid }),
         expect.objectContaining({ uuid: project.uuid })
       );
@@ -794,7 +796,7 @@ describe("ProjectProcessor", () => {
       await EntityFormFactory.project(projects[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -814,6 +816,22 @@ describe("ProjectProcessor", () => {
       });
       expect(result2.organisationReadableType).toEqual("For Profit Organization");
       expect(result2.organisationName).toEqual(orgs[1].name);
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        isTest: false,
+        frameworkKey: "ppc",
+        id: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        isTest: false,
+        frameworkKey: "ppc",
+        id: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

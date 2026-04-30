@@ -16,6 +16,13 @@ import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityProcessor } from "./entity-processor";
+import { EntityDto } from "../dto/entity.dto";
+import { EntityUpdateData } from "../dto/entity-update.dto";
+import { EntityCreateData } from "../dto/entity-create.dto";
+import { FindOptions, WhereOptions } from "sequelize";
+import { ProjectUser } from "@terramatch-microservices/database/entities";
 
 export const mockEntityService = async () => {
   const userId = (await UserFactory.create()).id;
@@ -30,6 +37,38 @@ export const mockEntityService = async () => {
       EntitiesService
     ]
   }).compile();
+};
+
+export const expectExportAllFiltersOwn = async <T extends EntityModel>(
+  service: EntitiesService,
+  processor: EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData, EntityCreateData>,
+  whereMatch: (projectIdResult: unknown) => WhereOptions
+) => {
+  const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
+  const projectIdResult = { val: {} };
+  const subquerySpy = jest.spyOn(ProjectUser, "userProjectsSubquery").mockReturnValue(projectIdResult);
+  mockRequestContext({ userId: 123, permissions: ["manage-own"] });
+  await processor.exportAll({ frameworkKey: "ppc" });
+  expect(exportSpy).toHaveBeenCalled();
+  expect(subquerySpy).toHaveBeenCalled();
+  const { findOptions } = exportSpy.mock.calls[0][2] as unknown as { findOptions: FindOptions };
+  expect(findOptions.where).toMatchObject(whereMatch(projectIdResult));
+};
+
+export const expectExportAllFiltersManaged = async <T extends EntityModel>(
+  service: EntitiesService,
+  processor: EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData, EntityCreateData>,
+  whereMatch: (projectIdResult: unknown) => WhereOptions
+) => {
+  const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
+  const projectIdResult = { val: {} };
+  const subquerySpy = jest.spyOn(ProjectUser, "projectsManageSubquery").mockReturnValue(projectIdResult);
+  mockRequestContext({ userId: 123, permissions: ["projects-manage"] });
+  await processor.exportAll({ frameworkKey: "ppc" });
+  expect(exportSpy).toHaveBeenCalled();
+  expect(subquerySpy).toHaveBeenCalled();
+  const { findOptions } = exportSpy.mock.calls[0][2] as unknown as { findOptions: FindOptions };
+  expect(findOptions.where).toMatchObject(whereMatch(projectIdResult));
 };
 
 describe("EntityProcessor", () => {

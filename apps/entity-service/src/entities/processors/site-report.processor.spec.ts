@@ -22,12 +22,13 @@ import { SiteReportProcessor } from "./site-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 describe("SiteReportProcessor", () => {
   let module: TestingModule;
@@ -711,6 +712,22 @@ describe("SiteReportProcessor", () => {
         totalSeedsPlanted: firstSeedSum + secondSeedSum,
         totalSeedsPlantedReport: secondSeedSum
       });
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$site.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$site.project.id$": { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$site.project.is_test$": false,
+        frameworkKey: "ppc",
+        "$site.project.id$": { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

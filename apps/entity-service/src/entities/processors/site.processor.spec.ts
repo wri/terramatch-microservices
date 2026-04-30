@@ -21,21 +21,24 @@ import { SiteReportFactory } from "@terramatch-microservices/database/factories/
 import { NotAcceptableException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { Op } from "sequelize";
+import { TestingModule } from "@nestjs/testing";
 
 describe("SiteProcessor", () => {
+  let module: TestingModule;
   let processor: SiteProcessor;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await Site.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("sites") as SiteProcessor;
   });
 
@@ -66,7 +69,7 @@ describe("SiteProcessor", () => {
 
     it("should returns sites", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const managedSites = await SiteFactory.createMany(3, { projectId: project.id });
       await SiteFactory.createMany(5);
       await expectSites(managedSites, {}, { permissions: ["manage-own"] });
@@ -75,7 +78,7 @@ describe("SiteProcessor", () => {
     it("should returns managed sites", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -99,8 +102,8 @@ describe("SiteProcessor", () => {
     it("filters", async () => {
       const p1 = await ProjectFactory.create();
       const p2 = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
       const first = await SiteFactory.create({
         name: "first site",
@@ -347,7 +350,7 @@ describe("SiteProcessor", () => {
       await EntityFormFactory.site(sites[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -379,7 +382,7 @@ describe("SiteProcessor", () => {
       await EntityFormFactory.site(sites[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ projectUuid: projects[0].uuid });
@@ -390,6 +393,22 @@ describe("SiteProcessor", () => {
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(org.name);
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        frameworkKey: "ppc",
+        projectId: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        frameworkKey: "ppc",
+        projectId: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

@@ -13,12 +13,13 @@ import {
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
-import { mockEntityService } from "./entity.processor.spec";
+import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
 import { NotFoundException } from "@nestjs/common";
+import { Op } from "sequelize";
 
 describe("SrpReportProcessor", () => {
   let module: TestingModule;
@@ -263,6 +264,20 @@ describe("SrpReportProcessor", () => {
         }),
         expect.anything()
       );
+    });
+
+    it("filters for own projects", async () => {
+      await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        projectId: { [Op.in]: projectIdResult }
+      }));
+    });
+
+    it("filters for managed projects", async () => {
+      await expectExportAllFiltersManaged(entitiesService(), processor, projectIdResult => ({
+        "$project.is_test$": false,
+        projectId: { [Op.in]: projectIdResult }
+      }));
     });
   });
 });

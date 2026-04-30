@@ -23,10 +23,11 @@ import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("SiteProcessor", () => {
   let processor: SiteProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -53,7 +54,7 @@ describe("SiteProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -164,7 +165,7 @@ describe("SiteProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
+      setMockedPermissions();
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
 
@@ -180,7 +181,7 @@ describe("SiteProcessor", () => {
 
     describe("processSideloads", () => {
       it("should throw", async () => {
-        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
+        setMockedPermissions("framework-terrafund");
         await SiteFactory.create({ frameworkKey: "terrafund" });
         await expect(
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
@@ -240,7 +241,7 @@ describe("SiteProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a site", async () => {
       const site = await SiteFactory.create();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -248,13 +249,13 @@ describe("SiteProcessor", () => {
     it("should not allow a non-admin to delete a site if it has reports", async () => {
       const site = await SiteFactory.create();
       await SiteReportFactory.create({ siteId: site.id });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a site if it has no reports", async () => {
       const site = await SiteFactory.create();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();
     });
@@ -278,6 +279,7 @@ describe("SiteProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       expect(site.projectId).toBe(project.id);
       expect(site.frameworkKey).toBe(project.frameworkKey);
@@ -291,6 +293,7 @@ describe("SiteProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
@@ -311,6 +314,7 @@ describe("SiteProcessor", () => {
           dueAt: DateTime.now().plus({ weeks: 5 }).toISO()
         }
       });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
       const site = await processor.create({ parentUuid: project.uuid });
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
@@ -324,7 +328,7 @@ describe("SiteProcessor", () => {
     });
 
     it("writes all sites to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await Site.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

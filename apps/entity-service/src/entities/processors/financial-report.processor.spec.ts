@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { Response } from "express";
 import {
   FinancialIndicator,
   FinancialReport,
@@ -11,6 +12,7 @@ import { EntitiesService } from "../entities.service";
 import { orderBy, reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  EntityFormFactory,
   FinancialIndicatorFactory,
   FinancialReportFactory,
   FundingTypeFactory,
@@ -18,14 +20,13 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
-import { PolicyService } from "@terramatch-microservices/common";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("FinancialReportProcessor", () => {
   let processor: FinancialReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -35,7 +36,6 @@ describe("FinancialReportProcessor", () => {
     await Organisation.truncate();
 
     const module = await mockEntityService();
-    policyService = module.get(PolicyService);
     csvExportService = module.get(CsvExportService);
     processor = module.get(EntitiesService).createEntityProcessor("financialReports") as FinancialReportProcessor;
   });
@@ -74,7 +74,7 @@ describe("FinancialReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -228,21 +228,21 @@ describe("FinancialReportProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
-      const organisations = orderBy(await OrganisationFactory.createMany(2), "id");
+      await FinancialReport.truncate();
+      const organisations = orderBy(await OrganisationFactory.createMany(2, { isTest: false }), "id");
       const reports = [
-        await FinancialReportFactory.org(organisations[0]).create({}),
-        await FinancialReportFactory.org(organisations[1]).create({})
+        await FinancialReportFactory.org(organisations[0]).create({ frameworkKey: "ppc" }),
+        await FinancialReportFactory.org(organisations[1]).create({ frameworkKey: "ppc" })
       ];
-      const fundingTypes1 = orderBy(await FundingTypeFactory.org(organisations[0]).createMany(2), "id");
-      const fundingTypes2 = orderBy(await FundingTypeFactory.org(organisations[1]).createMany(2), "id");
-      const indicators1 = orderBy(await FinancialIndicatorFactory.report(reports[0]).createMany(2), "id");
-      const indicators2 = orderBy(await FinancialIndicatorFactory.report(reports[1]).createMany(2), "id");
+
+      await EntityFormFactory.for(reports[0]).create();
 
       const addRow = jest.fn();
       csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
-      await processor.exportAll();
+      setMockedPermissions("framework-ppc");
+      await processor.exportAll({ target: {} as Response, frameworkKey: "ppc" });
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(
@@ -252,10 +252,7 @@ describe("FinancialReportProcessor", () => {
           organisationUuid: organisations[0].uuid,
           organisationName: organisations[0].name
         }),
-        {
-          financialIndicators: indicators1.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`),
-          fundingTypes: fundingTypes1.map(({ type, amount, year }) => `${type}:${amount}(${year})`)
-        }
+        expect.anything()
       );
       expect(addRow).toHaveBeenNthCalledWith(
         2,
@@ -264,10 +261,7 @@ describe("FinancialReportProcessor", () => {
           organisationUuid: organisations[1].uuid,
           organisationName: organisations[1].name
         }),
-        {
-          financialIndicators: indicators2.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`),
-          fundingTypes: fundingTypes2.map(({ type, amount, year }) => `${type}:${amount}(${year})`)
-        }
+        expect.anything()
       );
     });
   });

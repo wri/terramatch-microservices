@@ -9,7 +9,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("NurseryPolicy", () => {
   let service: PolicyService;
@@ -50,7 +50,7 @@ describe("NurseryPolicy", () => {
   it("allows managing own nurseries", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -83,7 +83,7 @@ describe("NurseryPolicy", () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
     const s1 = await NurseryFactory.create({ projectId: project.id });
     const s2 = await NurseryFactory.create();
     await expectAuthority(service, {

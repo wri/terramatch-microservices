@@ -9,7 +9,7 @@ import {
   SitePolygonFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("AnrPlotGeometryPolicy", () => {
   let service: PolicyService;
@@ -29,7 +29,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("polygons-manage permission", () => {
     it("allows service accounts with polygons-manage to read and create any anr plot geometry", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+      mockRequestForUser(user, "polygons-manage");
 
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.createdBy = user.id + 1;
@@ -40,7 +40,7 @@ describe("AnrPlotGeometryPolicy", () => {
 
     it("allows service accounts with polygons-manage to update and delete any anr plot geometries", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+      mockRequestForUser(user, "polygons-manage");
 
       const ownPlotGeometry = new AnrPlotGeometry();
       ownPlotGeometry.createdBy = user.id;
@@ -74,7 +74,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+      mockRequestForUser(user, "manage-own");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -88,7 +88,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+      mockRequestForUser(user, "projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -102,7 +102,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+      mockRequestForUser(user, "projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -113,7 +113,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("read-only permissions", () => {
     it("allows reading with view-dashboard permission", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id, permissions: ["view-dashboard"] });
+      mockRequestForUser(user, "view-dashboard");
 
       const anrPlotGeometry = new AnrPlotGeometry();
 
@@ -125,7 +125,7 @@ describe("AnrPlotGeometryPolicy", () => {
 
     it("allows reading with projects-read permission", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id, permissions: ["projects-read"] });
+      mockRequestForUser(user, "projects-read");
 
       const anrPlotGeometry = new AnrPlotGeometry();
 
@@ -139,7 +139,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("no permissions", () => {
     it("denies all operations when user has no permissions", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id });
+      mockRequestForUser(user);
 
       const anrPlotGeometry = new AnrPlotGeometry();
 

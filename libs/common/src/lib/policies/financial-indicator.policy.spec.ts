@@ -3,7 +3,7 @@ import { PolicyService } from "./policy.service";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { expectAuthority, expectCan, expectCannot } from "./policy.service.spec";
 import { FinancialIndicatorFactory } from "@terramatch-microservices/database/factories/financial-indicator.factory";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("FinancialIndicatorPolicy", () => {
   let service: PolicyService;
@@ -23,7 +23,7 @@ describe("FinancialIndicatorPolicy", () => {
   it("should allow upload and delete files if user has organisationId", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id });
+    mockRequestForUser(user);
     const financialIndicator = await FinancialIndicatorFactory.org(org).create();
     await expectCan(service, ["uploadFiles", "deleteFiles"], financialIndicator);
   });
@@ -43,7 +43,7 @@ describe("FinancialIndicatorPolicy", () => {
   it("should not allow managing financial indicators without framework permissions", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["other-permission"] });
+    mockRequestForUser(user, "other-permission");
     const financialIndicator = await FinancialIndicatorFactory.org(org).create();
     await expectCannot(service, ["read", "delete", "update", "approve", "create"], financialIndicator);
     await expectCan(service, ["uploadFiles", "deleteFiles"], financialIndicator);

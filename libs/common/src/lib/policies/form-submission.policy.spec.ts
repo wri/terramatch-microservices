@@ -1,6 +1,6 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
 import {
@@ -33,7 +33,7 @@ describe("FormSubmissionPolicy", () => {
   it("allows reading own org submissions", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
     let submission = await FormSubmissionFactory.create({ organisationUuid: org.uuid });
     await expectCan(service, "read", submission);
     submission = await FormSubmissionFactory.create({ organisationUuid: "other-org" });
@@ -44,7 +44,7 @@ describe("FormSubmissionPolicy", () => {
     const associatedOrg = await OrganisationFactory.create();
     const pendingOrg = await OrganisationFactory.create();
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
     await OrganisationUserFactory.create({ organisationId: associatedOrg.id, userId: user.id, status: "approved" });
     await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "requested" });
     const associatedSubmission = await FormSubmissionFactory.create({ organisationUuid: associatedOrg.uuid });

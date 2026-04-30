@@ -17,10 +17,11 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("DisturbanceReportProcessor", () => {
   let processor: DisturbanceReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
   let mediaService: DeepMocked<MediaService>;
 
@@ -70,7 +71,7 @@ describe("DisturbanceReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -350,6 +351,7 @@ describe("DisturbanceReportProcessor", () => {
         await writeRows(addRow);
       });
       mediaService.getUrl.mockReturnValue("media-url");
+      setMockedPermissions("framework-ppc");
       await processor.exportAll();
 
       expect(addRow).toHaveBeenCalledTimes(2);

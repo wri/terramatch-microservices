@@ -24,10 +24,11 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportLightDto } from "../dto/site-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("SiteReportProcessor", () => {
   let processor: SiteReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -50,7 +51,7 @@ describe("SiteReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -481,7 +482,7 @@ describe("SiteReportProcessor", () => {
       const siteReport = await SiteReportFactory.create();
       await TreeSpeciesFactory.siteReportTreePlanted(siteReport).createMany(3);
 
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
+      setMockedPermissions("projects-read");
       const document = buildJsonApi(SiteReportLightDto);
       await processor.addIndex(document, {
         sideloads: [{ entity: "treeSpecies", pageSize: 5 }]
@@ -549,7 +550,7 @@ describe("SiteReportProcessor", () => {
     });
 
     it("writes all site reports to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await SiteReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

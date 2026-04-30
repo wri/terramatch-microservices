@@ -21,10 +21,11 @@ import { NotAcceptableException } from "@nestjs/common";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { mockRequestContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("NurseryProcessor", () => {
   let processor: NurseryProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -47,7 +48,7 @@ describe("NurseryProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -350,7 +351,7 @@ describe("NurseryProcessor", () => {
   describe("delete", () => {
     it("should allow an admin to delete a nursery", async () => {
       const nursery = await NurseryFactory.create();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
@@ -358,13 +359,13 @@ describe("NurseryProcessor", () => {
     it("should not allow a non-admin to delete a nursery if it has reports", async () => {
       const nursery = await NurseryFactory.create();
       await NurseryReportFactory.create({ nurseryId: nursery.id });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await expect(processor.delete(nursery)).rejects.toThrow(NotAcceptableException);
     });
 
     it("should allow a non-admin to delete a nursery if it has no reports", async () => {
       const nursery = await NurseryFactory.create();
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      setMockedPermissions("manage-own");
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();
     });
@@ -388,6 +389,7 @@ describe("NurseryProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       expect(nursery.projectId).toBe(project.id);
       expect(nursery.frameworkKey).toBe(project.frameworkKey);
@@ -401,6 +403,7 @@ describe("NurseryProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
+      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
@@ -421,6 +424,7 @@ describe("NurseryProcessor", () => {
           dueAt: DateTime.now().plus({ weeks: 5 }).toISO()
         }
       });
+      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
@@ -434,7 +438,7 @@ describe("NurseryProcessor", () => {
     });
 
     it("writes all nurseries to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await Nursery.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

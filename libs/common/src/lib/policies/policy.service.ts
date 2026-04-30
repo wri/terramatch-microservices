@@ -35,7 +35,7 @@ import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { ProjectPolygonPolicy } from "./project-polygon.policy";
-import { isArray } from "lodash";
+import { isArray, isEmpty } from "lodash";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
 import { SiteReportPolicy } from "./site-report.policy";
@@ -147,6 +147,7 @@ export class PolicyService {
 
   async hasAccess(action: string, subject: Model | EntityClass | Model[]) {
     if (this.userId == null) return false;
+    if (isEmpty(subject)) return true;
 
     const subjects = isArray(subject) ? subject : [subject];
     const [, PolicyClass] =

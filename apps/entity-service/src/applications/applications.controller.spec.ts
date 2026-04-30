@@ -16,26 +16,29 @@ import {
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, mockRequestForUser, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { sortBy } from "lodash";
 import FakeTimers from "@sinonjs/fake-timers";
 import { DateTime } from "luxon";
+import { FormsService } from "../forms/forms.service";
 
 describe("ApplicationsController", () => {
   let controller: ApplicationsController;
   let formDataService: DeepMocked<FormDataService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ApplicationsController],
       providers: [
+        PolicyService,
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) }
+        { provide: FormsService, useValue: createMock<FormsService>() }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(ApplicationsController);
 
     await Application.truncate();
@@ -48,7 +51,7 @@ describe("ApplicationsController", () => {
   describe("indexApplications", () => {
     it("returns all applications to admins", async () => {
       const apps = await ApplicationFactory.createMany(3);
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       const result = serialize(await controller.index({}));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(3);
@@ -64,8 +67,7 @@ describe("ApplicationsController", () => {
       const user = await UserFactory.create({ organisationId: orgs[0].id });
       await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
       await OrganisationUserFactory.create({ organisationId: orgs[2].id, userId: user.id, status: "pending" });
-      mockRequestContext({ userId: user.id });
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["manage-own"]);
+      mockRequestForUser(user, "manage-own");
       const apps = await Promise.all(orgs.map(({ uuid }) => ApplicationFactory.create({ organisationUuid: uuid })));
       const userApps = apps.slice(0, 2); // the third is not a confirmed org association
       await ApplicationFactory.create();
@@ -80,7 +82,7 @@ describe("ApplicationsController", () => {
     });
 
     it("filters by submission status", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       const apps = await ApplicationFactory.createMany(2);
       const excluded = await ApplicationFactory.create();
       // included - only submission on this app
@@ -102,7 +104,7 @@ describe("ApplicationsController", () => {
     });
 
     it("filters on application fields", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       const apps = await ApplicationFactory.createMany(2);
       let result = serialize(await controller.index({ organisationUuid: apps[0].organisationUuid as string }));
       let dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
@@ -116,7 +118,7 @@ describe("ApplicationsController", () => {
     });
 
     it("throws with an invalid sort", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       await expect(controller.index({ sort: { field: "foo" } })).rejects.toThrow("Invalid sort field: foo");
     });
 
@@ -134,7 +136,7 @@ describe("ApplicationsController", () => {
         clock.setSystemTime(now.minus({ days: 6 }).toJSDate());
         await app1.update({ updatedBy: 123 });
 
-        jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+        mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
 
         let result = serialize(await controller.index({ sort: { field: "createdAt" } }));
         let uuids = (result.data as Resource[]).map(({ id }) => id);
@@ -169,7 +171,7 @@ describe("ApplicationsController", () => {
       const org3 = await OrganisationFactory.create({ name: "Crops" });
       await ApplicationFactory.create({ organisationUuid: org3.uuid });
 
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
 
       let result = serialize(await controller.index({ search: "Test" }));
       let uuids = (result.data as Resource[]).map(({ id }) => id);
@@ -200,6 +202,7 @@ describe("ApplicationsController", () => {
         userId: user.uuid
       });
       const project = await ProjectFactory.create({ applicationId: app.id });
+      mockRequestForUser(user, "framework-ppc");
 
       const result = serialize(await controller.get({ uuid: app.uuid }, {}));
       const dto = (result.data as Resource).attributes;
@@ -221,8 +224,11 @@ describe("ApplicationsController", () => {
       const fundingProgramme = await FundingProgrammeFactory.create();
       const app = await ApplicationFactory.create({ fundingProgrammeUuid: fundingProgramme.uuid });
       const stage = await StageFactory.create({});
-      const user = await UserFactory.create({ locale: "es-MX" });
-      mockRequestContext({ userId: user.id });
+      const user = await UserFactory.create({
+        locale: "es-MX",
+        organisationId: (await app.$get("organisation", { attributes: ["id"] }))?.id
+      });
+      mockRequestForUser(user, "manage-own");
       const submissions = [
         await FormSubmissionFactory.create({
           applicationId: app.id,
@@ -262,9 +268,10 @@ describe("ApplicationsController", () => {
     it("deletes the application and its submissions", async () => {
       const application = await ApplicationFactory.create();
       const submissions = await FormSubmissionFactory.createMany(2, { applicationId: application.id });
+      const authorizeSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       const result = serialize(await controller.delete({ uuid: application.uuid }));
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));
+      expect(authorizeSpy).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));
       expect(result.meta.resourceType).toBe("applications");
       expect(result.meta.resourceIds).toEqual([application.uuid]);
       expect(result.meta.deleted).toHaveLength(2);
@@ -331,6 +338,7 @@ describe("ApplicationsController", () => {
           comment: "Requires More Feedback"
         });
 
+        mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
         const result = serialize(await controller.getHistory({ uuid: app.uuid }));
         const dto = (result.data as Resource).attributes;
         // result is in reverse chronological order

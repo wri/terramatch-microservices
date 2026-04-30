@@ -8,7 +8,7 @@ import {
   SiteFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("SitePolygonPolicy", () => {
   let service: PolicyService;
@@ -27,7 +27,7 @@ describe("SitePolygonPolicy", () => {
 
   it("allows service accounts with polygons-manage to read and create any polygon", async () => {
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+    mockRequestForUser(user, "polygons-manage");
 
     const sitePolygon = new SitePolygon();
     sitePolygon.createdBy = 999; // Different user
@@ -38,7 +38,7 @@ describe("SitePolygonPolicy", () => {
 
   it("allows service accounts with polygons-manage to update and delete only their own polygons", async () => {
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+    mockRequestForUser(user, "polygons-manage");
 
     const ownPolygon = new SitePolygon();
     ownPolygon.createdBy = user.id;
@@ -68,7 +68,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -81,7 +81,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -94,7 +94,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: false });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -122,7 +122,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -135,7 +135,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -157,7 +157,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+      mockRequestForUser(user, "polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -170,7 +170,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+      mockRequestForUser(user, "polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -183,7 +183,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestContext({ userId: user.id, permissions: ["polygons-manage"] });
+      mockRequestForUser(user, "polygons-manage");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;

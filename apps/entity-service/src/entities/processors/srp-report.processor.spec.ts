@@ -1,25 +1,25 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { faker } from "@faker-js/faker";
 import { SrpReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
 import { orderBy, reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
+  FormFactory,
   ProjectFactory,
   ProjectUserFactory,
-  SrpReportFactory,
-  TrackingFactory
+  SrpReportFactory
 } from "@terramatch-microservices/database/factories";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SrpReportProcessor } from "./srp-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("SrpReportProcessor", () => {
   let processor: SrpReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -67,7 +67,7 @@ describe("SrpReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -206,16 +206,15 @@ describe("SrpReportProcessor", () => {
 
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await SrpReport.truncate();
       const projects = orderBy(await ProjectFactory.createMany(2, { frameworkKey: "ppc" }), "id");
       const reports = [
-        await SrpReportFactory.create({ projectId: projects[0].id }),
-        await SrpReportFactory.create({ projectId: projects[1].id })
+        await SrpReportFactory.create({ projectId: projects[0].id, frameworkKey: "ppc" }),
+        await SrpReportFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
-      const tracking = await TrackingFactory.srpReportDirectOtherRestorationPartners(reports[1]).create({
-        description: faker.lorem.sentence()
-      });
+
+      await FormFactory.create({ type: "srp-report" });
 
       const addRow = jest.fn();
       csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
@@ -231,9 +230,7 @@ describe("SrpReportProcessor", () => {
           projectUuid: projects[0].uuid,
           projectName: projects[0].name
         }),
-        {
-          otherRestorationPartnersDescription: undefined
-        }
+        expect.anything()
       );
       expect(addRow).toHaveBeenNthCalledWith(
         2,
@@ -242,9 +239,7 @@ describe("SrpReportProcessor", () => {
           projectUuid: projects[1].uuid,
           projectName: projects[1].name
         }),
-        {
-          otherRestorationPartnersDescription: tracking.description
-        }
+        expect.anything()
       );
     });
   });

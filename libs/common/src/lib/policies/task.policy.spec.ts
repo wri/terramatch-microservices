@@ -8,7 +8,7 @@ import {
   TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("TaskPolicy", () => {
   let service: PolicyService;
@@ -43,7 +43,7 @@ describe("TaskPolicy", () => {
   it("allows reading and updating tasks for own projects", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -73,7 +73,7 @@ describe("TaskPolicy", () => {
 
   it("allows reading and updating tasks for managed projects", async () => {
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

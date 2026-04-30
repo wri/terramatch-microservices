@@ -40,7 +40,7 @@ describe("OptionsLabelsController", () => {
     });
 
     it("should throw if no locale is found", async () => {
-      mockRequestContext({ userId: -1 });
+      mockRequestContext({ userId: -1, locale: null });
       await expect(controller.optionLabelsIndex(["1"])).rejects.toThrow("Locale is required");
     });
 
@@ -129,7 +129,7 @@ describe("OptionsLabelsController", () => {
     });
 
     it("should throw if no locale is found", async () => {
-      mockRequestContext({ userId: -1 });
+      mockRequestContext({ userId: -1, locale: null });
       await expect(controller.findList("fake-list-key")).rejects.toThrow("Locale is required");
     });
 

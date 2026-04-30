@@ -9,7 +9,7 @@ import {
   SiteFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("SitePolicy", () => {
   let service: PolicyService;
@@ -50,7 +50,7 @@ describe("SitePolicy", () => {
   it("allows managing own sites", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -82,7 +82,7 @@ describe("SitePolicy", () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
-    mockRequestContext({ userId: user.id, permissions: ["projects-manage"] });
+    mockRequestForUser(user, "projects-manage");
     const s1 = await SiteFactory.create({ projectId: project.id });
     const s2 = await SiteFactory.create();
     await expectAuthority(service, {
@@ -96,7 +96,7 @@ describe("SitePolicy", () => {
     const project = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
-    mockRequestContext({ userId: user.id, permissions: ["media-manage"] });
+    mockRequestForUser(user, "media-manage");
     await expectCan(service, "uploadFiles", site);
   });
 });

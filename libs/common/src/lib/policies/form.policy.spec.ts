@@ -2,7 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { FormFactory, UserFactory } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestForUser } from "../util/testing";
 
 describe("FormPolicy", () => {
   let service: PolicyService;
@@ -21,14 +21,14 @@ describe("FormPolicy", () => {
 
   it("should allow uploading files to forms if you can forms manage", async () => {
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["custom-forms-manage"] });
+    mockRequestForUser(user, "custom-forms-manage");
     const form = await FormFactory.create();
     await expectCan(service, ["uploadFiles"], form);
   });
 
   it("should disallow uploading files for forms if you cannot forms manage", async () => {
     const user = await UserFactory.create();
-    mockRequestContext({ userId: user.id, permissions: ["frarmework-terrafund"] });
+    mockRequestForUser(user, "framework-terrafund");
     const form = await FormFactory.create();
     await expectCannot(service, ["uploadFiles"], form);
   });

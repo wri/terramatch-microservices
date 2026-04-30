@@ -2,7 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectAuthority, expectCannot } from "./policy.service.spec";
 import { FinancialReportFactory, OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("FinancialReportPolicy", () => {
   let service: PolicyService;
@@ -32,7 +32,7 @@ describe("FinancialReportPolicy", () => {
   it("allows managing own financial reports", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
 
     const fr1 = await FinancialReportFactory.org(org).create();
     const fr2 = await FinancialReportFactory.org().create();
@@ -57,7 +57,7 @@ describe("FinancialReportPolicy", () => {
   it("does not allow access without any permission", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestContext({ userId: user.id, permissions: ["other-permission"] });
+    mockRequestForUser(user, "other-permissions");
 
     const financialReport = await FinancialReportFactory.org(org).create();
     await expectCannot(service, "read", financialReport);
@@ -66,7 +66,7 @@ describe("FinancialReportPolicy", () => {
 
   it("does not allow access for users without organisation", async () => {
     const user = await UserFactory.create({ organisationId: null });
-    mockRequestContext({ userId: user.id, permissions: ["manage-own"] });
+    mockRequestForUser(user, "manage-own");
 
     const financialReport = await FinancialReportFactory.org().create();
     await expectCannot(service, "read", financialReport);

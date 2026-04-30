@@ -21,10 +21,11 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ProjectReportLightDto } from "../dto/project-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("ProjectReportProcessor", () => {
   let processor: ProjectReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -47,7 +48,7 @@ describe("ProjectReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -307,7 +308,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should throw an error if the sort field is not recognized", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue([]);
+      setMockedPermissions();
       await expect(processor.findMany({ sort: { field: "foo" } })).rejects.toThrow(BadRequestException);
     });
   });
@@ -495,7 +496,7 @@ describe("ProjectReportProcessor", () => {
       await TrackingFactory.projectReportWorkday(projectReport).create();
       await TrackingFactory.projectReportJobs(projectReport).create();
 
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["projects-read"]);
+      setMockedPermissions(`framework-${projectReport.frameworkKey}`);
       const document = buildJsonApi(ProjectReportLightDto);
       await processor.addIndex(document, {
         sideloads: [{ entity: "trackings", pageSize: 5 }]
@@ -513,7 +514,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("writes all project reports to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-ppc"]);
+      setMockedPermissions("framework-ppc");
       await ProjectReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

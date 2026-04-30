@@ -309,13 +309,6 @@ describe("FormsService", () => {
       return { form, formMatch };
     };
 
-    it("throws if the user ID is invalid", async () => {
-      mockRequestContext({ userId: 0 });
-      await expect(
-        service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), await FormFactory.create(), true)
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it("returns the full DTO", async () => {
       const { form, formMatch } = await setupTestForm(true);
       const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, true));

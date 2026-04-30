@@ -20,10 +20,11 @@ import { NurseryReportProcessor } from "./nursery-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("NurseryReportProcessor", () => {
   let processor: NurseryReportProcessor;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -50,7 +51,7 @@ describe("NurseryReportProcessor", () => {
         total = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; total?: number } = {}
     ) {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(permissions);
+      setMockedPermissions(...permissions);
       const { models, paginationTotal } = await processor.findMany(query as EntityQueryDto);
       expect(models.length).toBe(expected.length);
       expect(paginationTotal).toBe(total);
@@ -521,7 +522,7 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("writes all nursery reports to the CSV", async () => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["framework-terrafund"]);
+      setMockedPermissions("framework-terrafund");
       await NurseryReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),

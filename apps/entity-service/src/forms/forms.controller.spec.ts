@@ -10,23 +10,27 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
 import { StoreFormAttributes } from "./dto/form.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
 
 describe("FormsController", () => {
   let controller: FormsController;
   let service: DeepMocked<FormsService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [FormsController],
       providers: [
+        PolicyService,
         { provide: FormsService, useValue: (service = createMock<FormsService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: LocalizationService, useValue: createMock<LocalizationService>() }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(FormsController);
+
+    mockRequestContext({ userId: 123, permissions: ["custom-forms-manage", "framework-ppc"] });
   });
 
   afterEach(() => {
@@ -53,10 +57,6 @@ describe("FormsController", () => {
   });
 
   describe("delete", () => {
-    beforeEach(() => {
-      jest.spyOn(policyService, "permissions", "get").mockReturnValue(["custom-forms_manage"]);
-    });
-
     it("deletes a published form", async () => {
       const form = await FormFactory.create({ published: true });
       service.findOne.mockResolvedValue(form);
@@ -106,6 +106,7 @@ describe("FormsController", () => {
     it("calls store on the service", async () => {
       const form = {} as Form;
       service.findOne.mockResolvedValue(form);
+      jest.spyOn(policyService, "authorize").mockResolvedValue();
       const attributes: StoreFormAttributes = {
         title: "",
         submissionMessage: ""

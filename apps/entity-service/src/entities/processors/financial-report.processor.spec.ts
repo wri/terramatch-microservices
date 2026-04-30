@@ -24,10 +24,15 @@ import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-typ
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { TestingModule } from "@nestjs/testing";
 
 describe("FinancialReportProcessor", () => {
+  let module: TestingModule;
   let processor: FinancialReportProcessor;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await FinancialReport.truncate();
@@ -35,8 +40,7 @@ describe("FinancialReportProcessor", () => {
     await FundingType.truncate();
     await Organisation.truncate();
 
-    const module = await mockEntityService();
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("financialReports") as FinancialReportProcessor;
   });
 
@@ -226,6 +230,29 @@ describe("FinancialReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws if the report is missing a framework key", async () => {
+      const report = await FinancialReportFactory.org().create({ frameworkKey: null });
+      await expect(processor.export(report.uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await FinancialReportFactory.org().create({ frameworkKey: "ppc" });
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "financialReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
       await FinancialReport.truncate();
@@ -238,7 +265,7 @@ describe("FinancialReportProcessor", () => {
       await EntityFormFactory.for(reports[0]).create();
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       setMockedPermissions("framework-ppc");

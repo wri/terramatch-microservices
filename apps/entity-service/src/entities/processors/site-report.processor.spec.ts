@@ -25,18 +25,22 @@ import { SiteReportLightDto } from "../dto/site-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 
 describe("SiteReportProcessor", () => {
+  let module: TestingModule;
   let processor: SiteReportProcessor;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await SiteReport.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("siteReports") as SiteReportProcessor;
   });
 
@@ -64,7 +68,7 @@ describe("SiteReportProcessor", () => {
     it("should returns site reports", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const managedSiteReports = await SiteReportFactory.createMany(3, { siteId: site.id });
       await SiteReportFactory.createMany(5);
       await expectSiteReports(managedSiteReports, {}, { permissions: ["manage-own"] });
@@ -73,7 +77,7 @@ describe("SiteReportProcessor", () => {
     it("should returns managed site reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -120,8 +124,8 @@ describe("SiteReportProcessor", () => {
     it("should return site reports filtered by the update request status, country, site and project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
       const s1 = await SiteFactory.create({ projectId: p1.id });
       const s2 = await SiteFactory.create({ projectId: p2.id });
       s1.project = await s1.$get("project");
@@ -180,7 +184,7 @@ describe("SiteReportProcessor", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const task1 = await TaskFactory.create({ projectId: project.id });
       const task2 = await TaskFactory.create({ projectId: project.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
 
       const task1Reports = await SiteReportFactory.createMany(2, { siteId: site.id, taskId: task1.id });
       await SiteReportFactory.createMany(3, { siteId: site.id, taskId: task2.id });
@@ -544,6 +548,29 @@ describe("SiteReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws if the report is missing a framework key", async () => {
+      const report = await SiteReportFactory.create({ frameworkKey: null });
+      await expect(processor.export(report.uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await SiteReportFactory.create({ frameworkKey: "ppc" });
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "siteReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
     it("throws if the framework key is missing", async () => {
       await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
@@ -585,7 +612,7 @@ describe("SiteReportProcessor", () => {
       );
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -656,7 +683,7 @@ describe("SiteReportProcessor", () => {
       );
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ projectUuid: projects[1].uuid });

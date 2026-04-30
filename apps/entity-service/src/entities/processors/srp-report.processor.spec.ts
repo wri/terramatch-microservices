@@ -16,18 +16,22 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { NotFoundException } from "@nestjs/common";
 
 describe("SrpReportProcessor", () => {
+  let module: TestingModule;
   let processor: SrpReportProcessor;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await SrpReport.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("srpReports") as SrpReportProcessor;
   });
 
@@ -134,7 +138,7 @@ describe("SrpReportProcessor", () => {
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -157,7 +161,7 @@ describe("SrpReportProcessor", () => {
 
     it("should returns own project disturbance reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const ownProjectReports = await SrpReportFactory.createMany(3, { projectId: project.id });
       await SrpReportFactory.createMany(5);
 
@@ -204,6 +208,24 @@ describe("SrpReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await SrpReportFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "srpReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
       setMockedPermissions("framework-ppc");
@@ -217,7 +239,7 @@ describe("SrpReportProcessor", () => {
       await FormFactory.create({ type: "srp-report" });
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll();

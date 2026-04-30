@@ -315,6 +315,12 @@ describe("DisturbanceReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws", async () => {
+      await expect(processor.export()).rejects.toThrow("Individual export of disturbance report is not supported");
+    });
+  });
+
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
       await DisturbanceReport.truncate();

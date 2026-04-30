@@ -22,18 +22,22 @@ import { ProjectReportLightDto } from "../dto/project-report.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { TestingModule } from "@nestjs/testing";
+import { Response } from "express";
+import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 
 describe("ProjectReportProcessor", () => {
+  let module: TestingModule;
   let processor: ProjectReportProcessor;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
+
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const entitiesService = () => module.get(EntitiesService);
 
   beforeEach(async () => {
     await ProjectReport.truncate();
 
-    const module = await mockEntityService();
-    policyService = module.get(PolicyService);
-    csvExportService = module.get(CsvExportService);
+    module = await mockEntityService();
     processor = module.get(EntitiesService).createEntityProcessor("projectReports") as ProjectReportProcessor;
   });
 
@@ -60,7 +64,7 @@ describe("ProjectReportProcessor", () => {
 
     it("should returns project reports", async () => {
       const project = await ProjectFactory.create();
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
       const managedProjectReports = await ProjectReportFactory.createMany(3, { projectId: project.id });
       await ProjectReportFactory.createMany(5);
       await expectProjectReports(managedProjectReports, {}, { permissions: ["manage-own"] });
@@ -69,7 +73,7 @@ describe("ProjectReportProcessor", () => {
     it("should returns managed project reports", async () => {
       const project = await ProjectFactory.create();
       await ProjectUserFactory.create({
-        userId: policyService.userId,
+        userId: policyService().userId,
         projectId: project.id,
         isMonitoring: false,
         isManaging: true
@@ -105,8 +109,8 @@ describe("ProjectReportProcessor", () => {
     it("should return project reports filtered by the update request status or project", async () => {
       const p1 = await ProjectFactory.create({ country: "MX" });
       const p2 = await ProjectFactory.create({ country: "CA" });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p1.id });
-      await ProjectUserFactory.create({ userId: policyService.userId, projectId: p2.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
       const first = await ProjectReportFactory.create({
         title: "first project report",
@@ -508,6 +512,29 @@ describe("ProjectReportProcessor", () => {
     });
   });
 
+  describe("export", () => {
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws if the report is missing a framework key", async () => {
+      const report = await ProjectReportFactory.create({ frameworkKey: null });
+      await expect(processor.export(report.uuid, {} as Response)).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("calls entity export", async () => {
+      const report = await ProjectReportFactory.create({ frameworkKey: "ppc" });
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.export(report.uuid, {} as Response);
+      expect(exportSpy).toHaveBeenCalledWith(
+        "projectReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: report.uuid })],
+        expect.anything()
+      );
+    });
+  });
+
   describe("exportAll", () => {
     it("throws if the framework key is missing", async () => {
       await expect(processor.exportAll({})).rejects.toThrow("Framework key not found");
@@ -545,7 +572,7 @@ describe("ProjectReportProcessor", () => {
       );
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ frameworkKey: "ppc" });
@@ -603,7 +630,7 @@ describe("ProjectReportProcessor", () => {
       );
 
       const addRow = jest.fn();
-      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
       await processor.exportAll({ projectUuid: projects[1].uuid });

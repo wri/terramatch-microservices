@@ -1,13 +1,18 @@
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesController } from "./entities.controller";
 import { EntitiesService } from "./entities.service";
-import { Test } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 import { EntityProcessor } from "./processors/entity-processor";
 import { ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
-import { Project } from "@terramatch-microservices/database/entities";
+import { DelayedJob, Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectFactory } from "@terramatch-microservices/database/factories";
-import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
@@ -17,7 +22,7 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { Resource, ResourceBuilder } from "@terramatch-microservices/common/util";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { getQueueToken } from "@nestjs/bullmq";
-import { ENTITY_SERVICE_EXPORT_QUEUE } from "../jobs/entity-service-exports.processor";
+import { ENTITY_SERVICE_EXPORT_QUEUE, PROJECT_EXPORT } from "../jobs/entity-service-exports.processor";
 import { Queue } from "bullmq";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
@@ -42,27 +47,29 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
 }
 
 describe("EntitiesController", () => {
+  let module: TestingModule;
   let controller: EntitiesController;
-  let entitiesService: DeepMocked<EntitiesService>;
-  let policyService: PolicyService;
-  let csvExportService: DeepMocked<CsvExportService>;
   let processor: StubProcessor;
 
+  const entitiesService = (): DeepMocked<EntitiesService> => module.get(EntitiesService);
+  const policyService = () => module.get(PolicyService);
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
+  const exportQueue = (): DeepMocked<Queue> => module.get(getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE));
+
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       controllers: [EntitiesController],
       providers: [
         PolicyService,
-        { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) },
-        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) },
+        { provide: EntitiesService, useValue: createMock<EntitiesService>() },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         { provide: getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE), useValue: createMock<Queue>() }
       ]
     }).compile();
 
     controller = module.get(EntitiesController);
-    processor = new StubProcessor(entitiesService, "projects");
-    policyService = module.get(PolicyService);
-    entitiesService.createEntityProcessor.mockImplementation(() => processor);
+    processor = new StubProcessor(entitiesService(), "projects");
+    entitiesService().createEntityProcessor.mockImplementation(() => processor);
   });
 
   afterEach(() => {
@@ -85,7 +92,7 @@ describe("EntitiesController", () => {
         number,
         ProjectLightDto
       >);
-      jest.spyOn(policyService, "authorize").mockResolvedValue();
+      jest.spyOn(policyService(), "authorize").mockResolvedValue();
 
       const result = serialize(await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto));
       expect(processor.getLightDto).toHaveBeenCalledTimes(2);
@@ -97,7 +104,7 @@ describe("EntitiesController", () => {
 
   describe("entityExportAll", () => {
     it("should throw an error if the policy does not authorize", async () => {
-      jest.spyOn(policyService, "authorize").mockRejectedValue(new UnauthorizedException());
+      jest.spyOn(policyService(), "authorize").mockRejectedValue(new UnauthorizedException());
       await expect(
         controller.entityExportAll({ entity: "projects" }, { frameworkKey: "ppc" }, {} as Response)
       ).rejects.toThrow(UnauthorizedException);
@@ -111,7 +118,7 @@ describe("EntitiesController", () => {
 
     it("should return a presigned url", async () => {
       mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
-      csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
+      csvExportService().generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
       const result = serialize(
         (await controller.entityExportAll(
           { entity: "projects" },
@@ -119,7 +126,7 @@ describe("EntitiesController", () => {
           {} as Response
         )) as ResourceBuilder
       );
-      expect(csvExportService.generateExportDto).toHaveBeenCalledTimes(1);
+      expect(csvExportService().generateExportDto).toHaveBeenCalledTimes(1);
       expect((result.data as Resource).type).toEqual("fileDownloads");
       expect((result.data as Resource).id).toEqual("projectsExport");
       expect((result.data as Resource).attributes.url).toEqual("fake-url");
@@ -134,17 +141,62 @@ describe("EntitiesController", () => {
 
     it("should throw an error if the policy does not authorize", async () => {
       processor.findOne.mockResolvedValue(new Project());
-      jest.spyOn(policyService, "authorize").mockRejectedValue(new UnauthorizedException());
+      jest.spyOn(policyService(), "authorize").mockRejectedValue(new UnauthorizedException());
       await expect(controller.entityGet({ entity: "projects", uuid: "asdf" })).rejects.toThrow(UnauthorizedException);
     });
 
     it("should add the DTO to the document", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      jest.spyOn(policyService, "authorize").mockResolvedValue();
+      jest.spyOn(policyService(), "authorize").mockResolvedValue();
       const result = serialize(await controller.entityGet({ entity: "projects", uuid: "asdf" }));
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("entityExport", () => {
+    describe("projects", () => {
+      it("should throw if the project is missing", async () => {
+        processor.findOne.mockResolvedValue(null);
+        await expect(controller.entityExport({ entity: "projects", uuid: "asdf" }, {} as Response)).rejects.toThrow(
+          NotFoundException
+        );
+      });
+
+      it("should throw an internal error if the framework is missing", async () => {
+        const { uuid } = await ProjectFactory.create({ frameworkKey: null });
+        await expect(controller.entityExport({ entity: "projects", uuid }, {} as Response)).rejects.toThrow(
+          InternalServerErrorException
+        );
+      });
+
+      it("should queue the project export", async () => {
+        const authSpy = jest.spyOn(policyService(), "authorize").mockResolvedValue();
+        const { id, uuid, name } = await ProjectFactory.create();
+
+        const result = serialize(
+          (await controller.entityExport({ entity: "projects", uuid }, {} as Response)) as ResourceBuilder
+        );
+        expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ id }));
+        const data = result.data as Resource;
+        expect(data.type).toEqual("delayedJobs");
+        const job = await DelayedJob.findOne({ where: { uuid: data.id } });
+        expect(job).toBeDefined();
+        expect(exportQueue().add).toHaveBeenCalledWith(PROJECT_EXPORT, {
+          delayedJobId: job?.id,
+          projectUuid: uuid,
+          projectName: name
+        });
+      });
+    });
+
+    describe("other entities", () => {
+      it("should call export on the processor", async () => {
+        const response = {} as Response;
+        await controller.entityExport({ entity: "sites", uuid: "fake-uuid" }, response);
+        expect(processor.export).toHaveBeenCalledWith("fake-uuid", response);
+      });
     });
   });
 
@@ -156,7 +208,7 @@ describe("EntitiesController", () => {
 
     it("should throw if the policy does not authorize", async () => {
       processor.findOne.mockResolvedValue(new Project());
-      jest.spyOn(policyService, "authorize").mockRejectedValue(new UnauthorizedException());
+      jest.spyOn(policyService(), "authorize").mockRejectedValue(new UnauthorizedException());
       await expect(controller.entityDelete({ entity: "projects", uuid: "asdf" })).rejects.toThrow(
         UnauthorizedException
       );
@@ -165,7 +217,7 @@ describe("EntitiesController", () => {
     it("should call delete on the processor", async () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
-      jest.spyOn(policyService, "authorize").mockResolvedValue();
+      jest.spyOn(policyService(), "authorize").mockResolvedValue();
       const result = serialize(await controller.entityDelete({ entity: "projects", uuid: project.uuid }));
       expect(processor.delete).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
@@ -207,7 +259,7 @@ describe("EntitiesController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       const { id, uuid } = project;
-      const authorizeSpy = jest.spyOn(policyService, "authorize").mockRejectedValueOnce(new UnauthorizedException());
+      const authorizeSpy = jest.spyOn(policyService(), "authorize").mockRejectedValueOnce(new UnauthorizedException());
       await expect(
         controller.entityUpdate({ entity: "projects", uuid }, { data: { type: "projects", id: uuid, attributes: {} } })
       ).rejects.toThrow(UnauthorizedException);
@@ -225,7 +277,7 @@ describe("EntitiesController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       const { uuid } = project;
-      jest.spyOn(policyService, "authorize").mockResolvedValueOnce(undefined);
+      jest.spyOn(policyService(), "authorize").mockResolvedValueOnce(undefined);
       const attributes = { status: "approved", feedback: "foo" } as const;
       await controller.entityUpdate({ entity: "projects", uuid }, { data: { type: "projects", id: uuid, attributes } });
 

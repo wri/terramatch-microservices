@@ -1,9 +1,10 @@
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { Response } from "express";
 import { Test, TestingModule } from "@nestjs/testing";
 import { FormDataService } from "../entities/form-data.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApplicationsController } from "./applications.controller";
-import { Application } from "@terramatch-microservices/database/entities";
+import { Application, FundingProgramme } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
   AuditFactory,
@@ -22,23 +23,26 @@ import { sortBy } from "lodash";
 import FakeTimers from "@sinonjs/fake-timers";
 import { DateTime } from "luxon";
 import { FormsService } from "../forms/forms.service";
+import { NotFoundException } from "@nestjs/common";
 
 describe("ApplicationsController", () => {
+  let module: TestingModule;
   let controller: ApplicationsController;
-  let formDataService: DeepMocked<FormDataService>;
-  let policyService: PolicyService;
+
+  const policyService = () => module.get(PolicyService);
+  const formDataService = (): DeepMocked<FormDataService> => module.get(FormDataService);
+  const formsService = (): DeepMocked<FormsService> => module.get(FormsService);
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       controllers: [ApplicationsController],
       providers: [
         PolicyService,
-        { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
+        { provide: FormDataService, useValue: createMock<FormDataService>() },
         { provide: FormsService, useValue: createMock<FormsService>() }
       ]
     }).compile();
 
-    policyService = module.get(PolicyService);
     controller = module.get(ApplicationsController);
 
     await Application.truncate();
@@ -244,18 +248,42 @@ describe("ApplicationsController", () => {
         })
       ];
 
-      formDataService.getFullSubmission.mockResolvedValue(submissions[1]);
+      formDataService().getFullSubmission.mockResolvedValue(submissions[1]);
 
       await controller.get({ uuid: app.uuid }, { sideloads: ["currentSubmission", "fundingProgramme"] });
-      expect(formDataService.getFullSubmission).toHaveBeenCalledWith(submissions[1].uuid);
-      expect(formDataService.addSubmissionDto).toHaveBeenCalledWith(
+      expect(formDataService().getFullSubmission).toHaveBeenCalledWith(submissions[1].uuid);
+      expect(formDataService().addSubmissionDto).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ id: submissions[1].id })
       );
-      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
+      expect(formDataService().addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
         [expect.objectContaining({ id: fundingProgramme.id })],
         "es-MX"
+      );
+    });
+  });
+
+  describe("getExport", () => {
+    it("should throw if the application is missing", async () => {
+      await expect(controller.getExport({ uuid: "fake-uuid" }, {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw if the application doesn't have a funding programme", async () => {
+      const { uuid } = await ApplicationFactory.create({ fundingProgrammeUuid: null });
+      await expect(controller.getExport({ uuid }, {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("should call the form service", async () => {
+      const { uuid } = await ApplicationFactory.create();
+      const authSpy = jest.spyOn(policyService(), "authorize").mockResolvedValue();
+      const response = {} as Response;
+      await controller.getExport({ uuid }, response);
+
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ uuid }));
+      expect(formsService().exportApplication).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid, fundingProgramme: expect.any(FundingProgramme) }),
+        response
       );
     });
   });
@@ -268,7 +296,7 @@ describe("ApplicationsController", () => {
     it("deletes the application and its submissions", async () => {
       const application = await ApplicationFactory.create();
       const submissions = await FormSubmissionFactory.createMany(2, { applicationId: application.id });
-      const authorizeSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
+      const authorizeSpy = jest.spyOn(policyService(), "authorize").mockResolvedValue();
 
       const result = serialize(await controller.delete({ uuid: application.uuid }));
       expect(authorizeSpy).toHaveBeenCalledWith("delete", expect.objectContaining({ id: application.id }));

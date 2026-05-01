@@ -91,7 +91,7 @@ export class ActionsService {
       throw new BadRequestException("User not found");
     }
 
-    const projectIds = user.projects.map(({ id }) => id);
+    const projectIds = (user.projects ?? []).map(({ id }) => id);
 
     if (projectIds.length === 0) {
       return [];

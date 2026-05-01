@@ -28,7 +28,7 @@ export const assertDate = (value: string | null, message: string, format = "M/d/
   return result as DateTime<Valid>;
 };
 
-export const assertMember = <T>(value: T | null | undefined, set: T[], message: string) => {
+export const assertMember = <T>(value: T | null | undefined, set: readonly T[], message: string) => {
   assert(set.includes(assertNotNull(value, message)), message);
   return value as T;
 };

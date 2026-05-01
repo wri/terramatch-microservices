@@ -33,7 +33,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("manage-own")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds: WhereAttributeHash[] = [{ [Op.in]: user.projects.map(({ id }) => id) }];
+        const projectIds: WhereAttributeHash[] = [{ [Op.in]: (user.projects ?? []).map(({ id }) => id) }];
         if (user.organisationId != null) {
           projectIds.push({ [Op.in]: Project.forOrganisation(user.organisationId) });
         }
@@ -63,7 +63,9 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("projects-manage")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        const projectIds = (user.projects ?? [])
+          .filter(({ ProjectUser }) => ProjectUser.isManaging)
+          .map(({ id }) => id);
         if (projectIds.length > 0) {
           const nurseryIds = (
             await Nursery.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes: ["id"] })

@@ -12,7 +12,7 @@ export class ProjectPitchPolicy extends UserPermissionsPolicy {
       if (user?.organisationId != null) {
         const orgUuid = (await Organisation.findOne({ where: { id: user.organisationId }, attributes: ["uuid"] }))
           ?.uuid;
-        const organisationsConfirmed = user.organisationsConfirmed.map(({ uuid }) => uuid);
+        const organisationsConfirmed = (user.organisationsConfirmed ?? []).map(({ uuid }) => uuid);
         if (orgUuid != null) {
           organisationsConfirmed.push(orgUuid);
         }

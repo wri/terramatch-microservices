@@ -76,7 +76,8 @@ export class ApiGatewayStack extends Stack {
           CorsHttpMethod.OPTIONS
         ],
         allowOrigins: ["*"],
-        allowHeaders: ["authorization", "content-type"]
+        allowHeaders: ["authorization", "content-type"],
+        exposeHeaders: ["content-disposition"]
       },
       disableExecuteApiEndpoint: true,
       defaultDomainMapping: {

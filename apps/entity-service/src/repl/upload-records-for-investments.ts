@@ -1,4 +1,4 @@
-import { parseCsv } from "../../../../libs/common/src/lib/util/repl/csv";
+import { parseCsv } from "@terramatch-microservices/common/util/repl/csv";
 import { Investment, InvestmentSplit } from "@terramatch-microservices/database/entities";
 import { CreationAttributes } from "sequelize";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";

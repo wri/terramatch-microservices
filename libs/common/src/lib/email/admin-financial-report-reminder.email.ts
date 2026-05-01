@@ -48,7 +48,7 @@ export class AdminFinancialReportReminderEmail extends EmailSender<AdminReminder
       return;
     }
 
-    const baseUrl = emailService.getFrontEndUrl();
+    const baseUrl = emailService.frontEndUrl;
     const orgUuid = report.organisation.uuid;
     const callbackUrl = `${baseUrl}/organization/${orgUuid}?tab=financial_information`;
     const myOrgLink = `${baseUrl}/organisation/${orgUuid}`;

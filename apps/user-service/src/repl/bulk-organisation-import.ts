@@ -138,6 +138,7 @@ const parseRow = async (row: Dictionary<string>) => {
 };
 
 const persistRows = async (rows: Row[], resultFileName: string) => {
+  LOGGER.log(`Creating ${rows.length} organisations`);
   await writeCsv(resultFileName, EXPORT_COLUMNS, async addRow => {
     for (const row of rows) {
       addRow(await createOrg(row));
@@ -152,26 +153,20 @@ const createOrg = async ({ org: orgCreationData, fundingProgrammeUuid, level0Pro
   // updated_by and form submission user_id must be left blank because we don't have a user in this
   // context. The user import script that will be run after this one will add that data when the
   // first user is added to the org.
-  const fundingProgramme = (await FundingProgramme.findOne({
-    where: { uuid: fundingProgrammeUuid },
-    include: [
-      { association: "stages", attributes: ["uuid"], include: [{ association: "forms", attributes: ["uuid"] }] }
-    ]
-  })) as FundingProgramme;
   const stage = (await Stage.findOne({
-    where: { fundingProgrammeId: fundingProgramme.uuid },
+    where: { fundingProgrammeId: fundingProgrammeUuid },
     include: [{ association: "form", attributes: ["uuid"] }],
     order: [["order", "ASC"]]
   })) as Stage;
   const pitch = await ProjectPitch.create({
     organisationId: org.uuid,
-    fundingProgrammeId: fundingProgramme.uuid,
+    fundingProgrammeId: fundingProgrammeUuid,
     level0Proposed,
     level1Proposed
   });
   const application = await Application.create({
     organisationUuid: org.uuid,
-    fundingProgrammeUuid: fundingProgramme.uuid
+    fundingProgrammeUuid: fundingProgrammeUuid
   });
   await FormSubmission.create({
     formId: stage.form?.uuid,

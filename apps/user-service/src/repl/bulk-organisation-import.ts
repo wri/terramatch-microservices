@@ -91,27 +91,24 @@ const decodeArray = (cell: string | null) => {
 };
 
 const parseRow = async (row: Dictionary<string>) => {
-  // hq_street_2, hq_zipcode, currency, level_0_proposed, level_1_proposed, level_0_past_restoration,
-  // and level_1_past_restoration are not required
+  // hqStreet2, hqZipcode, currency, level0Proposed, level1Proposed, level0PastRestoration,
+  // and level1PastRestoration are not required
   const name = assertNotNull(columnValue(row, "name"), "No name found");
   const type = assertMember(columnValue(row, "type"), VALID_TYPES, `Type not valid: ${columnValue(row, "type")}`);
-  const hqStreet1 = assertNotNull(columnValue(row, "hq_street_1"), "No hqStreet1 found");
-  const hqStreet2 = columnValue(row, "hq_street_2");
-  const hqCity = assertNotNull(columnValue(row, "hq_city"), "No hqCity found");
-  const hqState = assertNotNull(columnValue(row, "hq_state"), "No hqState found");
-  const hqZipcode = columnValue(row, "hq_zipcode");
-  const hqCountry = assertNotNull(columnValue(row, "hq_country"), "No hqCountry found");
+  const hqStreet1 = assertNotNull(columnValue(row, "hqStreet1"), "No hqStreet1 found");
+  const hqStreet2 = columnValue(row, "hqStreet2");
+  const hqCity = assertNotNull(columnValue(row, "hqCity"), "No hqCity found");
+  const hqState = assertNotNull(columnValue(row, "hqState"), "No hqState found");
+  const hqZipcode = columnValue(row, "hqZipcode");
+  const hqCountry = assertNotNull(columnValue(row, "hqCountry"), "No hqCountry found");
   const phone = assertNotNull(columnValue(row, "phone"), "No phone found");
   const currency = columnValue(row, "currency") ?? undefined;
   const countries = decodeArray(assertNotNull(columnValue(row, "countries"), "No countries found"));
-  const fundingProgrammeUuid = assertNotNull(
-    columnValue(row, "funding_programme_uuid"),
-    "No fundingProgrammeUuid found"
-  );
-  const level0Proposed = decodeArray(columnValue(row, "level_0_proposed"));
-  const level1Proposed = decodeArray(columnValue(row, "level_1_proposed"));
-  const level0PastRestoration = decodeArray(columnValue(row, "level_0_past_restoration"));
-  const level1PastRestoration = decodeArray(columnValue(row, "level_1_past_restoration"));
+  const fundingProgrammeUuid = assertNotNull(columnValue(row, "fundingProgrammeUuid"), "No fundingProgrammeUuid found");
+  const level0Proposed = decodeArray(columnValue(row, "level0Proposed"));
+  const level1Proposed = decodeArray(columnValue(row, "level1Proposed"));
+  const level0PastRestoration = decodeArray(columnValue(row, "level0PastRestoration"));
+  const level1PastRestoration = decodeArray(columnValue(row, "level1PastRestoration"));
 
   assert((await Organisation.count({ where: { name } })) === 0, `Organisation already exists: ${name}`);
   const fp = await FundingProgramme.findOne({

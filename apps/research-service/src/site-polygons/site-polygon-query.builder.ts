@@ -20,6 +20,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -152,15 +153,31 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
   }
 
-  async addSearch(searchTerm: string) {
-    return this.where({
-      [Op.or]: [
-        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
-        { "$site.name$": { [Op.like]: `% ${searchTerm}%` } },
-        { polyName: { [Op.like]: `${searchTerm}%` } },
-        { polyName: { [Op.like]: `% ${searchTerm}%` } }
-      ]
-    });
+  async addSearch(searchTerm: string, fields?: SitePolygonSearchField[]) {
+    const selectedFields =
+      fields != null && fields.length > 0 ? fields : ([...SITE_POLYGON_SEARCH_FIELDS] as SitePolygonSearchField[]);
+    const conditions: WhereOptions[] = [];
+
+    if (selectedFields.includes("siteName")) {
+      conditions.push({ "$site.name$": { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ "$site.name$": { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (selectedFields.includes("polyName")) {
+      conditions.push({ polyName: { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ polyName: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (selectedFields.includes("polygonUuid")) {
+      conditions.push({ polygonUuid: { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ polygonUuid: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (conditions.length === 0) {
+      return this;
+    }
+
+    return this.where({ [Op.or]: conditions });
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {

@@ -258,7 +258,8 @@ export class SitePolygonsController {
       projectCohort,
       landscape,
       validationStatus,
-      polygonUuid
+      polygonUuid,
+      searchFields
     } = query;
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
     // these two can be used together, but not along with the other project / site filters.
@@ -328,7 +329,7 @@ export class SitePolygonsController {
       await queryBuilder.excludeTestProjects();
     }
     if (query.search != null) {
-      await queryBuilder.addSearch(query.search);
+      await queryBuilder.addSearch(query.search, searchFields);
     }
 
     if (query.sort != null && query.sort.field != null) {

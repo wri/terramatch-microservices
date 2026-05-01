@@ -162,7 +162,7 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
     const managingIds = new Set(projectUsers.filter(pu => pu.isManaging).map(pu => pu.userId));
     const monitoringIds = new Set(projectUsers.filter(pu => pu.isMonitoring).map(pu => pu.userId));
 
-    const baseUrl = emailService.getFrontEndUrl();
+    const baseUrl = emailService.frontEndUrl;
     const managerTaskLink = `${baseUrl}/admin#/task/${task.uuid}/show`;
     const pdTaskLink = `${baseUrl}/project/${task.project.uuid}/reporting-task/${task.uuid}`;
 

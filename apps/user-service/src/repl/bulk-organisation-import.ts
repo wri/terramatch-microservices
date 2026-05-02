@@ -139,11 +139,15 @@ const parseRow = async (row: Dictionary<string>) => {
 
 const persistRows = async (rows: Row[], resultFileName: string) => {
   LOGGER.log(`Creating ${rows.length} organisations`);
-  await writeCsv(resultFileName, EXPORT_COLUMNS, async addRow => {
+  const downloadUrl = await writeCsv(resultFileName, EXPORT_COLUMNS, async addRow => {
     for (const row of rows) {
       addRow(await createOrg(row));
     }
   });
+
+  if (downloadUrl != null) {
+    LOGGER.log(`Download URL for orgs result CSV: ${downloadUrl}`);
+  }
 };
 
 const createOrg = async ({ org: orgCreationData, fundingProgrammeUuid, level0Proposed, level1Proposed }: Row) => {

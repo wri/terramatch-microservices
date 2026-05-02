@@ -87,7 +87,7 @@ export class OrganisationCreationService {
       emailAddressVerifiedAt: new Date()
     };
     const user = await User.create(userData as User);
-    await ModelHasRole.create({ roleId, modelId: user.id, modelType: User.LARAVEL_TYPE } as ModelHasRole);
+    await ModelHasRole.create({ roleId, modelId: user.id, modelType: User.LARAVEL_TYPE });
 
     // create Project Pitch, Application and Form Submission for chosen funding programme
     const pitch = await ProjectPitch.create({

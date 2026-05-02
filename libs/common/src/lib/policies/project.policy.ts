@@ -38,7 +38,7 @@ export class ProjectPolicy extends UserPermissionsPolicy {
           organisationId: user.organisationId,
           status: STARTED
         });
-        const projectIds = user.projects.map(({ id }) => id);
+        const projectIds = (user.projects ?? []).map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], Project, {
             id: { $in: projectIds }
@@ -51,7 +51,9 @@ export class ProjectPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("projects-manage")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        const projectIds = (user.projects ?? [])
+          .filter(({ ProjectUser }) => ProjectUser.isManaging)
+          .map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(
             ["read", "delete", "update", "approve", "uploadFiles", "deleteFiles", "updateFiles", "updateAnswers"],

@@ -37,7 +37,7 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
             ? []
             : await Project.findAll({ where: { organisationId: user.organisationId }, attributes: ["id"] })
           ).map(({ id }) => id),
-          ...user.projects.map(({ id }) => id)
+          ...(user.projects ?? []).map(({ id }) => id)
         ];
         if (projectIds.length > 0) {
           this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], ProjectReport, {
@@ -54,7 +54,9 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("projects-manage")) {
       const user = await this.getUser();
       if (user != null) {
-        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        const projectIds = (user.projects ?? [])
+          .filter(({ ProjectUser }) => ProjectUser.isManaging)
+          .map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(
             [

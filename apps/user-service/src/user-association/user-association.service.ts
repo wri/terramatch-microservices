@@ -255,16 +255,9 @@ export class UserAssociationService {
       locale: "en-US"
     } as User);
     const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({
-      modelId: newUser.id,
-      roleId: pdRole.id,
-      modelType: User.LARAVEL_TYPE
-    } as ModelHasRole);
+    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
     const token = crypto.randomBytes(32).toString("hex");
-    await PasswordReset.create({
-      userId: newUser.id,
-      token
-    } as PasswordReset);
+    await PasswordReset.create({ userId: newUser.id, token });
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
@@ -384,11 +377,7 @@ export class UserAssociationService {
     } as User);
 
     const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({
-      modelId: newUser.id,
-      roleId: pdRole.id,
-      modelType: User.LARAVEL_TYPE
-    } as ModelHasRole);
+    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
 
     const token = crypto.randomBytes(32).toString("hex");
     const invite = await OrganisationInvite.create({
@@ -396,10 +385,7 @@ export class UserAssociationService {
       emailAddress,
       token
     } as OrganisationInvite);
-    await PasswordReset.create({
-      userId: newUser.id,
-      token
-    } as PasswordReset);
+    await PasswordReset.create({ userId: newUser.id, token });
     try {
       await new OrganisationInviteEmail({
         organisationId: organisation.id,

@@ -13,7 +13,20 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, col, DATE, fn, Op, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  col,
+  CreationOptional,
+  DATE,
+  fn,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Role } from "./role.entity";
 import { ModelHasRole } from "./model-has-role.entity";
 import { Permission } from "./permission.entity";
@@ -29,7 +42,7 @@ import { FrameworkKey } from "../constants";
 import { InternalServerErrorException } from "@nestjs/common";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
-export class User extends Model<User> {
+export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\User";
 
   static get sql() {
@@ -62,7 +75,7 @@ export class User extends Model<User> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
@@ -135,11 +148,11 @@ export class User extends Model<User> {
 
   @Default(true)
   @Column(BOOLEAN)
-  isSubscribed: boolean;
+  isSubscribed: CreationOptional<boolean>;
 
   @Default(true)
   @Column(BOOLEAN)
-  hasConsented: boolean;
+  hasConsented: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)
@@ -170,7 +183,7 @@ export class User extends Model<User> {
       }
     }
   })
-  roles: Role[];
+  roles: Role[] | null;
 
   async loadRoles() {
     if (this.roles == null) this.roles = await (this as User).$get("roles");
@@ -208,7 +221,7 @@ export class User extends Model<User> {
   }
 
   @BelongsToMany(() => Project, () => ProjectUser)
-  projects: Array<Project & { ProjectUser: ProjectUser }>;
+  projects: Array<Project & { ProjectUser: ProjectUser }> | null;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;
@@ -221,7 +234,7 @@ export class User extends Model<User> {
   }
 
   @BelongsToMany(() => Organisation, () => OrganisationUser)
-  organisations: Array<Organisation & { OrganisationUser: OrganisationUser }>;
+  organisations: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   @BelongsToMany(() => Organisation, {
     through: {
@@ -229,7 +242,7 @@ export class User extends Model<User> {
       scope: { status: "approved" }
     }
   })
-  organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }>;
+  organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   @BelongsToMany(() => Organisation, {
     through: {
@@ -237,7 +250,7 @@ export class User extends Model<User> {
       scope: { status: "requested" }
     }
   })
-  organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }>;
+  organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
   async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {
@@ -270,7 +283,7 @@ export class User extends Model<User> {
   }
 
   @BelongsToMany(() => Framework, () => FrameworkUser)
-  frameworks: Framework[];
+  frameworks: Framework[] | null;
 
   async loadFrameworks() {
     if (this.frameworks == null) {
@@ -283,11 +296,11 @@ export class User extends Model<User> {
   async myFrameworks(): Promise<Framework[]> {
     if (this._myFrameworks == null) {
       await this.loadRoles();
-      const isAdmin = this.roles.find(({ name }) => name.startsWith("admin-")) != null;
+      const isAdmin = this.roles?.find(({ name }) => name.startsWith("admin-")) != null;
 
       await this.loadFrameworks();
 
-      let frameworkSlugs = this.frameworks.map(({ slug }) => slug).filter(isNotNull);
+      let frameworkSlugs = this.frameworks?.map(({ slug }) => slug).filter(isNotNull) ?? [];
       if (isAdmin) {
         // Admins have access to all frameworks their permissions say they do
         const permissions = await Permission.getUserPermissionNames(this.id);

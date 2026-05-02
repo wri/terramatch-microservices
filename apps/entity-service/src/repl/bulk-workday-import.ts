@@ -1,5 +1,4 @@
-import { FileService } from "@terramatch-microservices/common/file/file.service";
-import { parseCsv } from "@terramatch-microservices/common/util/repl/parse-csv";
+import { columnValue, parseCsv } from "@terramatch-microservices/common/util/repl/csv";
 import {
   PAID_NURSERY_OPERATIONS,
   PAID_OTHER,
@@ -30,10 +29,10 @@ import { Dictionary, intersection, isEqualWith, uniq } from "lodash";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Attributes, CreationAttributes } from "sequelize";
 import { DateTime } from "luxon";
-import { Valid } from "luxon/src/_util";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { LaravelModelCtor } from "@terramatch-microservices/database/types/util";
+import { assert, assertDate, assertNotNull, assertNumber } from "@terramatch-microservices/common/util/repl/assertions";
 
 type ModelConfig<M extends Model> = {
   model: LaravelModelCtor & ModelCtor<M>;
@@ -123,76 +122,47 @@ const LOGGER = new TMLogger("Bulk PPC Workday Import");
 
 /**
  * This script is meant to run in the REPL:
- * > await bulkWorkdayImport(await resolve(FileService), 'path-to.csv'));
+ * > await bulkWorkdayImport('path-to.csv', "sites");
  *
  * In local dev, the file path is expected to be on the local machine. In AWS, the file path should
  * be in the wri-tm-repl S3 bucket.
  */
-export const bulkWorkdayImport = withoutSqlLogs(
-  async (fileService: FileService, csvPath: string, type: SupportedType, dryRun?: boolean) => {
-    let rowCount = 0;
-    const warnings: string[] = [];
-    const workdays: Record<number, Workday[]> = {};
-    try {
-      const config = MODEL_CONFIGS[type];
+export const bulkWorkdayImport = withoutSqlLogs(async (csvPath: string, type: SupportedType, dryRun?: boolean) => {
+  let rowCount = 0;
+  const warnings: string[] = [];
+  const workdays: Record<number, Workday[]> = {};
+  try {
+    const config = MODEL_CONFIGS[type];
 
-      await parseCsv(fileService, csvPath, async row => {
-        rowCount++;
-        const result = await parseRow(config, row);
-        warnings.push(...result.warnings);
-        assert(workdays[result.reportId] == null, `Duplicate report ID: ${result.reportId} [row ${rowCount + 1}]`);
+    await parseCsv(csvPath, async row => {
+      rowCount++;
+      const result = await parseRow(config, row);
+      warnings.push(...result.warnings);
+      assert(workdays[result.reportId] == null, `Duplicate report ID: ${result.reportId} [row ${rowCount + 1}]`);
 
-        if (result.workdays.length === 0) {
-          warnings.push(`No workdays found for report ID: ${result.reportId} [row ${rowCount + 1}]`);
-        } else workdays[result.reportId] = result.workdays;
-      });
+      if (result.workdays.length === 0) {
+        warnings.push(`No workdays found for report ID: ${result.reportId} [row ${rowCount + 1}]`);
+      } else workdays[result.reportId] = result.workdays;
+    });
 
-      LOGGER.log(`Processed ${rowCount} rows from ${csvPath}`);
+    LOGGER.log(`Processed ${rowCount} rows from ${csvPath}`);
 
-      if (warnings.length > 0) {
-        LOGGER.warn("Warnings:");
-        for (const warning of warnings) LOGGER.warn(`${warning}`);
-      }
-
-      if (dryRun) {
-        LOGGER.log("Dry run complete. No workdays were persisted.");
-        LOGGER.log(`Workdays parsed:\n${JSON.stringify(workdays, null, 2)}`);
-      } else {
-        LOGGER.log("Persisting workdays...");
-        await persistWorkdays(config, workdays);
-      }
-    } catch (err) {
-      LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
+    if (warnings.length > 0) {
+      LOGGER.warn("Warnings:");
+      for (const warning of warnings) LOGGER.warn(`${warning}`);
     }
+
+    if (dryRun) {
+      LOGGER.log("Dry run complete. No workdays were persisted.");
+      LOGGER.log(`Workdays parsed:\n${JSON.stringify(workdays, null, 2)}`);
+    } else {
+      LOGGER.log("Persisting workdays...");
+      await persistWorkdays(config, workdays);
+    }
+  } catch (err) {
+    LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
   }
-);
-
-const columnValue = (row: Dictionary<string>, columnName: string) => {
-  assert(columnName in row, `Column ${columnName} not found.`);
-  return row[columnName] === "" ? null : row[columnName];
-};
-
-const assert = (condition: boolean, message: string) => {
-  if (!condition) throw new Error(message);
-};
-
-const assertNotNull = <T>(value: T | null | undefined, message: string): T => {
-  assert(value != null, message);
-  return value as T;
-};
-
-const assertNumber = (value: string | null, message: string) => {
-  const stringValue = assertNotNull(value, message);
-  assert(!isNaN(Number(stringValue)), message);
-  return Number(stringValue);
-};
-
-const assertDate = (value: string | null, message: string, format = "M/d/yy") => {
-  const stringValue = assertNotNull(value, message);
-  const result = DateTime.fromFormat(stringValue, format);
-  assert(result.isValid, message);
-  return result as DateTime<Valid>;
-};
+});
 
 const assertEntry = (demographicName: string, header: string, row: Dictionary<string>): Entry => {
   const entry = DEMOGRAPHICS[demographicName];

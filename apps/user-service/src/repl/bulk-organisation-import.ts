@@ -147,6 +147,8 @@ const persistRows = async (rows: Row[], resultFileName: string) => {
 
   if (downloadUrl != null) {
     LOGGER.log(`Download URL for orgs result CSV: ${downloadUrl}`);
+  } else {
+    LOGGER.log(`Result CSV is available at: ${resultFileName}`);
   }
 };
 

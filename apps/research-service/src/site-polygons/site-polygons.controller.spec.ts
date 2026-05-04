@@ -337,7 +337,7 @@ describe("SitePolygonsController", () => {
       const searchTerm = "forest site";
       await controller.findMany({ search: searchTerm });
 
-      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm);
+      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm, undefined);
     });
 
     it("should apply sorting when sort is provided with number pagination", async () => {

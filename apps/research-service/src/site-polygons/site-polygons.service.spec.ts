@@ -709,17 +709,16 @@ describe("SitePolygonsService", () => {
 
     const firstPolygon = await SitePolygonFactory.create({
       siteUuid: site.uuid,
-      polyName: "First Polygon",
-      polygonUuid: "poly-uuid-1234"
+      polyName: "First Polygon"
     });
+    const firstPolygonSearchToken = firstPolygon.polygonUuid?.slice(0, 8) ?? "";
     await SitePolygonFactory.create({
       siteUuid: site.uuid,
-      polyName: "Second Polygon",
-      polygonUuid: "another-uuid-9999"
+      polyName: "Second Polygon"
     });
 
     const query = await service.buildQuery({ size: 10 });
-    await query.addSearch("uuid-12", ["polygonUuid"]);
+    await query.addSearch(firstPolygonSearchToken, ["polygonUuid"]);
     const results = await query.execute();
 
     expect(results.length).toBe(1);

@@ -250,7 +250,7 @@ export class OrganisationsController {
     if (user != null) {
       const userResource = document.addData(
         user.uuid ?? "no-uuid",
-        new UserDto(user, user.frameworks, await user.myFrameworks())
+        new UserDto(user, user.frameworks ?? [], await user.myFrameworks())
       );
       userResource.relateTo("org", orgResource, { meta: { userStatus: "na" } });
     }

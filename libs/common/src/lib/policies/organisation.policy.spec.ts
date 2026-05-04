@@ -227,11 +227,7 @@ describe("OrganisationPolicy", () => {
       const org = await OrganisationFactory.create();
       const adminRole = await RoleFactory.create({ name: "admin-terrafund" });
       const user = await UserFactory.create({ emailAddressVerifiedAt: null });
-      await ModelHasRole.create({
-        modelId: user.id,
-        roleId: adminRole.id,
-        modelType: User.LARAVEL_TYPE
-      } as ModelHasRole);
+      await ModelHasRole.create({ modelId: user.id, roleId: adminRole.id, modelType: User.LARAVEL_TYPE });
       mockRequestForUser(user, "users-manage");
       await expectCannot(service, "approveReject", org);
     });
@@ -326,11 +322,7 @@ describe("OrganisationPolicy", () => {
       const org = await OrganisationFactory.create();
       const serviceRole = await RoleFactory.create({ name: "greenhouse-service-account" });
       const user = await UserFactory.create();
-      await ModelHasRole.create({
-        modelId: user.id,
-        roleId: serviceRole.id,
-        modelType: User.LARAVEL_TYPE
-      } as ModelHasRole);
+      await ModelHasRole.create({ modelId: user.id, roleId: serviceRole.id, modelType: User.LARAVEL_TYPE });
       mockRequestForUser(user);
       await expectCannot(service, "joinRequest", org);
     });

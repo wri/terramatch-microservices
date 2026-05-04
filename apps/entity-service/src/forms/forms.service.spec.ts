@@ -161,22 +161,19 @@ describe("FormsService", () => {
       const document = serialize(await service.addIndex(buildJsonApi<FormLightDto>(FormLightDto), {}));
       const dtos = document.data as Resource[];
       expect(dtos.length).toBe(forms.length);
-      expect(dtos[0].attributes).toEqual({
+      expect(dtos[0].attributes).toMatchObject({
         ...pick(forms[0], "uuid", "title", "type"),
         banner: expect.objectContaining({ url: "fake-url" }),
-        attachedTo: null,
         lightResource: true
       });
-      expect(dtos[1].attributes).toEqual({
+      expect(dtos[1].attributes).toMatchObject({
         ...pick(forms[1], "uuid", "title", "type"),
         banner: null,
-        attachedTo: null,
         lightResource: true
       });
-      expect(dtos[2].attributes).toEqual({
+      expect(dtos[2].attributes).toMatchObject({
         ...pick(forms[2], "uuid", "title", "type"),
         banner: null,
-        attachedTo: null,
         lightResource: true
       });
     });

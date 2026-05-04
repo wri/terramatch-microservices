@@ -116,8 +116,8 @@ export class CsvExportService {
     return new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, `exports/${fileName}`));
   }
 
-  getS3StreamWriter(fileName: string, columns: Dictionary<string>, bucket = this.bucket) {
-    return this.getStreamWriter(this.fileService.uploadStream(bucket, `exports/${fileName}`, "text/csv"), columns);
+  getS3StreamWriter(fileName: string, columns: Dictionary<string>) {
+    return this.getStreamWriter(this.fileService.uploadStream(this.bucket, `exports/${fileName}`, "text/csv"), columns);
   }
 
   getResponseStreamWriter(fileName: string, response: Response, columns: Dictionary<string>) {

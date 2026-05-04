@@ -164,16 +164,19 @@ describe("FormsService", () => {
       expect(dtos[0].attributes).toEqual({
         ...pick(forms[0], "uuid", "title", "type"),
         banner: expect.objectContaining({ url: "fake-url" }),
+        attachedTo: null,
         lightResource: true
       });
       expect(dtos[1].attributes).toEqual({
         ...pick(forms[1], "uuid", "title", "type"),
         banner: null,
+        attachedTo: null,
         lightResource: true
       });
       expect(dtos[2].attributes).toEqual({
         ...pick(forms[2], "uuid", "title", "type"),
         banner: null,
+        attachedTo: null,
         lightResource: true
       });
     });

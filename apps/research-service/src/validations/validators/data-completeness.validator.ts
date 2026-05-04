@@ -1,4 +1,9 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import {
+  SITE_POLYGON_DISTRIBUTIONS,
+  SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_TARGET_SYSTEMS
+} from "@terramatch-microservices/database/constants";
 import { PolygonValidator, GeometryValidator, ValidationResult, PolygonValidationResult } from "./validator.interface";
 import { NotFoundException } from "@nestjs/common";
 import { Attributes } from "sequelize";
@@ -38,21 +43,11 @@ function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: str
   return properties[camelCaseKey] != null ? properties[camelCaseKey] : properties[snakeCaseKey];
 }
 
-const VALID_PRACTICES = ["tree-planting", "direct-seeding", "assisted-natural-regeneration"];
+const VALID_PRACTICES = [...SITE_POLYGON_PRACTICES];
 
-const VALID_SYSTEMS = [
-  "agroforest",
-  "grassland",
-  "natural-forest",
-  "mangrove",
-  "peatland",
-  "riparian-area-or-wetland",
-  "silvopasture",
-  "woodlot-or-plantation",
-  "urban-forest"
-];
+const VALID_SYSTEMS = [...SITE_POLYGON_TARGET_SYSTEMS];
 
-const VALID_DISTRIBUTIONS = ["single-line", "partial", "full"];
+const VALID_DISTRIBUTIONS = [...SITE_POLYGON_DISTRIBUTIONS];
 
 export class DataCompletenessValidator implements PolygonValidator, GeometryValidator {
   async validatePolygon(polygonUuid: string): Promise<DataCompletenessValidationResult> {

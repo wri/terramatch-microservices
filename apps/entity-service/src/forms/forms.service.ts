@@ -213,6 +213,18 @@ export class FormsService {
       if (query[term] != null) builder.where({ [term]: query[term] });
     }
 
+    if (query.attachedTo != null) {
+      if (query.attachedTo.startsWith("framework-")) {
+        const frameworkKey = query.attachedTo.substring("framework-".length);
+        builder.where({ frameworkKey });
+      } else if (query.attachedTo.startsWith("funding-programme-")) {
+        const uuid = query.attachedTo.substring("funding-programme-".length);
+        builder.where({ "$stage.funding_programme_id$": uuid });
+      } else {
+        throw new BadRequestException(`Invalid attachedTo value: ${query.attachedTo}`);
+      }
+    }
+
     if (query.search != null) {
       builder.where({ title: { [Op.like]: `%${query.search}%` } });
     }

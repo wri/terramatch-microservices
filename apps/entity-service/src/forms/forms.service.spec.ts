@@ -34,8 +34,8 @@ import {
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import {
-  mockTranslateFieldsWithOriginal,
   mockRequestContext,
+  mockTranslateFieldsWithOriginal,
   serialize
 } from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
@@ -115,12 +115,30 @@ describe("FormsService", () => {
       expect(desc.forms.map(({ published }) => published)).toEqual([true, false]);
     });
 
-    it("filters", async () => {
+    it("filters by type", async () => {
       await FormFactory.create({ type: "application" });
       await FormFactory.create({ type: "project" });
       const result = await service.findMany({ type: "project" });
       expect(result.forms.length).toBe(1);
       expect(result.forms[0].type).toBe("project");
+    });
+
+    it("filters by framework", async () => {
+      await FormFactory.create({ frameworkKey: "ppc" });
+      await FormFactory.create({ frameworkKey: "terrafund" });
+      const result = await service.findMany({ attachedTo: "framework-ppc" });
+      expect(result.forms.length).toBe(1);
+      expect(result.forms[0].frameworkKey).toBe("ppc");
+    });
+
+    it("filters by funding programme", async () => {
+      const fp = await FundingProgrammeFactory.create();
+      const stage = await StageFactory.create({ fundingProgrammeId: fp.uuid });
+      const form = await FormFactory.create({ stageId: stage.uuid });
+      await FormFactory.create();
+      const result = await service.findMany({ attachedTo: `funding-programme-${fp.uuid}` });
+      expect(result.forms.length).toBe(1);
+      expect(result.forms[0].uuid).toBe(form.uuid);
     });
 
     it("searches", async () => {

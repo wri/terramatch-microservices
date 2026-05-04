@@ -1,12 +1,12 @@
 import { EmailSender } from "./email-sender";
 import { TMLogger } from "../util/tm-logger";
 import { EmailService } from "./email.service";
-import { ProjectUser, Task, User } from "../../../../database/src/lib/entities";
-import { APPROVED } from "../../../../database/src/lib/constants/status";
+import { ProjectUser, Task, User } from "@terramatch-microservices/database/entities";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
 import { Op } from "sequelize";
 import { Dictionary, groupBy } from "lodash";
-import { ValidLocale } from "../../../../database/src/lib/constants/locale";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 export type TaskDigestEmailData = {
   taskIds: number[];

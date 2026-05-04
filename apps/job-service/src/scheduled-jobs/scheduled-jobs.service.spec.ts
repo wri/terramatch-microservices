@@ -22,7 +22,7 @@ import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT 
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 import { FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
-import { TaskDigestEmail } from "../../../../libs/common/src/lib/email/task-digest.email";
+import { TaskDigestEmail } from "@terramatch-microservices/common/email/task-digest.email";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;

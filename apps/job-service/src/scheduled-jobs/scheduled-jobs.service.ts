@@ -28,7 +28,7 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { TaskDigestEmail } from "../../../../libs/common/src/lib/email/task-digest.email";
+import { TaskDigestEmail } from "@terramatch-microservices/common/email/task-digest.email";
 
 const TASK_DIGEST_CHUNK_SIZE = 100;
 const POLYGON_DIGEST_CHUNK_SIZE = 50;

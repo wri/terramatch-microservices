@@ -143,7 +143,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       frameworkKey: report.frameworkKey,
       fileName,
       target,
-      ability: "export"
+      ability: "read"
     });
   }
 

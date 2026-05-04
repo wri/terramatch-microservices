@@ -105,7 +105,7 @@ describe("CsvExportService", () => {
   describe("getArchiveWriter", () => {
     it("gets a stream for an archive file", () => {
       const append = jest.fn();
-      service.getArchiveWriter("test.csv", { append } as unknown as Archiver, { name: "Name" });
+      service.getArchiveStreamWriter("test.csv", { append } as unknown as Archiver, { name: "Name" });
       expect(append).toHaveBeenCalledWith(expect.any(PassThrough), { name: "test.csv" });
     });
   });
@@ -239,7 +239,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         throw new Error("failed stream");
       };
       const close = jest.fn();
-      jest.spyOn(service, "getArchiveWriter").mockReturnValue({ addRow: jest.fn(), close });
+      jest.spyOn(service, "getArchiveStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
       await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
       expect(close).toHaveBeenCalled();
     });
@@ -247,7 +247,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
     it("closes the stream on success", async () => {
       const writeRows = () => Promise.resolve();
       const close = jest.fn();
-      jest.spyOn(service, "getArchiveWriter").mockReturnValue({ addRow: jest.fn(), close });
+      jest.spyOn(service, "getArchiveStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
       await service.writeCsv("test.csv", {} as Response, {}, writeRows);
       expect(close).toHaveBeenCalled();
     });

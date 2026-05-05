@@ -64,15 +64,6 @@ describe("AggregateReportsService", () => {
             };
           }
 
-          return {
-            siteReports: jest.fn().mockReturnValue({
-              findAll: jest.fn().mockResolvedValue([])
-            })
-          };
-        })
-      } as unknown as ReturnType<typeof TreeSpecies.visible>);
-      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockImplementation((collectionKey: string) => {
           if (collectionKey === "invasive") {
             return {
               siteReports: jest.fn().mockReturnValue({
@@ -186,13 +177,6 @@ describe("AggregateReportsService", () => {
             };
           }
 
-          return {
-            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
-          };
-        })
-      } as unknown as ReturnType<typeof TreeSpecies.visible>);
-      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockImplementation((collectionKey: string) => {
           if (collectionKey === "invasive") {
             return {
               siteReports: jest.fn().mockReturnValue({
@@ -404,13 +388,6 @@ describe("AggregateReportsService", () => {
             };
           }
 
-          return {
-            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
-          };
-        })
-      } as unknown as ReturnType<typeof TreeSpecies.visible>);
-      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
-        collection: jest.fn().mockImplementation((collectionKey: string) => {
           if (collectionKey === "invasive") {
             return {
               siteReports: jest.fn().mockReturnValue({

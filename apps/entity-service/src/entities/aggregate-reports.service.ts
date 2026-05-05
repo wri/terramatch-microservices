@@ -88,7 +88,7 @@ export class AggregateReportsService {
     const reportIds = reports.map(r => r.id);
 
     if (reportIds.length === 0) {
-      return this.buildResponse(collections, [], [], []);
+      return this.buildResponse(collections, [], [], [], []);
     }
 
     const [treePlantedByReport, seedingByReport, anrByReport, invasiveByReport] = await Promise.all([
@@ -103,7 +103,7 @@ export class AggregateReportsService {
     const treesRegeneratingSeries = buildPeriodSeries(reports, anrByReport, () => 0);
     const invasiveSeries = buildPeriodSeries(reports, invasiveByReport, () => 0);
 
-    return this.buildResponse(collections, treePlantedSeries, seedingSeries, treesRegeneratingSeries);
+    return this.buildResponse(collections, treePlantedSeries, seedingSeries, treesRegeneratingSeries, invasiveSeries);
   }
 
   private async getApprovedReportRows(
@@ -223,7 +223,8 @@ export class AggregateReportsService {
     collections: ReadonlyArray<AggregateReportCollectionKey>,
     treePlanted: AggregateReportSeriesItemDto[],
     seedingRecords: AggregateReportSeriesItemDto[],
-    treesRegenerating: AggregateReportSeriesItemDto[]
+    treesRegenerating: AggregateReportSeriesItemDto[],
+    invasive: AggregateReportSeriesItemDto[]
   ): AggregateReportsResponseDto {
     const response: AggregateReportsResponseDto = {};
     if (collections.includes("treePlanted")) {
@@ -234,6 +235,9 @@ export class AggregateReportsService {
     }
     if (collections.includes("treesRegenerating")) {
       response.treesRegenerating = treesRegenerating;
+    }
+    if (collections.includes("invasive")) {
+      response.invasive = invasive;
     }
     return response;
   }

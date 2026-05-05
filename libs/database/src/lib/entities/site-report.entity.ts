@@ -242,11 +242,11 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   }
 
   get organisationUuid() {
-    return this.site?.project?.organisationUuid;
+    return this.site?.project?.organisationUuid as string | undefined;
   }
 
   get organisationReadableType() {
-    return this.site?.project?.organisationReadableType;
+    return this.site?.project?.organisationReadableType as string | undefined;
   }
 
   get siteName() {
@@ -348,11 +348,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column(INTEGER)
   numTreesRegenerating: number | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  soilWaterRestorationDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  soilWaterRestorationDescription: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  waterStructures: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  waterStructures: string | null;
 
   @AllowNull
   @Column(STRING)
@@ -397,17 +399,21 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column(STRING)
   plantingStatus: PlantingStatus | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesRemoved: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  invasiveSpeciesRemoved: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesManagement: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  invasiveSpeciesManagement: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  siteCommunityPartnersDescription: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersIncomeIncreaseDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  siteCommunityPartnersIncomeIncreaseDescription: string | null;
 
   @AllowNull
   @Column(TEXT)

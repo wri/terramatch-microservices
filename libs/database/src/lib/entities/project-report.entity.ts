@@ -332,11 +332,11 @@ export class ProjectReport extends Model<ProjectReport> {
   }
 
   get organisationUuid() {
-    return this.project?.organisationUuid;
+    return this.project?.organisationUuid as string | undefined;
   }
 
   get organisationReadableType() {
-    return this.project?.organisationReadableType;
+    return this.project?.organisationReadableType as string | undefined;
   }
 
   get taskUuid() {
@@ -568,38 +568,49 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   equitableOpportunities: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  resilienceProgress: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  resilienceProgress: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  localGovernance: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  localGovernance: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  adaptiveManagement: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  adaptiveManagement: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  scalabilityReplicability: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  scalabilityReplicability: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  convergenceJobsDescription: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  convergenceJobsDescription: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  convergenceSchemes: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  convergenceSchemes: string | null;
 
-  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  convergenceAmount: number;
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED })
+  convergenceAmount: number | null;
 
-  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  volunteerScstobc: number;
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED })
+  volunteerScstobc: number | null;
 
-  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  beneficiariesScstobc: number;
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED })
+  beneficiariesScstobc: number | null;
 
-  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  beneficiariesScstobcFarmers: number;
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED })
+  beneficiariesScstobcFarmers: number | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  communityPartnersAssetsDescription: string;
+  @AllowNull
+  @Column({ type: TEXT })
+  communityPartnersAssetsDescription: string | null;
 
   @AllowNull
   @Column(INTEGER)
@@ -613,8 +624,9 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column(TEXT)
   publicNarrative: string | null;
 
-  @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  totalUniqueRestorationPartners: number;
+  @AllowNull
+  @Column({ type: INTEGER.UNSIGNED })
+  totalUniqueRestorationPartners: number | null;
 
   @AllowNull
   @Column(TEXT)

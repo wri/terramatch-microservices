@@ -57,7 +57,8 @@ const PD_CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "updated_at",
   siteName: "site-name",
   totalTreesPlantedReport: "total_trees_planted_report",
-  totalTreesPlanted: "total_trees_planted"
+  totalTreesPlanted: "total_trees_planted",
+  totalInvasiveTreesCount: "total_invasive_trees_count"
 };
 
 const ADMIN_CSV_COLUMNS: Dictionary<string> = {
@@ -76,7 +77,8 @@ const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   siteExportId: "site-id",
   siteName: "site-name",
   totalTreesPlantedReport: "total_trees_planted_report",
-  totalTreesPlanted: "total_trees_planted"
+  totalTreesPlanted: "total_trees_planted",
+  totalInvasiveTreesCount: "total_invasive_trees_count"
 };
 
 const CSV_EXPORT_INCLUDES = [
@@ -251,6 +253,8 @@ export class SiteReportProcessor extends ReportProcessor<
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreesRegeneratingSpeciesCount =
       (await TreeSpecies.visible().collection("anr").siteReports([siteReportId]).sum("amount")) ?? 0;
+    const totalInvasiveTreesCount =
+      (await TreeSpecies.visible().collection("invasive").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
 
     const dto = new SiteReportFullDto(siteReport, {
@@ -263,6 +267,7 @@ export class SiteReportProcessor extends ReportProcessor<
       totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
+      totalInvasiveTreesCount,
       ...(this.entitiesService.mapMediaCollection(
         mediaCollection,
         SiteReport.MEDIA,

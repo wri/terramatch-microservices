@@ -294,6 +294,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       (await TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const treesRegeneratingSpeciesCount =
       (await TreeSpecies.visible().collection("anr").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const invasiveTreesCount =
+      (await TreeSpecies.visible().collection("invasive").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
 
     const treesPlantedPolygonsCount = (await SitePolygon.approved().active().sites([site.uuid]).sum("numTrees")) ?? 0;
     const hectaresRestoredPolygonsCount =
@@ -328,6 +330,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       lastReportedSurvivalRate: lastReportSurvivalRate?.pctSurvivalToDate ?? null,
       treesPlantedPolygonsCount,
       hectaresRestoredPolygonsCount,
+      invasiveTreesCount,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(site).findAll(),
         Site.MEDIA,

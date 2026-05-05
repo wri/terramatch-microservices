@@ -71,6 +71,23 @@ describe("AggregateReportsService", () => {
           };
         })
       } as unknown as ReturnType<typeof TreeSpecies.visible>);
+      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "invasive") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([{ speciesableId: reportInstance.id, total: 10 }])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({
+              findAll: jest.fn().mockResolvedValue([])
+            })
+          };
+        })
+      } as unknown as ReturnType<typeof TreeSpecies.visible>);
       jest.spyOn(Seeding, "visible").mockReturnValue({
         siteReports: jest.fn().mockReturnValue({
           findAll: jest.fn().mockResolvedValue([])
@@ -159,6 +176,24 @@ describe("AggregateReportsService", () => {
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
         collection: jest.fn().mockImplementation((collectionKey: string) => {
           if (collectionKey === "anr") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([
+                  { speciesableId: reportNullDue.id, total: 10 },
+                  { speciesableId: reportWithDue.id, total: 5 }
+                ])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+          };
+        })
+      } as unknown as ReturnType<typeof TreeSpecies.visible>);
+      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "invasive") {
             return {
               siteReports: jest.fn().mockReturnValue({
                 findAll: jest.fn().mockResolvedValue([
@@ -266,6 +301,10 @@ describe("AggregateReportsService", () => {
         { speciesableId: 10, total: 5 },
         { speciesableId: 11, total: 3 }
       ]);
+      const mockInvasiveFindAll = jest.fn().mockResolvedValue([
+        { speciesableId: 10, total: 5 },
+        { speciesableId: 11, total: 3 }
+      ]);
       jest.spyOn(TreeSpecies, "visible").mockReturnValue({
         collection: jest.fn().mockImplementation((collectionKey: string) => {
           if (collectionKey === "tree-planted") {
@@ -277,6 +316,12 @@ describe("AggregateReportsService", () => {
           if (collectionKey === "anr") {
             return {
               siteReports: jest.fn().mockReturnValue({ findAll: mockAnrFindAll })
+            };
+          }
+
+          if (collectionKey === "invasive") {
+            return {
+              siteReports: jest.fn().mockReturnValue({ findAll: mockInvasiveFindAll })
             };
           }
 
@@ -354,6 +399,24 @@ describe("AggregateReportsService", () => {
                 findAll: jest.fn().mockResolvedValue([
                   { speciesableId: report1.id, total: 5 },
                   { speciesableId: report2.id, total: 10 }
+                ])
+              })
+            };
+          }
+
+          return {
+            siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+          };
+        })
+      } as unknown as ReturnType<typeof TreeSpecies.visible>);
+      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
+        collection: jest.fn().mockImplementation((collectionKey: string) => {
+          if (collectionKey === "invasive") {
+            return {
+              siteReports: jest.fn().mockReturnValue({
+                findAll: jest.fn().mockResolvedValue([
+                  { speciesableId: report1.id, total: 10 },
+                  { speciesableId: report2.id, total: 20 }
                 ])
               })
             };

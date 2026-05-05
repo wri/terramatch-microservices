@@ -251,4 +251,7 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   hectaresRestoredPolygonsCount: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  invasiveTreesCount: number | null;
 }

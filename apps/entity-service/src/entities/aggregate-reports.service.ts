@@ -91,15 +91,17 @@ export class AggregateReportsService {
       return this.buildResponse(collections, [], [], []);
     }
 
-    const [treePlantedByReport, seedingByReport, anrByReport] = await Promise.all([
+    const [treePlantedByReport, seedingByReport, anrByReport, invasiveByReport] = await Promise.all([
       this.getTreePlantedByReportId(reportIds),
       this.getSeedingByReportId(reportIds),
-      this.getAnrByReportId(reportIds)
+      this.getAnrByReportId(reportIds),
+      this.getInvasiveByReportId(reportIds)
     ]);
 
     const treePlantedSeries = buildPeriodSeries(reports, treePlantedByReport, () => 0);
     const seedingSeries = buildPeriodSeries(reports, seedingByReport, () => 0);
     const treesRegeneratingSeries = buildPeriodSeries(reports, anrByReport, () => 0);
+    const invasiveSeries = buildPeriodSeries(reports, invasiveByReport, () => 0);
 
     return this.buildResponse(collections, treePlantedSeries, seedingSeries, treesRegeneratingSeries);
   }
@@ -160,6 +162,27 @@ export class AggregateReportsService {
 
     const rows = (await TreeSpecies.visible()
       .collection("anr")
+      .siteReports(reportIds)
+      .findAll({
+        attributes: ["speciesableId", [cast(fn("SUM", col("amount")), "SIGNED"), "total"]],
+        group: ["speciesableId"],
+        raw: true
+      })) as unknown as { speciesableId: number; total: number }[];
+
+    const map = new Map<number, number>();
+    for (const row of rows) {
+      if (row != null && Number.isFinite(row.total)) {
+        map.set(row.speciesableId, row.total);
+      }
+    }
+    return map;
+  }
+
+  private async getInvasiveByReportId(reportIds: number[]): Promise<Map<number, number>> {
+    if (reportIds.length === 0) return new Map();
+
+    const rows = (await TreeSpecies.visible()
+      .collection("invasive")
       .siteReports(reportIds)
       .findAll({
         attributes: ["speciesableId", [cast(fn("SUM", col("amount")), "SIGNED"), "total"]],

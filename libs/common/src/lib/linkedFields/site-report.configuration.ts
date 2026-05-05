@@ -199,6 +199,13 @@ export const SiteReportConfiguration: LinkedFieldConfiguration<SiteReport> = {
       inputType: "treeSpecies",
       collection: "anr"
     },
+    "site-rep-rel-invasive-tree-species": {
+      label: "Invasive Species",
+      exportHeading: "invasiveSpecies",
+      resource: "treeSpecies",
+      inputType: "treeSpecies",
+      collection: "invasive"
+    },
     "site-rep-rel-disturbances": {
       label: "Disturbances",
       exportHeading: "disturbances",

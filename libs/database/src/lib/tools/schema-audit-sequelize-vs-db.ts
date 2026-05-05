@@ -59,7 +59,7 @@ function loadEnvFromFile(envPath: string): void {
   const raw = readFileSync(envPath, "utf8");
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
     const eq = trimmed.indexOf("=");
     if (eq === -1) continue;
     const key = trimmed.slice(0, eq).trim();
@@ -88,7 +88,13 @@ function physicalColumnNames(model: ModelCtor<Model>): Set<string> {
   const out = new Set<string>();
   for (const [attrKey, def] of Object.entries(attrs)) {
     const d = def as ModelAttributeColumnOptions & { type?: { key?: string } };
-    if (d.type && typeof d.type === "object" && "key" in d.type && d.type.key === "VIRTUAL") {
+    if (
+      d.type !== undefined &&
+      d.type !== null &&
+      typeof d.type === "object" &&
+      "key" in d.type &&
+      d.type.key === "VIRTUAL"
+    ) {
       continue;
     }
     const field = typeof d.field === "string" ? d.field : camelToSnake(attrKey);
@@ -105,8 +111,12 @@ async function fetchDbColumns(sequelize: Sequelize, schema: string): Promise<Map
   );
   const map = new Map<string, Set<string>>();
   for (const r of rows) {
-    if (!map.has(r.TABLE_NAME)) map.set(r.TABLE_NAME, new Set());
-    map.get(r.TABLE_NAME)!.add(r.COLUMN_NAME);
+    let colSet = map.get(r.TABLE_NAME);
+    if (colSet === undefined) {
+      colSet = new Set();
+      map.set(r.TABLE_NAME, colSet);
+    }
+    colSet.add(r.COLUMN_NAME);
   }
   return map;
 }
@@ -138,10 +148,11 @@ async function fetchIndexesForTables(sequelize: Sequelize, schema: string, table
   const byKey = new Map<string, { nonUnique: number; cols: string[] }>();
   for (const r of rows) {
     const key = `${r.TABLE_NAME}\0${r.INDEX_NAME}`;
-    if (!byKey.has(key)) {
-      byKey.set(key, { nonUnique: r.NON_UNIQUE, cols: [] });
+    let entry = byKey.get(key);
+    if (entry === undefined) {
+      entry = { nonUnique: r.NON_UNIQUE, cols: [] };
+      byKey.set(key, entry);
     }
-    const entry = byKey.get(key)!;
     const cols = entry.cols;
     if (cols.length < r.SEQ_IN_INDEX) cols.length = r.SEQ_IN_INDEX;
     cols[r.SEQ_IN_INDEX - 1] = r.COLUMN_NAME;
@@ -157,7 +168,11 @@ async function fetchIndexesForTables(sequelize: Sequelize, schema: string, table
       columns: v.cols.filter(Boolean)
     });
   }
-  return out.sort((a, b) => a.table.localeCompare(b.table) || a.indexName.localeCompare(b.indexName));
+  return out.sort((a, b) => {
+    const byTable = a.table.localeCompare(b.table);
+    if (byTable !== 0) return byTable;
+    return a.indexName.localeCompare(b.indexName);
+  });
 }
 
 async function main(): Promise<void> {
@@ -208,7 +223,7 @@ async function main(): Promise<void> {
   for (const [tableName, ModelClass] of modelTableNames) {
     const dbCols = dbColumns.get(tableName);
     const expected = physicalColumnNames(ModelClass);
-    if (!dbCols) {
+    if (dbCols === undefined) {
       for (const c of expected) columnsMissingInDb.push({ table: tableName, column: c });
       continue;
     }
@@ -259,12 +274,16 @@ async function main(): Promise<void> {
     },
     tablesOnlyInDb: tablesOnlyInDb.sort(),
     tablesOnlyInModel: tablesOnlyInModel.sort(),
-    columnsExtraInDb: columnsExtraInDb.sort(
-      (a, b) => a.table.localeCompare(b.table) || a.column.localeCompare(b.column)
-    ),
-    columnsMissingInDb: columnsMissingInDb.sort(
-      (a, b) => a.table.localeCompare(b.table) || a.column.localeCompare(b.column)
-    ),
+    columnsExtraInDb: columnsExtraInDb.sort((a, b) => {
+      const byTable = a.table.localeCompare(b.table);
+      if (byTable !== 0) return byTable;
+      return a.column.localeCompare(b.column);
+    }),
+    columnsMissingInDb: columnsMissingInDb.sort((a, b) => {
+      const byTable = a.table.localeCompare(b.table);
+      if (byTable !== 0) return byTable;
+      return a.column.localeCompare(b.column);
+    }),
     indexesInDbForModelTables,
     indexRowFields: {
       table: "Table name (same as Sequelize `tableName`).",

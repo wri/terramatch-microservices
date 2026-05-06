@@ -12,6 +12,7 @@ import {
   FormSection,
   FormSubmission,
   FormTableHeader,
+  Framework,
   FundingProgramme,
   LocalizationKey,
   Media,
@@ -165,7 +166,17 @@ export class FormsService {
   async findOne(uuid: string) {
     const form = await Form.findOne({
       where: { uuid },
-      include: [{ association: "stage", attributes: ["fundingProgrammeId"] }]
+      include: [
+        {
+          association: "stage",
+          attributes: ["fundingProgrammeId"],
+          include: [{ association: "fundingProgramme", attributes: ["name", "uuid"] }]
+        },
+        {
+          association: "framework",
+          attributes: ["name"]
+        }
+      ]
     });
     if (form == null) throw new NotFoundException("Form not found");
 
@@ -173,7 +184,22 @@ export class FormsService {
   }
 
   async findMany(query: FormIndexQueryDto) {
-    const builder = PaginatedQueryBuilder.forNumberPage(Form, query.page);
+    const builder = PaginatedQueryBuilder.forNumberPage(Form, query.page, [
+      {
+        association: "stage",
+        attributes: ["fundingProgrammeId"],
+        include: [
+          {
+            association: "fundingProgramme",
+            attributes: ["name", "uuid"]
+          }
+        ]
+      },
+      {
+        association: "framework",
+        attributes: ["name"]
+      }
+    ]);
 
     if (query.sort?.field != null) {
       if (SORTABLE_FIELDS.includes(query.sort?.field as keyof Attributes<Form>)) {
@@ -185,6 +211,18 @@ export class FormsService {
 
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) builder.where({ [term]: query[term] });
+    }
+
+    if (query.attachedTo != null) {
+      if (query.attachedTo.startsWith("framework-")) {
+        const frameworkKey = query.attachedTo.substring("framework-".length);
+        builder.where({ frameworkKey });
+      } else if (query.attachedTo.startsWith("funding-programme-")) {
+        const uuid = query.attachedTo.substring("funding-programme-".length);
+        builder.where({ "$stage.funding_programme_id$": uuid });
+      } else {
+        throw new BadRequestException(`Invalid attachedTo value: ${query.attachedTo}`);
+      }
     }
 
     if (query.search != null) {
@@ -596,6 +634,10 @@ export class FormsService {
     form.subtitle = attributes.subtitle ?? null;
     form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle, form.subtitleId);
     form.frameworkKey = attributes.frameworkKey ?? null;
+    form.framework =
+      attributes.frameworkKey == null
+        ? null
+        : await Framework.findOne({ where: { slug: attributes.frameworkKey }, attributes: ["name"] });
     form.type = attributes.type ?? null;
     form.description = attributes.description ?? null;
     form.descriptionId = await this.localizationService.generateI18nId(attributes.description, form.descriptionId);
@@ -612,7 +654,11 @@ export class FormsService {
     form.stage =
       attributes.stageId == null
         ? null
-        : await Stage.findOne({ where: { uuid: attributes.stageId }, attributes: ["fundingProgrammeId"] });
+        : await Stage.findOne({
+            where: { uuid: attributes.stageId },
+            attributes: ["fundingProgrammeId"],
+            include: [{ association: "fundingProgramme", attributes: ["name", "uuid"] }]
+          });
     form.version = attributes.stageId == null ? 1 : (await Form.count({ where: { stageId: attributes.stageId } })) + 1;
     // New forms are created unpublished; published is not managed via the API (legacy DB column).
     if (form.id == null) {

@@ -1,4 +1,10 @@
-import { FinancialIndicator, FinancialReport, FundingType, Media } from "@terramatch-microservices/database/entities";
+import {
+  FinancialIndicator,
+  FinancialReport,
+  FundingType,
+  Media,
+  User
+} from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
@@ -79,6 +85,18 @@ export class FinancialReportProcessor extends ReportProcessor<
     const builder = await this.entitiesService.buildQuery(FinancialReport, query, [
       { association: "organisation", attributes: ["uuid", "name", "type"] }
     ]);
+
+    const userId = this.entitiesService.userId;
+    if (userId != null) {
+      const user = await User.findOne({
+        where: { id: userId },
+        attributes: ["organisationId"],
+        include: [{ association: "roles", attributes: ["name"] }]
+      });
+      if (user?.primaryRole === "project-manager" && user.organisationId != null) {
+        builder.where({ organisationId: user.organisationId });
+      }
+    }
 
     if (query.sort?.field != null) {
       if (

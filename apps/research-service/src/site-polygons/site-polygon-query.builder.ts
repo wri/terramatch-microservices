@@ -190,6 +190,60 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this;
   }
 
+  filterPlantStartRange(from?: Date, to?: Date) {
+    if (from == null && to == null) return this;
+    const parts: WhereOptions[] = [{ plantStart: { [Op.ne]: null } }];
+    if (from != null) parts.push({ plantStart: { [Op.gte]: from } });
+    if (to != null) parts.push({ plantStart: { [Op.lte]: to } });
+    this.where({ [Op.and]: parts });
+    return this;
+  }
+
+  filterPractice(practices?: string[]) {
+    if (practices == null || practices.length === 0) return this;
+    this.where(this.buildJsonArrayOverlapWhere("practice", practices));
+    return this;
+  }
+
+  filterDistr(distributions?: string[]) {
+    if (distributions == null || distributions.length === 0) return this;
+    this.where(this.buildJsonArrayOverlapWhere("distr", distributions));
+    return this;
+  }
+
+  filterTargetSys(values?: string[]) {
+    if (values == null || values.length === 0) return this;
+    this.where({
+      [Op.and]: [{ targetSys: { [Op.ne]: null } }, { targetSys: { [Op.in]: values } }]
+    });
+    return this;
+  }
+
+  filterSource(values?: string[]) {
+    if (values == null || values.length === 0) return this;
+    this.where({
+      [Op.and]: [{ source: { [Op.ne]: null } }, { source: { [Op.in]: values } }]
+    });
+    return this;
+  }
+
+  private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {
+    const sequelize = SitePolygon.sequelize;
+    if (sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+    const orContains = values.map(slug =>
+      literal(`JSON_CONTAINS(SitePolygon.${column}, ${sequelize.escape(JSON.stringify(slug))}, '$') = 1`)
+    );
+    return {
+      [Op.and]: [
+        { [column]: { [Op.ne]: null } } as WhereOptions,
+        literal(`JSON_LENGTH(SitePolygon.${column}) > 0`),
+        { [Op.or]: orContains }
+      ]
+    };
+  }
+
   isMissingIndicators(indicatorSlugs?: IndicatorSlug[]) {
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {

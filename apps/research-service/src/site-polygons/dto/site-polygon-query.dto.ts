@@ -12,6 +12,9 @@ import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 
+export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
+export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
+
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
   @IsOptional()
@@ -156,6 +159,18 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @ApiProperty({ required: false })
   @IsOptional()
   search?: string;
+
+  @ApiProperty({
+    name: "searchFields[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_SEARCH_FIELDS,
+    description: "Select the fields used by search."
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SITE_POLYGON_SEARCH_FIELDS, { each: true })
+  searchFields?: SitePolygonSearchField[];
 
   @ApiProperty({
     required: false,

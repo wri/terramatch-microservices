@@ -5,7 +5,8 @@ import {
   FinancialReport,
   FundingType,
   Media,
-  Organisation
+  Organisation,
+  User
 } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
@@ -149,6 +150,20 @@ describe("FinancialReportProcessor", () => {
       const result = await processor.findMany({ page: { size: 2, number: 1 } });
       expect(result.models.length).toBe(2);
       expect(result.paginationTotal).toBe(5);
+    });
+
+    it("should restrict project managers to their organisation", async () => {
+      const organisation1 = await OrganisationFactory.create();
+      const organisation2 = await OrganisationFactory.create();
+      const reports1 = await FinancialReportFactory.org(organisation1).createMany(2);
+      await FinancialReportFactory.org(organisation2).createMany(2);
+
+      jest.spyOn(User, "findOne").mockResolvedValue({
+        organisationId: organisation1.id,
+        primaryRole: "project-manager"
+      } as User);
+
+      await expectFinancialReports(reports1, {});
     });
   });
 

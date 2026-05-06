@@ -1,6 +1,7 @@
 import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
 import {
   Application,
+  AuditStatus,
   Form,
   FormSubmission,
   Media,
@@ -43,7 +44,10 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import {
+  POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+  READY_FOR_BASELINE_AUDIT_TYPE
+} from "@terramatch-microservices/database/constants/audit-status";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 
@@ -53,7 +57,9 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "projectUuid",
-  "organisationUuid"
+  "organisationUuid",
+  "polygonDataSubmission",
+  "readyForBaseline"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
@@ -256,7 +262,63 @@ export class ProjectProcessor extends EntityProcessor<
       project.isTest = update.isTest;
     }
 
+    const prevSubmission = project.polygonDataSubmission;
+    const prevBaseline = project.readyForBaseline;
+    let submissionChanged = false;
+    let baselineChanged = false;
+    const handoffComment = update.polygonHandoffComment ?? null;
+
+    if (update.polygonDataSubmission !== undefined && update.polygonDataSubmission !== prevSubmission) {
+      project.polygonDataSubmission = update.polygonDataSubmission;
+      submissionChanged = true;
+    }
+
+    if (update.readyForBaseline !== undefined && update.readyForBaseline !== prevBaseline) {
+      project.readyForBaseline = update.readyForBaseline;
+      baselineChanged = true;
+    }
+
     await super.update(project, update);
+
+    if (!submissionChanged && !baselineChanged) {
+      return;
+    }
+
+    const userId = this.entitiesService.userId;
+    const user =
+      userId != null ? await User.findByPk(userId, { attributes: ["emailAddress", "firstName", "lastName"] }) : null;
+
+    const auditRows: Array<Partial<AuditStatus>> = [];
+    if (submissionChanged) {
+      auditRows.push({
+        auditableType: Project.LARAVEL_TYPE,
+        auditableId: project.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: handoffComment,
+        status: project.polygonDataSubmission,
+        type: POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+        isActive: null
+      });
+    }
+    if (baselineChanged) {
+      auditRows.push({
+        auditableType: Project.LARAVEL_TYPE,
+        auditableId: project.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: handoffComment,
+        status: project.readyForBaseline === true ? "yes" : "no",
+        type: READY_FOR_BASELINE_AUDIT_TYPE,
+        isActive: null
+      });
+    }
+
+    if (auditRows.length > 0) {
+      await AuditStatus.bulkCreate(auditRows as CreationAttributes<AuditStatus>[]);
+    }
   }
 
   async processSideload(
@@ -621,7 +683,7 @@ export class ProjectProcessor extends EntityProcessor<
     const application =
       applicationUuid == null
         ? undefined
-        : (await Application.findOne({ where: { uuid: applicationUuid } })) ?? undefined;
+        : ((await Application.findOne({ where: { uuid: applicationUuid } })) ?? undefined);
     if (application == null && applicationUuid != null) {
       throw new BadRequestException(`Invalid application for project creation: ${applicationUuid}`);
     }

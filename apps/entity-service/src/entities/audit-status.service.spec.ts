@@ -60,6 +60,21 @@ describe("AuditStatusService", () => {
       expect(result[0].comment).toBe("Test comment");
     });
 
+    it("filters by audit type when typeFilter is set (TM-3300)", async () => {
+      const project = await ProjectFactory.create();
+      await AuditStatusFactory.project(project).create({ type: "status", status: "approved" });
+      await AuditStatusFactory.project(project).create({
+        type: "polygon-data-submission",
+        status: "all-polygons-received"
+      });
+
+      const entity = await service.resolveEntity("projects", project.uuid);
+      const result = await service.getAuditStatuses(entity, "projects", project.uuid, ["polygon-data-submission"]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe("polygon-data-submission");
+    });
+
     it("should transform status 'started' to 'Draft'", async () => {
       const project = await ProjectFactory.create();
       await AuditStatusFactory.project(project).create({ status: "started" });
@@ -358,6 +373,24 @@ describe("AuditStatusService", () => {
       expect(result.isActive).toBe(true);
       expect(result.requestRemoved).toBe(false);
       expect(reloadedProject.status).toBe("draft");
+    });
+
+    it("does not update project EntityStatus for polygon-data-submission audits (TM-3300)", async () => {
+      const project = await ProjectFactory.create({ status: "started" });
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      await service.createAuditStatus(project, {
+        status: "all-polygons-received",
+        type: "polygon-data-submission",
+        comment: "sync check"
+      });
+
+      const reloadedProject = await project.reload();
+      expect(reloadedProject.status).toBe("started");
     });
   });
 

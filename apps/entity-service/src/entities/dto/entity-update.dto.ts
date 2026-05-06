@@ -6,6 +6,7 @@ import {
   ReportStatus
 } from "@terramatch-microservices/database/constants/status";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
+import { POLYGON_DATA_SUBMISSION_VALUES } from "@terramatch-microservices/database/constants/polygon-data-submission";
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
 
@@ -43,6 +44,29 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsBoolean()
   @ApiProperty({ description: "Update the isTest flag.", required: false })
   isTest?: boolean;
+
+  @IsOptional()
+  @IsIn(POLYGON_DATA_SUBMISSION_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: POLYGON_DATA_SUBMISSION_VALUES,
+    description: "Polygon data submission tracking (TM-3300)"
+  })
+  polygonDataSubmission?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ required: false, description: "Whether the project is ready for baseline analysis (TM-3300)" })
+  readyForBaseline?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    description:
+      "Optional comment recorded on polygon handoff audit entries when updating submission/baseline (TM-3300)"
+  })
+  polygonHandoffComment?: string | null;
 }
 
 export class ReportUpdateAttributes extends FeedbackFieldsAttributes {

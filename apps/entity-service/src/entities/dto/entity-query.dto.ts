@@ -11,6 +11,7 @@ import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.
 import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
+import { POLYGON_DATA_SUBMISSION_VALUES } from "@terramatch-microservices/database/constants/polygon-data-submission";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
@@ -127,4 +128,21 @@ export class EntityQueryDto extends IndexQueryDto {
   })
   @IsOptional()
   taskId?: number;
+
+  @ApiProperty({
+    required: false,
+    enum: POLYGON_DATA_SUBMISSION_VALUES,
+    description: "Filter projects by polygon data submission status (TM-3300)"
+  })
+  @IsOptional()
+  @IsIn(POLYGON_DATA_SUBMISSION_VALUES)
+  polygonDataSubmission?: string;
+
+  @ApiProperty({
+    required: false,
+    description: "Filter projects where ready for baseline is true or false (TM-3300)"
+  })
+  @IsOptional()
+  @TransformBooleanString({ optional: true })
+  readyForBaseline?: boolean;
 }

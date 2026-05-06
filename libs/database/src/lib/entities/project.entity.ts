@@ -34,6 +34,7 @@ import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FrameworkKey } from "../constants";
+import { POLYGON_DATA_SUBMISSION_DEFAULT } from "../constants/polygon-data-submission";
 import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
@@ -506,6 +507,12 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(TEXT)
   bioeconomyProductDescription: string | null;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: POLYGON_DATA_SUBMISSION_DEFAULT })
+  polygonDataSubmission: CreationOptional<string>;
+
+  @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
+  readyForBaseline: CreationOptional<boolean>;
 
   @BelongsTo(() => Organisation)
   organisation: Organisation | null;

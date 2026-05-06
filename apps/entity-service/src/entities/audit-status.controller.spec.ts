@@ -57,10 +57,10 @@ describe("AuditStatusController", () => {
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 
-      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }));
+      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }, {}));
 
       expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
-      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "projects", project.uuid);
+      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "projects", project.uuid, undefined);
       expect(policyService.authorize).toHaveBeenCalledWith("read", expect.anything());
       expect(result.data).toHaveLength(1);
       expect((result.data as Resource[])[0].id).toBe("uuid-1");
@@ -70,6 +70,24 @@ describe("AuditStatusController", () => {
         requestPath: `/entities/v3/auditStatuses/projects/${project.uuid}`,
         ids: undefined
       });
+    });
+
+    it("parses types query and forwards filter to service (TM-3300)", async () => {
+      const project = await ProjectFactory.create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.getAuditStatuses.mockResolvedValue([]);
+      policyService.authorize.mockResolvedValue();
+
+      await controller.getAuditStatuses(
+        { entity: "projects", uuid: project.uuid },
+        { types: "polygon-data-submission, ready-for-baseline" }
+      );
+
+      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "projects", project.uuid, [
+        "polygon-data-submission",
+        "ready-for-baseline"
+      ]);
     });
 
     it("should return audit statuses for sitePolygons", async () => {
@@ -82,16 +100,18 @@ describe("AuditStatusController", () => {
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 
-      const result = serialize(await controller.getAuditStatuses({ entity: "sitePolygons", uuid: sitePolygon.uuid }));
+      const result = serialize(
+        await controller.getAuditStatuses({ entity: "sitePolygons", uuid: sitePolygon.uuid }, {})
+      );
 
       expect(service.resolveEntity).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
-      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "sitePolygons", sitePolygon.uuid);
+      expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "sitePolygons", sitePolygon.uuid, undefined);
       expect(result.data).toHaveLength(1);
     });
 
     it("should throw NotFoundException for non-existent entity", async () => {
       service.resolveEntity.mockRejectedValue(new NotFoundException());
-      await expect(controller.getAuditStatuses({ entity: "projects", uuid: "non-existent-uuid" })).rejects.toThrow(
+      await expect(controller.getAuditStatuses({ entity: "projects", uuid: "non-existent-uuid" }, {})).rejects.toThrow(
         NotFoundException
       );
     });
@@ -102,7 +122,7 @@ describe("AuditStatusController", () => {
       service.resolveEntity.mockResolvedValue(mockEntity);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
-      await expect(controller.getAuditStatuses({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
+      await expect(controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }, {})).rejects.toThrow(
         UnauthorizedException
       );
     });
@@ -114,7 +134,7 @@ describe("AuditStatusController", () => {
       service.getAuditStatuses.mockResolvedValue([]);
       policyService.authorize.mockResolvedValue();
 
-      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }));
+      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }, {}));
 
       expect(result.data).toHaveLength(0);
       expect(result.meta.indices?.length).toBe(1);
@@ -137,7 +157,7 @@ describe("AuditStatusController", () => {
       service.getAuditStatuses.mockResolvedValue(auditStatuses);
       policyService.authorize.mockResolvedValue();
 
-      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }));
+      const result = serialize(await controller.getAuditStatuses({ entity: "projects", uuid: project.uuid }, {}));
 
       expect(result.data).toHaveLength(2);
       expect((result.data as Resource[])[0].type).toBe("auditStatuses");

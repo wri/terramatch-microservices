@@ -148,7 +148,7 @@ export class UsersService {
       );
       document.addData(
         user.uuid ?? "no-uuid",
-        new UserDto(user, user.frameworks, userFrameworks, monitoringPartnerProjects)
+        new UserDto(user, user.frameworks ?? [], userFrameworks, monitoringPartnerProjects)
       );
     }
     return document;
@@ -240,12 +240,9 @@ export class UsersService {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    await PasswordReset.create({
-      userId: user.id,
-      token
-    } as PasswordReset);
+    await PasswordReset.create({ userId: user.id, token });
 
-    new SendLoginDetailsEmail({
+    await new SendLoginDetailsEmail({
       emailAddress: user.emailAddress,
       userName: user.fullName as string,
       token: token

@@ -7,7 +7,7 @@ import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
-import { EXPORT_ENTITY_TYPES, ScheduledJobsService } from "./scheduled-jobs.service";
+import { ScheduledJobsService } from "./scheduled-jobs.service";
 import {
   Framework,
   FundingProgramme,
@@ -19,9 +19,10 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
-import { TaskDigestEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
 import { FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
+import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
+import { TaskDigestEmail } from "@terramatch-microservices/common/email/task-digest.email";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
@@ -256,9 +257,9 @@ describe("ScheduledJobsService", () => {
     const frameworks = await FrameworkFactory.createMany(2);
     await service.generateFrameworkEntityExports();
 
-    expect(entitiesQueue.add).toHaveBeenCalledTimes(frameworks.length * EXPORT_ENTITY_TYPES.length);
+    expect(entitiesQueue.add).toHaveBeenCalledTimes(frameworks.length * CACHED_EXPORT_ENTITY_TYPES.length);
     for (const { slug } of frameworks) {
-      for (const entityType of EXPORT_ENTITY_TYPES) {
+      for (const entityType of CACHED_EXPORT_ENTITY_TYPES) {
         expect(entitiesQueue.add).toHaveBeenCalledWith("generateFrameworkEntityExport", {
           frameworkKey: slug,
           entityType

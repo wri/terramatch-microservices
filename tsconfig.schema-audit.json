@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+    "module": "commonjs",
+    "moduleResolution": "node"
+  },
+  "include": ["libs/database/src/lib/tools/schema-audit-sequelize-vs-db.ts", "libs/database/src/lib/**/*.ts"]
+}

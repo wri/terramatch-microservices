@@ -13,7 +13,12 @@ import {
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import {
+  mockRequestContext,
+  mockRequestForUser,
+  serialize,
+  setMockedPermissions
+} from "@terramatch-microservices/common/util/testing";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { StoreFundingProgrammeAttributes } from "./dto/funding-programme.dto";
 import { faker } from "@faker-js/faker";
@@ -27,7 +32,7 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 describe("FundingProgrammesController", () => {
   let controller: FundingProgrammesController;
   let formDataService: DeepMocked<FormDataService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let localizationService: DeepMocked<LocalizationService>;
   let csvExportService: DeepMocked<CsvExportService>;
 
@@ -35,13 +40,14 @@ describe("FundingProgrammesController", () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FundingProgrammesController],
       providers: [
+        PolicyService,
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
         { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
         { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(FundingProgrammesController);
   });
 
@@ -52,10 +58,11 @@ describe("FundingProgrammesController", () => {
   describe("indexFundingProgrammes", () => {
     it("returns all funding programmes", async () => {
       await FundingProgramme.truncate();
-      policyService.getPermissions.mockResolvedValue(["framework-terrafund"]);
+      setMockedPermissions("framework-terrafund");
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       const programmes = await FundingProgrammeFactory.createMany(3);
       await controller.index({ translated: false });
-      expect(policyService.authorize).toHaveBeenCalledWith(
+      expect(authSpy).toHaveBeenCalledWith(
         "read",
         expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
       );
@@ -68,11 +75,11 @@ describe("FundingProgrammesController", () => {
 
     it("returns no funding programmes if the user doesn't have an org", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      mockRequestForUser(user, "manage-own");
       await FundingProgrammeFactory.createMany(3);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       await controller.index({ translated: false });
-      expect(policyService.authorize).toHaveBeenCalledWith("read", []);
+      expect(authSpy).toHaveBeenCalledWith("read", []);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [], undefined);
     });
 
@@ -81,8 +88,7 @@ describe("FundingProgrammesController", () => {
       const org2 = await OrganisationFactory.create({ type: "gov" });
       const user = await UserFactory.create({ organisationId: org.id });
       await OrganisationUserFactory.create({ organisationId: org2.id, userId: user.id, status: "approved" });
-      mockUserId(user.id);
-      policyService.getPermissions.mockResolvedValue(["manage-own"]);
+      mockRequestForUser(user, "manage-own");
       await FundingProgramme.truncate();
       const programmes = [
         await FundingProgrammeFactory.create({
@@ -96,9 +102,11 @@ describe("FundingProgrammesController", () => {
       });
       await FundingProgrammeFactory.create({ organisationTypes: ["for-profit"] as unknown as OrganisationType[] });
 
+      const authSpy = jest.spyOn(policyService, "authorize");
+
       await controller.index({ translated: false });
 
-      expect(policyService.authorize).toHaveBeenCalledWith(
+      expect(authSpy).toHaveBeenCalledWith(
         "read",
         expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
       );
@@ -112,7 +120,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       await FundingProgramme.truncate();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestForUser(user, "framework-ppc");
       await controller.index({});
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
@@ -129,9 +137,10 @@ describe("FundingProgrammesController", () => {
 
     it("returns the programme UUID", async () => {
       const programme = await FundingProgrammeFactory.create();
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       await controller.get({ uuid: programme.uuid }, { translated: false });
       await programme.reload();
-      expect(policyService.authorize).toHaveBeenCalledWith("read", programme);
+      expect(authSpy).toHaveBeenCalledWith("read", programme);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
         expect.arrayContaining([expect.objectContaining({ uuid: programme.uuid })]),
@@ -142,7 +151,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       const programme = await FundingProgrammeFactory.create();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockUserId(user.id);
+      mockRequestForUser(user);
       await controller.get({ uuid: programme.uuid }, {});
       await programme.reload();
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
@@ -160,11 +169,12 @@ describe("FundingProgrammesController", () => {
 
     it("deletes the programme", async () => {
       const programme = await FundingProgrammeFactory.create();
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       const result = serialize(await controller.delete({ uuid: programme.uuid }));
       await programme.reload({ paranoid: false });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", expect.objectContaining({ id: programme.id }));
+      expect(authSpy).toHaveBeenCalledWith("delete", expect.objectContaining({ id: programme.id }));
       await expect(programme.deletedAt).not.toBeNull();
       expect(result.meta.resourceType).toBe("fundingProgrammes");
       expect(result.meta.resourceIds).toEqual([programme.uuid]);
@@ -190,13 +200,14 @@ describe("FundingProgrammesController", () => {
       };
 
       localizationService.generateI18nId.mockResolvedValue(1);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       await controller.create({ data: { type: "fundingProgrammes", attributes } });
       const fp = await FundingProgramme.findOne({ order: [["createdAt", "DESC"]], attributes: ["uuid"] });
       const stages = await Stage.findAll({ where: { fundingProgrammeId: fp?.uuid }, order: [["order", "ASC"]] });
       await Promise.all(stageForms.map(form => form.reload()));
 
-      expect(policyService.authorize).toHaveBeenCalledWith(
+      expect(authSpy).toHaveBeenCalledWith(
         "create",
         expect.objectContaining({ name: attributes.name, frameworkKey: attributes.frameworkKey })
       );
@@ -274,6 +285,7 @@ describe("FundingProgrammesController", () => {
       };
 
       localizationService.generateI18nId.mockResolvedValue(1);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       await controller.update(
         { uuid: programme.uuid },
@@ -288,7 +300,7 @@ describe("FundingProgrammesController", () => {
         [...currentStages, ...currentForms, updateStageForm].map(model => model.reload({ paranoid: false }))
       );
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", expect.objectContaining({ uuid: programme.uuid }));
+      expect(authSpy).toHaveBeenCalledWith("update", expect.objectContaining({ uuid: programme.uuid }));
       expect(localizationService.generateI18nId).toHaveBeenCalledTimes(2);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.description);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.location);
@@ -316,6 +328,7 @@ describe("FundingProgrammesController", () => {
   describe("exportAll", () => {
     it("throws if the export is not found", async () => {
       await SavedExport.truncate();
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       await expect(controller.exportAll({ uuid: "uuid" })).rejects.toThrow(NotFoundException);
     });
 
@@ -325,6 +338,7 @@ describe("FundingProgrammesController", () => {
       exports[0].setDataValue("createdAt", DateTime.fromJSDate(exports[0].createdAt).minus({ days: 1 }).toJSDate());
       await exports[0].save();
 
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("test"));
       await controller.exportAll({ uuid: fp.uuid });
       expect(csvExportService.generateExportDto).toHaveBeenCalledWith(exports[1].name);

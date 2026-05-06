@@ -1,10 +1,9 @@
-import { Injectable, Scope, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
   AnrPlotGeometry,
   Application,
   AuditStatus,
-  Tracking,
   Disturbance,
   DisturbanceReport,
   FinancialIndicator,
@@ -19,7 +18,6 @@ import {
   Nursery,
   NurseryReport,
   Organisation,
-  Permission,
   Project,
   ProjectPitch,
   ProjectPolygon,
@@ -29,14 +27,15 @@ import {
   SiteReport,
   SrpReport,
   Task,
+  Tracking,
   User
 } from "@terramatch-microservices/database/entities";
-import { AbilityBuilder, createMongoAbility } from "@casl/ability";
+import { AbilityBuilder, createMongoAbility, MongoAbility } from "@casl/ability";
 import { Model } from "sequelize-typescript";
 import { SitePolygonPolicy } from "./site-polygon.policy";
 import { ProjectPolicy } from "./project.policy";
 import { ProjectPolygonPolicy } from "./project-polygon.policy";
-import { isArray } from "lodash";
+import { isArray, isEmpty } from "lodash";
 import { BuilderType, UserPermissionsPolicy } from "./user-permissions.policy";
 import { ProjectReportPolicy } from "./project-report.policy";
 import { SiteReportPolicy } from "./site-report.policy";
@@ -60,7 +59,7 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
-import { authenticatedUserId } from "../guards/auth.guard";
+import { authenticatedUserId, permissions, policyBuilder } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
@@ -106,6 +105,24 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [User, UserPolicy]
 ];
 
+export class PolicyBuilder {
+  private builder: AbilityBuilder<MongoAbility>;
+  private loadedPolicyClasses: PolicyClass[] = [];
+  private ability: MongoAbility | undefined;
+
+  constructor(private readonly userId: number, private readonly permissions: string[]) {
+    this.builder = new AbilityBuilder(createMongoAbility);
+  }
+
+  async getAbilityWith(policyClass: PolicyClass) {
+    if (this.ability != null && this.loadedPolicyClasses.includes(policyClass)) return this.ability;
+
+    await new policyClass(this.userId, this.permissions, this.builder).addRules();
+    this.loadedPolicyClasses.push(policyClass);
+    return (this.ability = this.builder.build());
+  }
+}
+
 /**
  * A service for finding the correct policy given an entity subject, building rules for the currently
  * authenticated user and checking the given action and subject against those rules.
@@ -113,24 +130,24 @@ const POLICIES: [EntityClass, PolicyClass][] = [
  * @throws UnauthorizedException if there is no authenticated user id, there's no policy defined for
  *   the subject, or if the requested action is not allowed against the subject for this user.
  */
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class PolicyService {
   private readonly log = new TMLogger(PolicyService.name);
-  private permissions?: string[];
 
   get userId() {
     return authenticatedUserId();
   }
 
-  async getPermissions() {
-    if (this.permissions != null) return this.permissions;
+  get permissions() {
+    const value = permissions();
+    if (value == null) throw new UnauthorizedException();
 
-    if (this.userId == null) throw new UnauthorizedException();
-    return (this.permissions = await Permission.getUserPermissionNames(this.userId));
+    return value;
   }
 
   async hasAccess(action: string, subject: Model | EntityClass | Model[]) {
     if (this.userId == null) return false;
+    if (isEmpty(subject)) return true;
 
     const subjects = isArray(subject) ? subject : [subject];
     const [, PolicyClass] =
@@ -140,14 +157,18 @@ export class PolicyService {
       return false;
     }
 
-    const builder = new AbilityBuilder(createMongoAbility);
-    await new PolicyClass(this.userId, await this.getPermissions(), builder).addRules();
-
-    const ability = builder.build();
+    const ability = await this.getAbilityWith(PolicyClass);
     return subjects.find(subject => ability.cannot(action, subject)) == null;
   }
 
   async authorize(action: string, subject: Model | EntityClass | Model[]) {
     if (!(await this.hasAccess(action, subject))) throw new UnauthorizedException();
+  }
+
+  private async getAbilityWith(policyClass: PolicyClass) {
+    const builder = policyBuilder();
+    if (builder == null) throw new UnauthorizedException();
+
+    return await builder.getAbilityWith(policyClass);
   }
 }

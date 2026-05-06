@@ -57,7 +57,9 @@ export class AnrPlotGeometryPolicy extends UserPermissionsPolicy {
 
     if (this.permissions.includes("projects-manage")) {
       if (user != null) {
-        const projectIds = user.projects.filter(({ ProjectUser }) => ProjectUser.isManaging).map(({ id }) => id);
+        const projectIds = (user.projects ?? [])
+          .filter(({ ProjectUser }) => ProjectUser.isManaging)
+          .map(({ id }) => id);
         if (projectIds.length > 0) {
           const sites = await Site.findAll({
             where: { projectId: { [Op.in]: projectIds } },

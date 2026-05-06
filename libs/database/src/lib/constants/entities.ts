@@ -46,6 +46,8 @@ export const ENTITY_TYPES = ["projects", "sites", "nurseries", ...REPORT_TYPES] 
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export type EntityModel = ReportModel | Project | Site | Nursery;
+export type LinkedEntityModel = EntityModel & { linkToTerramatch: (frontEndUrl: string) => string };
+export const isLinkedEntityModel = (model: EntityModel): model is LinkedEntityModel => "linkToTerramatch" in model;
 export type EntityClass<T extends EntityModel> = ModelCtor<T> & ModelStatic<T> & { LARAVEL_TYPE: string };
 export const ENTITY_MODELS: Record<EntityType, EntityClass<EntityModel>> = {
   ...REPORT_MODELS,
@@ -75,6 +77,15 @@ export const hasNothingToReport = (entity: Model): entity is NothingToReportMode
   NOTHING_TO_REPORT_MODELS.find(model => entity instanceof model) != null;
 export const hasTaskId = (entity: Model): entity is TaskModel =>
   TASK_MODELS.find(model => entity instanceof model) != null;
+
+export const CACHED_EXPORT_ENTITY_TYPES: EntityType[] = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+];
 
 /**
  * Get the project ID associated with the given entity, which may be any one of EntityModels defined in this file.

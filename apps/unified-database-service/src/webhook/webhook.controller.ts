@@ -2,11 +2,10 @@ import { BadRequestException, Controller, Get, HttpStatus, Query, UnauthorizedEx
 import { AirtableService } from "../airtable/airtable.service";
 import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { UpdateRecordsQueryDto } from "./dto/update-records-query.dto";
-import { Permission } from "@terramatch-microservices/database/entities";
 import { DeleteRecordsQueryDto } from "./dto/delete-records-query.dto";
 import { UpdateAllQueryDto } from "./dto/update-all-query.dto";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, permissions } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
@@ -16,11 +15,10 @@ export class WebhookController {
     const userId = authenticatedUserId();
     if (userId == null) throw new UnauthorizedException();
 
-    const permissions = await Permission.getUserPermissionNames(userId);
     // This isn't a perfect match for what this controller does, but it is close, and all admins have
     // this permission, so it's a reasonable way for now to restrict this controller to logged in
     // admins.
-    if (!permissions.includes("reports-manage")) {
+    if (!permissions()?.includes("reports-manage")) {
       throw new UnauthorizedException();
     }
   }

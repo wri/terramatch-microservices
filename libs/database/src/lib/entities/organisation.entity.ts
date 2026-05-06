@@ -1,5 +1,20 @@
 import { AllowNull, AutoIncrement, Column, Default, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, DECIMAL, ENUM, INTEGER, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  DECIMAL,
+  ENUM,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { OrganisationStatus } from "../constants/status";
 import { MediaConfiguration } from "../constants/media-owners";
@@ -45,7 +60,7 @@ const READABLE_TYPES: Dictionary<string> = {
 };
 
 @Table({ tableName: "organisations", underscored: true, paranoid: true, hooks: { afterDestroy: removeMedia } })
-export class Organisation extends Model<Organisation> {
+export class Organisation extends Model<InferAttributes<Organisation>, InferCreationAttributes<Organisation>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Organisation";
 
   static readonly MEDIA: Record<OrganisationMedia, MediaConfiguration> = {
@@ -98,31 +113,31 @@ export class Organisation extends Model<Organisation> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  override id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  uuid: CreationOptional<string>;
 
   @Default("draft")
   @Column(STRING)
-  status: OrganisationStatus;
+  status: CreationOptional<OrganisationStatus>;
 
   @AllowNull
   @Column(STRING)
   type: string | null;
 
-  get readableType(): string {
+  get readableType(): CreationOptional<string> {
     return (this.type != null ? READABLE_TYPES[this.type] : undefined) ?? "Unknown";
   }
 
   @Default(false)
   @Column(BOOLEAN)
-  private: boolean;
+  private: CreationOptional<boolean>;
 
   @Default(false)
   @Column(BOOLEAN)
-  isTest: boolean;
+  isTest: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)
@@ -330,7 +345,7 @@ export class Organisation extends Model<Organisation> {
 
   @Default("USD")
   @Column(STRING)
-  currency: string;
+  currency: CreationOptional<string>;
 
   @AllowNull
   @JsonColumn()

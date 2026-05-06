@@ -38,7 +38,7 @@ export class EmailService {
     });
   }
 
-  getFrontEndUrl(): string {
+  get frontEndUrl(): string {
     return this.configService.get<string>("APP_FRONT_END") ?? "";
   }
 
@@ -104,8 +104,7 @@ export class EmailService {
     } = await this.localizationService.translateKeys(i18nKeys, locale, i18nReplacements ?? {});
 
     const data: Dictionary<string | null | undefined | number> = {
-      backendUrl: this.configService.get<string>("EMAIL_IMAGE_BASE_URL"),
-      banner: null,
+      appFrontEnd: this.frontEndUrl,
       invite: null,
       monitoring: null,
       year: new Date().getFullYear(),
@@ -117,7 +116,7 @@ export class EmailService {
     if (isString(data["link"]) && data["link"].substring(0, 4).toLowerCase() !== "http") {
       // If we're given a link that's pointing to a raw path, assume it should be prepended with
       // the configured app FE base URL.
-      data["link"] = `${this.configService.get("APP_FRONT_END")}${data["link"]}`;
+      data["link"] = `${this.frontEndUrl}${data["link"]}`;
     }
 
     body ??= this.templateService.render(EMAIL_TEMPLATE, data);

@@ -200,7 +200,7 @@ export class UsersController {
 
     const userResource = document.addData(
       user.uuid ?? "no-uuid",
-      new UserDto(user, user.frameworks, await user.myFrameworks(), monitoringPartnerProjects)
+      new UserDto(user, user.frameworks ?? [], await user.myFrameworks(), monitoringPartnerProjects)
     );
 
     const org = await user.primaryOrganisation();

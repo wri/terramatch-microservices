@@ -20,6 +20,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -152,15 +153,31 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
   }
 
-  async addSearch(searchTerm: string) {
-    return this.where({
-      [Op.or]: [
-        { "$site.name$": { [Op.like]: `${searchTerm}%` } },
-        { "$site.name$": { [Op.like]: `% ${searchTerm}%` } },
-        { polyName: { [Op.like]: `${searchTerm}%` } },
-        { polyName: { [Op.like]: `% ${searchTerm}%` } }
-      ]
-    });
+  async addSearch(searchTerm: string, fields?: SitePolygonSearchField[]) {
+    const selectedFields =
+      fields != null && fields.length > 0 ? fields : ([...SITE_POLYGON_SEARCH_FIELDS] as SitePolygonSearchField[]);
+    const conditions: WhereOptions[] = [];
+
+    if (selectedFields.includes("siteName")) {
+      conditions.push({ "$site.name$": { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ "$site.name$": { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (selectedFields.includes("polyName")) {
+      conditions.push({ polyName: { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ polyName: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (selectedFields.includes("polygonUuid")) {
+      conditions.push({ polygonUuid: { [Op.like]: `${searchTerm}%` } });
+      conditions.push({ polygonUuid: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (conditions.length === 0) {
+      return this;
+    }
+
+    return this.where({ [Op.or]: conditions });
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {
@@ -171,6 +188,60 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   modifiedSince(date?: Date) {
     if (date != null) this.where({ updatedAt: { [Op.gte]: date } });
     return this;
+  }
+
+  filterPlantStartRange(from?: Date, to?: Date) {
+    if (from == null && to == null) return this;
+    const parts: WhereOptions[] = [{ plantStart: { [Op.ne]: null } }];
+    if (from != null) parts.push({ plantStart: { [Op.gte]: from } });
+    if (to != null) parts.push({ plantStart: { [Op.lte]: to } });
+    this.where({ [Op.and]: parts });
+    return this;
+  }
+
+  filterPractice(practices?: string[]) {
+    if (practices == null || practices.length === 0) return this;
+    this.where(this.buildJsonArrayOverlapWhere("practice", practices));
+    return this;
+  }
+
+  filterDistr(distributions?: string[]) {
+    if (distributions == null || distributions.length === 0) return this;
+    this.where(this.buildJsonArrayOverlapWhere("distr", distributions));
+    return this;
+  }
+
+  filterTargetSys(values?: string[]) {
+    if (values == null || values.length === 0) return this;
+    this.where({
+      [Op.and]: [{ targetSys: { [Op.ne]: null } }, { targetSys: { [Op.in]: values } }]
+    });
+    return this;
+  }
+
+  filterSource(values?: string[]) {
+    if (values == null || values.length === 0) return this;
+    this.where({
+      [Op.and]: [{ source: { [Op.ne]: null } }, { source: { [Op.in]: values } }]
+    });
+    return this;
+  }
+
+  private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {
+    const sequelize = SitePolygon.sequelize;
+    if (sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+    const orContains = values.map(slug =>
+      literal(`JSON_CONTAINS(SitePolygon.${column}, ${sequelize.escape(JSON.stringify(slug))}, '$') = 1`)
+    );
+    return {
+      [Op.and]: [
+        { [column]: { [Op.ne]: null } } as WhereOptions,
+        literal(`JSON_LENGTH(SitePolygon.${column}) > 0`),
+        { [Op.or]: orContains }
+      ]
+    };
   }
 
   isMissingIndicators(indicatorSlugs?: IndicatorSlug[]) {

@@ -11,3 +11,4 @@ export * from "./validation-types";
 export * from "./geometry-types";
 export * from "./indicator-types";
 export * from "./audit-status";
+export * from "./site-polygon-attributes";

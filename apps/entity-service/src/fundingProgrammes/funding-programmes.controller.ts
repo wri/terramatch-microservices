@@ -35,7 +35,7 @@ import {
   getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
 import { difference, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -66,9 +66,8 @@ export class FundingProgrammesController {
     description: "User is not authorized to access these funding programmes"
   })
   async index(@Query() query: FundingProgrammeQueryDto) {
-    const permissions = await this.policyService.getPermissions();
     let fundingProgrammes: FundingProgramme[];
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
+    if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // non-admins only have access to FPs that match their org types
       const orgUuids = await User.orgUuids(authenticatedUserId());
       const types =
@@ -94,7 +93,7 @@ export class FundingProgrammesController {
       fundingProgrammes = await FundingProgramme.findAll();
     }
 
-    const locale = query.translated === false ? undefined : await User.findLocale(authenticatedUserId());
+    const locale = query.translated === false ? undefined : userLocale();
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
       requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`
@@ -114,7 +113,7 @@ export class FundingProgrammesController {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
-    const locale = translated === false ? undefined : await User.findLocale(authenticatedUserId());
+    const locale = translated === false ? undefined : userLocale();
     await this.policyService.authorize("read", fundingProgramme);
 
     return await this.formDataService.addFundingProgrammeDtos(

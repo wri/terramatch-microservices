@@ -44,7 +44,8 @@ export class UserDto {
       directFrameworks: (directFrameworks ?? [])
         .filter(({ slug }) => slug != null)
         .map(({ name, slug }) => ({ name, slug })) as UserFramework[],
-      monitoringPartnerProjects
+      monitoringPartnerProjects,
+      canLogIn: user.password != null
     });
   }
 
@@ -108,4 +109,7 @@ export class UserDto {
 
   @ApiProperty({ type: () => UserMonitoringPartnerProjectLightDto, isArray: true })
   monitoringPartnerProjects: UserMonitoringPartnerProjectLightDto[];
+
+  @ApiProperty({ type: Boolean })
+  canLogIn: boolean;
 }

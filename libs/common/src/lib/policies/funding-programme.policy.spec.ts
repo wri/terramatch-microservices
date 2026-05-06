@@ -1,7 +1,7 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 import { FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 
 describe("FundingProgrammePolicy", () => {
@@ -20,8 +20,7 @@ describe("FundingProgrammePolicy", () => {
   });
 
   it("allows uploading files with framework permissions", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     let fp = await FundingProgrammeFactory.create({ frameworkKey: "ppc" });
     await expectCan(service, "uploadFiles", fp);
     fp = await FundingProgrammeFactory.create({ frameworkKey: "terrafund" });

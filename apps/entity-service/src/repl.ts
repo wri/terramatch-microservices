@@ -3,6 +3,12 @@ import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-r
 import * as oneOff from "./repl/oneOff";
 import { bulkWorkdayImport } from "./repl/bulk-workday-import";
 import { uploadRecordsForInvestments } from "./repl/upload-records-for-investments";
+import { seedLocalizationKeys } from "./repl/localization-keys-seeder";
 
 // See comment in oneOff/index.ts for details on how to add new one-off scripts
-bootstrapRepl("Entity Service", AppModule, { oneOff, bulkWorkdayImport, uploadRecordsForInvestments });
+bootstrapRepl("Entity Service", AppModule, {
+  oneOff,
+  bulkWorkdayImport,
+  uploadRecordsForInvestments,
+  seedLocalizationKeys
+});

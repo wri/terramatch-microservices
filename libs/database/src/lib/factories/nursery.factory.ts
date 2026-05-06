@@ -7,5 +7,6 @@ import { UPDATE_REQUEST_STATUSES } from "../constants/status";
 export const NurseryFactory = FactoryGirl.define(Nursery, async () => ({
   projectId: ProjectFactory.associate("id"),
   name: faker.animal.petName(),
+  frameworkKey: "ppc",
   updateRequestStatus: faker.helpers.arrayElement(UPDATE_REQUEST_STATUSES)
 }));

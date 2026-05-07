@@ -87,14 +87,29 @@ export class FinancialReportProcessor extends ReportProcessor<
     ]);
 
     const userId = this.entitiesService.userId;
+    const permissions = this.entitiesService.permissions;
     if (userId != null) {
       const user = await User.findOne({
         where: { id: userId },
         attributes: ["organisationId"],
-        include: [{ association: "roles", attributes: ["name"] }]
+        include: [
+          { association: "roles", attributes: ["name"] },
+          { association: "projects", attributes: ["organisationId"] }
+        ]
       });
+
+      const organisationIds: number[] = [];
+      if (permissions?.includes("projects-manage")) {
+        const projectsOrganisationIds = [...((user?.projects ?? []).map(({ organisationId }) => organisationId) ?? [])];
+        if (projectsOrganisationIds.length > 0) {
+          organisationIds.push(...projectsOrganisationIds.filter((id): id is number => id !== null));
+        }
+      }
       if (user?.primaryRole === "project-manager" && user.organisationId != null) {
-        builder.where({ organisationId: user.organisationId });
+        organisationIds.push(user.organisationId as number);
+      }
+      if (organisationIds.length > 0) {
+        builder.where({ organisationId: { [Op.in]: organisationIds } });
       }
     }
 

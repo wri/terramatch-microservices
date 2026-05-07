@@ -126,12 +126,7 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "landownerAgreement",
   "bioeconomyProductList",
   "bioeconomyProductDescription",
-  "polygonDataSubmission",
-  {
-    airtableColumn: "readyForBaseline",
-    dbColumn: "readyForBaseline",
-    valueMap: async ({ readyForBaseline }) => readyForBaseline === true
-  }
+  "polygonDataSubmission"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

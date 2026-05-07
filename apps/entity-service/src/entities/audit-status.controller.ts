@@ -44,13 +44,7 @@ export class AuditStatusController {
   async getAuditStatuses(@Param() { entity, uuid }: AuditStatusParamsDto, @Query() query: AuditStatusIndexQueryDto) {
     const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
     await this.policyService.authorize("read", baseEntity);
-    const parsedTypes =
-      query.types
-        ?.split(",")
-        .map(t => t.trim())
-        .filter(t => t.length > 0) ?? [];
-    const typeFilter = parsedTypes.length > 0 ? parsedTypes : undefined;
-    const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid, typeFilter);
+    const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid, query.types);
     const document = buildJsonApi(AuditStatusDto, { forceDataArray: true });
     const indexIds: string[] = [];
     for (const auditStatus of auditStatuses) {

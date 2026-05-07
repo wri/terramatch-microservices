@@ -81,7 +81,7 @@ describe("AuditStatusController", () => {
 
       await controller.getAuditStatuses(
         { entity: "projects", uuid: project.uuid },
-        { types: "polygon-data-submission, ready-for-baseline" }
+        { types: ["polygon-data-submission", "ready-for-baseline"] }
       );
 
       expect(service.getAuditStatuses).toHaveBeenCalledWith(mockEntity, "projects", project.uuid, [

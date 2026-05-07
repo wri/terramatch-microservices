@@ -17,9 +17,7 @@ import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
   FundingTypeFactory,
-  OrganisationFactory,
-  ProjectFactory,
-  ProjectUserFactory
+  OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -30,7 +28,6 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
-import { PolicyService } from "@terramatch-microservices/common";
 
 describe("FinancialReportProcessor", () => {
   let module: TestingModule;
@@ -38,7 +35,6 @@ describe("FinancialReportProcessor", () => {
 
   const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
   const entitiesService = () => module.get(EntitiesService);
-  const policyService = () => module.get(PolicyService);
 
   beforeEach(async () => {
     await FinancialReport.truncate();

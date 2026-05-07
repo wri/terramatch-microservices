@@ -157,7 +157,7 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
     });
 
-    it("filters by polygonDataSubmission and readyForBaseline (TM-3300)", async () => {
+    it("filters by polygonDataSubmission and readyForBaseline", async () => {
       const ready = await ProjectFactory.create({
         polygonDataSubmission: "all-polygons-received",
         readyForBaseline: true
@@ -346,7 +346,7 @@ describe("ProjectProcessor", () => {
       expect(project.isTest).toBe(true);
     });
 
-    it("records polygon handoff audits when submission or baseline change (TM-3300)", async () => {
+    it("records polygon handoff audits when submission or baseline change", async () => {
       const project = await ProjectFactory.create({
         polygonDataSubmission: "no-polygons-submitted",
         readyForBaseline: false

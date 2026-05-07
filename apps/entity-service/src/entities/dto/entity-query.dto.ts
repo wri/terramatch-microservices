@@ -132,7 +132,7 @@ export class EntityQueryDto extends IndexQueryDto {
   @ApiProperty({
     required: false,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Filter projects by polygon data submission status (TM-3300)"
+    description: "Filter projects by polygon data submission status"
   })
   @IsOptional()
   @IsIn(POLYGON_DATA_SUBMISSION_VALUES)
@@ -140,7 +140,7 @@ export class EntityQueryDto extends IndexQueryDto {
 
   @ApiProperty({
     required: false,
-    description: "Filter projects where ready for baseline is true or false (TM-3300)"
+    description: "Filter projects where ready for baseline is true or false"
   })
   @IsOptional()
   @TransformBooleanString({ optional: true })

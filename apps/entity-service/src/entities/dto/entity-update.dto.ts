@@ -50,21 +50,20 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @ApiProperty({
     required: false,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Polygon data submission tracking (TM-3300)"
+    description: "Polygon data submission tracking"
   })
   polygonDataSubmission?: string;
 
   @IsOptional()
   @IsBoolean()
-  @ApiProperty({ required: false, description: "Whether the project is ready for baseline analysis (TM-3300)" })
+  @ApiProperty({ required: false, description: "Whether the project is ready for baseline analysis" })
   readyForBaseline?: boolean;
 
   @IsOptional()
   @IsString()
   @ApiProperty({
     required: false,
-    description:
-      "Optional comment recorded on polygon handoff audit entries when updating submission/baseline (TM-3300)"
+    description: "Optional comment recorded on polygon handoff audit entries when updating submission/baseline"
   })
   polygonHandoffComment?: string | null;
 }

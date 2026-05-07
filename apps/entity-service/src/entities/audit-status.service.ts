@@ -156,7 +156,10 @@ export class AuditStatusService {
     const data = await this.queryAuditData([entity], typeFilter);
     const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
     const dtos = await this.transformToDtos(data, attachmentsMap);
-    return uniqBy(dtos, dto => dto.uuid);
+    if (typeFilter != null && typeFilter.length > 0) {
+      return uniqBy(dtos, dto => dto.uuid);
+    }
+    return uniqBy(dtos, dto => dto.comment ?? "__NULL_COMMENT_KEY__");
   }
 
   private shouldSyncModelStatusFromAudit(
@@ -230,8 +233,8 @@ export class AuditStatusService {
       status: attributes.status ?? null,
       comment: attributes.comment ?? null,
       type: attributes.type ?? null,
-      isActive: attributes.type === "change-request" ? (attributes.isActive ?? null) : null,
-      requestRemoved: attributes.type === "change-request" ? (attributes.requestRemoved ?? null) : null,
+      isActive: attributes.type === "change-request" ? attributes.isActive ?? null : null,
+      requestRemoved: attributes.type === "change-request" ? attributes.requestRemoved ?? null : null,
       createdBy: user.emailAddress, // this is storing the email of the user, not the ID
       firstName: user.firstName,
       lastName: user.lastName

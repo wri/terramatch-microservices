@@ -101,13 +101,13 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({
     nullable: true,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Polygon data submission tracking (TM-3300)"
+    description: "Polygon data submission tracking"
   })
   polygonDataSubmission: string | null;
 
   @ApiProperty({
     nullable: false,
-    description: "Whether the project is ready for baseline analysis (TM-3300)"
+    description: "Whether the project is ready for baseline analysis"
   })
   readyForBaseline: boolean;
 }

@@ -1,6 +1,3 @@
-/**
- * DQA polygon data submission tracking on v2_projects (TM-3300).
- */
 export const POLYGON_DATA_SUBMISSION_DEFAULT = "no-polygons-submitted";
 
 export const POLYGON_DATA_SUBMISSION_VALUES = [

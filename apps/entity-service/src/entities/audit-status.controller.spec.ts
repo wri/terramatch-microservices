@@ -72,7 +72,7 @@ describe("AuditStatusController", () => {
       });
     });
 
-    it("parses types query and forwards filter to service (TM-3300)", async () => {
+    it("parses types query and forwards filter to service", async () => {
       const project = await ProjectFactory.create();
       const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
       service.resolveEntity.mockResolvedValue(mockEntity);

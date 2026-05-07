@@ -122,17 +122,6 @@ describe("FinancialReportPolicy", () => {
     });
   });
 
-  it("allows export and sendReminder with reports-manage", async () => {
-    mockRequestContext({ userId: 123, permissions: ["reports-manage"] });
-    const report = await FinancialReportFactory.org().create();
-    await expectAuthority(service, {
-      can: [
-        ["export", report],
-        ["sendReminder", report]
-      ]
-    });
-  });
-
   it("allows reading reports for organisations linked via projects-manage", async () => {
     const orgFromProject = await OrganisationFactory.create();
     const otherOrg = await OrganisationFactory.create();

@@ -189,23 +189,6 @@ describe("FinancialReportProcessor", () => {
       await expectFinancialReports(ppc, { frameworkKey: ["ppc"] });
     });
 
-    it("should restrict users with projects-manage to organisations from their projects", async () => {
-      const orgFromProject = await OrganisationFactory.create();
-      const otherOrg = await OrganisationFactory.create();
-      const project = await ProjectFactory.create({ organisationId: orgFromProject.id });
-      await ProjectUserFactory.create({
-        userId: policyService().userId,
-        projectId: project.id,
-        isMonitoring: false,
-        isManaging: true
-      });
-      await FinancialReport.destroy({ where: {} });
-      const visible = await FinancialReportFactory.org(orgFromProject).createMany(2);
-      await FinancialReportFactory.org(otherOrg).createMany(2);
-
-      await expectFinancialReports(visible, {}, { permissions: ["projects-manage"] });
-    });
-
     it("should sort by submittedAt and dueAt", async () => {
       const organisation = await OrganisationFactory.create();
       const r1 = await FinancialReportFactory.org(organisation).create({

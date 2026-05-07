@@ -26,6 +26,7 @@ import { Attributes, CreationAttributes, Op, Sequelize, WhereOptions } from "seq
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 import {

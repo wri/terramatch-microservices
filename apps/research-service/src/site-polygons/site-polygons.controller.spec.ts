@@ -63,6 +63,11 @@ describe("SitePolygonsController", () => {
     filterProjectShortNames: jest.Mock;
     filterPolygonUuids: jest.Mock;
     addSearch: jest.Mock;
+    filterPlantStartRange: jest.Mock;
+    filterPractice: jest.Mock;
+    filterDistr: jest.Mock;
+    filterTargetSys: jest.Mock;
+    filterSource: jest.Mock;
   }
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
@@ -82,7 +87,12 @@ describe("SitePolygonsController", () => {
       filterValidationStatus: jest.fn().mockResolvedValue(undefined),
       filterProjectShortNames: jest.fn().mockResolvedValue(undefined),
       filterPolygonUuids: jest.fn().mockResolvedValue(undefined),
-      addSearch: jest.fn().mockResolvedValue(undefined)
+      addSearch: jest.fn().mockResolvedValue(undefined),
+      filterPlantStartRange: jest.fn().mockReturnThis(),
+      filterPractice: jest.fn().mockReturnThis(),
+      filterDistr: jest.fn().mockReturnThis(),
+      filterTargetSys: jest.fn().mockReturnThis(),
+      filterSource: jest.fn().mockReturnThis()
     } as unknown as MockQueryBuilder;
 
     builder.filterProjectUuids.mockResolvedValue(builder);
@@ -337,7 +347,7 @@ describe("SitePolygonsController", () => {
       const searchTerm = "forest site";
       await controller.findMany({ search: searchTerm });
 
-      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm);
+      expect(builder.addSearch).toHaveBeenCalledWith(searchTerm, undefined);
     });
 
     it("should apply sorting when sort is provided with number pagination", async () => {
@@ -403,6 +413,40 @@ describe("SitePolygonsController", () => {
       await controller.findMany({ polygonUuid: ["uuid-1", "uuid-2"] });
 
       expect(builder.filterPolygonUuids).toHaveBeenCalledWith(["uuid-1", "uuid-2"]);
+    });
+
+    it("should call attribute filters when provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      const from = new Date("2024-01-01");
+      const to = new Date("2024-12-31");
+
+      await controller.findMany({
+        plantStartFrom: from,
+        plantStartTo: to,
+        practice: ["tree-planting"],
+        distr: ["partial", "full"],
+        targetSys: ["mangrove", "urban-forest"],
+        source: ["terramatch", "greenhouse"]
+      });
+
+      expect(builder.filterPlantStartRange).toHaveBeenCalledWith(from, to);
+      expect(builder.filterPractice).toHaveBeenCalledWith(["tree-planting"]);
+      expect(builder.filterDistr).toHaveBeenCalledWith(["partial", "full"]);
+      expect(builder.filterTargetSys).toHaveBeenCalledWith(["mangrove", "urban-forest"]);
+      expect(builder.filterSource).toHaveBeenCalledWith(["terramatch", "greenhouse"]);
+    });
+
+    it("should throw when plantStartFrom is after plantStartTo", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockQueryBuilder();
+
+      await expect(
+        controller.findMany({
+          plantStartFrom: new Date("2024-12-31"),
+          plantStartTo: new Date("2024-01-01")
+        })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw when sorting without number pagination", async () => {

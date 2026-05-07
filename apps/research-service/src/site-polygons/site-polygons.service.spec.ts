@@ -688,6 +688,41 @@ describe("SitePolygonsService", () => {
     expect(results.length).toBe(1);
     expect(results[0].siteUuid).toBe(site3.uuid);
     expect(results[0].polyName).toBe("Zone Polygon");
+
+    query = await service.buildQuery({ size: 10 });
+    await query.addSearch("Alpha", ["polyName"]);
+    results = await query.execute();
+    expect(results.length).toBe(1);
+    expect(results[0].siteUuid).toBe(site2.uuid);
+    expect(results[0].polyName).toBe("Alphabetical Order");
+  });
+
+  it("should search polygon uuid when search field includes polygonUuid", async () => {
+    await SitePolygon.truncate();
+    await PolygonGeometry.truncate();
+
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({
+      projectId: project.id,
+      name: "Any Site"
+    });
+
+    const firstPolygon = await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      polyName: "First Polygon"
+    });
+    const firstPolygonSearchToken = firstPolygon.polygonUuid?.slice(0, 8) ?? "";
+    await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      polyName: "Second Polygon"
+    });
+
+    const query = await service.buildQuery({ size: 10 });
+    await query.addSearch(firstPolygonSearchToken, ["polygonUuid"]);
+    const results = await query.execute();
+
+    expect(results.length).toBe(1);
+    expect(results[0].uuid).toBe(firstPolygon.uuid);
   });
 
   it("should map establishment tree species and reporting periods correctly", async () => {

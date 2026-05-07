@@ -17,8 +17,11 @@ import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
   FundingTypeFactory,
-  OrganisationFactory
+  OrganisationFactory,
+  ProjectFactory,
+  ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
+import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
@@ -27,6 +30,7 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
+import { PolicyService } from "@terramatch-microservices/common";
 
 describe("FinancialReportProcessor", () => {
   let module: TestingModule;
@@ -34,6 +38,7 @@ describe("FinancialReportProcessor", () => {
 
   const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
   const entitiesService = () => module.get(EntitiesService);
+  const policyService = () => module.get(PolicyService);
 
   beforeEach(async () => {
     await FinancialReport.truncate();
@@ -165,6 +170,62 @@ describe("FinancialReportProcessor", () => {
 
       await expectFinancialReports(reports1, {});
     });
+
+    it("should filter by updateRequestStatus", async () => {
+      const organisation = await OrganisationFactory.create();
+      const awaiting = await FinancialReportFactory.org(organisation).createMany(2, {
+        updateRequestStatus: AWAITING_APPROVAL
+      });
+      await FinancialReportFactory.org(organisation).create({ updateRequestStatus: APPROVED });
+
+      await expectFinancialReports(awaiting, { updateRequestStatus: AWAITING_APPROVAL });
+    });
+
+    it("should filter by frameworkKey", async () => {
+      const organisation = await OrganisationFactory.create();
+      const ppc = await FinancialReportFactory.org(organisation).createMany(2, { frameworkKey: "ppc" });
+      await FinancialReportFactory.org(organisation).create({ frameworkKey: "terrafund" });
+
+      await expectFinancialReports(ppc, { frameworkKey: ["ppc"] });
+    });
+
+    it("should restrict users with projects-manage to organisations from their projects", async () => {
+      const orgFromProject = await OrganisationFactory.create();
+      const otherOrg = await OrganisationFactory.create();
+      const project = await ProjectFactory.create({ organisationId: orgFromProject.id });
+      await ProjectUserFactory.create({
+        userId: policyService().userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: true
+      });
+      await FinancialReport.destroy({ where: {} });
+      const visible = await FinancialReportFactory.org(orgFromProject).createMany(2);
+      await FinancialReportFactory.org(otherOrg).createMany(2);
+
+      await expectFinancialReports(visible, {}, { permissions: ["projects-manage"] });
+    });
+
+    it("should sort by submittedAt and dueAt", async () => {
+      const organisation = await OrganisationFactory.create();
+      const r1 = await FinancialReportFactory.org(organisation).create({
+        submittedAt: new Date("2024-01-01")
+      });
+      const r2 = await FinancialReportFactory.org(organisation).create({
+        submittedAt: new Date("2024-06-01")
+      });
+      await expectFinancialReports(
+        [r1, r2],
+        { sort: { field: "submittedAt", direction: "ASC" } },
+        {
+          sortField: "submittedAt"
+        }
+      );
+      await FinancialReport.destroy({ where: {} });
+      const d1 = await FinancialReportFactory.org(organisation).create({ dueAt: new Date("2025-01-01") });
+      const d2 = await FinancialReportFactory.org(organisation).create({ dueAt: new Date("2025-12-01") });
+      await expectFinancialReports([d1, d2], { sort: { field: "dueAt", direction: "ASC" } }, { sortField: "dueAt" });
+    });
   });
 
   describe("getFullDto", () => {
@@ -269,6 +330,14 @@ describe("FinancialReportProcessor", () => {
   });
 
   describe("exportAll", () => {
+    it("throws when target is missing", async () => {
+      await expect(processor.exportAll({ frameworkKey: "ppc" })).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("throws when frameworkKey is missing", async () => {
+      await expect(processor.exportAll({ target: {} as Response })).rejects.toThrow(BadRequestException);
+    });
+
     it("writes all reports to the CSV", async () => {
       await FinancialReport.truncate();
       const organisations = orderBy(await OrganisationFactory.createMany(2, { isTest: false }), "id");

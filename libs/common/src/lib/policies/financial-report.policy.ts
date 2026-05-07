@@ -33,6 +33,20 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
     if (this.permissions.includes("reports-manage")) {
       this.builder.can(["read", "delete", "update", "approve", "updateAnswers", "sendReminder"], FinancialReport);
     }
+
+    const organisationIds: number[] = [];
+    if (this.permissions?.includes("projects-manage")) {
+      const projectsOrganisationIds = [...((user?.projects ?? []).map(({ organisationId }) => organisationId) ?? [])];
+      if (projectsOrganisationIds.length > 0) {
+        organisationIds.push(...projectsOrganisationIds.filter((id): id is number => id !== null));
+      }
+    }
+    if (user?.primaryRole === "project-manager" && user.organisationId != null) {
+      organisationIds.push(user.organisationId as number);
+    }
+    if (organisationIds.length > 0) {
+      this.builder.can("read", FinancialReport, { organisationId: { $in: organisationIds } });
+    }
   }
 
   private _user?: User | null;
@@ -41,7 +55,11 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["id", "organisationId"]
+      attributes: ["id", "organisationId"],
+      include: [
+        { association: "projects", attributes: ["organisationId"] },
+        { association: "roles", attributes: ["name"] }
+      ]
     }));
   }
 }

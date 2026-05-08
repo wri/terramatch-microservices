@@ -126,7 +126,8 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "landownerAgreement",
   "bioeconomyProductList",
   "bioeconomyProductDescription",
-  "polygonDataSubmission"
+  "polygonDataSubmission",
+  "readyForBaseline"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

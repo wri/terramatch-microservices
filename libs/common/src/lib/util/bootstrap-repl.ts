@@ -14,8 +14,16 @@ import { SequelizeStorage, Umzug } from "umzug";
 import { migrations } from "@terramatch-microservices/database/migrations";
 import { User } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { PaginatedQueryBuilder } from "./paginated-query.builder";
 
 const logger = new TMLogger("REPL");
+
+type ReplGet = <T>(provided: new (...args: unknown[]) => T) => T;
+
+let replGet: ReplGet | undefined;
+// replGet is set to a valid value when the repl bootstrap process starts up, so any script can import this
+// function and use it to retrieve services from the REPL module.
+export const getService = <T>(provided: new (...args: unknown[]) => T) => replGet?.(provided) as T;
 
 /**
  * Starts up the NestJS REPL for the given app module.
@@ -37,6 +45,8 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
 
   const dataValues = (models: Model[]) => models.map(model => model.dataValues);
 
+  replGet = replServer.context["get"] as ReplGet;
+
   // By default, we make lodash, luxon, the JSON API Builder, and the Sequelize models available
   context = {
     umzug,
@@ -48,7 +58,8 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
     Op,
     Reflect,
     Subquery,
-    ...replServer.context["get"](Sequelize).models,
+    PaginatedQueryBuilder,
+    ...getService(Sequelize).models,
     ...context
   };
 

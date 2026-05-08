@@ -3,7 +3,7 @@ import { PolicyService } from "./policy.service";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 describe("UserPolicy", () => {
   let service: PolicyService;
@@ -15,7 +15,7 @@ describe("UserPolicy", () => {
 
     service = await module.resolve(PolicyService);
 
-    mockUserId(123);
+    mockRequestContext({ userId: 123 });
   });
 
   afterEach(async () => {
@@ -23,68 +23,59 @@ describe("UserPolicy", () => {
   });
 
   it("allows reading any user as admin", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "read", new User());
   });
 
   it("allows reading all users as admin", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "readAll", User);
   });
 
   it("allows creating users as admin", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "create", User);
   });
 
   it("disallows creating users as non-admin", async () => {
-    mockPermissions();
     await expectCannot(service, "create", User);
   });
 
   it("disallows reading other users as non-admin", async () => {
-    mockPermissions();
     await expectCannot(service, "read", new User());
   });
 
   it("allows reading own user as non-admin", async () => {
-    mockPermissions();
     await expectCan(service, "read", await UserFactory.build({ id: 123 }));
   });
 
   it("allows updating any user as admin", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "update", new User());
   });
 
   it("disallows updating other users as non-admin", async () => {
-    mockPermissions();
     await expectCannot(service, "update", new User());
   });
 
   it("allows updating own user as non-admin", async () => {
-    mockPermissions();
     await expectCan(service, "update", await UserFactory.build({ id: 123 }));
   });
 
   it("allows verify any user with users-manage", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "verify", new User());
   });
 
   it("disallows verify other users as non-admin", async () => {
-    mockPermissions();
     await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
   });
 
   it("allows verify own user as non-admin", async () => {
-    mockPermissions();
     await expectCan(service, "verify", await UserFactory.build({ id: 123 }));
   });
 
   it("allows verify any user for verified admin without users-manage", async () => {
-    mockPermissions();
-
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
     (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
@@ -95,8 +86,6 @@ describe("UserPolicy", () => {
   });
 
   it("allows reading all users for verified admin without users-manage", async () => {
-    mockPermissions();
-
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
     (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
@@ -107,8 +96,6 @@ describe("UserPolicy", () => {
   });
 
   it("allows updating any user for verified admin without users-manage", async () => {
-    mockPermissions();
-
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
     (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
@@ -119,8 +106,6 @@ describe("UserPolicy", () => {
   });
 
   it("disallows verify any user when admin role is unverified", async () => {
-    mockPermissions();
-
     const unverifiedAdminUser = new User();
     (unverifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = null;
     (unverifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
@@ -131,8 +116,6 @@ describe("UserPolicy", () => {
   });
 
   it("disallows verify any user when verified user has no admin role", async () => {
-    mockPermissions();
-
     const verifiedNonAdminUser = new User();
     (verifiedNonAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
     (verifiedNonAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "project-manager" }];
@@ -143,26 +126,22 @@ describe("UserPolicy", () => {
   });
 
   it("disallows verify any user when authenticated user is not found", async () => {
-    mockPermissions();
     jest.spyOn(User, "findOne").mockResolvedValue(null);
 
     await expectCannot(service, "verify", await UserFactory.build({ id: 999 }));
   });
 
   it("allows deleting any user as users-manage", async () => {
-    mockPermissions("users-manage");
+    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "delete", new User());
   });
 
   it("disallows deleting users as non-admin", async () => {
-    mockPermissions();
     await expectCannot(service, "delete", new User());
     await expectCannot(service, "delete", await UserFactory.build({ id: 123 }));
   });
 
   it("allows deleting any user for verified admin without users-manage", async () => {
-    mockPermissions();
-
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
     (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];

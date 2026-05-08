@@ -1,16 +1,23 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsDate, IsEnum, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsIn, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
   POLYGON_STATUSES,
-  PolygonStatus
+  PolygonStatus,
+  SITE_POLYGON_DISTRIBUTIONS,
+  SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_SOURCES,
+  SITE_POLYGON_TARGET_SYSTEMS
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
 import { Type, TypeHelpOptions } from "class-transformer";
 import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
+
+export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
+export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
 
 class QuerySort {
   @ApiProperty({ name: "sort[field]", required: false })
@@ -22,6 +29,11 @@ class QuerySort {
   @IsOptional()
   direction?: "ASC" | "DESC";
 }
+
+const SITE_POLYGON_PRACTICE_FILTER_VALUES = [...SITE_POLYGON_PRACTICES];
+const SITE_POLYGON_TARGET_SYS_FILTER_VALUES = [...SITE_POLYGON_TARGET_SYSTEMS];
+const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
+const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
@@ -136,6 +148,74 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
 
   @ApiProperty({
     required: false,
+    type: String,
+    format: "date",
+    description: "Inclusive lower bound for plant start date (plantStart)"
+  })
+  @IsOptional()
+  @IsDate()
+  plantStartFrom?: Date;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+    format: "date",
+    description: "Inclusive upper bound for plant start date (plantStart)"
+  })
+  @IsOptional()
+  @IsDate()
+  plantStartTo?: Date;
+
+  @ApiProperty({
+    name: "practice[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_PRACTICES,
+    description: "Filter by restoration practice (any selected value matches)"
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(SITE_POLYGON_PRACTICE_FILTER_VALUES, { each: true })
+  practice?: string[];
+
+  @ApiProperty({
+    name: "targetSys[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_TARGET_SYSTEMS,
+    description: "Filter by target land use / target system (any selected value matches)"
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(SITE_POLYGON_TARGET_SYS_FILTER_VALUES, { each: true })
+  targetSys?: string[];
+
+  @ApiProperty({
+    name: "distr[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_DISTRIBUTIONS,
+    description: "Filter by tree distribution (any selected value matches)"
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(SITE_POLYGON_DISTR_FILTER_VALUES, { each: true })
+  distr?: string[];
+
+  @ApiProperty({
+    name: "source[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_SOURCES,
+    description: "Filter by polygon source (any selected value matches)"
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(SITE_POLYGON_SOURCE_FILTER_VALUES, { each: true })
+  source?: string[];
+
+  @ApiProperty({
+    required: false,
     default: false,
     description: "Include polygons for test projects in the results."
   })
@@ -156,6 +236,18 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @ApiProperty({ required: false })
   @IsOptional()
   search?: string;
+
+  @ApiProperty({
+    name: "searchFields[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_SEARCH_FIELDS,
+    description: "Select the fields used by search."
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SITE_POLYGON_SEARCH_FIELDS, { each: true })
+  searchFields?: SitePolygonSearchField[];
 
   @ApiProperty({
     required: false,

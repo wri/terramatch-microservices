@@ -47,7 +47,7 @@ export class TasksService {
       { association: "project", attributes: ["name", "frameworkKey"], required: true }
     ]);
 
-    const permissions = await this.policyService.getPermissions();
+    const permissions = this.policyService.permissions;
     const frameworkPermissions = permissions
       ?.filter(name => name.startsWith("framework-"))
       ?.map(name => name.substring("framework-".length) as string);

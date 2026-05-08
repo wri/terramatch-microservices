@@ -9,14 +9,15 @@ import { StubProcessor } from "./entities.controller.spec";
 import { Form, Project } from "@terramatch-microservices/database/entities";
 import { FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 import { Dictionary } from "lodash";
+import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 describe("FormDataController", () => {
   let controller: FormDataController;
   let service: DeepMocked<FormDataService>;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
   let entitiesService: DeepMocked<EntitiesService>;
   let processor: StubProcessor;
 
@@ -26,12 +27,20 @@ describe("FormDataController", () => {
     const module = await Test.createTestingModule({
       controllers: [FormDataController],
       providers: [
+        PolicyService,
         { provide: FormDataService, useValue: (service = createMock<FormDataService>()) },
-        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>()) },
-        { provide: EntitiesService, useValue: (entitiesService = createMock<EntitiesService>()) }
+        {
+          provide: EntitiesService,
+          useValue: (entitiesService = createMock<EntitiesService>({
+            get userLocale() {
+              return "en-US" as ValidLocale;
+            }
+          }))
+        }
       ]
     }).compile();
 
+    policyService = module.get(PolicyService);
     controller = module.get(FormDataController);
     processor = new StubProcessor(entitiesService, "projects");
     entitiesService.createEntityProcessor.mockImplementation(() => processor);
@@ -50,6 +59,7 @@ describe("FormDataController", () => {
 
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
+      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       processor.findOne.mockResolvedValue(project);
       await expect(controller.get({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         "Form for entity not found"
@@ -61,14 +71,15 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload(); // this seems to be needed to get the matching object to what is returned from findOne()
-      entitiesService.getUserLocale.mockResolvedValue("es-MX");
+      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
-      expect(entitiesService.getUserLocale).toHaveBeenCalled();
+      expect(localeSpy).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
-      expect(policyService.authorize).toHaveBeenCalledWith("read", project);
+      expect(authSpy).toHaveBeenCalledWith("read", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });
@@ -93,6 +104,7 @@ describe("FormDataController", () => {
 
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
+      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       processor.findOne.mockResolvedValue(project);
       await expect(
         controller.update({ entity: "projects", uuid: project.uuid }, createPayload(`projects|${project.uuid}`, {}))
@@ -104,9 +116,10 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload();
-      entitiesService.getUserLocale.mockResolvedValue("es-MX");
+      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       const answers = { jedi: "Obi-Wan Kenobi", sith: "Darth Vader" };
       const result = serialize(
@@ -116,9 +129,9 @@ describe("FormDataController", () => {
         )
       );
       expect(service.storeEntityAnswers).toHaveBeenCalledWith(project, form, answers);
-      expect(entitiesService.getUserLocale).toHaveBeenCalled();
+      expect(localeSpy).toHaveBeenCalled();
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
-      expect(policyService.authorize).toHaveBeenCalledWith("update", project);
+      expect(authSpy).toHaveBeenCalledWith("update", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });

@@ -66,12 +66,7 @@ export class FormDataController {
   }
 
   private async addFormData(document: DocumentBuilder, entity: EntityModel, entityType: EntityType, form: Form) {
-    const dto = await this.formDataService.getDtoForEntity(
-      entityType,
-      entity,
-      form,
-      await this.entitiesService.getUserLocale()
-    );
+    const dto = await this.formDataService.getDtoForEntity(entityType, entity, form, this.entitiesService.userLocale);
     return document.addData(`${entityType}|${entity.uuid}`, dto).document;
   }
 }

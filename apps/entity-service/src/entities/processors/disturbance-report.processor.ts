@@ -7,7 +7,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { CreationAttributes, Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
@@ -19,10 +19,10 @@ import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { Dictionary, flatten, kebabCase } from "lodash";
-import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
 
 const REPORT_ENTRIES = [
   {
@@ -226,7 +226,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -320,9 +320,13 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     };
   }
 
-  async exportAll({ response }: ExportAllOptions = {}) {
-    const fileName = `Disturbance Reports Export - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}.csv`;
-    await this.entitiesService.writeCsv(fileName, response, CSV_COLUMNS, async addRow => {
+  async export() {
+    throw new InternalServerErrorException("Individual export of disturbance report is not supported");
+  }
+
+  async exportAll({ target }: ExportAllOptions = {}) {
+    const fileName = timestampFileName("Disturbance Reports Export");
+    await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {
           association: "project",

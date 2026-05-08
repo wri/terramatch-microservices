@@ -81,7 +81,7 @@ describe("ImpactStoriesController", () => {
           provide: PolicyService,
           useValue: {
             authorize: jest.fn(),
-            getPermissions: jest.fn()
+            permissions: []
           }
         }
       ]

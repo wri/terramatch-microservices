@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock } from "@golevelup/ts-jest";
 import { EntitiesService, ProcessableEntity } from "../entities.service";
 import {
   NurseryReportFactory,
@@ -15,13 +15,22 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { EntityModel } from "@terramatch-microservices/database/constants/entities";
+import { EntityProcessor } from "./entity-processor";
+import { EntityDto } from "../dto/entity.dto";
+import { EntityUpdateData } from "../dto/entity-update.dto";
+import { EntityCreateData } from "../dto/entity-create.dto";
+import { FindOptions, WhereOptions } from "sequelize";
+import { ProjectUser } from "@terramatch-microservices/database/entities";
 
 export const mockEntityService = async () => {
   const userId = (await UserFactory.create()).id;
+  mockRequestContext({ userId });
   return Test.createTestingModule({
     providers: [
+      PolicyService,
       { provide: MediaService, useValue: createMock<MediaService>() },
-      { provide: PolicyService, useValue: createMock<PolicyService>({ userId }) },
       { provide: LocalizationService, useValue: createMock<LocalizationService>() },
       { provide: ConfigService, useValue: createMock<ConfigService>() },
       { provide: CsvExportService, useValue: createMock<CsvExportService>() },
@@ -30,9 +39,41 @@ export const mockEntityService = async () => {
   }).compile();
 };
 
+export const expectExportAllFiltersOwn = async <T extends EntityModel>(
+  service: EntitiesService,
+  processor: EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData, EntityCreateData>,
+  whereMatch: (projectIdResult: unknown) => WhereOptions
+) => {
+  const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
+  const projectIdResult = { val: {} };
+  const subquerySpy = jest.spyOn(ProjectUser, "userProjectsSubquery").mockReturnValue(projectIdResult);
+  mockRequestContext({ userId: 123, permissions: ["manage-own"] });
+  await processor.exportAll({ frameworkKey: "ppc" });
+  expect(exportSpy).toHaveBeenCalled();
+  expect(subquerySpy).toHaveBeenCalled();
+  const { findOptions } = exportSpy.mock.calls[0][2] as unknown as { findOptions: FindOptions };
+  expect(findOptions.where).toMatchObject(whereMatch(projectIdResult));
+};
+
+export const expectExportAllFiltersManaged = async <T extends EntityModel>(
+  service: EntitiesService,
+  processor: EntityProcessor<T, EntityDto, EntityDto, EntityUpdateData, EntityCreateData>,
+  whereMatch: (projectIdResult: unknown) => WhereOptions
+) => {
+  const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
+  const projectIdResult = { val: {} };
+  const subquerySpy = jest.spyOn(ProjectUser, "projectsManageSubquery").mockReturnValue(projectIdResult);
+  mockRequestContext({ userId: 123, permissions: ["projects-manage"] });
+  await processor.exportAll({ frameworkKey: "ppc" });
+  expect(exportSpy).toHaveBeenCalled();
+  expect(subquerySpy).toHaveBeenCalled();
+  const { findOptions } = exportSpy.mock.calls[0][2] as unknown as { findOptions: FindOptions };
+  expect(findOptions.where).toMatchObject(whereMatch(projectIdResult));
+};
+
 describe("EntityProcessor", () => {
   let service: EntitiesService;
-  let policyService: DeepMocked<PolicyService>;
+  let policyService: PolicyService;
 
   const createProcessor = (entity: ProcessableEntity = "projects") => service.createEntityProcessor(entity);
 
@@ -76,23 +117,23 @@ describe("EntityProcessor", () => {
     it("authorizes for approval when appropriate", async () => {
       const project = await ProjectFactory.create({ status: "started", feedback: null, feedbackFields: null });
 
-      policyService.authorize.mockResolvedValueOnce(undefined);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValueOnce();
       const processor = createProcessor();
       await processor.update(project, {
         status: "awaiting-approval",
         feedback: "foo",
         feedbackFields: ["bar"]
       });
-      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(authSpy).not.toHaveBeenCalled();
       // These two should be ignored for non approval statuses
       expect(project.feedback).toBeNull();
       expect(project.feedbackFields).toBeNull();
-      policyService.authorize.mockReset();
+      authSpy.mockReset();
 
-      policyService.authorize.mockRejectedValueOnce(new UnauthorizedException());
+      authSpy.mockRejectedValueOnce(new UnauthorizedException());
       await expect(processor.update(project, { status: "approved" })).rejects.toThrow(UnauthorizedException);
 
-      policyService.authorize.mockResolvedValueOnce(undefined);
+      authSpy.mockResolvedValueOnce();
       await processor.update(project, { status: "approved", feedback: "foo", feedbackFields: ["bar"] });
       expect(project.status).toEqual("approved");
       expect(project.feedback).toEqual("foo");

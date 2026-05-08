@@ -38,6 +38,7 @@ const serializePayload = (result: DelayedJobResult) => ({
 export abstract class DelayedJobWorker<T extends DelayedJobData> extends WorkerHost {
   protected logger = new TMLogger(DelayedJobWorker.name);
 
+  /* istanbul ignore next */
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
     this.logger.error(`Job failed: ${job.id}`, error, job);

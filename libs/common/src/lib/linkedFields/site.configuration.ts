@@ -159,6 +159,13 @@ export const SiteConfiguration: LinkedFieldConfiguration<Site> = {
       inputType: "treeSpecies",
       collection: "non-tree"
     },
+    "site-rel-invasive-tree-species": {
+      label: "Invasive Species",
+      exportHeading: "invasiveSpecies",
+      resource: "treeSpecies",
+      inputType: "treeSpecies",
+      collection: "invasive"
+    },
     "site-rel-disturbances": {
       label: "Disturbances",
       exportHeading: "disturbances",

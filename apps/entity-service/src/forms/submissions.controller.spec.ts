@@ -13,7 +13,7 @@ import {
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
 import { FormSubmission } from "@terramatch-microservices/database/entities";
 import { UpdateSubmissionAttributes } from "../entities/dto/submission.dto";
 
@@ -76,7 +76,7 @@ describe("SubmissionsController", () => {
 
     it("throws if the user doesn't have an org", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
       const programme = await FundingProgrammeFactory.create();
       const stage = await StageFactory.create({ fundingProgrammeId: programme.uuid });
       await FormFactory.create({ stageId: stage.uuid });
@@ -171,7 +171,7 @@ describe("SubmissionsController", () => {
     it("creates the submission, application and project pitch for the first stage", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const programme = await FundingProgrammeFactory.create();
       const stage = await StageFactory.create({ fundingProgrammeId: programme.uuid });
@@ -210,7 +210,7 @@ describe("SubmissionsController", () => {
     it("creates the submission, application and project pitch for the next stage", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const programme = await FundingProgrammeFactory.create();
       const stages = [
@@ -289,7 +289,7 @@ describe("SubmissionsController", () => {
 
     it("calls the service to update the answers", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const form = await FormFactory.create();
       const submission = await FormSubmissionFactory.create({ formId: form.uuid });
@@ -311,7 +311,7 @@ describe("SubmissionsController", () => {
 
     it("updates the submissions status and feedback", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const form = await FormFactory.create();
       const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "awaiting-approval" });

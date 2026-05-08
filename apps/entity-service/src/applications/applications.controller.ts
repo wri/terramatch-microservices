@@ -1,6 +1,6 @@
-import { Controller, Delete, Get, NotFoundException, Param, Query, UnauthorizedException } from "@nestjs/common";
+import { Controller, Delete, Get, NotFoundException, Param, Query, Res, UnauthorizedException } from "@nestjs/common";
 import { ApplicationGetQueryDto, ApplicationIndexQueryDto } from "./dto/application-query.dto";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { ApplicationDto, ApplicationHistoryDto, ApplicationHistoryEntryDto } from "./dto/application.dto";
 import {
@@ -20,7 +20,7 @@ import {
 } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
@@ -31,13 +31,19 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { FormSubmissionStatus } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import { FormsService } from "../forms/forms.service";
+import { Response } from "express";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
 
 @Controller("applications/v3/applications")
 export class ApplicationsController {
-  constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly formDataService: FormDataService,
+    private readonly formsService: FormsService
+  ) {}
 
   @Get()
   @ApiOperation({ operationId: "applicationIndex", summary: "Get a filtered, paginated view of applications" })
@@ -51,8 +57,7 @@ export class ApplicationsController {
       { association: "fundingProgramme", attributes: ["name"] }
     ]);
 
-    const permissions = await this.policyService.getPermissions();
-    if (permissions.find(p => p.startsWith("framework-")) == null) {
+    if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // admins have access to everything, so we just filter what's available for non-admins
       const orgUuids = await User.orgUuids(authenticatedUserId());
       builder.where({ organisationUuid: { [Op.in]: orgUuids } });
@@ -158,12 +163,32 @@ export class ApplicationsController {
         await this.formDataService.addFundingProgrammeDtos(
           document,
           [fundingProgramme],
-          translated === false ? undefined : await User.findLocale(authenticatedUserId())
+          translated === false ? undefined : userLocale()
         );
       }
     }
 
     return document;
+  }
+
+  @Get(":uuid/export")
+  @ApiOperation({ operationId: "applicationExportGet", summary: "Get a single application export by UUID" })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(NotFoundException, { description: "Application not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
+  async getExport(@Param() { uuid }: SingleResourceDto, @Res({ passthrough: true }) response: Response) {
+    const application = await Application.findOne({
+      where: { uuid },
+      include: [{ association: "fundingProgramme", required: true }]
+    });
+    if (application == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", application);
+    await this.formsService.exportApplication(application, response);
   }
 
   @Delete(":uuid")

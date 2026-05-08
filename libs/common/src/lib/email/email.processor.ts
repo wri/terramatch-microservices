@@ -6,7 +6,7 @@ import { NotImplementedException } from "@nestjs/common";
 import * as Sentry from "@sentry/node";
 import { TMLogger } from "../util/tm-logger";
 import { EntityStatusUpdateEmail } from "./entity-status-update.email";
-import { TaskDigestEmail, TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
+import { TerrafundReportReminderEmail } from "./terrafund-report-reminder.email";
 import { WeeklyPolygonUpdateEmail } from "./weekly-polygon-update.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "./terrafund-site-and-nursery-reminder.email";
 import { AdminUserCreationEmail } from "./admin-user-creation.email";
@@ -26,6 +26,7 @@ import { OrganisationInviteEmail } from "./organisation-invite.email";
 import { AdminReportReminderEmail } from "./admin-report-reminder.email";
 import { AdminFinancialReportReminderEmail } from "./admin-financial-report-reminder.email";
 import { SendLoginDetailsEmail } from "./send-login-details.email";
+import { TaskDigestEmail } from "./task-digest.email";
 
 export type SpecificEntityData = {
   type: EntityType;

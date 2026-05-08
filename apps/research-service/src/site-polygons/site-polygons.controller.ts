@@ -258,8 +258,20 @@ export class SitePolygonsController {
       projectCohort,
       landscape,
       validationStatus,
-      polygonUuid
+      polygonUuid,
+      searchFields,
+      plantStartFrom,
+      plantStartTo,
+      practice,
+      targetSys,
+      distr,
+      source
     } = query;
+
+    if (plantStartFrom != null && plantStartTo != null && plantStartFrom.getTime() > plantStartTo.getTime()) {
+      throw new BadRequestException("plantStartFrom must be on or before plantStartTo");
+    }
+
     let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
     // these two can be used together, but not along with the other project / site filters.
     if (projectCohort != null || landscape != null) countSelectedParams++;
@@ -323,12 +335,19 @@ export class SitePolygonsController {
       await queryBuilder.filterPolygonUuids(polygonUuid);
     }
 
+    queryBuilder
+      .filterPlantStartRange(plantStartFrom, plantStartTo)
+      .filterPractice(practice)
+      .filterDistr(distr)
+      .filterTargetSys(targetSys)
+      .filterSource(source);
+
     // Ensure test projects are excluded only if not included explicitly
     if (!includeTestProjects && siteId == null && projectId == null) {
       await queryBuilder.excludeTestProjects();
     }
     if (query.search != null) {
-      await queryBuilder.addSearch(query.search);
+      await queryBuilder.addSearch(query.search, searchFields);
     }
 
     if (query.sort != null && query.sort.field != null) {

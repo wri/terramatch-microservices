@@ -20,6 +20,7 @@ import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/link
 import { uniq } from "lodash";
 import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { Archiver } from "archiver";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -66,9 +67,14 @@ const getIndexData = (
 const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
 
 export type ExportAllOptions = {
+  // filter by framework
   frameworkKey?: FrameworkKey;
+  // filter by project
+  projectUuid?: string;
   // If undefined, the export will go to S3 instead.
-  response?: Response;
+  target?: Response | Archiver;
+  // If undefined, the filename will be generated
+  fileNamePrefix?: string;
 };
 
 export abstract class EntityProcessor<
@@ -88,6 +94,9 @@ export abstract class EntityProcessor<
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
   abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
+
+  abstract export(uuid: string, target: Response | Archiver): Promise<void>;
+  abstract exportAll(opts: ExportAllOptions): Promise<void>;
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
@@ -192,11 +201,6 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async exportAll(opts: ExportAllOptions = {}) {
-    throw new BadRequestException("Export all not supported for this entity type");
   }
 
   protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {

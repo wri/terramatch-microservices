@@ -32,7 +32,7 @@ export function financialIndicatorsCollector(
       questions[modelType] = questionUuid;
     },
 
-    async collect(answers, models) {
+    async collect(answers, models, { forExport }) {
       if (models.organisations != null && models.financialReports != null) {
         throw new InternalServerErrorException(
           "Only one of financialReports or organisations can be set for financialIndicators."
@@ -52,7 +52,7 @@ export function financialIndicatorsCollector(
       });
 
       const medias =
-        financialIndicators.length === 0
+        financialIndicators.length === 0 || forExport
           ? []
           : await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
       const createMediaDto = (media: Media) =>
@@ -61,15 +61,20 @@ export function financialIndicatorsCollector(
           thumbUrl: mediaService.getUrl(media, "thumbnail")
         });
 
-      answers[Object.values(questions)[0]] = financialIndicators.map(financialIndicator => {
-        const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
-        return new EmbeddedFinancialIndicatorDto(financialIndicator, {
-          startMonth:
-            financialIndicator.financialReport?.finStartMonth ?? financialIndicator.organisation?.finStartMonth ?? null,
-          currency: financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
-          documentation: documentationMedia.map(createMediaDto)
-        });
-      });
+      answers[Object.values(questions)[0]] = forExport
+        ? financialIndicators.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`)
+        : financialIndicators.map(financialIndicator => {
+            const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
+            return new EmbeddedFinancialIndicatorDto(financialIndicator, {
+              startMonth:
+                financialIndicator.financialReport?.finStartMonth ??
+                financialIndicator.organisation?.finStartMonth ??
+                null,
+              currency:
+                financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
+              documentation: documentationMedia.map(createMediaDto)
+            });
+          });
     },
 
     async syncRelation(formModel, _, answer) {

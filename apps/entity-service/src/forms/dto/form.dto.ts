@@ -25,6 +25,17 @@ export class Forms {
   FORM_TYPES: string[];
 }
 
+export class FormAttachment {
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ enum: ["fundingProgramme", "framework", "entity"] })
+  type: "fundingProgramme" | "framework" | "entity";
+
+  @ApiProperty({ nullable: true, required: false, type: String })
+  adminId?: string | null;
+}
+
 @JsonApiDto({ type: "forms" })
 export class FormLightDto extends HybridSupportDto {
   constructor(form?: FormWithoutExtras, props?: HybridSupportProps<FormLightDto, FormWithoutExtras>) {
@@ -48,6 +59,14 @@ export class FormLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, type: MediaDto })
   banner: MediaDto | null;
+
+  @ApiProperty({
+    nullable: true,
+    required: false,
+    type: FormAttachment,
+    description: "The funding programme, reporting framework or entity that is using this form."
+  })
+  attachedTo: FormAttachment | null;
 }
 
 export class FormFullDto extends FormLightDto {

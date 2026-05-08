@@ -9,8 +9,7 @@ import {
   I18nTranslation,
   Media,
   Stage,
-  UpdateRequest,
-  User
+  UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { AnswersModel, laravelType } from "@terramatch-microservices/database/types/util";
 import {
@@ -33,7 +32,7 @@ import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
 import { Op } from "sequelize";
@@ -134,7 +133,7 @@ export class FormDataService {
       undefined;
     if (form == null) throw new BadRequestException("Form not found for submission");
 
-    locale ??= (await User.findLocale(authenticatedUserId())) ?? "en-US";
+    locale ??= userLocale() ?? "en-US";
 
     formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
     formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
@@ -315,7 +314,7 @@ export class FormDataService {
     if (isReport(answersModel)) {
       answersModel.completion = this.calculateProgress(answers, questions);
 
-      const permissions = await this.policyService.getPermissions();
+      const permissions = this.policyService.permissions;
       const { frameworkKey } = answersModel;
       const isAdmin =
         frameworkKey == null

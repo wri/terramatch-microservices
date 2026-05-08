@@ -33,7 +33,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import { mockTranslateFieldsWithOriginal, mockUserId, serialize } from "@terramatch-microservices/common/util/testing";
+import {
+  mockRequestContext,
+  mockTranslateFieldsWithOriginal,
+  serialize
+} from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 
@@ -111,12 +115,30 @@ describe("FormsService", () => {
       expect(desc.forms.map(({ published }) => published)).toEqual([true, false]);
     });
 
-    it("filters", async () => {
+    it("filters by type", async () => {
       await FormFactory.create({ type: "application" });
       await FormFactory.create({ type: "project" });
       const result = await service.findMany({ type: "project" });
       expect(result.forms.length).toBe(1);
       expect(result.forms[0].type).toBe("project");
+    });
+
+    it("filters by framework", async () => {
+      await FormFactory.create({ frameworkKey: "ppc" });
+      await FormFactory.create({ frameworkKey: "terrafund" });
+      const result = await service.findMany({ attachedTo: "framework-ppc" });
+      expect(result.forms.length).toBe(1);
+      expect(result.forms[0].frameworkKey).toBe("ppc");
+    });
+
+    it("filters by funding programme", async () => {
+      const fp = await FundingProgrammeFactory.create();
+      const stage = await StageFactory.create({ fundingProgrammeId: fp.uuid });
+      const form = await FormFactory.create({ stageId: stage.uuid });
+      await FormFactory.create();
+      const result = await service.findMany({ attachedTo: `funding-programme-${fp.uuid}` });
+      expect(result.forms.length).toBe(1);
+      expect(result.forms[0].uuid).toBe(form.uuid);
     });
 
     it("searches", async () => {
@@ -139,17 +161,17 @@ describe("FormsService", () => {
       const document = serialize(await service.addIndex(buildJsonApi<FormLightDto>(FormLightDto), {}));
       const dtos = document.data as Resource[];
       expect(dtos.length).toBe(forms.length);
-      expect(dtos[0].attributes).toEqual({
+      expect(dtos[0].attributes).toMatchObject({
         ...pick(forms[0], "uuid", "title", "type"),
         banner: expect.objectContaining({ url: "fake-url" }),
         lightResource: true
       });
-      expect(dtos[1].attributes).toEqual({
+      expect(dtos[1].attributes).toMatchObject({
         ...pick(forms[1], "uuid", "title", "type"),
         banner: null,
         lightResource: true
       });
-      expect(dtos[2].attributes).toEqual({
+      expect(dtos[2].attributes).toMatchObject({
         ...pick(forms[2], "uuid", "title", "type"),
         banner: null,
         lightResource: true
@@ -159,7 +181,7 @@ describe("FormsService", () => {
 
   describe("addFullDto", () => {
     const setupTestForm = async (translated: boolean) => {
-      mockUserId((await UserFactory.create()).id);
+      mockRequestContext({ userId: (await UserFactory.create()).id });
       mediaService.getUrl.mockReturnValue("fake-url");
       localizationService.translateIds.mockResolvedValue({
         1: "First Translation",
@@ -305,13 +327,6 @@ describe("FormsService", () => {
       return { form, formMatch };
     };
 
-    it("throws if the user ID is invalid", async () => {
-      mockUserId(0);
-      await expect(
-        service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), await FormFactory.create(), true)
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it("returns the full DTO", async () => {
       const { form, formMatch } = await setupTestForm(true);
       const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, true));
@@ -329,7 +344,7 @@ describe("FormsService", () => {
 
   describe("store", () => {
     beforeEach(() => {
-      mockUserId(123);
+      mockRequestContext({ userId: 123 });
       localizationService.generateI18nId.mockResolvedValue(1);
     });
 

@@ -63,6 +63,7 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsString()
   @ApiProperty({
     required: false,
+    type: String,
     description: "Optional comment recorded on polygon handoff audit entries when updating submission/baseline"
   })
   polygonHandoffComment?: string | null;

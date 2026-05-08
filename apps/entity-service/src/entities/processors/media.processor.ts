@@ -89,6 +89,9 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
   private async getProjectReportModels(projectReport: ProjectReport) {
     const models: QueryModelType[] = this.getBaseEntityModels(projectReport);
+    if (this.query.fileType === "documents") {
+      return models;
+    }
 
     const siteSubquery = Subquery.select(Site, "id").eq("projectId", projectReport.projectId);
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", projectReport.projectId);

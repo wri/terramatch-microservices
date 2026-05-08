@@ -684,7 +684,7 @@ export class ProjectProcessor extends EntityProcessor<
     const application =
       applicationUuid == null
         ? undefined
-        : (await Application.findOne({ where: { uuid: applicationUuid } })) ?? undefined;
+        : ((await Application.findOne({ where: { uuid: applicationUuid } })) ?? undefined);
     if (application == null && applicationUuid != null) {
       throw new BadRequestException(`Invalid application for project creation: ${applicationUuid}`);
     }

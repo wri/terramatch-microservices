@@ -82,7 +82,10 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  constructor(private readonly csvExportService: CsvExportService, private readonly mediaService: MediaService) {
+  constructor(
+    private readonly csvExportService: CsvExportService,
+    private readonly mediaService: MediaService
+  ) {
     super();
   }
 

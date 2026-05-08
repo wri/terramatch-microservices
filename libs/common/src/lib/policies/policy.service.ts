@@ -110,7 +110,10 @@ export class PolicyBuilder {
   private loadedPolicyClasses: PolicyClass[] = [];
   private ability: MongoAbility | undefined;
 
-  constructor(private readonly userId: number, private readonly permissions: string[]) {
+  constructor(
+    private readonly userId: number,
+    private readonly permissions: string[]
+  ) {
     this.builder = new AbilityBuilder(createMongoAbility);
   }
 

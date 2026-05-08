@@ -21,10 +21,13 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
     },
 
     async collect(answers, models, { forExport }) {
-      const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
-        const [modelType, collection] = key.split(":") as [FormModelType, string];
-        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
-      }, {} as FormTypeMap<string[]>);
+      const collectionsByModel = Object.keys(questions).reduce(
+        (byModel, key) => {
+          const [modelType, collection] = key.split(":") as [FormModelType, string];
+          return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
+        },
+        {} as FormTypeMap<string[]>
+      );
 
       const laravelTypes = mapLaravelTypes(models);
       const medias = await Media.findAll({

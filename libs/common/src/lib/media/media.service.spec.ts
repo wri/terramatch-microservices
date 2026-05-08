@@ -41,7 +41,7 @@ const createTestFile = (mimetype = "text/plain", ext = "txt", size = 123) =>
     mimetype,
     size,
     buffer: Buffer.from("test text file")
-  } as Express.Multer.File);
+  }) as Express.Multer.File;
 
 describe("MediaService", () => {
   let service: MediaService;

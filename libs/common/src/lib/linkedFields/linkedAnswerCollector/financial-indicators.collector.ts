@@ -133,7 +133,7 @@ export function financialIndicatorsCollector(
       const startMonth = Number(dtos[0].startMonth);
       const currency = dtos[0].currency;
       if (!isNaN(startMonth) || !isEmpty(currency)) {
-        model.finStartMonth = isNaN(startMonth) ? 0 : startMonth ?? model.finStartMonth ?? 0;
+        model.finStartMonth = isNaN(startMonth) ? 0 : (startMonth ?? model.finStartMonth ?? 0);
         model.currency = currency ?? model.currency;
         await model.save();
       }

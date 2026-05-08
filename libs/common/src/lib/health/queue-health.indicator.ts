@@ -15,7 +15,10 @@ type QueueData = {
 export class QueueHealthIndicator implements OnModuleInit {
   private queues: Queue[] = [];
 
-  constructor(private readonly moduleRef: ModuleRef, private readonly healthIndicatorService: HealthIndicatorService) {}
+  constructor(
+    private readonly moduleRef: ModuleRef,
+    private readonly healthIndicatorService: HealthIndicatorService
+  ) {}
 
   async isHealthy() {
     const indicator = this.healthIndicatorService.check("redis:bullmq");

@@ -76,7 +76,10 @@ const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: s
 export class IndicatorsService {
   private readonly logger = new TMLogger(IndicatorsService.name);
 
-  constructor(private readonly dataApiService: DataApiService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly dataApiService: DataApiService,
+    private readonly policyService: PolicyService
+  ) {}
 
   async process(slug: IndicatorSlug, polygonUuids: string[]) {
     const results = await Promise.all(polygonUuids.map(polygonUuid => this.processPolygon(slug, polygonUuid)));

@@ -36,7 +36,10 @@ const FILTER_PROPS = {
 export class TasksService {
   private logger = new TMLogger(TasksService.name);
 
-  constructor(private readonly entitiesService: EntitiesService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly entitiesService: EntitiesService,
+    private readonly policyService: PolicyService
+  ) {}
 
   async getTasks(query: TaskQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [

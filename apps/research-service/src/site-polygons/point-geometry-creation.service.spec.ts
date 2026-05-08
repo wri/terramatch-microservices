@@ -62,7 +62,7 @@ describe("PointGeometryCreationService", () => {
     point: { type: string; coordinates: number[] },
     estimatedArea: number | null,
     createdBy: number | null
-  ) => ({ uuid, point, estimatedArea, createdBy } as PointGeometry);
+  ) => ({ uuid, point, estimatedArea, createdBy }) as PointGeometry;
 
   describe("createPointGeometriesFromFeatures", () => {
     it("should return empty array for empty input", async () => {

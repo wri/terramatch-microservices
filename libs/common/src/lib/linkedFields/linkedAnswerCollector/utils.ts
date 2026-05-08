@@ -146,7 +146,7 @@ export const polymorphicSync = <M extends PolymorphicModel & UuidModel>(
         [typeAttribute]: laravelType(model),
         [idAttribute]: model.id,
         collection: hasCollection ? field.collection : undefined
-      } as unknown as Partial<CreationAttributes<M>>),
+      }) as unknown as Partial<CreationAttributes<M>>,
     options
   );
 };
@@ -181,10 +181,13 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
       },
 
       async collect(answers, models, { forExport }) {
-        const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
-          const [modelType, collection] = key.split(":") as [FormModelType, string];
-          return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
-        }, {} as FormTypeMap<string[]>);
+        const collectionsByModel = Object.keys(questions).reduce(
+          (byModel, key) => {
+            const [modelType, collection] = key.split(":") as [FormModelType, string];
+            return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
+          },
+          {} as FormTypeMap<string[]>
+        );
 
         const laravelTypes = mapLaravelTypes(models);
         const modelInstances = await modelClass.findAll({

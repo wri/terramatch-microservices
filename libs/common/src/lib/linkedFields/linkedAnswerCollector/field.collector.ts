@@ -141,7 +141,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           });
 
           answers[questionUuid] =
-            tracking == null ? 0 : (await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0;
+            tracking == null ? 0 : ((await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0);
         } else if (props.type === "trackingDescription") {
           // Pull the description from the first matching demographic that has a non-null description.
           // For this one we ignore the "visible" flag.

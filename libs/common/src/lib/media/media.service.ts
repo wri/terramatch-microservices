@@ -54,7 +54,10 @@ const MIME_TYPES = {
 export class MediaService {
   private logger = new TMLogger(MediaService.name);
 
-  constructor(private readonly fileService: FileService, private readonly configService: ConfigService) {}
+  constructor(
+    private readonly fileService: FileService,
+    private readonly configService: ConfigService
+  ) {}
 
   get endpoint() {
     const endpoint = this.configService.get<string>("AWS_ENDPOINT");

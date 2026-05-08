@@ -25,7 +25,6 @@ Repository for the Microservices API backend of the TerraMatch service
     $ docker compose exec mariadb mysql -u wri -pwri wri_restoration_marketplace_api < 2026-04-02-staging.sql
     ```
 - To set up MinIO (local S3 proxy) using creds from the example env (`.env.local.sample`):
-
   - This sets up correct local bucket in the correct region for the node services to access
     ```
     $ docker compose exec minio bash
@@ -258,12 +257,15 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
   - Make sure swagger docs are implemented
   - Pick a default local port that is unique from other services
   - Make sure the top of `main.ts` has these two lines:
+
   ```
   // eslint-disable-next-line @nx/enforce-module-boundaries
   import "../../../instrument-sentry";
   ```
+
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
   - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
+
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
   - Add the `build-repl` target to `project.json`, which an empty definition.

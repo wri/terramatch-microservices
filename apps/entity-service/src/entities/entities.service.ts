@@ -292,8 +292,8 @@ export class EntitiesService {
         [collection]: multiple
           ? (grouped[dbCollection] ?? []).map(media => this.mediaDto(media, { entityType, entityUuid }))
           : grouped[dbCollection] == null
-          ? null
-          : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
+            ? null
+            : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
       }),
       {}
     );

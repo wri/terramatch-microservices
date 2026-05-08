@@ -11,7 +11,10 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
     order: ["id"]
   };
 
-  constructor(private readonly MODEL: ModelCtor<T>, include?: Includeable[]) {
+  constructor(
+    private readonly MODEL: ModelCtor<T>,
+    include?: Includeable[]
+  ) {
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }

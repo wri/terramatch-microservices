@@ -19,7 +19,10 @@ export const userLocale = () => RequestContext.currentContext?.req?.userLocale a
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService, private reflector: Reflector) {}
+  constructor(
+    private jwtService: JwtService,
+    private reflector: Reflector
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const skipAuth = this.reflector.getAllAndOverride<boolean>(NO_BEARER_AUTH, [

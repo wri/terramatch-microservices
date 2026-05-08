@@ -325,7 +325,7 @@ export class UserAssociationService {
     filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
-      const status = isOwner ? "approved" : orgUser?.status ?? "";
+      const status = isOwner ? "approved" : (orgUser?.status ?? "");
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,

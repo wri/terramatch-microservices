@@ -87,7 +87,10 @@ export abstract class EntityProcessor<
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
+  constructor(
+    protected readonly entitiesService: EntitiesService,
+    protected readonly resource: ProcessableEntity
+  ) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;

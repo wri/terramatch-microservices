@@ -284,7 +284,7 @@ export class ActionsService {
                   type: "notification",
                   projectId,
                   organisationId
-                } as Action)
+                }) as Action
             ),
             { returning: true }
           )

@@ -186,8 +186,8 @@ export class TreeService {
       const entityModel = await (entity === "sites"
         ? Site.findOne(whereOptions)
         : entity === "nurseries"
-        ? Nursery.findOne(whereOptions)
-        : ProjectReport.findOne(whereOptions));
+          ? Nursery.findOne(whereOptions)
+          : ProjectReport.findOne(whereOptions));
       if (entityModel == null) throw new NotFoundException();
 
       const uniqueTrees = uniqueTreeNames(

@@ -63,7 +63,10 @@ const getEntityType = (model: Model) =>
 export class EntityStatusUpdate extends EventProcessor {
   private readonly logger = new TMLogger(EntityStatusUpdate.name);
 
-  constructor(eventService: EventService, private readonly model: StatusUpdateModel) {
+  constructor(
+    eventService: EventService,
+    private readonly model: StatusUpdateModel
+  ) {
     super(eventService);
   }
 

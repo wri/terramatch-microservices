@@ -174,8 +174,8 @@ export class CsvExportService {
       target == null
         ? this.getS3StreamWriter(fileName, columns)
         : target instanceof ServerResponse
-        ? this.getResponseStreamWriter(fileName, target as Response, columns)
-        : this.getArchiveStreamWriter(fileName, target, columns),
+          ? this.getResponseStreamWriter(fileName, target as Response, columns)
+          : this.getArchiveStreamWriter(fileName, target, columns),
       writeRows
     );
   }

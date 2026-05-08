@@ -43,7 +43,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.ENTITY_SERVICE_PORT ?? 4050;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.ENTITY_SERVICE_PORT ?? 4050);
   await app.listen(port);
 
   Logger.log(`TerraMatch Entity Service is running on: http://localhost:${port}`);

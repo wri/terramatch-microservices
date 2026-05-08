@@ -182,10 +182,13 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
     },
 
     async collect(answers, models, { forExport, frameworkKey }) {
-      const keysByModel = Object.keys(questions).reduce((byModel, key) => {
-        const { modelType, domain, type, collection } = parseKey(key);
-        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
-      }, {} as FormTypeMap<ModelKey[]>);
+      const keysByModel = Object.keys(questions).reduce(
+        (byModel, key) => {
+          const { modelType, domain, type, collection } = parseKey(key);
+          return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
+        },
+        {} as FormTypeMap<ModelKey[]>
+      );
 
       const laravelTypes = mapLaravelTypes(models);
       const trackings = await Tracking.findAll({

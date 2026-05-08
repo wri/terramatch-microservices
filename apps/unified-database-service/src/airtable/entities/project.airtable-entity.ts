@@ -9,6 +9,7 @@ import {
 import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
 import { filter, flatten, groupBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { POLYGON_DATA_SUBMISSION_MAP } from "@terramatch-microservices/database/constants/polygon-data-submission";
 
 const loadApprovedSites = async (projectIds: number[]) =>
   groupBy(
@@ -126,7 +127,12 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "landownerAgreement",
   "bioeconomyProductList",
   "bioeconomyProductDescription",
-  "polygonDataSubmission"
+  {
+    airtableColumn: "polygonDataSubmission",
+    dbColumn: "polygonDataSubmission",
+    valueMap: async ({ polygonDataSubmission }) => POLYGON_DATA_SUBMISSION_MAP[polygonDataSubmission]
+  },
+  "readyForBaseline"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

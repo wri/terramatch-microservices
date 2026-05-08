@@ -70,5 +70,6 @@
         "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
       }
     }
-  }
+  },
+  "analytics": false
 }

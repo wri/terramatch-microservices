@@ -7,7 +7,7 @@ import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked, PartialFuncReturn } from "@golevelup/ts-jest";
 import { MediaFactory, ProjectFactory, SiteFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { Media, Project, Site } from "@terramatch-microservices/database/entities";
-import { faker } from "@faker-js/faker/.";
+import { faker } from "@faker-js/faker";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
 import { FileService } from "../file/file.service";

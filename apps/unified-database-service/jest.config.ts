@@ -1,5 +1,5 @@
 /* eslint-disable */
-export default {
+module.exports = {
   displayName: "unified-database-service",
   preset: "../../jest.preset.js",
   testEnvironment: "node",

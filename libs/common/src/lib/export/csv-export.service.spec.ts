@@ -240,7 +240,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
       };
       const close = jest.fn();
       jest.spyOn(service, "getArchiveStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
-      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrowError("failed stream");
+      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrow("failed stream");
       expect(close).toHaveBeenCalled();
     });
 

@@ -1,5 +1,5 @@
 /* eslint-disable */
-export default {
+module.exports = {
   displayName: "database",
   preset: "../../jest.preset.js",
   testEnvironment: "node",
@@ -16,5 +16,5 @@ export default {
       statements: 0
     }
   },
-  setupFilesAfterEnv: ["./jest/setup-jest.ts", "./jest/sync-sequelize.ts"]
+  setupFilesAfterEnv: ["../../jest/setup-jest.ts", "../../jest/sync-sequelize.ts"]
 };

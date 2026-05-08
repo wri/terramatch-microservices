@@ -750,7 +750,7 @@ describe("FormsService", () => {
 
   describe("exportSubmissions", () => {
     it("throws if the form UUID is invalid", async () => {
-      await expect(service.exportSubmissions("invalid-uuid", {} as Response)).rejects.toThrowError(
+      await expect(service.exportSubmissions("invalid-uuid", {} as Response)).rejects.toThrow(
         "Form with UUID invalid-uuid not found"
       );
     });

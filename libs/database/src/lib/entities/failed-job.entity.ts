@@ -1,7 +1,7 @@
 import { AllowNull, AutoIncrement, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, UUIDV4, UUID, STRING, TEXT } from "sequelize";
 
-@Table({ tableName: "failed_jobs", underscored: true })
+@Table({ tableName: "failed_jobs", underscored: true, timestamps: false })
 export class FailedJob extends Model<FailedJob> {
   @PrimaryKey
   @AutoIncrement

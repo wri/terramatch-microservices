@@ -4,7 +4,17 @@ import { Audit } from "@terramatch-microservices/database/entities/audit.entity"
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { User } from "@terramatch-microservices/database/entities/user.entity";
 import { SitePolygon } from "@terramatch-microservices/database/entities/site-polygon.entity";
-import { EntityType, ENTITY_MODELS } from "@terramatch-microservices/database/constants/entities";
+import { EntityType, ENTITY_MODELS, isReport } from "@terramatch-microservices/database/constants/entities";
+import {
+  POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+  READY_FOR_BASELINE_AUDIT_TYPE
+} from "@terramatch-microservices/database/constants/audit-status";
+import {
+  ENTITY_STATUSES,
+  EntityStatus,
+  REPORT_STATUSES,
+  ReportStatus
+} from "@terramatch-microservices/database/constants/status";
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
 import { Op } from "sequelize";
@@ -44,12 +54,15 @@ export class AuditStatusService {
     return entity;
   }
 
-  private async queryAuditData(entities: LaravelModel[]): Promise<RawAuditData> {
+  private async queryAuditData(entities: LaravelModel[], typeFilter?: string[]): Promise<RawAuditData> {
     if (entities.length === 0) {
       return { modernAuditStatuses: [], legacyAudits: [] };
     }
 
+    const typeWhere = typeFilter != null && typeFilter.length > 0 ? { type: { [Op.in]: typeFilter } } : undefined;
+
     const modernAuditStatuses = await AuditStatus.for(entities).findAll({
+      ...(typeWhere != null ? { where: typeWhere } : {}),
       order: [
         ["updatedAt", "DESC"],
         ["createdAt", "DESC"]
@@ -57,15 +70,18 @@ export class AuditStatusService {
     });
 
     const legacyCutoffDate = new Date("2024-09-01");
-    const legacyAudits = await Audit.for(entities).findAll({
-      where: {
-        [Op.or]: [{ createdAt: { [Op.lt]: legacyCutoffDate } }, { updatedAt: { [Op.lt]: legacyCutoffDate } }]
-      },
-      order: [
-        ["updatedAt", "DESC"],
-        ["createdAt", "DESC"]
-      ]
-    });
+    const legacyAudits =
+      typeFilter != null && typeFilter.length > 0
+        ? []
+        : await Audit.for(entities).findAll({
+            where: {
+              [Op.or]: [{ createdAt: { [Op.lt]: legacyCutoffDate } }, { updatedAt: { [Op.lt]: legacyCutoffDate } }]
+            },
+            order: [
+              ["updatedAt", "DESC"],
+              ["createdAt", "DESC"]
+            ]
+          });
 
     return { modernAuditStatuses, legacyAudits };
   }
@@ -134,12 +150,42 @@ export class AuditStatusService {
   async getAuditStatuses(
     entity: LaravelModel,
     entityType: EntityType | "sitePolygons" | "submissions",
-    entityUuid: string
+    entityUuid: string,
+    typeFilter?: string[]
   ): Promise<AuditStatusDto[]> {
-    const data = await this.queryAuditData([entity]);
+    const data = await this.queryAuditData([entity], typeFilter);
     const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
     const dtos = await this.transformToDtos(data, attachmentsMap);
-    return uniqBy(dtos, dto => dto.comment ?? null);
+    if (typeFilter != null && typeFilter.length > 0) {
+      return uniqBy(dtos, dto => dto.uuid);
+    }
+    return uniqBy(dtos, dto => dto.comment ?? "__NULL_COMMENT_KEY__");
+  }
+
+  private shouldSyncModelStatusFromAudit(
+    entity: LaravelModel,
+    attributes: {
+      type?: string | null;
+      status?: string | null;
+    }
+  ): boolean {
+    if (attributes.type === "change-request" || attributes.status == null) {
+      return false;
+    }
+    const modelClass = entity.constructor as ModelCtor<LaravelModel>;
+    if (!("status" in modelClass.getAttributes())) {
+      return false;
+    }
+    if (entity instanceof SitePolygon) {
+      return attributes.type === "status";
+    }
+    if (attributes.type === POLYGON_DATA_SUBMISSION_AUDIT_TYPE || attributes.type === READY_FOR_BASELINE_AUDIT_TYPE) {
+      return false;
+    }
+    if (isReport(entity)) {
+      return REPORT_STATUSES.includes(attributes.status as ReportStatus);
+    }
+    return ENTITY_STATUSES.includes(attributes.status as EntityStatus);
   }
 
   async createAuditStatus(
@@ -194,12 +240,9 @@ export class AuditStatusService {
       lastName: user.lastName
     } as InferCreationAttributes<AuditStatus>);
 
-    if (attributes.type !== "change-request" && attributes.status != null) {
+    if (this.shouldSyncModelStatusFromAudit(entity, attributes)) {
       const modelClass = entity.constructor as ModelCtor<LaravelModel>;
-      const modelAttributes = modelClass.getAttributes();
-      if ("status" in modelAttributes) {
-        await modelClass.update({ status: attributes.status }, { where: { id: entity.id } });
-      }
+      await modelClass.update({ status: attributes.status }, { where: { id: entity.id } });
     }
 
     return auditStatus;

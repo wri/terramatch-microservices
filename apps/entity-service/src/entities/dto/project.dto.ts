@@ -8,6 +8,7 @@ import {
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
+import { POLYGON_DATA_SUBMISSION_VALUES } from "@terramatch-microservices/database/constants/polygon-data-submission";
 import { ApiProperty } from "@nestjs/swagger";
 import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
@@ -96,6 +97,19 @@ export class ProjectLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Number })
   treesPlantedCount: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    enum: POLYGON_DATA_SUBMISSION_VALUES,
+    description: "Polygon data submission tracking"
+  })
+  polygonDataSubmission: string | null;
+
+  @ApiProperty({
+    nullable: false,
+    description: "Whether the project is ready for baseline analysis"
+  })
+  readyForBaseline: boolean;
 }
 
 export type ProjectMedia = Pick<ProjectFullDto, keyof typeof Project.MEDIA>;

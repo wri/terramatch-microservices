@@ -1,10 +1,21 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Post, UnauthorizedException } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
 import { AuditStatusParamsDto, AuditStatusDeleteParamsDto } from "./dto/audit-status-params.dto";
+import { AuditStatusIndexQueryDto } from "./dto/audit-status-index-query.dto";
 import { AuditStatusDto, CreateAuditStatusBody } from "./dto/audit-status.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
@@ -30,10 +41,10 @@ export class AuditStatusController {
     description: "Authentication failed, or resource unavailable to current user."
   })
   @ExceptionResponse(NotFoundException, { description: "Entity not found." })
-  async getAuditStatuses(@Param() { entity, uuid }: AuditStatusParamsDto) {
+  async getAuditStatuses(@Param() { entity, uuid }: AuditStatusParamsDto, @Query() query: AuditStatusIndexQueryDto) {
     const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
     await this.policyService.authorize("read", baseEntity);
-    const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid);
+    const auditStatuses = await this.auditStatusService.getAuditStatuses(baseEntity, entity, uuid, query.types);
     const document = buildJsonApi(AuditStatusDto, { forceDataArray: true });
     const indexIds: string[] = [];
     for (const auditStatus of auditStatuses) {

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
+  AuditStatus,
   Project,
   ProjectReport,
   ProjectUser,
@@ -154,6 +155,20 @@ describe("ProjectProcessor", () => {
       await expectProjects([mx], { country: "MX" });
       await expectProjects([us, ca], { status: "approved" });
       await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
+    });
+
+    it("filters by polygonDataSubmission and readyForBaseline", async () => {
+      const ready = await ProjectFactory.create({
+        polygonDataSubmission: "all-polygons-received",
+        readyForBaseline: true
+      });
+      await ProjectFactory.create({
+        polygonDataSubmission: "no-polygons-submitted",
+        readyForBaseline: false
+      });
+
+      await expectProjects([ready], { polygonDataSubmission: "all-polygons-received" });
+      await expectProjects([ready], { readyForBaseline: true });
     });
 
     it("filters by landscape, cohort and organisationType", async () => {
@@ -329,6 +344,31 @@ describe("ProjectProcessor", () => {
       setMockedPermissions(`framework-${project.frameworkKey}`);
       await processor.update(project, { isTest: true });
       expect(project.isTest).toBe(true);
+    });
+
+    it("records polygon handoff audits when submission or baseline change", async () => {
+      const project = await ProjectFactory.create({
+        polygonDataSubmission: "no-polygons-submitted",
+        readyForBaseline: false
+      });
+      await AuditStatus.destroy({
+        where: { auditableId: project.id, auditableType: Project.LARAVEL_TYPE },
+        force: true
+      });
+
+      await processor.update(project, {
+        polygonDataSubmission: "all-polygons-received",
+        readyForBaseline: true,
+        polygonHandoffComment: "verified"
+      });
+      await project.reload();
+      expect(project.polygonDataSubmission).toBe("all-polygons-received");
+      expect(project.readyForBaseline).toBe(true);
+
+      const audits = await AuditStatus.for(project).findAll({ order: [["id", "ASC"]] });
+      const handoff = audits.filter(a => a.type === "polygon-data-submission" || a.type === "ready-for-baseline");
+      expect(handoff.length).toBe(2);
+      expect(handoff.map(a => a.comment)).toEqual(["verified", "verified"]);
     });
 
     it("should call super.update", async () => {

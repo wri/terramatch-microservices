@@ -241,7 +241,17 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
         } else {
           // make sure it hasn't been used for a typical demographics entry, as in that case we
           // don't want to handle trying to balance with this single integer value.
-          const entries = await TrackingEntry.tracking(tracking.id).findAll();
+          let entries = await TrackingEntry.tracking(tracking.id).findAll();
+          const hasComplicatedEntries =
+            entries.length !== virtual.entryTypes.length ||
+            entries.find(({ subtype }) => subtype !== "unknown") != null;
+          if (hasComplicatedEntries && virtual.domain === "demographics" && question.inputType === "number") {
+            await TrackingEntry.destroy({ where: { id: entries.map(({ id }) => id) } });
+            await TrackingEntry.bulkCreate(
+              virtual.entryTypes.map(type => ({ trackingId: tracking.id, type, subtype: "unknown", amount: value }))
+            );
+            entries = await TrackingEntry.tracking(tracking.id).findAll();
+          }
           if (
             entries.length !== virtual.entryTypes.length ||
             entries.find(({ subtype }) => subtype !== "unknown") != null

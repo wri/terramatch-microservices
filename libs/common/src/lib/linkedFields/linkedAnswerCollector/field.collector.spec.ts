@@ -249,6 +249,27 @@ describe("FieldCollector", () => {
       );
     });
 
+    it("normalizes complicated demographics to aggregate shape for demographics number fields", async () => {
+      const demo = await TrackingFactory.projectPitch(pitch).create({
+        type: "volunteers",
+        collection: "volunteer"
+      });
+      await TrackingEntryFactory.gender(demo, "male").create({ amount: 10 });
+      await TrackingEntryFactory.gender(demo, "female").create({ amount: 10 });
+      await TrackingEntryFactory.age(demo, "youth").create({ amount: 5 });
+
+      await expect(
+        collector.syncField(pitch, question, getField("pro-pit-volunteers-count"), {
+          [question.uuid]: 15
+        })
+      ).resolves.toBeUndefined();
+
+      const entries = await TrackingEntry.tracking(demo.id).findAll();
+      expect(entries.length).toBe(2);
+      expect(entries).toContainEqual(expect.objectContaining({ type: "gender", subtype: "unknown", amount: 15 }));
+      expect(entries).toContainEqual(expect.objectContaining({ type: "age", subtype: "unknown", amount: 15 }));
+    });
+
     it("unhides a hidden demographic", async () => {
       const demo = await TrackingFactory.projectPitch(pitch).create({
         type: "volunteers",

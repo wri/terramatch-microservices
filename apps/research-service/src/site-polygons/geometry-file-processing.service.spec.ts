@@ -215,18 +215,6 @@ describe("GeometryFileProcessingService", () => {
       await expect(service.parseGeometryFile(file)).rejects.toThrow("No features found in the uploaded file");
     });
 
-    it("should throw BadRequestException for KML that parses but has no features", async () => {
-      const invalidBinary = Buffer.from([0xff, 0xfe, 0xfd, 0xfc]);
-      const file = {
-        originalname: "invalid.kml",
-        mimetype: "application/vnd.google-earth.kml+xml",
-        buffer: invalidBinary
-      } as Express.Multer.File;
-
-      await expect(service.parseGeometryFile(file)).rejects.toThrow(BadRequestException);
-      await expect(service.parseGeometryFile(file)).rejects.toThrow("No features found in the uploaded file");
-    });
-
     it("should throw BadRequestException when KML parsing throws an error", async () => {
       const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">

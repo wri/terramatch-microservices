@@ -571,7 +571,7 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         collection: "all",
         entryTypes: ["gender", "age"]
       },
-      label: "Aggregate beneficiaries",
+      label: "Aggregate beneficiaries (collection: all)",
       exportHeading: "allBeneficiariesAggregate",
       inputType: "number"
     },
@@ -583,7 +583,31 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
         collection: "indirect",
         entryTypes: ["gender", "age"]
       },
-      label: "Aggregate indirect beneficiaries",
+      label: "Aggregate indirect beneficiaries (collection: indirect)",
+      exportHeading: "indirectBeneficiariesAggregate",
+      inputType: "number"
+    },
+    "pro-pit-aggregate-beneficiaries-count": {
+      virtual: {
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "all-beneficiaries",
+        collection: "aggregate",
+        entryTypes: ["gender", "age"]
+      },
+      label: "Aggregate beneficiaries (collection: aggregate)",
+      exportHeading: "allBeneficiariesAggregate",
+      inputType: "number"
+    },
+    "pro-pit-aggregate-indirect-beneficiaries-count": {
+      virtual: {
+        type: "trackingAggregate",
+        domain: "demographics",
+        trackingType: "indirect-beneficiaries",
+        collection: "aggregate",
+        entryTypes: ["gender", "age"]
+      },
+      label: "Aggregate indirect beneficiaries (collection: aggregate)",
       exportHeading: "indirectBeneficiariesAggregate",
       inputType: "number"
     },

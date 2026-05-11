@@ -80,13 +80,12 @@ export class AuditStatusDto {
 
   static fromAudits(audit: Audit, firstName: string | null = null, lastName: string | null = null): AuditStatusDto {
     let status: string | null = null;
-    let feedback: string | null = null;
     let comment: string | null = null;
 
     if (audit.newValues != null) {
       const newValues = audit.newValues as Dictionary<unknown>;
       status = (newValues.status as string) ?? null;
-      feedback = (newValues.feedback as string) ?? null;
+      const feedback = (newValues.feedback as string) ?? null;
 
       if (status != null && feedback != null) {
         comment = `${status}: ${feedback}`.replace(/-/g, " ");

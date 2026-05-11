@@ -11,9 +11,10 @@ import {
   PolygonGeometry,
   Project,
   Site,
-  SitePolygon
+  SitePolygon,
+  CriteriaSite
 } from "@terramatch-microservices/database/entities";
-import { IndicatorSlug, PolygonStatus } from "@terramatch-microservices/database/constants";
+import { IndicatorSlug, PolygonStatus, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -224,6 +225,24 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     this.where({
       [Op.and]: [{ source: { [Op.ne]: null } }, { source: { [Op.in]: values } }]
     });
+    return this;
+  }
+
+  filterHasOverlap(hasOverlap?: boolean) {
+    if (hasOverlap !== true) return this;
+    const sequelize = SitePolygon.sequelize;
+    if (sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const criteriaTable = CriteriaSite.tableName;
+    this.where(
+      literal(
+        `EXISTS (SELECT 1 FROM ${criteriaTable} WHERE ${criteriaTable}.polygon_id = SitePolygon.poly_id AND ` +
+          `${criteriaTable}.criteria_id = ${sequelize.escape(VALIDATION_CRITERIA_IDS.OVERLAPPING)} AND ` +
+          `${criteriaTable}.valid = 0)`
+      )
+    );
     return this;
   }
 

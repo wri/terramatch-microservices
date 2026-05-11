@@ -1,7 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { SitePolygonFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/entities";
+import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 
 describe("SitePolygonQueryBuilder", () => {
   let builder: SitePolygonQueryBuilder;
@@ -15,6 +16,7 @@ describe("SitePolygonQueryBuilder", () => {
   });
 
   afterEach(async () => {
+    await CriteriaSite.truncate();
     await SitePolygon.truncate();
   });
   describe("filterProjectShortNames", () => {
@@ -255,6 +257,60 @@ describe("SitePolygonQueryBuilder", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(match.id);
+    });
+  });
+
+  describe("filterHasOverlap", () => {
+    it("should return only polygons with failed overlap validation when enabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const failedOverlap = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const passedOverlap = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const failedOverlapPolygonUuid = failedOverlap.polygonUuid;
+      const passedOverlapPolygonUuid = passedOverlap.polygonUuid;
+      if (failedOverlapPolygonUuid == null || passedOverlapPolygonUuid == null) {
+        throw new Error("Expected polygonUuid to be defined for overlap test fixtures");
+      }
+
+      await CriteriaSite.create({
+        polygonId: failedOverlapPolygonUuid,
+        criteriaId: VALIDATION_CRITERIA_IDS.OVERLAPPING,
+        valid: false
+      } as CriteriaSite);
+      await CriteriaSite.create({
+        polygonId: passedOverlapPolygonUuid,
+        criteriaId: VALIDATION_CRITERIA_IDS.OVERLAPPING,
+        valid: true
+      } as CriteriaSite);
+
+      builder.filterHasOverlap(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(failedOverlap.id);
+    });
+
+    it("should not filter polygons when disabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const failedOverlap = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const noOverlapValidation = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const failedOverlapPolygonUuid = failedOverlap.polygonUuid;
+      if (failedOverlapPolygonUuid == null) {
+        throw new Error("Expected polygonUuid to be defined for overlap test fixture");
+      }
+
+      await CriteriaSite.create({
+        polygonId: failedOverlapPolygonUuid,
+        criteriaId: VALIDATION_CRITERIA_IDS.OVERLAPPING,
+        valid: false
+      } as CriteriaSite);
+
+      builder.filterHasOverlap(false);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([failedOverlap.id, noOverlapValidation.id].sort());
     });
   });
 

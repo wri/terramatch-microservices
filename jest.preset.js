@@ -19,5 +19,5 @@ module.exports = {
 
   setupFilesAfterEnv: [`${__dirname}/jest/setup-jest.ts`],
 
-  transformIgnorePatterns: ["node_modules/(?!(uuid)/)"]
+  transformIgnorePatterns: ["node_modules/(?!(uuid|@faker-js\/faker)/)"]
 };

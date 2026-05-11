@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* istanbul ignore file */
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException, Type } from "@nestjs/common";

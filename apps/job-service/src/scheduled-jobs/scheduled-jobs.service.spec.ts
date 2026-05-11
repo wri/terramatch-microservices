@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { faker } from "@faker-js/faker";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Queue } from "bullmq";

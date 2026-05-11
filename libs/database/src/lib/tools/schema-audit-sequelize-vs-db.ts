@@ -380,9 +380,7 @@ async function main(): Promise<void> {
 
   await sequelize.close();
 
-  // eslint-disable-next-line no-console
   console.log(`Wrote ${resolve(outDir, "tm3169-sequelize-vs-db-report.json")}`);
-  // eslint-disable-next-line no-console
   console.log(`Wrote ${resolve(outDir, "tm3169-sequelize-vs-db-report.md")}`);
 }
 

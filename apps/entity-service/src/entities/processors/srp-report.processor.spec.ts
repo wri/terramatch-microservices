@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { SrpReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";

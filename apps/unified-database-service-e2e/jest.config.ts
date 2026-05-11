@@ -1,4 +1,3 @@
-/* eslint-disable */
 module.exports = {
   displayName: "unified-database-service-e2e",
   preset: "../../jest.preset.js",

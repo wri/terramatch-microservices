@@ -211,7 +211,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     for (const siteUuid of siteUuids) {
       const sitesPolygons = polygonsBySite[siteUuid] ?? [];
-      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => Number(polygon.calcArea) ?? 0);
+      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => polygon.calcArea ?? 0);
     }
 
     return hectaresMap;

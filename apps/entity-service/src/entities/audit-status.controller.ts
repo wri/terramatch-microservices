@@ -11,7 +11,12 @@ import {
 } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
 import { AuditStatusParamsDto, AuditStatusDeleteParamsDto } from "./dto/audit-status-params.dto";
@@ -54,7 +59,7 @@ export class AuditStatusController {
 
     document.addIndex({
       resource: getDtoType(AuditStatusDto),
-      requestPath: `/entities/v3/auditStatuses/${entity}/${uuid}`,
+      requestPath: `/entities/v3/auditStatuses/${entity}/${uuid}${getStableRequestQuery(query)}`,
       ids: indexIds
     });
 

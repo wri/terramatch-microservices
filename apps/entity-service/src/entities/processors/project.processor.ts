@@ -250,6 +250,14 @@ export class ProjectProcessor extends EntityProcessor<
       });
     }
 
+    if (query.polygonDataSubmission != null) {
+      builder.where({ polygonDataSubmission: query.polygonDataSubmission });
+    }
+
+    if (query.readyForBaseline != null) {
+      builder.where({ readyForBaseline: query.readyForBaseline });
+    }
+
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 

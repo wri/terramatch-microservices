@@ -74,7 +74,7 @@ const processModel = async (model: Project | ProjectPitch) => {
   const trackings = await Tracking.for(model)
     .domain("demographics")
     .type(["all-beneficiaries", "indirect-beneficiaries"])
-    .collection(["all", "aggregate"])
+    .collection(["all", "indirect", "aggregate"])
     .findAll();
 
   const allBeneficiaries = groupBy(
@@ -90,8 +90,8 @@ const processModel = async (model: Project | ProjectPitch) => {
     trackings.filter(({ type }) => type === "indirect-beneficiaries"),
     "collection"
   );
-  if ((indirectBeneficiaries.all ?? []).length > 0 && (indirectBeneficiaries.aggregate ?? []).length === 0) {
-    await processTracking(indirectBeneficiaries.all[0]);
+  if ((indirectBeneficiaries.indirect ?? []).length > 0 && (indirectBeneficiaries.aggregate ?? []).length === 0) {
+    await processTracking(indirectBeneficiaries.indirect[0]);
   }
 };
 

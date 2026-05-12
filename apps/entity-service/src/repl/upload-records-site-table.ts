@@ -18,10 +18,9 @@ export const uploadRecordsForSites = withoutSqlLogs(async (csvPath: string) => {
     await parseCsv(csvPath, async row => {
       rowCount++;
       const site = await Site.findOne({ where: { uuid: row.siteUuid } });
-      if (site) {
+      if (site != null) {
         await site.update({
           startDate: new Date(row.startDate),
-
           restorationStrategy: JSON.parse(row.restorationStrategy),
           landUseTypes: JSON.parse(row.landUseTypes)
         });

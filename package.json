@@ -137,5 +137,11 @@
     "typescript": "6.0.3",
     "typescript-eslint": "^8.59.3",
     "webpack-cli": "^7.0.2"
+  },
+  "overrides": {
+    "yaml": "^2.8.3",
+    "follow-redirects": "^1.16.0",
+    "axios": "^1.16.0",
+    "lodash": "^4.18.1"
   }
 }

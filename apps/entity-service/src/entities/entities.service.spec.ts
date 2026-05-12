@@ -121,9 +121,9 @@ describe("EntitiesService", () => {
       const result = service.mapMediaCollection(media, Project.MEDIA, "projects", project.uuid);
       expect(Object.keys(result)).toMatchObject(Object.keys(Project.MEDIA));
       // multi media
-      expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);
+      expectMediaMatchesDto((result["otherAdditionalDocuments"] as MediaDto[])[0], media[0]);
       // non multi media
-      expectMediaMatchesDto(result["detailedProjectBudget"], media[1]);
+      expectMediaMatchesDto(result["detailedProjectBudget"] as MediaDto, media[1]);
     });
   });
 

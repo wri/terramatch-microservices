@@ -295,7 +295,7 @@ export class EntitiesService {
             ? null
             : this.mediaDto(grouped[dbCollection][0], { entityType, entityUuid })
       }),
-      {}
+      {} as Dictionary<MediaDto | MediaDto[] | null>
     );
   }
 

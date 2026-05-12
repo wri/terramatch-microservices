@@ -49,9 +49,7 @@ describe("DisturbanceService", () => {
       const disturbances = [new Disturbance({ uuid: "uuid10", type: "Filtered" } as Disturbance)];
       jest.spyOn(Disturbance, "findAll").mockImplementation(() => Promise.resolve(disturbances));
 
-      const params = getDefaultPagination();
-      params["unexpectedFilter"] = ["value1", "value2"];
-
+      const params = { ...getDefaultPagination(), unexpectedFilter: ["value1", "value2"] };
       await expect(service.getDisturbances(params)).rejects.toThrow("Invalid filter key: unexpectedFilter");
     });
 

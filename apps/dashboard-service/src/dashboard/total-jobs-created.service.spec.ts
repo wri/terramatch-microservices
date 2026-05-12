@@ -3,6 +3,7 @@ import { TotalJobsCreatedService } from "./total-jobs-created.service";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
+import { FindOptions, WhereAttributeHash } from "sequelize";
 
 const mockDemographicEntryFactory = {
   create: jest.fn()
@@ -143,8 +144,8 @@ describe("TotalJobsCreatedService - filters", () => {
         ]
       } as unknown as Tracking;
 
-      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
-        if (options?.where?.type === "jobs") {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: FindOptions) => {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "jobs") {
           return Promise.resolve([fullTimeJobs, partTimeJobs] as unknown as Tracking[]);
         }
         return Promise.resolve([] as unknown as Tracking[]);
@@ -215,11 +216,11 @@ describe("TotalJobsCreatedService - filters", () => {
         ]
       } as unknown as Tracking;
 
-      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
-        if (options?.where?.type === "jobs") {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: FindOptions) => {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "jobs") {
           return Promise.resolve([] as unknown as Tracking[]);
         }
-        if (options?.where?.type === "volunteers") {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
           return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
         return Promise.resolve([] as unknown as Tracking[]);
@@ -269,11 +270,11 @@ describe("TotalJobsCreatedService - filters", () => {
         entries: [{ type: "gender", subtype: "male", amount: 15 }]
       } as unknown as Tracking;
 
-      jest.spyOn(Tracking, "findAll").mockImplementation((options?: { where?: { type?: string } }) => {
-        if (options?.where?.type === "jobs") {
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: FindOptions) => {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "jobs") {
           return Promise.resolve([fullTimeJobs] as unknown as Tracking[]);
         }
-        if (options?.where?.type === "volunteers") {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
           return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
         return Promise.resolve([] as unknown as Tracking[]);

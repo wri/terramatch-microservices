@@ -5,6 +5,7 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { HectaresRestorationController } from "./hectares-restoration.controller";
 import { HectaresRestorationService } from "./hectares-restoration.service";
 import { serialize } from "@terramatch-microservices/common/util/testing";
+import { Attributes } from "@terramatch-microservices/common/util";
 
 const getTotalsResult = () => {
   return {
@@ -78,8 +79,8 @@ describe("HectaresRestorationController", () => {
       expect(response.data.type).toBe("hectareRestoration");
       expect(response.data.attributes.restorationStrategiesRepresented).toBeDefined();
       expect(response.data.attributes.targetLandUseTypesRepresented).toBeDefined();
-      expect(response.data.attributes.restorationStrategiesRepresented["tree-planting"]).toBe(100.0);
-      expect(response.data.attributes.targetLandUseTypesRepresented["natural-forest"]).toBe(600.0);
+      expect((response.data.attributes.restorationStrategiesRepresented as Attributes)["tree-planting"]).toBe(100.0);
+      expect((response.data.attributes.targetLandUseTypesRepresented as Attributes)["natural-forest"]).toBe(600.0);
     } else {
       fail("response.data should not be an array");
     }

@@ -76,10 +76,8 @@ describe("OverlappingValidator", () => {
         }
       };
 
-      const mockRelatedSitePolygons = [];
-
       mockSitePolygonFindOne.mockResolvedValueOnce(mockSitePolygon as unknown as SitePolygon);
-      mockSitePolygonFindAll.mockResolvedValueOnce(mockRelatedSitePolygons as unknown as SitePolygon[]);
+      mockSitePolygonFindAll.mockResolvedValueOnce([] as SitePolygon[]);
 
       const result = await validator.validatePolygon(testUuids.polygon1);
 

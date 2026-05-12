@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { merge } from "lodash";
+import { Dictionary, merge } from "lodash";
 
 export const COUNTRIES = {
   ESP: "Spain",
@@ -14,7 +14,7 @@ export const fakerCountries = (num = 1) => faker.helpers.uniqueArray(Object.keys
 
 export const gadmLevel0Mock = async () => Object.entries(COUNTRIES).map(([iso, name]) => ({ iso, name }));
 
-export const STATES = {
+export const STATES: Dictionary<Dictionary<string>> = {
   ESP: {
     "ESP.4_1": "Castilla-La Mancha",
     "ESP.5_1": "Castilla y León",
@@ -140,15 +140,15 @@ export const STATES = {
     "CHL.15_1": "Tarapacá",
     "CHL.16_1": "Valparaíso"
   }
-} as const;
+};
 
 export const fakerStates = (countries: Country[], num = 1) => {
   const options = Object.keys(merge({}, ...countries.map(country => STATES[country])));
   return faker.helpers.uniqueArray(options, num);
 };
 
-export const gadmLevel1Mock = async (level0: Country) =>
-  Object.entries(STATES[level0]).map(([id, name]) => ({ id, name }));
+export const gadmLevel1Mock = async (level0: string) =>
+  Object.entries(STATES[level0 as Country] ?? []).map(([id, name]) => ({ id, name }));
 
 export const DISTRICTS = {
   "ESP.1_1": {
@@ -276,5 +276,5 @@ export const fakerDistricts = (states: ("ESP.1_1" | "MEX.31_1")[], num = 1) => {
   return faker.helpers.uniqueArray(options, num);
 };
 
-export const gadmLevel2Mock = async (level1: "ESP.1_1" | "MEX.31_1") =>
-  Object.entries(DISTRICTS[level1]).map(([id, name]) => ({ id, name }));
+export const gadmLevel2Mock = async (level1: string) =>
+  Object.entries(DISTRICTS[level1 as "ESP.1_1" | "MEX.31_1"] ?? []).map(([id, name]) => ({ id, name }));

@@ -8,7 +8,7 @@ import { DelayedJobDto } from "../dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
-type Attributes = {
+export type Attributes = {
   [key: string]: AttributeValue | Attributes;
 };
 

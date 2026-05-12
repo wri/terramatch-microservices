@@ -4,6 +4,7 @@ import { ECSClient, ExecuteCommandCommand } from "@aws-sdk/client-ecs";
 import { CLUSTER, Environment, ENVIRONMENTS, Service, SERVICES } from "../consts";
 
 import { WebSocket } from "ws";
+// @ts-expect-error No types available for ssm-session
 import { ssm } from "ssm-session";
 import { TextDecoder, TextEncoder } from "util";
 import { spawn } from "child_process";

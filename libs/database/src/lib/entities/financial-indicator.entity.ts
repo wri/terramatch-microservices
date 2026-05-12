@@ -57,42 +57,42 @@ export class FinancialIndicator extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number;
+  declare organisationId: number;
 
   @ForeignKey(() => FinancialReport)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  financialReportId: number | null;
+  declare financialReportId: number | null;
 
   @Column(SMALLINT.UNSIGNED)
-  year: number;
+  declare year: number;
 
   @Column(STRING)
-  collection: string;
+  declare collection: string;
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  amount: number | null;
+  declare amount: number | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  exchangeRate: number | null;
+  declare exchangeRate: number | null;
 
   @BelongsTo(() => Organisation)
-  organisation: NonAttribute<Organisation | null>;
+  declare organisation: NonAttribute<Organisation | null>;
 
   @BelongsTo(() => FinancialReport)
-  financialReport: NonAttribute<FinancialReport | null>;
+  declare financialReport: NonAttribute<FinancialReport | null>;
 }

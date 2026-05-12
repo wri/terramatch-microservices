@@ -75,12 +75,16 @@ type CollectorType = Exclude<LinkedFieldResource, "demographics"> | "trackings";
 
 export class LinkedAnswerCollector {
   public fields = fieldCollector(new TMLogger("Fields Collector"));
-  public files = fileCollector(new TMLogger("File Collector"), this.mediaService);
 
   private relationCollectors = {} as Partial<Record<CollectorType, RelationResourceCollector>>;
 
   constructor(private readonly mediaService: MediaService) {}
 
+  private _files?: ResourceCollector<LinkedFile>;
+  get files() {
+    if (this._files == null) this._files = fileCollector(new TMLogger("File Collector"), this.mediaService);
+    return this._files;
+  }
   get demographics() {
     return this.trackings;
   }

@@ -75,12 +75,12 @@ export class TrackingEntryDto {
 
 @JsonApiDto({ type: "trackings" })
 export class TrackingDto extends AssociationDto {
-  constructor(demographic?: Tracking, additional?: AdditionalProps<TrackingDto, Tracking>) {
+  constructor(tracking?: Tracking, additional?: AdditionalProps<TrackingDto, Tracking>) {
     super();
-    if (demographic != null && additional != null) {
-      populateDto<TrackingDto, Omit<Tracking, "entries">>(this, demographic, {
+    if (tracking != null && additional != null) {
+      populateDto<TrackingDto, Omit<Tracking, "entries">>(this, tracking, {
         ...additional,
-        entries: demographic.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
+        entries: tracking.entries?.map(entry => new TrackingEntryDto(entry)) ?? []
       });
     }
   }

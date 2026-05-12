@@ -42,43 +42,43 @@ export class FormSection extends Model<FormSection> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Column(TINYINT.UNSIGNED)
-  order: number;
+  declare order: number;
 
   @Column(UUID)
-  formId: string;
+  declare formId: string;
 
   @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
-  form: Form | null;
+  declare form: Form | null;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  titleId: number | null;
+  declare titleId: number | null;
 
   @AllowNull
   @Column(STRING)
-  subtitle: string | null;
+  declare subtitle: string | null;
 
   @AllowNull
   @Column(STRING)
-  subtitleId: string | null;
+  declare subtitleId: string | null;
 
   @AllowNull
   @Column(STRING)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  descriptionId: number | null;
+  declare descriptionId: number | null;
 }

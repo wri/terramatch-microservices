@@ -20,20 +20,20 @@ export class WorldCountryGeneralized extends Model<WorldCountryGeneralized> {
     field: "OGR_FID",
     type: DataType.INTEGER
   })
-  OGRFID: number;
+  declare OGRFID: number;
 
   @Column({ type: DataType.STRING(50) })
-  country: string;
+  declare country: string;
 
   @Column({ type: DataType.STRING(3) })
-  iso: string;
+  declare iso: string;
 
   @Column({ type: DataType.STRING(50) })
-  countryaff: string;
+  declare countryaff: string;
 
   @Column({ type: DataType.STRING(2), field: "alpha_2_iso" })
-  alpha2Iso: string;
+  declare alpha2Iso: string;
 
   @Column({ type: GEOMETRY })
-  geometry: Polygon | MultiPolygon;
+  declare geometry: Polygon | MultiPolygon;
 }

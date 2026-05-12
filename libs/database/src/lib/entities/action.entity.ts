@@ -58,59 +58,59 @@ export class Action extends Model<Action> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  declare status: string | null;
 
   @Column(STRING)
-  targetableType: string;
+  declare targetableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  targetableId: number;
+  declare targetableId: number;
 
   @AllowNull
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number | null;
+  declare organisationId: number | null;
 
   @BelongsTo(() => Organisation)
-  organisation?: Organisation | null;
+  declare organisation?: Organisation | null;
 
   @AllowNull
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number | null;
+  declare projectId: number | null;
 
   @BelongsTo(() => Project)
-  project?: Project;
+  declare project?: Project;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   @AllowNull
   @Column(STRING)
-  subtype: string | null;
+  declare subtype: string | null;
 
   @AllowNull
   @Column(STRING)
-  key: string | null;
+  declare key: string | null;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(STRING)
-  subTitle: string | null;
+  declare subTitle: string | null;
 
   @AllowNull
   @Column(STRING)
-  text: string | null;
+  declare text: string | null;
 }

@@ -34,30 +34,30 @@ export class Strata extends Model<InferAttributes<Strata>, InferCreationAttribut
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ownerId: number | null;
+  declare ownerId: number | null;
 
   @Column(STRING)
-  stratasableType: string;
+  declare stratasableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  stratasableId: number;
+  declare stratasableId: number;
 
   @AllowNull
   @Column(STRING)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  extent: number | null;
+  declare extent: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: boolean;
+  declare hidden: boolean;
 }

@@ -29,35 +29,35 @@ export class Stage extends Model<InferAttributes<Stage>, InferCreationAttributes
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  declare status: string | null;
 
   @Column(TINYINT.UNSIGNED)
-  order: number;
+  declare order: number;
 
   @Column(UUID)
-  fundingProgrammeId: string;
+  declare fundingProgrammeId: string;
 
   @BelongsTo(() => FundingProgramme, { foreignKey: "fundingProgrammeId", targetKey: "uuid", constraints: false })
-  fundingProgramme: FundingProgramme | null;
+  declare fundingProgramme: FundingProgramme | null;
 
   @AllowNull
   @Column(DATE)
-  deadlineAt: Date | null;
+  declare deadlineAt: Date | null;
 
   @HasOne(() => Form, { foreignKey: "stageId", sourceKey: "uuid", constraints: false })
-  form: Form | null;
+  declare form: Form | null;
 
   /**
    * Resolves to true if this stage is not in a funding programme, or if it's the last stage in its funding programme.

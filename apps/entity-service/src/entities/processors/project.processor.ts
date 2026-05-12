@@ -39,7 +39,6 @@ import { ProcessableEntity } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
-import { EntityDto } from "../dto/entity.dto";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
@@ -335,7 +334,7 @@ export class ProjectProcessor extends EntityProcessor<
     await processor.addIndex(document, { page: { size: pageSize }, projectUuid: model.uuid }, true);
   }
 
-  async getLightDto(project: Project, associateDto: EntityDto) {
+  async getLightDto(project: Project, associatedData: object = {}) {
     const projectId = project.id;
     const totalHectaresRestoredSum =
       (await SitePolygon.active().approved().sites(Site.approvedUuidsSubquery(projectId)).sum("calcArea")) ?? 0;
@@ -346,7 +345,7 @@ export class ProjectProcessor extends EntityProcessor<
       totalHectaresRestoredSum,
       treesPlantedCount: 0,
       plantingStatus,
-      ...associateDto
+      ...associatedData
     });
 
     return {
@@ -597,28 +596,26 @@ export class ProjectProcessor extends EntityProcessor<
       .findOne({ attributes: ["pctSurvivalToDate"] });
   }
 
-  /* istanbul ignore next */
-  async loadAssociationData(projectIds: number[]): Promise<Record<number, ProjectLightDto>> {
-    const associationDtos: Record<number, ProjectLightDto> = {};
-    const sites = await this.getSites(projectIds);
-
-    if (sites.length === 0) {
-      return associationDtos;
-    }
+  protected async loadAssociationData(
+    projectIds: number[]
+  ): Promise<Record<number, { treesPlantedCount?: number | null }>> {
+    const sites = await Site.approved().findAll({
+      where: { projectId: projectIds },
+      attributes: ["id", "projectId"]
+    });
+    if (sites.length === 0) return {};
 
     const siteIdToProjectId = new Map<number, number>();
     for (const site of sites) {
       siteIdToProjectId.set(site.id, site.projectId);
-      if (associationDtos[site.projectId] !== undefined) {
-        associationDtos[site.projectId] = {} as ProjectLightDto; // Initialize with default structure
-      }
     }
 
-    const approvedSiteReports = await this.getSiteReports(sites);
-
-    if (approvedSiteReports.length === 0) {
-      return associationDtos;
-    }
+    const approvedSiteReports = await SiteReport.approved()
+      .sites(sites.map(({ id }) => id))
+      .findAll({
+        attributes: ["id", "siteId"]
+      });
+    if (approvedSiteReports.length === 0) return {};
 
     const siteReportIdToProjectId = new Map<number, number>();
     for (const report of approvedSiteReports) {
@@ -627,27 +624,7 @@ export class ProjectProcessor extends EntityProcessor<
         siteReportIdToProjectId.set(report.id, projectId);
       }
     }
-    const treeSpecies = await this.getTreeSpecies(approvedSiteReports);
-
-    for (const species of treeSpecies) {
-      const projectId = siteReportIdToProjectId.get(species.speciesableId);
-      if (projectId !== undefined) {
-        const dto = associationDtos[projectId] as ProjectLightDto;
-
-        if (dto == null) {
-          associationDtos[projectId] = { treesPlantedCount: species.amount } as ProjectLightDto;
-        } else {
-          dto.treesPlantedCount = (dto.treesPlantedCount ?? 0) + (species.amount ?? 0);
-        }
-      }
-    }
-
-    return associationDtos;
-  }
-
-  /* istanbul ignore next */
-  private async getTreeSpecies(approvedSiteReports: SiteReport[]) {
-    return await TreeSpecies.visible()
+    const treeSpecies = await TreeSpecies.visible()
       .collection("tree-planted")
       .siteReports(approvedSiteReports.map(r => r.id))
       .findAll({
@@ -655,24 +632,22 @@ export class ProjectProcessor extends EntityProcessor<
         group: ["speciesableId"],
         raw: true
       });
-  }
 
-  /* istanbul ignore next */
-  private async getSiteReports(sites: Site[]) {
-    return await SiteReport.findAll({
-      where: { id: { [Op.in]: SiteReport.approvedIdsSubquery(sites.map(s => s.id)) } },
-      attributes: ["id", "siteId"],
-      raw: true
-    });
-  }
+    const associationDtos: Record<number, { treesPlantedCount: number | null }> = {};
+    for (const species of treeSpecies) {
+      const projectId = siteReportIdToProjectId.get(species.speciesableId);
+      if (projectId !== undefined) {
+        const dto = associationDtos[projectId];
 
-  /* istanbul ignore next */
-  private async getSites(numericProjectIds: number[]) {
-    return await Site.findAll({
-      where: { id: { [Op.in]: Site.approvedIdsProjectsSubquery(numericProjectIds) } },
-      attributes: ["id", "projectId"],
-      raw: true
-    });
+        if (dto == null) {
+          associationDtos[projectId] = { treesPlantedCount: species.amount };
+        } else {
+          dto.treesPlantedCount = (dto.treesPlantedCount ?? 0) + (species.amount ?? 0);
+        }
+      }
+    }
+
+    return associationDtos;
   }
 
   async create({ applicationUuid, formUuid }: ProjectCreateAttributes) {

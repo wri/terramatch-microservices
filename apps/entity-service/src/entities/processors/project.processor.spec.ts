@@ -292,10 +292,9 @@ describe("ProjectProcessor", () => {
 
     describe("processSideload", () => {
       it("throws if the sideloads includes something unsupported", async () => {
-        const project = await ProjectFactory.create();
+        await ProjectFactory.create();
         setMockedPermissions("projects-read");
         const document = buildJsonApi(ProjectLightDto);
-        await processor.loadAssociationData([project.id]);
         await expect(
           processor.addIndex(document, { sideloads: [{ entity: "siteReports", pageSize: 5 }] })
         ).rejects.toThrow(BadRequestException);
@@ -390,7 +389,7 @@ describe("ProjectProcessor", () => {
 
       setMockedPermissions("projects-read");
       const { models } = await processor.findMany({});
-      const { id, dto } = await processor.getLightDto(models[0], new ProjectLightDto());
+      const { id, dto } = await processor.getLightDto(models[0]);
       expect(id).toEqual(uuid);
       expect(dto).toMatchObject({
         uuid,
@@ -434,7 +433,7 @@ describe("ProjectProcessor", () => {
 
         setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
-        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        const { dto: lightDto } = await processor.getLightDto(models[0]);
         expect(lightDto.plantingStatus).toBe("replacement-planting");
       });
 
@@ -447,7 +446,7 @@ describe("ProjectProcessor", () => {
 
         setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
-        const { dto: lightDto } = await processor.getLightDto(models[0], new ProjectLightDto());
+        const { dto: lightDto } = await processor.getLightDto(models[0]);
         expect(lightDto.plantingStatus).toBeNull();
       });
     });
@@ -651,6 +650,29 @@ describe("ProjectProcessor", () => {
         treesToBeRestoredGoal,
         treesToBePlantedSpeciesGoalTotal
       });
+    });
+
+    it("loads association data", async () => {
+      const project = await ProjectFactory.create();
+      const sites = await SiteFactory.createMany(2, { status: "approved", projectId: project.id });
+      const siteReports = [
+        ...(await SiteReportFactory.createMany(2, { status: "approved", siteId: sites[0].id })),
+        await SiteReportFactory.create({ status: "approved", siteId: sites[1].id })
+      ];
+      const dueReport = await SiteReportFactory.create({ status: "due" });
+      const treesPlantedCount = sumBy(
+        [
+          ...(await TreeSpeciesFactory.siteReportTreePlanted(siteReports[0]).createMany(2)),
+          await TreeSpeciesFactory.siteReportTreePlanted(siteReports[1]).create(),
+          await TreeSpeciesFactory.siteReportTreePlanted(siteReports[2]).create()
+        ],
+        "amount"
+      );
+      // ignored
+      await TreeSpeciesFactory.siteReportTreePlanted(dueReport).create();
+
+      const result = await processor.getLightDtos([project]);
+      expect(result[0].dto.treesPlantedCount).toEqual(treesPlantedCount);
     });
   });
 

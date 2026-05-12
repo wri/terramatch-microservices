@@ -12,21 +12,21 @@ export class IndicatorOutputHectares extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique("unique_polygon_indicator_year")
   @ForeignKey(() => SitePolygon)
   @Column({ type: BIGINT.UNSIGNED })
-  sitePolygonId: number;
+  declare sitePolygonId: number;
 
   @Unique("unique_polygon_indicator_year")
   @Column({ type: STRING, values: INDICATOR_SLUGS })
-  indicatorSlug: IndicatorSlug;
+  declare indicatorSlug: IndicatorSlug;
 
   @Unique("unique_polygon_indicator_year")
   @Column(INTEGER)
-  yearOfAnalysis: number;
+  declare yearOfAnalysis: number;
 
   @JsonColumn()
-  value: object;
+  declare value: object;
 }

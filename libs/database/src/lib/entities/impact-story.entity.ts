@@ -18,35 +18,33 @@ export class ImpactStory extends Model<ImpactStory> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
-  @Column({
-    type: DataType.STRING(71)
-  })
-  title: string;
+  @Column({ type: DataType.STRING(71) })
+  declare title: string;
 
   @Column(STRING)
-  status: string;
+  declare status: string;
 
   @Column(BIGINT.UNSIGNED)
-  organizationId: number;
+  declare organizationId: number;
 
   @BelongsTo(() => Organisation, { foreignKey: "organizationId", constraints: false })
-  organisation: Organisation;
+  declare organisation: Organisation;
 
   @Column(DATE)
-  date: string;
+  declare date: string;
 
   @JsonColumn()
-  category: string[];
+  declare category: string[];
 
   @Column(STRING)
-  thumbnail: string;
+  declare thumbnail: string;
 
   @Column(TEXT)
-  content: string;
+  declare content: string;
 }

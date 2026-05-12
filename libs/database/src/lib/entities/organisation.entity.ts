@@ -113,19 +113,19 @@ export class Organisation extends Model<InferAttributes<Organisation>, InferCrea
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Default("draft")
   @Column(STRING)
-  status: CreationOptional<OrganisationStatus>;
+  declare status: CreationOptional<OrganisationStatus>;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   get readableType(): CreationOptional<string> {
     return (this.type != null ? READABLE_TYPES[this.type] : undefined) ?? "Unknown";
@@ -133,462 +133,462 @@ export class Organisation extends Model<InferAttributes<Organisation>, InferCrea
 
   @Default(false)
   @Column(BOOLEAN)
-  private: CreationOptional<boolean>;
+  declare private: CreationOptional<boolean>;
 
   @Default(false)
   @Column(BOOLEAN)
-  isTest: CreationOptional<boolean>;
+  declare isTest: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @Column(STRING)
-  phone: string | null;
+  declare phone: string | null;
 
   @AllowNull
   @Column({ type: STRING, field: "hq_street_1" })
-  hqStreet1: string | null;
+  declare hqStreet1: string | null;
 
   @AllowNull
   @Column({ type: STRING, field: "hq_street_2" })
-  hqStreet2: string | null;
+  declare hqStreet2: string | null;
 
   @AllowNull
   @Column(STRING)
-  hqCity: string | null;
+  declare hqCity: string | null;
 
   @AllowNull
   @Column(STRING)
-  hqState: string | null;
+  declare hqState: string | null;
 
   @AllowNull
   @Column(STRING)
-  hqZipcode: string | null;
+  declare hqZipcode: string | null;
 
   @AllowNull
   @Column(STRING)
-  hqCountry: string | null;
+  declare hqCountry: string | null;
 
   @AllowNull
   @Column(TEXT)
-  leadershipTeamTxt: string | null;
+  declare leadershipTeamTxt: string | null;
 
   @AllowNull
   @Column(DATE)
-  foundingDate: Date | null;
+  declare foundingDate: Date | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @JsonColumn()
-  countries: string[] | null;
+  declare countries: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  languages: string[] | null;
+  declare languages: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  treeCareApproach: string | null;
+  declare treeCareApproach: string | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  relevantExperienceYears: number | null;
+  declare relevantExperienceYears: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "trees_grown_3year" })
-  treesGrown3Year: number | null;
+  declare treesGrown3Year: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  treesGrownTotal: number | null;
+  declare treesGrownTotal: number | null;
 
   @AllowNull
   @Column({ type: DECIMAL(8, 2), field: "ha_restored_3year" })
-  haRestored3Year: number | null;
+  declare haRestored3Year: number | null;
 
   @AllowNull
   @Column(DECIMAL(10, 2))
-  haRestoredTotal: number | null;
+  declare haRestoredTotal: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  finStartMonth: number | null;
+  declare finStartMonth: number | null;
 
   @AllowNull
   @Column(STRING)
-  webUrl: string | null;
+  declare webUrl: string | null;
 
   @AllowNull
   @Column(STRING)
-  facebookUrl: string | null;
+  declare facebookUrl: string | null;
 
   @AllowNull
   @Column(STRING)
-  instagramUrl: string | null;
+  declare instagramUrl: string | null;
 
   @AllowNull
   @Column(STRING)
-  linkedinUrl: string | null;
+  declare linkedinUrl: string | null;
 
   @AllowNull
   @Column(STRING)
-  twitterUrl: string | null;
+  declare twitterUrl: string | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  ftPermanentEmployees: number | null;
+  declare ftPermanentEmployees: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  ptPermanentEmployees: number | null;
+  declare ptPermanentEmployees: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10 }))
-  tempEmployees: number | null;
+  declare tempEmployees: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  femaleEmployees: number | null;
+  declare femaleEmployees: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  maleEmployees: number | null;
+  declare maleEmployees: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  youngEmployees: number | null;
+  declare youngEmployees: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 10 }), field: "over_35_employees" })
-  over35Employees: number | null;
+  declare over35Employees: number | null;
 
   @AllowNull
   @Column(TEXT)
-  additionalFundingDetails: string | null;
+  declare additionalFundingDetails: string | null;
 
   @AllowNull
   @Column(TEXT)
-  communityExperience: string | null;
+  declare communityExperience: string | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 10, unsigned: true }), field: "total_engaged_community_members_3yr" })
-  totalEngagedCommunityMembers3Yr: number | null;
+  declare totalEngagedCommunityMembers3Yr: number | null;
 
   @AllowNull
   @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_women_3yr" })
-  percentEngagedWomen3Yr: number | null;
+  declare percentEngagedWomen3Yr: number | null;
 
   @AllowNull
   @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_men_3yr" })
-  percentEngagedMen3Yr: number | null;
+  declare percentEngagedMen3Yr: number | null;
 
   @AllowNull
   @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_under_35_3yr" })
-  percentEngagedUnder353Yr: number | null;
+  declare percentEngagedUnder353Yr: number | null;
 
   @AllowNull
   @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_over_35_3yr" })
-  percentEngagedOver353Yr: number | null;
+  declare percentEngagedOver353Yr: number | null;
 
   @AllowNull
   @Column({ type: TINYINT({ length: 4 }), field: "percent_engaged_smallholder_3yr" })
-  percentEngagedSmallholder3Yr: number | null;
+  declare percentEngagedSmallholder3Yr: number | null;
 
   @AllowNull
   @Column(INTEGER({ length: 10, unsigned: true }))
-  totalTreesGrown: number | null;
+  declare totalTreesGrown: number | null;
 
   @AllowNull
   @Column(TINYINT({ length: 4 }))
-  avgTreeSurvivalRate: number | null;
+  declare avgTreeSurvivalRate: number | null;
 
   @AllowNull
   @Column(TEXT)
-  treeMaintenanceAftercareApproach: string | null;
+  declare treeMaintenanceAftercareApproach: string | null;
 
   @AllowNull
   @Column(TEXT)
-  restoredAreasDescription: string | null;
+  declare restoredAreasDescription: string | null;
 
   @AllowNull
   @JsonColumn()
-  restorationTypesImplemented: string[] | null;
+  declare restorationTypesImplemented: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  historicMonitoringGeojson: string | null;
+  declare historicMonitoringGeojson: string | null;
 
   @AllowNull
   @Column(TEXT)
-  monitoringEvaluationExperience: string | null;
+  declare monitoringEvaluationExperience: string | null;
 
   @AllowNull
   @Column(TEXT("long"))
-  fundingHistory: string | null;
+  declare fundingHistory: string | null;
 
   @AllowNull
   @JsonColumn()
-  engagementFarmers: string[] | null;
+  declare engagementFarmers: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  engagementWomen: string[] | null;
+  declare engagementWomen: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  engagementYouth: string[] | null;
+  declare engagementYouth: string[] | null;
 
   @Default("USD")
   @Column(STRING)
-  currency: CreationOptional<string>;
+  declare currency: CreationOptional<string>;
 
   @AllowNull
   @JsonColumn()
-  states: string[] | null;
+  declare states: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  district: string | null;
+  declare district: string | null;
 
   @AllowNull
   @Column({ type: TEXT, field: "account_number_1" })
-  accountNumber1: string | null;
+  declare accountNumber1: string | null;
 
   @AllowNull
   @Column({ type: TEXT, field: "account_number_2" })
-  accountNumber2: string | null;
+  declare accountNumber2: string | null;
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  loanStatusAmount: number | null;
+  declare loanStatusAmount: number | null;
 
   @AllowNull
   @JsonColumn()
-  loanStatusTypes: string[] | null;
+  declare loanStatusTypes: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  approachOfMarginalizedCommunities: string | null;
+  declare approachOfMarginalizedCommunities: string | null;
 
   @AllowNull
   @Column(TEXT)
-  communityEngagementNumbersMarginalized: string | null;
+  declare communityEngagementNumbersMarginalized: string | null;
 
   @AllowNull
   @JsonColumn()
-  landSystems: string[] | null;
+  declare landSystems: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  fundUtilisation: string[] | null;
+  declare fundUtilisation: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  detailedInterventionTypes: string[] | null;
+  declare detailedInterventionTypes: string[] | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr" })
-  communityMembersEngaged3yr: number | null;
+  declare communityMembersEngaged3yr: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_women" })
-  communityMembersEngaged3yrWomen: number | null;
+  declare communityMembersEngaged3yrWomen: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_men" })
-  communityMembersEngaged3yrMen: number | null;
+  declare communityMembersEngaged3yrMen: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_youth" })
-  communityMembersEngaged3yrYouth: number | null;
+  declare communityMembersEngaged3yrYouth: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_non_youth" })
-  communityMembersEngaged3yrNonYouth: number | null;
+  declare communityMembersEngaged3yrNonYouth: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_smallholder" })
-  communityMembersEngaged3yrSmallholder: number | null;
+  declare communityMembersEngaged3yrSmallholder: number | null;
 
   @AllowNull
   @Column({ type: INTEGER({ length: 11 }), field: "community_members_engaged_3yr_backward_class" })
-  communityMembersEngaged3YrBackwardClass: number | null;
+  declare communityMembersEngaged3YrBackwardClass: number | null;
 
   @AllowNull
   @Column(TEXT)
-  engagementNonYouth: string | null;
+  declare engagementNonYouth: string | null;
 
   @AllowNull
   @JsonColumn()
-  treeRestorationPractices: string[] | null;
+  declare treeRestorationPractices: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  businessModel: string | null;
+  declare businessModel: string | null;
 
   @AllowNull
   @Column(TEXT)
-  subtype: string | null;
+  declare subtype: string | null;
 
   @AllowNull
   @Column(TEXT)
-  fieldStaffSkills: string | null;
+  declare fieldStaffSkills: string | null;
 
   @AllowNull
   @Column({ type: ENUM, values: ["yes", "no"] })
-  fpcCompany: string | null;
+  declare fpcCompany: string | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  numOfMarginalisedEmployees: number | null;
+  declare numOfMarginalisedEmployees: number | null;
 
   @AllowNull
   @Column(TEXT)
-  benefactorsFpcCompany: string | null;
+  declare benefactorsFpcCompany: string | null;
 
   @AllowNull
   @Column(STRING)
-  boardRemunerationFpcCompany: string | null;
+  declare boardRemunerationFpcCompany: string | null;
 
   @AllowNull
   @Column(STRING)
-  boardEngagementFpcCompany: string | null;
+  declare boardEngagementFpcCompany: string | null;
 
   @AllowNull
   @JsonColumn()
-  biodiversityFocus: string[] | null;
+  declare biodiversityFocus: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  globalPlanningFrameworks: string[] | null;
+  declare globalPlanningFrameworks: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  pastGovCollaboration: string | null;
+  declare pastGovCollaboration: string | null;
 
   @AllowNull
   @Column(TEXT)
-  engagementLandless: string | null;
+  declare engagementLandless: string | null;
 
   @AllowNull
   @Column(TEXT)
-  socioeconomicImpact: string | null;
+  declare socioeconomicImpact: string | null;
 
   @AllowNull
   @Column(TEXT)
-  environmentalImpact: string | null;
+  declare environmentalImpact: string | null;
 
   // field misspelled intentionally to match the current DB schema
   @AllowNull
   @Column({ type: TEXT, field: "growith_stage" })
-  growthStage: string | null;
+  declare growthStage: string | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  totalEmployees: number | null;
+  declare totalEmployees: number | null;
 
   @AllowNull
   @Column(TEXT)
-  additionalComments: string | null;
+  declare additionalComments: string | null;
 
   @AllowNull
   @Column(TEXT)
-  femaleYouthLeadershipExample: string | null;
+  declare femaleYouthLeadershipExample: string | null;
 
   @AllowNull
   @JsonColumn({ field: "level_0_past_restoration" })
-  level0PastRestoration: string[] | null;
+  declare level0PastRestoration: string[] | null;
 
   @AllowNull
   @JsonColumn({ field: "level_1_past_restoration" })
-  level1PastRestoration: string[] | null;
+  declare level1PastRestoration: string[] | null;
 
   @AllowNull
   @JsonColumn({ field: "level_2_past_restoration" })
-  level2PastRestoration: string[] | null;
+  declare level2PastRestoration: string[] | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  treesNaturallyRegeneratedTotal: number | null;
+  declare treesNaturallyRegeneratedTotal: number | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, field: "trees_naturally_regenerated_3year" })
-  treesNaturallyRegenerated3Year: number | null;
+  declare treesNaturallyRegenerated3Year: number | null;
 
   @AllowNull
   @Column(TEXT)
-  externalTechnicalAssistance: string | null;
+  declare externalTechnicalAssistance: string | null;
 
   @AllowNull
   @Column(TEXT)
-  barriersToFunding: string | null;
+  declare barriersToFunding: string | null;
 
   @AllowNull
   @Column(TEXT)
-  capacityBuildingSupportNeeded: string | null;
+  declare capacityBuildingSupportNeeded: string | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  associationsCooperatives: boolean | null;
+  declare associationsCooperatives: boolean | null;
 
   @AllowNull
   @JsonColumn()
-  territoriesOfOperation: string[] | null;
+  declare territoriesOfOperation: string[] | null;
 
   @AllowNull
   @Column({ type: TEXT, field: "decisionmaking_structure_description" })
-  decisionMakingStructureDescription: string | null;
+  declare decisionMakingStructureDescription: string | null;
 
   @AllowNull
   @Column({ type: TEXT, field: "decisionmaking_structure_individuals_involved" })
-  decisionMakingStructureIndividualsInvolved: string | null;
+  declare decisionMakingStructureIndividualsInvolved: string | null;
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  averageWorkerIncome: number | null;
+  declare averageWorkerIncome: number | null;
 
   @AllowNull
   @JsonColumn()
-  anrPracticesPast: string[] | null;
+  declare anrPracticesPast: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  anrMonitoringApproaches: string[] | null;
+  declare anrMonitoringApproaches: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  anrMonitoringApproachesDescription: string | null;
+  declare anrMonitoringApproachesDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  anrCommunicationFunders: string | null;
+  declare anrCommunicationFunders: string | null;
 
   @AllowNull
   @Column(TEXT)
-  bioeconomyProducts: string | null;
+  declare bioeconomyProducts: string | null;
 
   @AllowNull
   @Column(TEXT)
-  bioeconomyTraditionalKnowledge: string | null;
+  declare bioeconomyTraditionalKnowledge: string | null;
 
   @AllowNull
   @Column(TEXT)
-  bioeconomyProductProcessing: string | null;
+  declare bioeconomyProductProcessing: string | null;
 
   @AllowNull
   @Column(TEXT)
-  bioeconomyBuyers: string | null;
+  declare bioeconomyBuyers: string | null;
 
   @AllowNull
   @JsonColumn()
-  bioeconomyProductList: string[] | null;
+  declare bioeconomyProductList: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  bioeconomyDescription: string | null;
+  declare bioeconomyDescription: string | null;
 }

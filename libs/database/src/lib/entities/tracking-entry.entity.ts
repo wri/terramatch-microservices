@@ -26,23 +26,23 @@ export class TrackingEntry extends Model<InferAttributes<TrackingEntry>, InferCr
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Column(STRING)
-  type: string;
-
-  @AllowNull
-  @Column(STRING)
-  subtype: string | null;
+  declare type: string;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare subtype: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  declare name: string | null;
 
   @Column(INTEGER({ length: 10 }))
-  amount: number;
+  declare amount: number;
 
   @ForeignKey(() => Tracking)
   @Column(BIGINT.UNSIGNED)
-  trackingId: number;
+  declare trackingId: number;
 }

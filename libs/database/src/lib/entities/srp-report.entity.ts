@@ -52,91 +52,91 @@ export class SrpReport extends Model<SrpReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  declare status: ReportStatus;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  nothingToReport: boolean | null;
+  declare nothingToReport: boolean | null;
 
   @AllowNull
   @Column(DATE)
-  approvedAt: Date | null;
+  declare approvedAt: Date | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  declare approvedBy: number;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @AllowNull
   @Column(DATE)
-  submittedAt: Date | null;
+  declare submittedAt: Date | null;
 
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number;
+  declare taskId: number;
 
   @BelongsTo(() => Task, { constraints: false })
-  task: Task | null;
+  declare task: Task | null;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  declare dueAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: number;
+  declare completion: number;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
-  restorationPartnersDescription: string | null;
+  declare restorationPartnersDescription: string | null;
 
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  totalUniqueRestorationPartners: number;
+  declare totalUniqueRestorationPartners: number;
 
   @Column(INTEGER)
-  year: number;
+  declare year: number;
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   get projectName() {
     return this.project?.name;
@@ -146,7 +146,7 @@ export class SrpReport extends Model<SrpReport> {
     return this.project?.organisationName;
   }
 
-  get organisationUuid() {
+  get organisationUuid(): string | undefined {
     return this.project?.organisation?.uuid;
   }
 

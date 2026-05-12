@@ -62,82 +62,82 @@ export class DisturbanceReport extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  declare status: ReportStatus;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  nothingToReport: boolean | null;
+  declare nothingToReport: boolean | null;
 
   @AllowNull
   @Column(DATE)
-  approvedAt: Date | null;
+  declare approvedAt: Date | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number | null;
+  declare approvedBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @AllowNull
   @Column(DATE)
-  submittedAt: Date | null;
+  declare submittedAt: Date | null;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  declare dueAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: CreationOptional<number>;
+  declare completion: CreationOptional<number>;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(TEXT)
-  actionDescription: string | null;
+  declare actionDescription: string | null;
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   get projectName() {
     return this.project?.name ?? undefined;

@@ -103,7 +103,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           ? []
           : await FormQuestion.findAll({
               where: { uuid: propertyQuestionUuids, inputType: OPTIONS_TYPES },
-              attributes: ["id", "optionsList"],
+              attributes: ["uuid", "id", "optionsList"],
               include: [{ association: "options", attributes: ["slug", "label"] }]
             });
 

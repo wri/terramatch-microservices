@@ -78,7 +78,7 @@ describe("OrganisationsController", () => {
 
     controller = module.get(OrganisationsController);
 
-    emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+    emailQueue.add.mockResolvedValue({} as Job);
   });
 
   afterEach(() => {

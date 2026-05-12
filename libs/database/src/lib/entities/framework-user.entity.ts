@@ -8,13 +8,13 @@ export class FrameworkUser extends Model<FrameworkUser> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @ForeignKey(() => Framework)
   @Column(BIGINT.UNSIGNED)
-  frameworkId: number;
+  declare frameworkId: number;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 }

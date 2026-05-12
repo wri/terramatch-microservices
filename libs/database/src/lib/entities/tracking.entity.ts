@@ -150,37 +150,37 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column(STRING)
-  domain: TrackingDomain;
+  declare domain: TrackingDomain;
 
   @Column(STRING)
-  type: TrackingType;
+  declare type: TrackingType;
 
   // Note: this allows null in the current schema, but the only rows with a null value have been soft deleted.
   // This column will be made non-nullable in a future update.
   @AllowNull
   @Column(STRING)
-  collection: string | null;
+  declare collection: string | null;
 
   @Column(STRING)
-  trackableType: string;
+  declare trackableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  trackableId: number;
+  declare trackableId: number;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: CreationOptional<boolean>;
+  declare hidden: CreationOptional<boolean>;
 
   @HasMany(() => TrackingEntry, { constraints: false })
-  entries: TrackingEntry[] | null;
+  declare entries: TrackingEntry[] | null;
 }

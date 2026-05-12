@@ -359,18 +359,18 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column({ type: GEOMETRY, field: "geom" })
-  polygon: Polygon;
+  declare polygon: Polygon;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 }

@@ -43,30 +43,30 @@ export class FormTableHeader extends Model<FormTableHeader> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @ForeignKey(() => FormQuestion)
   @Column(BIGINT.UNSIGNED)
-  formQuestionId: number;
+  declare formQuestionId: number;
 
   @AllowNull
   @Column(STRING)
-  slug: string | null;
+  declare slug: string | null;
 
   @AllowNull
   @Column(STRING)
-  label: string | null;
+  declare label: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  labelId: number | null;
+  declare labelId: number | null;
 
   @AllowNull
   @Column(SMALLINT)
-  order: number | null;
+  declare order: number | null;
 }

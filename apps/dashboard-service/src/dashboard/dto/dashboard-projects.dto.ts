@@ -14,9 +14,6 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
     }
   }
 
-  @ApiProperty()
-  uuid: string;
-
   @ApiProperty({ nullable: true, type: String })
   country: string | null;
 

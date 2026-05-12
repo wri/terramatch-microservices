@@ -81,12 +81,6 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  dueAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  frameworkKey: string | null;
-
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
 
@@ -107,9 +101,6 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   currency: string | null;
-
-  @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
-  organisationUuid: string | null;
 
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation type" })
   organisationType: string | null;

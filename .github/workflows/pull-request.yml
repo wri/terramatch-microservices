@@ -34,12 +34,6 @@ jobs:
         with:
           version: "2.29.1"
 
-      # Cache node_modules
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-
       - run: npm ci
 
       - run: npm run lint-build

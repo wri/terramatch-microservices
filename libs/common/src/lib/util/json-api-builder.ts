@@ -4,6 +4,7 @@ import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 import { cloneDeep } from "lodash";
+import { DateTime } from "luxon";
 import * as qs from "qs";
 import { DelayedJobDto } from "../dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -246,13 +247,18 @@ export const buildDeletedResponse = (resourceType: string, ids: string | string[
     .serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
 
 export const getStableRequestQuery = (originalQuery: object) => {
-  const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
+  const normalizedQuery = cloneDeep(originalQuery) as Record<string, unknown> & {
+    page?: { number?: number };
+    sideloads?: object[];
+  };
   if (normalizedQuery.page?.number != null) delete normalizedQuery.page.number;
   if (normalizedQuery.sideloads != null) delete normalizedQuery.sideloads;
 
-  // guarantee order of array query params.
-  for (const value of Object.values(normalizedQuery)) {
+  for (const [key, value] of Object.entries(normalizedQuery)) {
     if (Array.isArray(value)) value.sort();
+    if (value instanceof Date) {
+      normalizedQuery[key] = DateTime.fromJSDate(value, { zone: "utc" }).toISO();
+    }
   }
   const query = qs.stringify(normalizedQuery, { arrayFormat: "indices", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;

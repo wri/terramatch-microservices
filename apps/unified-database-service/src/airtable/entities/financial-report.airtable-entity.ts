@@ -8,7 +8,7 @@ type FinancialReportAssociations = {
 };
 
 const COLUMNS: ColumnMapping<FinancialReport, FinancialReportAssociations>[] = [
-  ...commonEntityColumns<FinancialReport>("financialReport"),
+  ...commonEntityColumns<FinancialReport, FinancialReportAssociations>("financialReport"),
   "status",
   "updateRequestStatus",
   associatedValueColumn("organisationUuid", "organisationId"),

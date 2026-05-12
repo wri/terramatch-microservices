@@ -185,7 +185,11 @@ export class CsvExportService {
     try {
       await writeRows(addRow);
     } catch (error) {
-      this.logger.error(`Error exporting CSV file: [${error.message}]`, error.stack);
+      if (error instanceof Error) {
+        this.logger.error(`Error exporting CSV file: [${error.message}]`, error.stack);
+      } else {
+        this.logger.error(`Error exporting CSV file: [${error}]`);
+      }
       throw error;
     } finally {
       close();

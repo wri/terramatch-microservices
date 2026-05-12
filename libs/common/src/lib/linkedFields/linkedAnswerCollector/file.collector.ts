@@ -32,16 +32,18 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
       const laravelTypes = mapLaravelTypes(models);
       const medias = await Media.findAll({
         where: {
-          [Op.or]: Object.entries(collectionsByModel).map(([modelType, collections]) => {
-            if (models[modelType] == null) {
-              throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+          [Op.or]: (Object.entries(collectionsByModel) as [FormModelType, string[]][]).map(
+            ([modelType, collections]) => {
+              if (models[modelType] == null) {
+                throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+              }
+              return {
+                modelType: laravelTypes[modelType],
+                modelId: models[modelType].id,
+                collectionName: { [Op.in]: collections }
+              };
             }
-            return {
-              modelType: laravelTypes[modelType],
-              modelId: models[modelType].id,
-              collectionName: { [Op.in]: collections }
-            };
-          })
+          )
         }
       });
 

@@ -4,7 +4,6 @@
     "rootDir": ".",
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
@@ -18,14 +17,13 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strictPropertyInitialization": false,
-    "baseUrl": ".",
     "paths": {
-      "@terramatch-microservices/common": ["libs/common/src/index.ts"],
-      "@terramatch-microservices/common/*": ["libs/common/src/lib/*"],
-      "@terramatch-microservices/data-api": ["libs/data-api/src/index.ts"],
-      "@terramatch-microservices/database": ["libs/database/src/index.ts"],
-      "@terramatch-microservices/database/*": ["libs/database/src/lib/*"],
-      "@terramatch-microservices/tm-v3-cli": ["tm-v3-cli/src/index.ts"]
+      "@terramatch-microservices/common": ["./libs/common/src/index.ts"],
+      "@terramatch-microservices/common/*": ["./libs/common/src/lib/*"],
+      "@terramatch-microservices/data-api": ["./libs/data-api/src/index.ts"],
+      "@terramatch-microservices/database": ["./libs/database/src/index.ts"],
+      "@terramatch-microservices/database/*": ["./libs/database/src/lib/*"],
+      "@terramatch-microservices/tm-v3-cli": ["./tm-v3-cli/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

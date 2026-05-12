@@ -81,7 +81,8 @@ export const bulkOrganisationImport = withoutSqlLogs(async (csvPath: string, dry
 
     LOGGER.log(`Processed ${rowCount} rows from ${csvPath}`);
   } catch (err) {
-    LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
+    const message = err instanceof Error ? err.message : `${err}`;
+    LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${message}`);
   }
 });
 

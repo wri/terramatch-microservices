@@ -413,7 +413,7 @@ export class MediaService {
     try {
       res = await fetch(url);
     } catch (error) {
-      throw new BadRequestException(`Failed to download file from URL ${url}: ${error.message}`);
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${(error as Error).message}`);
     }
 
     if (!res.ok) {

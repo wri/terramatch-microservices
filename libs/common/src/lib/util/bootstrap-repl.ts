@@ -18,12 +18,12 @@ import { PaginatedQueryBuilder } from "./paginated-query.builder";
 
 const logger = new TMLogger("REPL");
 
-type ReplGet = <T>(provided: new (...args: unknown[]) => T) => T;
+type ReplGet = <T>(provided: new (...args: never[]) => T) => T;
 
 let replGet: ReplGet | undefined;
 // replGet is set to a valid value when the repl bootstrap process starts up, so any script can import this
 // function and use it to retrieve services from the REPL module.
-export const getService = <T>(provided: new (...args: unknown[]) => T) => replGet?.(provided) as T;
+export const getService = <T>(provided: new (...args: never[]) => T) => replGet?.(provided) as T;
 
 /**
  * Starts up the NestJS REPL for the given app module.

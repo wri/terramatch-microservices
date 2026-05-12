@@ -297,7 +297,7 @@ export class FormsService {
       {} as Record<number, { url: string | null; thumbUrl: string | null }>
     );
 
-    const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []) => {
+    const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []): FormQuestionDto => {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
       // For file questions, the collection is the collection of the field.
       const collection =
@@ -470,7 +470,10 @@ export class FormsService {
     where: WhereOptions,
     { order, csvColumns }: { order?: OrderItem[]; csvColumns?: Dictionary<string> } = {}
   ) {
-    const allMappings = Object.values(formIdMap).reduce((acc, { mappings }) => [...acc, ...mappings], []);
+    const allMappings = Object.values(formIdMap).reduce(
+      (acc, { mappings }) => [...acc, ...mappings],
+      [] as FormQuestionExportMapping[]
+    );
     const orgAttributes = uniq([...SUBMISSION_CSV_ORG_ATTRIBUTES, ...getAttributes(allMappings, "organisations")]);
     const pitchAttributes = uniq([...SUBMISSION_CSV_PITCH_ATTRIBUTES, ...getAttributes(allMappings, "projectPitches")]);
     const builder = new PaginatedQueryBuilder(FormSubmission, 10, [
@@ -568,9 +571,8 @@ export class FormsService {
       formQuestions.map(question => question.id)
     );
     const optionsListParams = formQuestions
-      .map((question: FormQuestion) => question.optionsList)
-      .filter(optionsList => optionsList != null)
-      .filter(optionsList => optionsList != "0");
+      .map(question => (question as FormQuestion).optionsList)
+      .filter((optionsList): optionsList is string => optionsList != null && optionsList !== "0");
     const [formOptionListI18nIds, formOptionsLists] = await this.processTranslationEntity(
       FormOptionList,
       "key",

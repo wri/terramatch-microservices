@@ -216,7 +216,7 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     for (const term of SIMPLE_FILTERS) {
-      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+      const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 

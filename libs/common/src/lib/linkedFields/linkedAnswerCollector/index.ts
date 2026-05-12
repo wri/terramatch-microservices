@@ -77,7 +77,7 @@ export class LinkedAnswerCollector {
   public fields = fieldCollector(new TMLogger("Fields Collector"));
   public files = fileCollector(new TMLogger("File Collector"), this.mediaService);
 
-  private relationCollectors = {} as Partial<Record<LinkedFieldResource, RelationResourceCollector>>;
+  private relationCollectors = {} as Partial<Record<CollectorType, RelationResourceCollector>>;
 
   constructor(private readonly mediaService: MediaService) {}
 

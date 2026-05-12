@@ -17,7 +17,7 @@ import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fire
 import { RestorationByEcoRegionCalculator } from "./calculators/restoration-by-eco-region.calculator";
 import { RestorationByTypeCalculator } from "./calculators/restoration-by-type.calculator";
 import { Polygon } from "geojson";
-import { Op } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { stringify } from "csv-stringify/sync";
 import { PolicyService } from "@terramatch-microservices/common";
 import { intersection } from "lodash";
@@ -30,13 +30,8 @@ export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   restorationByLandUse: new RestorationByTypeCalculator("targetSys", INDICATORS[6])
 };
 
-const SLUG_MAPPINGS = {
-  treeCoverLoss: IndicatorOutputTreeCoverLoss,
-  treeCoverLossFires: IndicatorOutputTreeCoverLoss,
-  restorationByEcoRegion: IndicatorOutputHectares,
-  restorationByStrategy: IndicatorOutputHectares,
-  restorationByLandUse: IndicatorOutputHectares
-};
+const HECTARES_SLUGS = ["restorationByEcoRegion", "restorationByStrategy", "restorationByLandUse"] as const;
+const TREE_COVER_LOSS_SLUGS = ["treeCoverLoss", "treeCoverLossFires"] as const;
 
 const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
   poly_name: "Polygon Name",
@@ -89,7 +84,7 @@ export class IndicatorsService {
   async processPolygon(
     slug: IndicatorSlug,
     polygonUuid: string
-  ): Promise<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> {
+  ): Promise<CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>> {
     const calculator = CALCULATE_INDICATORS[slug];
     if (calculator == null) {
       throw new BadRequestException(`Unknown calculator: ${slug}`);
@@ -101,19 +96,27 @@ export class IndicatorsService {
     }
 
     const results = await calculator.calculate(polygonUuid, geoJson, this.dataApiService);
-    return results as Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>;
+    return results as CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>;
   }
 
   async saveResults(
-    results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>>,
+    results: CreationAttributes<IndicatorOutputHectares>[] | CreationAttributes<IndicatorOutputTreeCoverLoss>[],
     slug: IndicatorSlug
   ) {
     try {
-      await SLUG_MAPPINGS[slug].bulkCreate(results, {
-        updateOnDuplicate: ["value", "updatedAt"],
-        ignoreDuplicates: false,
-        returning: true
-      });
+      if (HECTARES_SLUGS.includes(slug as (typeof HECTARES_SLUGS)[number])) {
+        await IndicatorOutputHectares.bulkCreate(results as CreationAttributes<IndicatorOutputHectares>[], {
+          updateOnDuplicate: ["value", "updatedAt"],
+          ignoreDuplicates: false,
+          returning: true
+        });
+      } else if (TREE_COVER_LOSS_SLUGS.includes(slug as (typeof TREE_COVER_LOSS_SLUGS)[number])) {
+        await IndicatorOutputTreeCoverLoss.bulkCreate(results as CreationAttributes<IndicatorOutputTreeCoverLoss>[], {
+          updateOnDuplicate: ["value", "updatedAt"],
+          ignoreDuplicates: false,
+          returning: true
+        });
+      }
       this.logger.debug(`Successfully saved/updated ${results.length} results for slug: ${slug}`);
     } catch (error) {
       this.logger.error(`Failed to save results for slug: ${slug}`, `${error}`);

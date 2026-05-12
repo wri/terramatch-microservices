@@ -40,7 +40,7 @@ function isCompletedPlantingAnswer(answer: unknown) {
 
 const OPTIONS_TYPES: FieldInputType[] = ["select", "radio", "select-image"];
 
-const READABLE_MONTHS = {
+const READABLE_MONTHS: Record<number, string> = {
   1: "January",
   2: "February",
   3: "March",
@@ -67,7 +67,7 @@ const prepareValueForExport = (
 
     const selected = castArray(initialValue as string | number | string[] | number[]);
     if (question.optionsList === "months") {
-      return selected.map(month => READABLE_MONTHS[month]);
+      return selected.map(month => READABLE_MONTHS[Number(month)]);
     } else {
       return selected.map(selection => question.options?.find(({ slug }) => slug === selection)?.label ?? selection);
     }
@@ -113,7 +113,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           continue;
         }
 
-        const initialValue = models[modelType][property];
+        const initialValue = (models[modelType] as unknown as Dictionary<unknown>)[property];
         if (forExport) {
           answers[questionUuid] = prepareValueForExport(initialValue, inputType, questionUuid, questions);
         } else {

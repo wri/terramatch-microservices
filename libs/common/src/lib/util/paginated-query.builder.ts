@@ -28,7 +28,7 @@ function unpackAnd(where: WhereOptions) {
   const keys = getComplexKeys(where);
   if (keys.length === 0) return;
   if (keys.length !== 1 || keys[0] !== Op.and) return where;
-  return where[Op.and];
+  return (where as { [Op.and]: WhereOptions[] })[Op.and];
 }
 
 export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions) {

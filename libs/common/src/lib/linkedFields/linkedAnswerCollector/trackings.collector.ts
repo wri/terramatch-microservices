@@ -193,19 +193,21 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
       const laravelTypes = mapLaravelTypes(models);
       const trackings = await Tracking.findAll({
         where: {
-          [Op.or]: Object.entries(keysByModel).map(([modelType, keys]): WhereOptions<Tracking> => {
-            if (models[modelType] == null) {
-              throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
-            }
+          [Op.or]: (Object.entries(keysByModel) as [FormModelType, ModelKey[]][]).map(
+            ([modelType, keys]): WhereOptions<Tracking> => {
+              if (models[modelType] == null) {
+                throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+              }
 
-            return {
-              trackableType: laravelTypes[modelType],
-              trackableId: models[modelType].id,
-              [Op.or]: keys.map(
-                ({ domain, type, collection }): WhereOptions<Tracking> => ({ domain, type, collection })
-              )
-            };
-          })
+              return {
+                trackableType: laravelTypes[modelType],
+                trackableId: models[modelType].id,
+                [Op.or]: keys.map(
+                  ({ domain, type, collection }): WhereOptions<Tracking> => ({ domain, type, collection })
+                )
+              };
+            }
+          )
         },
         attributes: dtoAttributes,
         include: [{ association: "entries" }]

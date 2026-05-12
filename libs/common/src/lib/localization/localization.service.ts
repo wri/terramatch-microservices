@@ -11,7 +11,7 @@ import {
   I18nTranslation,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Attributes, Model, Op, WhereOptions } from "sequelize";
+import { Attributes, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
@@ -20,6 +20,7 @@ import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/st
 import { TMLogger } from "../util/tm-logger";
 import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
+import { Model } from "sequelize-typescript";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;

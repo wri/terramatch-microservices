@@ -9,12 +9,13 @@ import { Job } from "bullmq";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
-  SitePolygon,
   IndicatorOutputHectares,
-  IndicatorOutputTreeCoverLoss
+  IndicatorOutputTreeCoverLoss,
+  SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
+import { ModelCtor } from "sequelize-typescript";
 
 const SLUG_MAPPINGS = {
   treeCoverLoss: IndicatorOutputTreeCoverLoss,
@@ -22,7 +23,7 @@ const SLUG_MAPPINGS = {
   restorationByEcoRegion: IndicatorOutputHectares,
   restorationByStrategy: IndicatorOutputHectares,
   restorationByLandUse: IndicatorOutputHectares
-};
+} as const;
 
 export interface IndicatorsJobData {
   slug: IndicatorSlug;
@@ -94,7 +95,9 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       const batch = batches[batchIndex];
       this.logger.debug(`Processing batch ${batchIndex + 1} of ${batches.length}: ${batch.length} polygons`);
 
-      const batchResults: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
+      const batchResults: Array<
+        CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>
+      > = [];
 
       for (const polygonUuid of batch) {
         try {
@@ -167,7 +170,9 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
   ) {
     let processed = 0;
     const successfulPolygons: string[] = [];
-    const results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> = [];
+    const results: Array<
+      CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>
+    > = [];
 
     for (const polygonUuid of polygonUuids) {
       try {
@@ -243,7 +248,7 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
   }
 
   private async checkIfExists(slug: IndicatorSlug, polygonUuid: string): Promise<boolean> {
-    const Model = SLUG_MAPPINGS[slug];
+    const Model: ModelCtor | undefined = SLUG_MAPPINGS[slug as keyof typeof SLUG_MAPPINGS];
     if (Model == null) {
       return false;
     }

@@ -1,27 +1,27 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
+  Action,
+  AuditStatus,
+  NurseryReport,
   ProjectReport,
   ProjectUser,
   SiteReport,
+  SrpReport,
   Task,
   TreeSpecies,
-  User,
-  AuditStatus,
-  NurseryReport,
-  Action
+  User
 } from "@terramatch-microservices/database/entities";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { TaskFullDto } from "./dto/task.dto";
-import { EntitiesService, ProcessableEntity } from "./entities.service";
+import { EntitiesService } from "./entities.service";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { TaskQueryDto } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { Op } from "sequelize";
+import { Attributes, Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
-import { AWAITING_APPROVAL, APPROVED } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { laravelType } from "@terramatch-microservices/database/types/util";
-import { Attributes } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
 import { filter } from "lodash";
@@ -75,7 +75,7 @@ export class TasksService {
       }
     }
 
-    for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS)) {
+    for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS) as [keyof typeof FILTER_PROPS, string][]) {
       if (query[filterProp] != null) {
         builder.where({ [sqlProp]: query[filterProp] });
       }
@@ -118,11 +118,13 @@ export class TasksService {
 
     const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
     await this.loadReports(task);
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as ProcessableEntity[]) {
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
-      if (entityType === "projectReports" && task.projectReport != null) {
-        const { id, dto } = await processor.getLightDto(task.projectReport);
-        taskResource.relateTo("projectReport", document.addData(id, dto));
+      if (entityType === "projectReports") {
+        if (task.projectReport != null) {
+          const { id, dto } = await processor.getLightDto(task.projectReport);
+          taskResource.relateTo("projectReport", document.addData(id, dto));
+        }
       } else {
         for (const report of task[entityType] ?? []) {
           const { id, dto } = await processor.getLightDto(report);
@@ -270,14 +272,14 @@ export class TasksService {
   private async loadReports(task: Task) {
     if (task.projectReport != null) return;
 
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as ProcessableEntity[]) {
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       const { models } = await processor.findMany({ taskId: task.id });
       if (entityType === "projectReports") {
         if (models.length > 1) this.logger.error(`More than one project report found for task ${task.id}`);
         task.projectReport = models[0] as ProjectReport;
       } else {
-        task[entityType] = models;
+        task[entityType] = models as NurseryReport[] & SiteReport[] & SrpReport[];
       }
     }
   }

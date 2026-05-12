@@ -70,7 +70,8 @@ export class EntityServiceExportsProcessor extends DelayedJobWorker<EntityServic
         await processor.export(job.data.projectUuid, archive);
       });
     } catch (error) {
-      throw new DelayedJobException(500, `Failed to export project zip: ${error.message}`);
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new DelayedJobException(500, `Failed to export project zip: ${message}`);
     }
 
     return {

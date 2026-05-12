@@ -208,7 +208,7 @@ export class EntitiesService {
         const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
         if (field == null || !isField(field) || !isPropertyField(field)) return;
 
-        if (field.property in dto) dto[field.property] = null;
+        if (field.property in dto) delete dto[field.property as keyof typeof dto];
       })
     );
   }

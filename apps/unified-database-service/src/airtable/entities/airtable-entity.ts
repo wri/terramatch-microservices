@@ -1,6 +1,6 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
+import { Attributes, FindOptions, Op } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -71,7 +71,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   }
 
   protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
-    const where = {} as WhereOptions<ModelType>;
+    const where: Dictionary = {};
 
     if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
       where["updatedAt"] = { [Op.gte]: updatedSince };
@@ -93,7 +93,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   }
 
   protected getDeletePageFindOptions(deletedSince: Date, page: number) {
-    const where = {} as WhereOptions<ModelType>;
+    const where: Record<string | symbol, unknown> = {};
 
     const deletedAtCondition = { [Op.gte]: deletedSince };
     if (isEmpty(this.FILTER_FLAGS)) {
@@ -133,7 +133,10 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
         records.map(async record => ({ fields: await this.mapEntityColumns(record, associations[record.id]) }))
       );
     } catch (error) {
-      this.logger.error(`Airtable mapping failed: ${JSON.stringify({ entity: this.TABLE_NAME, page })}`, error.stack);
+      this.logger.error(
+        `Airtable mapping failed: ${JSON.stringify({ entity: this.TABLE_NAME, page })}`,
+        error instanceof Error ? error.stack : undefined
+      );
       throw error;
     }
 
@@ -148,7 +151,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     } catch (error) {
       this.logger.error(
         `Entity update failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, airtableRecords }, null, 2)}`,
-        error.stack
+        error instanceof Error ? error.stack : undefined
       );
       throw error;
     }
@@ -169,7 +172,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
       if (records.length === 0) return false;
 
       const formula = `OR(${records
-        .map(record => `{${this.IDENTITY_COLUMN}}='${record[this.IDENTITY_COLUMN]}'`)
+        .map(record => `{${this.IDENTITY_COLUMN}}='${record[this.IDENTITY_COLUMN as keyof typeof record]}'`)
         .join(",")})`;
       const result = await base(this.TABLE_NAME)
         .select({ filterByFormula: formula, fields: [this.IDENTITY_COLUMN] })
@@ -185,7 +188,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     } catch (error) {
       this.logger.error(
         `Fetching Airtable records failed: ${JSON.stringify({ entity: this.TABLE_NAME, page })}`,
-        error.stack
+        error instanceof Error ? error.stack : undefined
       );
       throw error;
     }
@@ -200,7 +203,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     } catch (error) {
       this.logger.error(
         `Airtable record delete failed: ${JSON.stringify({ entity: this.TABLE_NAME, page, idMapping })}`,
-        error.stack
+        error instanceof Error ? error.stack : undefined
       );
       throw error;
     }
@@ -210,7 +213,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   }
 
   protected async mapEntityColumns(record: ModelType, associations: AssociationType) {
-    const airtableObject = {};
+    const airtableObject: Dictionary = {};
     for (const mapping of this.COLUMNS) {
       let value = isObject(mapping) ? await mapping.valueMap(record, associations) : record[mapping];
       if (isString(value) && value.length > LONG_TEXT_MAX_LENGTH) {
@@ -313,7 +316,7 @@ export type PolymorphicUuidAssociation<AssociationType> = {
 };
 
 // used in the test suite
-export const airtableColumnName = <T extends Model>(mapping: ColumnMapping<T, unknown>) =>
+export const airtableColumnName = <T extends Model>(mapping: ColumnMapping<T, never>) =>
   isObject(mapping) ? mapping.airtableColumn : (mapping as string);
 
 const selectAttributes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
@@ -371,7 +374,7 @@ export const commonEntityColumns = <T extends UuidModel, A = Record<string, neve
           {
             airtableColumn: "linkToTerramatch",
             dbColumn: "uuid",
-            valueMap: ({ uuid }) => `https://www.terramatch.org/admin#/${adminSiteType}/${uuid}/show`
+            valueMap: (record: UuidModel) => `https://www.terramatch.org/admin#/${adminSiteType}/${record.uuid}/show`
           }
         ])
   ] as ColumnMapping<T, A>[];

@@ -114,7 +114,8 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
         }
       }
     } catch (error) {
-      throw new DelayedJobException(500, `Failed to export organisations to CSV: ${error.message}`);
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new DelayedJobException(500, `Failed to export organisations to CSV: ${message}`);
     } finally {
       close();
     }

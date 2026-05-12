@@ -59,7 +59,7 @@ export class ApiGatewayStack extends Stack {
     if (process.env.TM_ENV == null) throw new Error("No TM_ENV defined");
     this.env = process.env.TM_ENV ?? "local";
 
-    const enabledServices =
+    const enabledServices: string[] =
       process.env.ENABLED_SERVICES == null || process.env.ENABLED_SERVICES === ""
         ? Object.keys(V3_SERVICES)
         : process.env.ENABLED_SERVICES.split(",");

@@ -132,7 +132,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
     const keys = this.getComplexKeys(where);
     if (keys.length === 0) return;
     if (keys.length !== 1 || keys[0] !== Op.and) return where;
-    return where[Op.and];
+    return (where as { [Op.and]: WhereOptions[] })[Op.and];
   }
 
   private combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions): WhereOptions {

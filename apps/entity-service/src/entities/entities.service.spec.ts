@@ -35,7 +35,7 @@ describe("EntitiesService", () => {
     service = module.get(EntitiesService);
     mediaService = module.get(MediaService);
     mediaService.getUrl.mockImplementation(
-      ({ fileName }, conversion: string) => `https://example.com/${conversion ?? ""}/${fileName}`
+      ({ fileName }, conversion?: string) => `https://example.com/${conversion ?? ""}/${fileName}`
     );
     csvExportService = module.get(CsvExportService);
     const configService: DeepMocked<ConfigService> = module.get(ConfigService);

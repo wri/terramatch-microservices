@@ -35,6 +35,7 @@ import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
+import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -151,7 +152,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
 
     for (const term of SIMPLE_FILTERS) {
-      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+      const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
@@ -476,7 +477,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         const nextTask =
           project.frameworkKey == null ? undefined : await ScheduledJob.taskDue(project.frameworkKey).findOne();
         createReport =
-          nextTask != null && DateTime.fromISO(nextTask.taskDefinition["dueAt"]) > DateTime.now().plus({ weeks: 4 });
+          nextTask != null &&
+          DateTime.fromISO((nextTask.taskDefinition as TaskDue).dueAt) > DateTime.now().plus({ weeks: 4 });
       }
 
       if (createReport) {

@@ -7,6 +7,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 
 describe("ProjectPitchesController", () => {
   let controller: ProjectPitchesController;
@@ -90,7 +91,7 @@ describe("ProjectPitchesController", () => {
 
         const result = serialize(await controller.projectPitchGet({ uuid: "1" }));
         expect(result).toBeDefined();
-        expect(result.data?.["id"]).toBe("1");
+        expect((result.data as Resource).id).toBe("1");
         expect(projectPitchService.getProjectPitch).toHaveBeenCalledWith("1");
       });
 

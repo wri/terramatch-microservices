@@ -15,6 +15,7 @@
     "schema:audit": "ts-node --transpile-only -P tsconfig.schema-audit.json libs/database/src/lib/tools/schema-audit-sequelize-vs-db.ts"
   },
   "private": true,
+  "// mariadb": "MariaDB must remain on 3.0.2 for now - upgrading it past that changes an internal mechanism that breaks Umzug migrations and potentially some raw queries",
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.1045.0",
     "@aws-sdk/client-s3": "^3.1045.0",
@@ -57,7 +58,7 @@
     "ioredis": "^5.10.1",
     "lodash": "^4.18.1",
     "luxon": "^3.7.2",
-    "mariadb": "^3.5.2",
+    "mariadb": "^3.0.2",
     "multer": "^2.1.1",
     "mysql2": "^3.22.3",
     "nestjs-request-context": "^4.0.0",

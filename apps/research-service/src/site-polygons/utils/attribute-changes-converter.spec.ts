@@ -17,15 +17,11 @@ describe("AttributeChangesConverter", () => {
 
       expect(result).toEqual({
         polyName: "Test Polygon",
-        poly_name: "Test Polygon",
         plantStart: "2023-01-15T00:00:00.000Z",
-        plantstart: "2023-01-15T00:00:00.000Z",
         practice: ["agroforestry", "planting"],
         targetSys: "agroforestry",
-        target_sys: "agroforestry",
         distr: ["full-enrichment", "single-line"],
-        numTrees: 100,
-        num_trees: 100
+        numTrees: 100
       });
     });
 
@@ -37,8 +33,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        plantStart: "2023-01-15T00:00:00Z",
-        plantstart: "2023-01-15T00:00:00Z"
+        plantStart: "2023-01-15T00:00:00Z"
       });
     });
 
@@ -51,8 +46,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        plantStart: date.toISOString(),
-        plantstart: date.toISOString()
+        plantStart: date.toISOString()
       });
     });
 
@@ -86,7 +80,7 @@ describe("AttributeChangesConverter", () => {
       expect(result).toEqual({});
     });
 
-    it("should exclude empty string polyName", () => {
+    it("should include empty string polyName", () => {
       const properties: Partial<SitePolygon> = {
         polyName: ""
       };
@@ -94,8 +88,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        polyName: "",
-        poly_name: ""
+        polyName: ""
       });
     });
 
@@ -129,9 +122,7 @@ describe("AttributeChangesConverter", () => {
 
       expect(result).toEqual({
         polyName: "Partial Polygon",
-        poly_name: "Partial Polygon",
-        targetSys: "agroforestry",
-        target_sys: "agroforestry"
+        targetSys: "agroforestry"
       });
     });
 
@@ -143,8 +134,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        polyName: "Name Only",
-        poly_name: "Name Only"
+        polyName: "Name Only"
       });
     });
 
@@ -180,8 +170,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        targetSys: "woodlot-or-plantation",
-        target_sys: "woodlot-or-plantation"
+        targetSys: "woodlot-or-plantation"
       });
     });
 
@@ -193,8 +182,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        numTrees: 500,
-        num_trees: 500
+        numTrees: 500
       });
     });
 
@@ -206,8 +194,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        plantStart: "2024-01-01T00:00:00.000Z",
-        plantstart: "2024-01-01T00:00:00.000Z"
+        plantStart: "2024-01-01T00:00:00.000Z"
       });
     });
 
@@ -227,8 +214,7 @@ describe("AttributeChangesConverter", () => {
       const result = convertPropertiesToAttributeChanges(properties);
 
       expect(result).toEqual({
-        numTrees: 0,
-        num_trees: 0
+        numTrees: 0
       });
     });
 

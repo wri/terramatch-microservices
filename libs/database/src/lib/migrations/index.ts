@@ -6,6 +6,7 @@ import { revertProjectBudgetColumnsProdTypes } from "./202604151400-revert-proje
 import { makeAssortedColumnsNullable } from "./202605041703-make-assorted-columns-nullable";
 import { tm3300ProjectPolygonHandoff } from "./202605061200-tm-3300-project-polygon-handoff";
 import { removeUnusedColumns } from "./202605071434-remove-unused-columns";
+import { dropUnusedTables } from "./202605130922-drop-unused-tables";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -13,5 +14,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   revertProjectBudgetColumnsProdTypes,
   makeAssortedColumnsNullable,
   tm3300ProjectPolygonHandoff,
-  removeUnusedColumns
+  removeUnusedColumns,
+  dropUnusedTables
 ];

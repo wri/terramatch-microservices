@@ -34,12 +34,14 @@ const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, ApplicationLoadBa
     prod: {
       cpu: 512,
       memoryLimitMiB: 1024,
-      desiredCount: 2
+      desiredCount: 2,
+      minHealthyPercent: 50
     },
     staging: {
       cpu: 512,
       memoryLimitMiB: 1024,
-      desiredCount: 2
+      desiredCount: 2,
+      minHealthyPercent: 50
     }
   }
 };
@@ -107,6 +109,8 @@ export class ServiceStack extends Stack {
         cpu: 256,
         memoryLimitMiB: 512,
         desiredCount: 1,
+        minHealthyPercent: 100,
+        maxHealthyPercent: 200,
         enableExecuteCommand: true,
         taskImageOptions: {
           image,
@@ -122,7 +126,8 @@ export class ServiceStack extends Stack {
         taskSubnets: { subnets: privateSubnets },
         assignPublicIp: false,
         publicLoadBalancer: false,
-        loadBalancerName: `${service}-${env}`
+        loadBalancerName: `${service}-${env}`,
+        circuitBreaker: { enable: true, rollback: true }
       })
     );
     fargateService.targetGroup.configureHealthCheck({

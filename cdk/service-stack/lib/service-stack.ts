@@ -132,7 +132,8 @@ export class ServiceStack extends Stack {
     );
     fargateService.targetGroup.configureHealthCheck({
       path: "/health",
-      interval: Duration.seconds(5)
+      interval: Duration.seconds(5),
+      timeout: Duration.seconds(3)
     });
     fargateService.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "45");
     Tags.of(fargateService.loadBalancer).add("service", `${service}-${env}`);

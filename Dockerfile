@@ -1,4 +1,4 @@
-FROM node:24.15-alpine3.23 as builder
+FROM node:24.15-alpine3.23 AS builder
 ARG NODE_ENV
 ARG BUILD_FLAG
 

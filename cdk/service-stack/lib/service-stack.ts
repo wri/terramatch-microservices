@@ -1,4 +1,4 @@
-import { Stack, StackProps, Tags } from "aws-cdk-lib";
+import { Duration, Stack, StackProps, Tags } from "aws-cdk-lib";
 import { PrivateSubnet, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
@@ -131,8 +131,10 @@ export class ServiceStack extends Stack {
       })
     );
     fargateService.targetGroup.configureHealthCheck({
-      path: "/health"
+      path: "/health",
+      interval: Duration.seconds(5)
     });
+    fargateService.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "45");
     Tags.of(fargateService.loadBalancer).add("service", `${service}-${env}`);
   }
 }

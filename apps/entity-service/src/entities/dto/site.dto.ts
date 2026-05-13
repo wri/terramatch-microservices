@@ -60,7 +60,7 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   treesPlantedCount: number;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ nullable: true, type: Number })
   hectaresToRestoreGoal: number | null;
 
   @ApiProperty()

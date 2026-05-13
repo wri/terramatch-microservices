@@ -745,32 +745,35 @@ export class SitePolygonCreationService {
     }
 
     if (attributeChanges != null) {
-      const polyName = attributeChanges.polyName ?? attributeChanges.poly_name;
-      if (polyName != null && polyName.length > 0) {
-        sitePolygonAttributes.polyName = polyName;
+      if (attributeChanges.polyName !== undefined) {
+        sitePolygonAttributes.polyName = attributeChanges.polyName.length > 0 ? attributeChanges.polyName : null;
       }
 
-      const plantStart = attributeChanges.plantStart ?? attributeChanges.plantstart;
-      if (plantStart != null && plantStart.length > 0) {
-        sitePolygonAttributes.plantStart = new Date(plantStart);
+      if (attributeChanges.plantStart !== undefined) {
+        sitePolygonAttributes.plantStart =
+          attributeChanges.plantStart.length > 0 ? new Date(attributeChanges.plantStart) : null;
       }
 
-      if (attributeChanges.practice != null && attributeChanges.practice.length > 0) {
-        sitePolygonAttributes.practice = validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES);
+      if (attributeChanges.practice !== undefined) {
+        sitePolygonAttributes.practice =
+          attributeChanges.practice.length > 0
+            ? validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES)
+            : null;
       }
 
-      const targetSys = attributeChanges.targetSys ?? attributeChanges.target_sys;
-      if (targetSys != null && targetSys.length > 0) {
-        sitePolygonAttributes.targetSys = targetSys;
+      if (attributeChanges.targetSys !== undefined) {
+        sitePolygonAttributes.targetSys = attributeChanges.targetSys.length > 0 ? attributeChanges.targetSys : null;
       }
 
-      if (attributeChanges.distr != null && attributeChanges.distr.length > 0) {
-        sitePolygonAttributes.distr = validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES);
+      if (attributeChanges.distr !== undefined) {
+        sitePolygonAttributes.distr =
+          attributeChanges.distr.length > 0
+            ? validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES)
+            : null;
       }
 
-      const numTrees = attributeChanges.numTrees ?? attributeChanges.num_trees;
-      if (numTrees != null) {
-        sitePolygonAttributes.numTrees = numTrees;
+      if (attributeChanges.numTrees !== undefined) {
+        sitePolygonAttributes.numTrees = attributeChanges.numTrees;
       }
     }
     sitePolygonAttributes.validationStatus = null;
@@ -816,8 +819,8 @@ export class SitePolygonCreationService {
     for (const [key, newValue] of Object.entries(changes)) {
       if (key === "status") continue;
       const oldValue = basePolygon[key as keyof SitePolygon];
-      if (oldValue !== newValue && newValue != null) {
-        parts.push(`${key} => from ${oldValue ?? "null"} to ${newValue}`);
+      if (oldValue !== newValue) {
+        parts.push(`${key} => from ${oldValue ?? "null"} to ${newValue ?? "null"}`);
       }
     }
 
@@ -874,15 +877,13 @@ export class SitePolygonCreationService {
     const validatedProperties = validateSitePolygonProperties(allProperties);
     const attributeChanges = convertPropertiesToAttributeChanges(validatedProperties);
 
-    const uploadedPolyName = attributeChanges.polyName ?? attributeChanges.poly_name;
+    const uploadedPolyName = attributeChanges.polyName;
     const basePolyName = basePolygon.polyName ?? null;
 
     if (uploadedPolyName != null && uploadedPolyName.length > 0 && uploadedPolyName !== basePolyName) {
       attributeChanges.polyName = uploadedPolyName;
-      attributeChanges.poly_name = uploadedPolyName;
     } else {
       attributeChanges.polyName = basePolyName != null ? `${basePolyName} (new)` : " (new)";
-      attributeChanges.poly_name = attributeChanges.polyName;
     }
 
     const versionGeometries: CreateSitePolygonRequestDto[] = [

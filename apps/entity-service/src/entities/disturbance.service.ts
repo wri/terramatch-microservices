@@ -33,7 +33,7 @@ export class DisturbanceService {
     });
 
     for (const { uuidKey, model, laravelType } of DISTURBANCES_FILTERS) {
-      const uuids = query[uuidKey];
+      const uuids = query[uuidKey as keyof typeof query] as string[] | undefined;
       if (uuids != null && uuids.length > 0) {
         const records = (await model.findAll({
           attributes: ["id"],

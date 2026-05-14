@@ -16,7 +16,10 @@ const EMAIL_KEYS = {
 export class ResetPasswordService {
   protected readonly logger = new TMLogger(ResetPasswordService.name);
 
-  constructor(private readonly jwtService: JwtService, private readonly emailService: EmailService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly emailService: EmailService
+  ) {}
 
   async sendResetPasswordEmail(emailAddress: string, callbackUrl: string) {
     const user = await User.findOne({ where: { emailAddress }, attributes: ["id", "uuid", "locale"] });

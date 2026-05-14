@@ -17,17 +17,12 @@ import { EmailService } from "@terramatch-microservices/common/email/email.servi
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserCreationService } from "./user-creation.service";
 import { UserCreateAttributes } from "./dto/user-create.dto";
+import { BadRequestException, InternalServerErrorException, UnprocessableEntityException } from "@nestjs/common";
 import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-  UnprocessableEntityException
-} from "@nestjs/common";
-import {
-  RoleFactory,
-  UserFactory,
+  FrameworkFactory,
   ProjectFactory,
-  FrameworkFactory
+  RoleFactory,
+  UserFactory
 } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
@@ -181,7 +176,7 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(new NotFoundException("Role not found"));
+    await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow("Role not found");
   });
 
   it("should generate a error when create user in DB", async () => {
@@ -509,9 +504,7 @@ describe("UserCreationService", () => {
 
       jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
 
-      await expect(service.createNewUser(true, request)).rejects.toThrow(
-        new NotFoundException("Organisation not found")
-      );
+      await expect(service.createNewUser(true, request)).rejects.toThrow("Organisation not found");
     });
 
     it("should fail when admin role does not exist", async () => {

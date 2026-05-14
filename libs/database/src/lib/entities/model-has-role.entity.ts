@@ -6,11 +6,11 @@ import { BIGINT, InferAttributes, InferCreationAttributes, STRING } from "sequel
 export class ModelHasRole extends Model<InferAttributes<ModelHasRole>, InferCreationAttributes<ModelHasRole>> {
   @ForeignKey(() => Role)
   @Column({ type: BIGINT.UNSIGNED, primaryKey: true })
-  roleId: number;
+  declare roleId: number;
 
   @Column({ type: STRING, primaryKey: true })
-  modelType: string;
+  declare modelType: string;
 
   @Column({ type: BIGINT.UNSIGNED, primaryKey: true })
-  modelId: number;
+  declare modelId: number;
 }

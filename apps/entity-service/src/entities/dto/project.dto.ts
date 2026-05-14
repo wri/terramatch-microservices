@@ -170,12 +170,6 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: String })
   continent: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
-  country: string | null;
-
-  @ApiProperty({ nullable: true, type: String, description: "The associated organisation type" })
-  organisationType: string | null;
-
   @ApiProperty({ nullable: true, type: String, isArray: true })
   states: string[] | null;
 
@@ -231,7 +225,7 @@ export class ProjectFullDto extends ProjectLightDto {
   incomeGeneratingActivities: string[] | null;
 
   @ApiProperty()
-  treesPlantedCount: number;
+  declare treesPlantedCount: number;
 
   @ApiProperty()
   seedsPlantedCount: number;

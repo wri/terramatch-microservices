@@ -696,7 +696,7 @@ describe("ProjectPolygonCreationService", () => {
         originalname: "test.geojson",
         mimetype: "application/geo+json",
         buffer: Buffer.from(JSON.stringify({ type: "FeatureCollection", features: [] }))
-      } as Express.Multer.File);
+      }) as Express.Multer.File;
 
     const createFeatureCollection = (): FeatureCollection => ({
       type: "FeatureCollection",

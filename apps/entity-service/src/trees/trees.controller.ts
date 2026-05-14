@@ -27,7 +27,10 @@ import { SpeciesDto } from "./dto/species.dto";
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
 export class TreesController {
-  constructor(private readonly treeService: TreeService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly treeService: TreeService,
+    private readonly policyService: PolicyService
+  ) {}
 
   @Get("scientificNames")
   @ApiOperation({

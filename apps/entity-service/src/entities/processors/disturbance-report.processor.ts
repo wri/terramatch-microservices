@@ -245,7 +245,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
 
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
         builder.where({ [field]: query[term] });
       }
     }
@@ -350,7 +350,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
                 ...acc,
                 [kebabCase(name)]: formatEntriesForExport(rowEntries, name)
               }),
-              {} as Dictionary<string>
+              {} as Dictionary<unknown>
             ),
             media: rowMedia.map(media => `${this.entitiesService.fullUrl(media)} (${media.name})`)
           });

@@ -80,22 +80,22 @@ export class SitePolygon extends Model<SitePolygon> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Column(UUID)
-  primaryUuid: string;
+  declare primaryUuid: string;
 
   // This column got called site_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
   @Column({ type: UUID, field: "site_id" })
-  siteUuid: string;
+  declare siteUuid: string;
 
   @BelongsTo(() => Site, { foreignKey: "siteUuid", targetKey: "uuid" })
-  site: Site | null;
+  declare site: Site | null;
 
   async loadSite() {
     if (this.site == null && this.siteUuid != null) {
@@ -107,105 +107,105 @@ export class SitePolygon extends Model<SitePolygon> {
   // This column got called point_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
   @Column({ type: UUID, field: "point_id" })
-  pointUuid: string;
+  declare pointUuid: string;
 
   @BelongsTo(() => PointGeometry, { foreignKey: "pointUuid", targetKey: "uuid" })
-  point: PointGeometry | null;
+  declare point: PointGeometry | null;
 
   // This column got called poly_id in the PHP codebase, which is misleading because it's a UUID
   @AllowNull
   @Column({ type: UUID, field: "poly_id" })
-  polygonUuid: string;
+  declare polygonUuid: string;
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polygonUuid", targetKey: "uuid" })
-  polygon: PolygonGeometry | null;
+  declare polygon: PolygonGeometry | null;
 
   @AllowNull
   @Column(STRING)
-  polyName: string | null;
+  declare polyName: string | null;
 
   @AllowNull
   @Column({ type: DATE, field: "plantstart" })
-  plantStart: Date | null;
+  declare plantStart: Date | null;
 
   @AllowNull
   @JsonColumn({ type: STRING })
-  practice: string[] | null;
+  declare practice: string[] | null;
 
   @AllowNull
   @Column(STRING)
-  targetSys: string | null;
+  declare targetSys: string | null;
 
   @AllowNull
   @JsonColumn({ type: STRING })
-  distr: string[] | null;
+  declare distr: string[] | null;
 
   @AllowNull
   @Column(INTEGER)
-  numTrees: number | null;
+  declare numTrees: number | null;
 
   @AllowNull
   @Column(DOUBLE)
-  calcArea: number | null;
+  declare calcArea: number | null;
 
   @AllowNull
   @Column({ type: STRING, values: POLYGON_STATUSES })
-  status: PolygonStatus | null;
+  declare status: PolygonStatus | null;
 
   @AllowNull
   @Column({ type: DOUBLE })
-  lat: number | null;
+  declare lat: number | null;
 
   @AllowNull
   @Column({ type: DOUBLE })
-  long: number | null;
+  declare long: number | null;
 
   @AllowNull
   @Column(STRING)
-  source: string | null;
+  declare source: string | null;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @Default(false)
   @Column(BOOLEAN)
-  isActive: boolean;
+  declare isActive: boolean;
 
   @AllowNull
   @Column(STRING)
-  versionName: string | null;
+  declare versionName: string | null;
 
   @AllowNull
   @Column({ type: STRING })
-  validationStatus: string | null;
+  declare validationStatus: string | null;
 
   @ForeignKey(() => Disturbance)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  disturbanceId: number | null;
+  declare disturbanceId: number | null;
 
   @BelongsTo(() => Disturbance, { foreignKey: "disturbanceId", targetKey: "id" })
-  disturbance: Disturbance | null;
+  declare disturbance: Disturbance | null;
 
   @HasMany(() => IndicatorOutputFieldMonitoring)
-  indicatorsFieldMonitoring: IndicatorOutputFieldMonitoring[] | null;
+  declare indicatorsFieldMonitoring: IndicatorOutputFieldMonitoring[] | null;
 
   @HasMany(() => IndicatorOutputHectares)
-  indicatorsHectares: IndicatorOutputHectares[] | null;
+  declare indicatorsHectares: IndicatorOutputHectares[] | null;
 
   @HasMany(() => IndicatorOutputMsuCarbon)
-  indicatorsMsuCarbon: IndicatorOutputMsuCarbon[] | null;
+  declare indicatorsMsuCarbon: IndicatorOutputMsuCarbon[] | null;
 
   @HasMany(() => IndicatorOutputTreeCount)
-  indicatorsTreeCount: IndicatorOutputTreeCount[] | null;
+  declare indicatorsTreeCount: IndicatorOutputTreeCount[] | null;
 
   @HasMany(() => IndicatorOutputTreeCover)
-  indicatorsTreeCover: IndicatorOutputTreeCover[] | null;
+  declare indicatorsTreeCover: IndicatorOutputTreeCover[] | null;
 
   @HasMany(() => IndicatorOutputTreeCoverLoss)
-  indicatorsTreeCoverLoss: IndicatorOutputTreeCoverLoss[] | null;
+  declare indicatorsTreeCoverLoss: IndicatorOutputTreeCoverLoss[] | null;
 
   private _indicators: Indicator[] | null;
   async getIndicators() {

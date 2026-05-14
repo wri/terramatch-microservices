@@ -88,7 +88,11 @@ export class SiteReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated task uuid"
+  })
   taskUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
@@ -118,41 +122,7 @@ export class SiteReportFullDto extends SiteReportLightDto {
   }
 
   @ApiProperty({ nullable: true, type: String })
-  reportTitle: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated site name"
-  })
-  siteName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated site uuid"
-  })
-  siteUuid: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated organisation name"
-  })
-  organisationName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated organisation uuid"
-  })
-  organisationUuid: string | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  dueAt: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
@@ -177,36 +147,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   approvedByLastName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project name"
-  })
-  projectName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project uuid"
-  })
-  projectUuid: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated task uuid"
-  })
-  taskUuid: string | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  submittedAt: Date | null;
-
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
 
   @ApiProperty({ nullable: true, type: Number })
   numTreesRegenerating: number | null;

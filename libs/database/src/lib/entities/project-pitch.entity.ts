@@ -3,6 +3,7 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
+  HasOne,
   Index,
   Model,
   PrimaryKey,
@@ -86,447 +87,450 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
+
+  @HasOne(() => FormSubmission, { foreignKey: "projectPitchUuid", sourceKey: "uuid", constraints: false })
+  declare formSubmission: FormSubmission | null;
 
   @AllowNull
   @JsonColumn()
-  capacityBuildingNeeds: string[] | null;
+  declare capacityBuildingNeeds: string[] | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  totalTrees: number | null;
+  declare totalTrees: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  totalHectares: number | null;
+  declare totalHectares: number | null;
 
   @AllowNull
   @JsonColumn()
-  restorationInterventionTypes: string[] | null;
+  declare restorationInterventionTypes: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  landUseTypes: string[] | null;
+  declare landUseTypes: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  restorationStrategy: string[] | null;
+  declare restorationStrategy: string[] | null;
 
   @AllowNull
   @Column(STRING)
-  projectCountyDistrict: string | null;
+  declare projectCountyDistrict: string | null;
 
   @AllowNull
   @Column(STRING)
-  projectCountry: string | null;
+  declare projectCountry: string | null;
 
   @AllowNull
   @Column(TEXT("medium"))
-  projectObjectives: string | null;
+  declare projectObjectives: string | null;
 
   @AllowNull
   @Column(STRING)
-  projectName: string | null;
+  declare projectName: string | null;
 
   @AllowNull
   @Column(UUID)
-  organisationId: string | null;
+  declare organisationId: string | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid", constraints: false })
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   @AllowNull
   @Column(UUID)
-  fundingProgrammeId: string | null;
+  declare fundingProgrammeId: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  projectBudget: number | null;
+  declare projectBudget: number | null;
 
   @AllowNull
   @JsonColumn()
-  howDiscovered: string[] | null;
+  declare howDiscovered: string[] | null;
 
   @Column({ type: STRING, defaultValue: "draft" })
-  status: CreationOptional<string>;
+  declare status: CreationOptional<string>;
 
   @AllowNull
   @Column(DATE)
-  expectedActiveRestorationStartDate: Date | null;
+  declare expectedActiveRestorationStartDate: Date | null;
 
   @AllowNull
   @Column(DATE)
-  expectedActiveRestorationEndDate: Date | null;
+  declare expectedActiveRestorationEndDate: Date | null;
 
   @AllowNull
   @Column(TEXT)
-  descriptionOfProjectTimeline: string | null;
+  declare descriptionOfProjectTimeline: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projPartnerInfo: string | null;
+  declare projPartnerInfo: string | null;
 
   @AllowNull
   @JsonColumn()
-  landTenureProjArea: string[] | null;
+  declare landTenureProjArea: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  landholderCommEngage: string | null;
+  declare landholderCommEngage: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projSuccessRisks: string | null;
+  declare projSuccessRisks: string | null;
 
   @AllowNull
   @Column(TEXT)
-  monitorEvalPlan: string | null;
+  declare monitorEvalPlan: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projBoundary: string | null;
+  declare projBoundary: string | null;
 
   @AllowNull
   @JsonColumn()
-  sustainableDevGoals: string[] | null;
+  declare sustainableDevGoals: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  projAreaDescription: string | null;
+  declare projAreaDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  environmentalGoals: string | null;
+  declare environmentalGoals: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  proposedNumSites: number | null;
+  declare proposedNumSites: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  proposedNumNurseries: number | null;
+  declare proposedNumNurseries: number | null;
 
   @AllowNull
   @Column(TEXT)
-  currLandDegradation: string | null;
+  declare currLandDegradation: string | null;
 
   @AllowNull
   @Column(TEXT)
-  mainDegradationCauses: string | null;
+  declare mainDegradationCauses: string | null;
 
   @AllowNull
   @Column(TEXT)
-  seedlingsSource: string | null;
+  declare seedlingsSource: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projImpactSocieconom: string | null;
+  declare projImpactSocieconom: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projImpactFoodsec: string | null;
+  declare projImpactFoodsec: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projImpactWatersec: string | null;
+  declare projImpactWatersec: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projImpactJobtypes: string | null;
+  declare projImpactJobtypes: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  numJobsCreated: number | null;
+  declare numJobsCreated: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctEmployeesMen: number | null;
+  declare pctEmployeesMen: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctEmployeesWomen: number | null;
+  declare pctEmployeesWomen: number | null;
 
   @AllowNull
   @Column({ type: TINYINT, field: "pct_employees_18to35" })
-  pctEmployees18To35: number | null;
+  declare pctEmployees18To35: number | null;
 
   @AllowNull
   @Column({ type: TINYINT, field: "pct_employees_older35" })
-  pctEmployeesOlder35: number | null;
+  declare pctEmployeesOlder35: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  projBeneficiaries: number | null;
+  declare projBeneficiaries: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesWomen: number | null;
+  declare pctBeneficiariesWomen: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesSmall: number | null;
+  declare pctBeneficiariesSmall: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesLarge: number | null;
+  declare pctBeneficiariesLarge: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesYouth: number | null;
+  declare pctBeneficiariesYouth: number | null;
 
   @AllowNull
   @Column(TEXT)
-  mainCausesOfDegradation: string | null;
+  declare mainCausesOfDegradation: string | null;
 
   @AllowNull
   @JsonColumn()
-  states: string[] | null;
+  declare states: string[] | null;
 
   @AllowNull
   @Column(INTEGER)
-  hectaresFirstYr: number | null;
+  declare hectaresFirstYr: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  totalTreesFirstYr: number | null;
+  declare totalTreesFirstYr: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  pctBeneficiariesBackwardClass: number | null;
+  declare pctBeneficiariesBackwardClass: number | null;
 
   @AllowNull
   @JsonColumn()
-  landSystems: string[] | null;
+  declare landSystems: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  treeRestorationPractices: string[] | null;
+  declare treeRestorationPractices: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  detailedInterventionTypes: string[] | null;
+  declare detailedInterventionTypes: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  monitoringEvaluationPlan: string | null;
+  declare monitoringEvaluationPlan: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  pctBeneficiariesScheduledClasses: number | null;
+  declare pctBeneficiariesScheduledClasses: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  pctBeneficiariesScheduledTribes: number | null;
+  declare pctBeneficiariesScheduledTribes: number | null;
 
   @AllowNull
   @Column(TEXT)
-  theoryOfChange: string | null;
+  declare theoryOfChange: string | null;
 
   @AllowNull
   @Column(TEXT)
-  proposedGovPartners: string | null;
+  declare proposedGovPartners: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  pctSchTribe: string | null;
+  declare pctSchTribe: string | null;
 
   @AllowNull
   @Column(TEXT)
-  sustainabilityPlan: string | null;
+  declare sustainabilityPlan: string | null;
 
   @AllowNull
   @Column(TEXT)
-  replicationPlan: string | null;
+  declare replicationPlan: string | null;
 
   @AllowNull
   @Column(TEXT)
-  replicationChallenges: string | null;
+  declare replicationChallenges: string | null;
 
   @AllowNull
   @Column(TEXT)
-  solutionMarketSize: string | null;
+  declare solutionMarketSize: string | null;
 
   @AllowNull
   @Column(TEXT)
-  affordabilityOfSolution: string | null;
+  declare affordabilityOfSolution: string | null;
 
   @AllowNull
   @Column(TEXT)
-  growthTrendsBusiness: string | null;
+  declare growthTrendsBusiness: string | null;
 
   @AllowNull
   @Column(TEXT)
-  limitationsOnScope: string | null;
+  declare limitationsOnScope: string | null;
 
   @AllowNull
   @Column(TEXT)
-  businessModelReplicationPlan: string | null;
+  declare businessModelReplicationPlan: string | null;
 
   @AllowNull
   @Column(TEXT)
-  biodiversityImpact: string | null;
+  declare biodiversityImpact: string | null;
 
   @AllowNull
   @Column(TEXT)
-  waterSource: string | null;
+  declare waterSource: string | null;
 
   @AllowNull
   @Column(TEXT)
-  climateResilience: string | null;
+  declare climateResilience: string | null;
 
   @AllowNull
   @Column(TEXT)
-  soilHealth: string | null;
+  declare soilHealth: string | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctEmployeesMarginalised: number | null;
+  declare pctEmployeesMarginalised: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesMarginalised: number | null;
+  declare pctBeneficiariesMarginalised: number | null;
 
   @AllowNull
   @Column(TINYINT)
-  pctBeneficiariesMen: number | null;
+  declare pctBeneficiariesMen: number | null;
 
   @AllowNull
   @Column(TEXT)
-  baselineBiodiversity: string | null;
+  declare baselineBiodiversity: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  goalTreesRestoredPlanting: number | null;
+  declare goalTreesRestoredPlanting: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  goalTreesRestoredAnr: number | null;
+  declare goalTreesRestoredAnr: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  goalTreesRestoredDirectSeeding: number | null;
+  declare goalTreesRestoredDirectSeeding: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  directSeedingSurvivalRate: number | null;
+  declare directSeedingSurvivalRate: number | null;
 
   @AllowNull
   @JsonColumn({ field: "level_0_proposed" })
-  level0Proposed: string[] | null;
+  declare level0Proposed: string[] | null;
 
   @AllowNull
   @JsonColumn({ field: "level_1_proposed" })
-  level1Proposed: string[] | null;
+  declare level1Proposed: string[] | null;
 
   @AllowNull
   @JsonColumn({ field: "level_2_proposed" })
-  level2Proposed: string[] | null;
+  declare level2Proposed: string[] | null;
 
   @AllowNull
   @Column(DECIMAL(15, 8))
-  latProposed: number | null;
+  declare latProposed: number | null;
 
   @AllowNull
   @Column({ type: DECIMAL(15, 8), field: "long_proposed" })
-  lngProposed: number | null;
+  declare lngProposed: number | null;
 
   @AllowNull
   @Column(TEXT)
-  stakeholderEngagement: string | null;
+  declare stakeholderEngagement: string | null;
 
   @AllowNull
   @Column(STRING)
-  landownerAgreement: string | null;
+  declare landownerAgreement: string | null;
 
   @AllowNull
   @Column(TEXT)
-  landownerAgreementDescription: string | null;
+  declare landownerAgreementDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  landTenureDistribution: string | null;
+  declare landTenureDistribution: string | null;
 
   @AllowNull
   @Column(TEXT)
-  landTenureRisks: string | null;
+  declare landTenureRisks: string | null;
 
   @AllowNull
   @Column(TEXT)
-  nonTreeInterventionsDescription: string | null;
+  declare nonTreeInterventionsDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  complementExistingRestoration: string | null;
+  declare complementExistingRestoration: string | null;
 
   @AllowNull
   @Column(TEXT)
-  landUseTypeDistribution: string | null;
+  declare landUseTypeDistribution: string | null;
 
   @AllowNull
   @Column(TEXT)
-  restorationStrategyDistribution: string | null;
+  declare restorationStrategyDistribution: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  totalTreeSecondYr: number | null;
+  declare totalTreeSecondYr: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  projSurvivalRate: number | null;
+  declare projSurvivalRate: number | null;
 
   @AllowNull
   @Column(TEXT)
-  anrApproach: string | null;
+  declare anrApproach: string | null;
 
   @AllowNull
   @Column(TEXT)
-  anrRights: string | null;
+  declare anrRights: string | null;
 
   @AllowNull
   @Column(TEXT)
-  projectSiteModel: string | null;
+  declare projectSiteModel: string | null;
 
   @AllowNull
   @Column(TEXT)
-  indigenousImpact: string | null;
+  declare indigenousImpact: string | null;
 
   @AllowNull
   @JsonColumn()
-  barriersProjectActivity: string | null;
+  declare barriersProjectActivity: string | null;
 
   @AllowNull
   @Column(TEXT)
-  barriersProjectActivityDescription: string | null;
+  declare barriersProjectActivityDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  otherEngageWomenYouth: string | null;
+  declare otherEngageWomenYouth: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  forestFragmentsDistance: number | null;
+  declare forestFragmentsDistance: number | null;
 
   @AllowNull
   @JsonColumn()
-  anrPracticesProposed: string[] | null;
+  declare anrPracticesProposed: string[] | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  informationAuthorization: boolean | null;
+  declare informationAuthorization: boolean | null;
 
   @AllowNull
   @Column(TEXT)
-  goalTreesRestoredDescription: string | null;
+  declare goalTreesRestoredDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  jobsCreatedBeneficiariesDescription: string | null;
+  declare jobsCreatedBeneficiariesDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  consortium: string | null;
+  declare consortium: string | null;
 }

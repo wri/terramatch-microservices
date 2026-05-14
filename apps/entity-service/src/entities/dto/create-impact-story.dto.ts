@@ -8,12 +8,12 @@ export class CreateImpactStoryAttributes extends StoreImpactStoryAttributes {
   @IsNotEmpty()
   @Length(1, 70, { message: "Title must be between 1 and 70 characters" })
   @ApiProperty({ description: "Impact story title (max 70 characters)", maxLength: 70 })
-  title: string;
+  declare title: string;
 
   @IsString()
   @IsNotEmpty()
   @ApiProperty({ description: "Organization UUID (must exist in the database)" })
-  organizationUuid: string;
+  declare organizationUuid: string;
 }
 
 export class CreateImpactStoryDataDto extends CreateDataDto("impactStories", CreateImpactStoryAttributes) {}

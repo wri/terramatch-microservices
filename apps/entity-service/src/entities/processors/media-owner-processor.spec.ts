@@ -103,13 +103,11 @@ describe("getBaseEntityByLaravelTypeAndId", () => {
   });
 
   it("throws if the owner is unknown", async () => {
-    await expect(getBaseEntityByLaravelTypeAndId("unknown", 1)).rejects.toThrowError(
-      "Media owner type invalid: unknown"
-    );
+    await expect(getBaseEntityByLaravelTypeAndId("unknown", 1)).rejects.toThrow("Media owner type invalid: unknown");
   });
 
   it("throws if the model is not found", async () => {
-    await expect(getBaseEntityByLaravelTypeAndId(Site.LARAVEL_TYPE, -1)).rejects.toThrowError(
+    await expect(getBaseEntityByLaravelTypeAndId(Site.LARAVEL_TYPE, -1)).rejects.toThrow(
       "Base entity not found: [Site, -1]"
     );
   });

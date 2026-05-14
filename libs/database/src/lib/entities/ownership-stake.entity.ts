@@ -25,30 +25,30 @@ export class OwnershipStake extends Model<InferAttributes<OwnershipStake>, Infer
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column({ type: UUID })
-  organisationId: string;
+  declare organisationId: string;
 
   @Column(STRING)
-  firstName: string;
+  declare firstName: string;
 
   @Column(STRING)
-  lastName: string;
+  declare lastName: string;
 
   @Column(STRING)
-  title: string;
+  declare title: string;
 
   @Column(TEXT)
-  gender: string;
+  declare gender: string;
 
   @Column(TINYINT)
-  percentOwnership: number;
+  declare percentOwnership: number;
 
   @Column(INTEGER.UNSIGNED)
-  yearOfBirth: number;
+  declare yearOfBirth: number;
 }

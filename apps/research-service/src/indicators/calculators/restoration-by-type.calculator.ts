@@ -7,7 +7,10 @@ import { Op } from "sequelize";
 import { IndicatorSlug, RestorationByTypeData } from "@terramatch-microservices/database/constants";
 
 export class RestorationByTypeCalculator implements CalculateIndicator {
-  constructor(private readonly type: string, private readonly indicatorSlug: IndicatorSlug) {}
+  constructor(
+    private readonly type: string,
+    private readonly indicatorSlug: IndicatorSlug
+  ) {}
   private logger = new TMLogger(RestorationByTypeCalculator.name);
 
   async calculate(polygonUuid: string, geometry: Polygon): Promise<IndicatorOutputHectares> {

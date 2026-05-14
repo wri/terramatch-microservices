@@ -362,17 +362,23 @@ describe("SitePolygonCreationService - Versioning", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should ignore empty string attribute values", async () => {
+    it("should clear nullable attributes when empty values are explicitly provided", async () => {
       const basePolygon = {
         uuid: baseSitePolygonUuid,
         primaryUuid: "primary-uuid",
         polyName: "Original Name",
-        practice: ["agroforestry"]
+        plantStart: new Date("2023-01-01T00:00:00Z"),
+        practice: ["agroforestry"],
+        targetSys: "agroforestry",
+        distr: ["full"]
       } as unknown as SitePolygon;
 
       const attributeChanges: AttributeChangesDto = {
-        polyName: "Updated Name",
-        practice: [], // Empty array should be ignored
+        polyName: "",
+        plantStart: "",
+        practice: [],
+        targetSys: "",
+        distr: [],
         numTrees: 0
       };
 
@@ -395,9 +401,55 @@ describe("SitePolygonCreationService - Versioning", () => {
       const createVersionCall = (versioningService.createVersion as jest.Mock).mock.calls[0];
       const appliedAttributes = createVersionCall[1];
 
-      expect(appliedAttributes.polyName).toBe("Updated Name");
-      expect(appliedAttributes.practice).toBeUndefined(); // Empty array ignored
+      expect(appliedAttributes.polyName).toBeNull();
+      expect(appliedAttributes.plantStart).toBeNull();
+      expect(appliedAttributes.practice).toBeNull();
+      expect(appliedAttributes.targetSys).toBeNull();
+      expect(appliedAttributes.distr).toBeNull();
       expect(appliedAttributes.numTrees).toBe(0);
+    });
+
+    it("should leave inherited values untouched when a field is omitted", async () => {
+      const basePolygon = {
+        uuid: baseSitePolygonUuid,
+        primaryUuid: "primary-uuid",
+        polyName: "Original Name",
+        plantStart: new Date("2023-01-01T00:00:00Z"),
+        practice: ["agroforestry"],
+        targetSys: "agroforestry",
+        distr: ["full"],
+        numTrees: 42
+      } as unknown as SitePolygon;
+
+      const attributeChanges: AttributeChangesDto = {
+        polyName: "Updated Name"
+      };
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
+        uuid: "new-version-uuid"
+      } as SitePolygon);
+
+      await service.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        undefined,
+        attributeChanges,
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+
+      const createVersionCall = (versioningService.createVersion as jest.Mock).mock.calls[0];
+      const appliedAttributes = createVersionCall[1];
+
+      expect(appliedAttributes.polyName).toBe("Updated Name");
+      expect(appliedAttributes).not.toHaveProperty("plantStart");
+      expect(appliedAttributes).not.toHaveProperty("practice");
+      expect(appliedAttributes).not.toHaveProperty("targetSys");
+      expect(appliedAttributes).not.toHaveProperty("distr");
+      expect(appliedAttributes).not.toHaveProperty("numTrees");
     });
 
     it("should always set status to draft", async () => {
@@ -480,6 +532,19 @@ describe("SitePolygonCreationService - Versioning", () => {
       const description = service["buildDetailedChangeDescription"](basePolygon, changes, false);
 
       expect(description).toBe("Version created");
+    });
+
+    it("should describe cleared attribute values", () => {
+      const basePolygon = { uuid: "test", polyName: "Old Name", targetSys: "agroforestry" } as SitePolygon;
+      const changes = { polyName: null, targetSys: null };
+
+      const description = service["buildDetailedChangeDescription"](basePolygon, changes, false);
+
+      expect(description).toContain("polyName");
+      expect(description).toContain("Old Name");
+      expect(description).toContain("null");
+      expect(description).toContain("targetSys");
+      expect(description).toContain("agroforestry");
     });
   });
 });

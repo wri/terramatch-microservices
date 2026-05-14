@@ -6,11 +6,11 @@ export class Role extends Model<InferAttributes<Role>, InferCreationAttributes<R
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Column(STRING)
-  name: string;
+  declare name: string;
 
   @Column({ type: STRING, defaultValue: "api" })
-  guardName: CreationOptional<string>;
+  declare guardName: CreationOptional<string>;
 }

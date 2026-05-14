@@ -21,7 +21,10 @@ import { StrataDto } from "@terramatch-microservices/common/dto/strata.dto";
 @Controller("entities/v3/:entity/:uuid")
 @ApiExtraModels(TrackingEntryDto, DemographicCollections)
 export class EntityAssociationsController {
-  constructor(private readonly entitiesService: EntitiesService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly entitiesService: EntitiesService,
+    private readonly policyService: PolicyService
+  ) {}
 
   @Get(":association")
   @ApiOperation({

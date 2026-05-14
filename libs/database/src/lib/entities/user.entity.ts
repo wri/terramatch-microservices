@@ -75,103 +75,103 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   // There are many rows in the prod DB without a UUID assigned, so this cannot be a unique
   // index until that is fixed.
   @AllowNull
   @Index({ unique: false })
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string | null;
+  declare uuid: string | null;
 
   @ForeignKey(() => Organisation)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  organisationId: number | null;
+  declare organisationId: number | null;
 
   @AllowNull
   @Column(STRING)
-  firstName: string | null;
+  declare firstName: string | null;
 
   @AllowNull
   @Column(STRING)
-  lastName: string | null;
+  declare lastName: string | null;
 
   @AllowNull
   @Unique
   @Column(STRING)
-  emailAddress: string;
+  declare emailAddress: string;
 
   @AllowNull
   @Column(STRING)
-  password: string | null;
+  declare password: string | null;
 
   @AllowNull
   @Column(DATE)
-  emailAddressVerifiedAt: Date | null;
+  declare emailAddressVerifiedAt: Date | null;
 
   @AllowNull
   @Column(DATE)
-  lastLoggedInAt: Date | null;
+  declare lastLoggedInAt: Date | null;
 
   @AllowNull
   @Column(STRING)
-  jobRole: string | null;
+  declare jobRole: string | null;
 
   @AllowNull
   @Column(STRING)
-  facebook: string | null;
+  declare facebook: string | null;
 
   @AllowNull
   @Column(STRING)
-  twitter: string | null;
+  declare twitter: string | null;
 
   @AllowNull
   @Column(STRING)
-  linkedin: string | null;
+  declare linkedin: string | null;
 
   @AllowNull
   @Column(STRING)
-  instagram: string | null;
+  declare instagram: string | null;
 
   @AllowNull
   @Column(STRING)
-  avatar: string | null;
+  declare avatar: string | null;
 
   @AllowNull
   @Column(STRING)
-  phoneNumber: string | null;
+  declare phoneNumber: string | null;
 
   @AllowNull
   @Column(STRING)
-  whatsappPhone: string | null;
+  declare whatsappPhone: string | null;
 
   @Default(true)
   @Column(BOOLEAN)
-  isSubscribed: CreationOptional<boolean>;
+  declare isSubscribed: CreationOptional<boolean>;
 
   @Default(true)
   @Column(BOOLEAN)
-  hasConsented: CreationOptional<boolean>;
+  declare hasConsented: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)
-  banners: string | null;
+  declare banners: string | null;
 
   @AllowNull
   @Column(STRING)
-  apiKey: string | null;
+  declare apiKey: string | null;
 
   @AllowNull
   @Column(STRING)
-  country: string | null;
+  declare country: string | null;
 
   @AllowNull
   @Column(STRING)
-  program: string | null;
+  declare program: string | null;
 
   @Column(STRING)
-  locale: ValidLocale;
+  declare locale: ValidLocale;
 
   @BelongsToMany(() => Role, {
     foreignKey: "modelId",
@@ -183,7 +183,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
       }
     }
   })
-  roles: Role[] | null;
+  declare roles: Role[] | null;
 
   async loadRoles() {
     if (this.roles == null) this.roles = await (this as User).$get("roles");
@@ -221,10 +221,10 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   }
 
   @BelongsToMany(() => Project, () => ProjectUser)
-  projects: Array<Project & { ProjectUser: ProjectUser }> | null;
+  declare projects: Array<Project & { ProjectUser: ProjectUser }> | null;
 
   @BelongsTo(() => Organisation)
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   async loadOrganisation() {
     if (this.organisation == null && this.organisationId != null) {
@@ -234,7 +234,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   }
 
   @BelongsToMany(() => Organisation, () => OrganisationUser)
-  organisations: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
+  declare organisations: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   @BelongsToMany(() => Organisation, {
     through: {
@@ -242,7 +242,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
       scope: { status: "approved" }
     }
   })
-  organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
+  declare organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   @BelongsToMany(() => Organisation, {
     through: {
@@ -250,7 +250,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
       scope: { status: "requested" }
     }
   })
-  organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
+  declare organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
   async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {
@@ -283,7 +283,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   }
 
   @BelongsToMany(() => Framework, () => FrameworkUser)
-  frameworks: Framework[] | null;
+  declare frameworks: Framework[] | null;
 
   async loadFrameworks() {
     if (this.frameworks == null) {

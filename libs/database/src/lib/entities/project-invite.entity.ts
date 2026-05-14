@@ -18,30 +18,30 @@ export class ProjectInvite extends Model<ProjectInvite> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @Column(STRING)
-  emailAddress: string;
+  declare emailAddress: string;
 
   @AllowNull
   @Column(STRING)
-  token: string | null;
+  declare token: string | null;
 
   @AllowNull
   @Column(DATE)
-  acceptedAt: Date | null;
+  declare acceptedAt: Date | null;
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   @BelongsTo(() => User, { foreignKey: "emailAddress", targetKey: "emailAddress" })
-  user: User | null;
+  declare user: User | null;
 }

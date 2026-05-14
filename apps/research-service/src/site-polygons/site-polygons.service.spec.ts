@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion,@typescript-eslint/no-non-null-asserted-optional-chain */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {

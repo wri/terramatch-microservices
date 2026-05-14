@@ -44,34 +44,34 @@ export class DisturbanceReportEntry extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => DisturbanceReport)
   @Column({ type: BIGINT.UNSIGNED })
-  disturbanceReportId: number;
+  declare disturbanceReportId: number;
 
   @Column(STRING)
-  name: string;
+  declare name: string;
 
   @Column({ type: STRING })
-  inputType: string;
+  declare inputType: string;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(STRING)
-  subtitle: string | null;
+  declare subtitle: string | null;
 
   @AllowNull
   @Column(TEXT)
-  value: string | null;
+  declare value: string | null;
 
   @BelongsTo(() => DisturbanceReport)
-  disturbanceReport: CreationOptional<DisturbanceReport>;
+  declare disturbanceReport: CreationOptional<DisturbanceReport>;
 }

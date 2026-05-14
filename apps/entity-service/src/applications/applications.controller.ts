@@ -307,7 +307,7 @@ export class ApplicationsController {
     } else {
       const status = (audit.newValues?.status ?? null) as FormSubmissionStatus | null;
       const eventType = audit.event === "updated" && status == null ? audit.event : "status";
-      const comment = eventType === "updated" ? null : (audit.newValues?.feedback as string) ?? null;
+      const comment = eventType === "updated" ? null : ((audit.newValues?.feedback as string) ?? null);
       return populateDto(new ApplicationHistoryEntryDto(), {
         eventType,
         status,

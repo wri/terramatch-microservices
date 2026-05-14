@@ -9,7 +9,7 @@ type FundingTypeAssociations = {
 };
 
 const COLUMNS: ColumnMapping<FundingType, FundingTypeAssociations>[] = [
-  ...commonEntityColumns<FundingType>(),
+  ...commonEntityColumns<FundingType, FundingTypeAssociations>(),
   {
     dbColumn: "organisationId",
     airtableColumn: "organisationUuid",

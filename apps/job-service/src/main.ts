@@ -41,7 +41,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.JOB_SERVICE_PORT ?? 4020;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.JOB_SERVICE_PORT ?? 4020);
   await app.listen(port);
 
   Logger.log(`TerraMatch Job Service is running on: http://localhost:${port}`);

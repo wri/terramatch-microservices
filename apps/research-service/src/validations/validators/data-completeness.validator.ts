@@ -62,7 +62,7 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
 
     const validationErrors = this.validateFields(
       VALIDATION_FIELDS,
-      field => sitePolygon[field],
+      field => sitePolygon[field as keyof typeof sitePolygon],
       field => FIELD_NAME_MAP[field] ?? field
     );
 
@@ -89,7 +89,7 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
 
       const validationErrors = this.validateFields(
         VALIDATION_FIELDS,
-        field => sitePolygon[field],
+        field => sitePolygon[field as keyof typeof sitePolygon],
         field => FIELD_NAME_MAP[field] ?? field
       );
 

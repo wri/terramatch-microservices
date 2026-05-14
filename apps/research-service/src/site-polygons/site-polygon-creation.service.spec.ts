@@ -883,7 +883,7 @@ describe("SitePolygonCreationService", () => {
             ])
           })
         ]),
-        expect.objectContaining({ polyName: "New Name", poly_name: "New Name" }),
+        expect.objectContaining({ polyName: "New Name" }),
         "Version created from geometry file upload",
         userId,
         userFullName,
@@ -935,7 +935,7 @@ describe("SitePolygonCreationService", () => {
       expect(service.createSitePolygonVersion).toHaveBeenCalledWith(
         sitePolygonUuid,
         expect.any(Array),
-        expect.objectContaining({ polyName: "Base (new)", poly_name: "Base (new)" }),
+        expect.objectContaining({ polyName: "Base (new)" }),
         "Version created from geometry file upload",
         userId,
         userFullName,

@@ -31,7 +31,10 @@ import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-specie
 
 @Injectable()
 export class OrganisationsService {
-  constructor(private readonly policyService: PolicyService, private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly mediaService: MediaService
+  ) {}
 
   async findMany(query: OrganisationIndexQueryDto) {
     const builder = PaginatedQueryBuilder.forNumberPage(Organisation, query.page);
@@ -113,7 +116,7 @@ export class OrganisationsService {
 
     if (query.sort?.field != null) {
       const sortField = query.sort.field.startsWith("-") ? query.sort.field.substring(1) : query.sort.field;
-      const direction = query.sort.field.startsWith("-") ? "DESC" : query.sort.direction ?? "ASC";
+      const direction = query.sort.field.startsWith("-") ? "DESC" : (query.sort.direction ?? "ASC");
 
       const fieldMap: Record<string, string> = {
         created_at: "createdAt",
@@ -176,13 +179,16 @@ export class OrganisationsService {
           where: { collectionName: "documentation" }
         });
 
-        const mediaByIndicatorId = mediaCollection.reduce((acc, media) => {
-          if (acc[media.modelId] == null) {
-            acc[media.modelId] = [];
-          }
-          acc[media.modelId].push(media);
-          return acc;
-        }, {} as Record<number, Media[]>);
+        const mediaByIndicatorId = mediaCollection.reduce(
+          (acc, media) => {
+            if (acc[media.modelId] == null) {
+              acc[media.modelId] = [];
+            }
+            acc[media.modelId].push(media);
+            return acc;
+          },
+          {} as Record<number, Media[]>
+        );
 
         for (const indicator of financialIndicators) {
           const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];

@@ -25,27 +25,27 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  declare status: string | null;
 
   // Note: this is marked as nullable in the current schema, but has a default value. The
   // nullability should be removed when v3 is responsible for the DB schema.
   @Column({ type: BOOLEAN, defaultValue: false })
-  isMonitoring: CreationOptional<boolean>;
+  declare isMonitoring: CreationOptional<boolean>;
 
   // Note: this is marked as nullable in the current schema, but has a default value. The
   // nullability should be removed when v3 is responsible for the DB schema.
   @Column({ type: BOOLEAN, defaultValue: false })
-  isManaging: CreationOptional<boolean>;
+  declare isManaging: CreationOptional<boolean>;
 }

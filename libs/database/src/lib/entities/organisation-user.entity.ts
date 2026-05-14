@@ -8,16 +8,16 @@ export class OrganisationUser extends Model<OrganisationUser> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number;
+  declare organisationId: number;
 
   @Column(STRING(20))
-  status: string;
+  declare status: string;
 }

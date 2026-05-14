@@ -43,7 +43,7 @@ export type AdminReminderEmailData = {
   feedback: string | null;
 };
 
-const EMAIL_PROCESSORS: ((new (data: unknown) => EmailSender<unknown>) & { NAME: string })[] = [
+const EMAIL_SENDERS: ((new (data: never) => EmailSender<unknown>) & { NAME: string })[] = [
   EntityStatusUpdateEmail,
   TerrafundReportReminderEmail,
   TerrafundSiteAndNurseryReminderEmail,
@@ -80,12 +80,13 @@ export class EmailProcessor extends WorkerHost {
 
   async process(job: Job) {
     const { name, data } = job;
-    const processor = EMAIL_PROCESSORS.find(processor => processor.NAME === name);
-    if (processor == null) {
+    const sender = EMAIL_SENDERS.find(sender => sender.NAME === name);
+    if (sender == null) {
       throw new NotImplementedException(`Unknown email name [${name}]`);
     }
 
-    await new processor(data).send(this.emailService);
+    const typedSender = sender as unknown as new (d: typeof data) => EmailSender<typeof data>;
+    await new typedSender(data).send(this.emailService);
   }
 
   @OnWorkerEvent("failed")

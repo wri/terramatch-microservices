@@ -20,7 +20,10 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 export class DisturbancesController {
   private logger = new TMLogger(DisturbancesController.name);
 
-  constructor(private readonly disturbanceService: DisturbanceService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly disturbanceService: DisturbanceService,
+    private readonly policyService: PolicyService
+  ) {}
 
   @Get()
   @ApiOperation({

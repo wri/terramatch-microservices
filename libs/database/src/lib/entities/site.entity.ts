@@ -143,7 +143,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   get exportId(): CreationOptional<number> {
     return this.ppcExternalId ?? this.id;
@@ -151,18 +151,18 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @StateMachineColumn(EntityStatusStates)
-  status: CreationOptional<EntityStatus>;
+  declare status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/site/${this.uuid}/show`;
@@ -170,10 +170,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
-  framework: Framework | null;
+  declare framework: Framework | null;
 
   get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
@@ -181,10 +181,10 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   get projectName() {
     return this.project?.name;
@@ -216,126 +216,126 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
 
   @AllowNull
   @Column(STRING)
-  sitingStrategy: SitingStrategy | null;
+  declare sitingStrategy: SitingStrategy | null;
 
   @AllowNull
   @Column(TEXT)
-  descriptionSitingStrategy: string | null;
+  declare descriptionSitingStrategy: string | null;
 
   @AllowNull
   @Column(DECIMAL(15, 1))
-  hectaresToRestoreGoal: number | null;
+  declare hectaresToRestoreGoal: number | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  controlSite: boolean | null;
+  declare controlSite: boolean | null;
 
   @AllowNull
   @Column(TEXT)
-  history: string | null;
+  declare history: string | null;
 
   @AllowNull
   @Column(DATE)
-  startDate: Date | null;
+  declare startDate: Date | null;
 
   @AllowNull
   @Column(DATE)
-  endDate: Date | null;
+  declare endDate: Date | null;
 
   @AllowNull
   @JsonColumn()
-  landTenures: string[] | null;
+  declare landTenures: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  landTenureApproach: string | null;
+  declare landTenureApproach: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  survivalRatePlanted: number | null;
+  declare survivalRatePlanted: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  directSeedingSurvivalRate: number | null;
+  declare directSeedingSurvivalRate: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  aNatRegenerationTreesPerHectare: number | null;
+  declare aNatRegenerationTreesPerHectare: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  aNatRegeneration: number | null;
+  declare aNatRegeneration: number | null;
 
   @AllowNull
   @Column(TEXT)
-  landscapeCommunityContribution: string | null;
+  declare landscapeCommunityContribution: string | null;
 
   @AllowNull
   @Column(TEXT)
-  technicalNarrative: string | null;
+  declare technicalNarrative: string | null;
 
   @AllowNull
   @Column(TEXT)
-  plantingPattern: string | null;
+  declare plantingPattern: string | null;
 
   @AllowNull
   @Column(STRING)
-  soilCondition: string | null;
+  declare soilCondition: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  aimYearFiveCrownCover: number | null;
+  declare aimYearFiveCrownCover: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  aimNumberOfMatureTrees: number | null;
+  declare aimNumberOfMatureTrees: number | null;
 
   @AllowNull
   @JsonColumn()
-  landUseTypes: string[] | null;
+  declare landUseTypes: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  restorationStrategy: string[] | null;
+  declare restorationStrategy: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  anrPractices: string[] | null;
+  declare anrPractices: string[] | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ppcExternalId: number | null;
+  declare ppcExternalId: number | null;
 
   @AllowNull
   @JsonColumn()
-  detailedInterventionTypes: string[] | null;
+  declare detailedInterventionTypes: string[] | null;
 
   @AllowNull
   @Column(TEXT("long"))
-  boundaryGeojson: string | null;
+  declare boundaryGeojson: string | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "tree-planted" }
   })
-  treesPlanted: TreeSpecies[] | null;
+  declare treesPlanted: TreeSpecies[] | null;
 
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
@@ -347,24 +347,24 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     constraints: false,
     scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "non-tree" }
   })
-  nonTrees: TreeSpecies[] | null;
+  declare nonTrees: TreeSpecies[] | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "invasive" }
   })
-  invasiveTrees: TreeSpecies[] | null;
+  declare invasiveTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
     scope: { seedable_type: Site.LARAVEL_TYPE }
   })
-  seedsPlanted: Seeding[] | null;
+  declare seedsPlanted: Seeding[] | null;
 
   @HasMany(() => SiteReport)
-  reports: SiteReport[] | null;
+  declare reports: SiteReport[] | null;
 
   async loadReports() {
     this.reports ??= await this.$get("reports");
@@ -372,5 +372,5 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   }
 
   @HasMany(() => SitePolygon, { foreignKey: "siteUuid", sourceKey: "uuid" })
-  sitePolygons: SitePolygon[] | null;
+  declare sitePolygons: SitePolygon[] | null;
 }

@@ -98,36 +98,36 @@ export class TreeSpecies extends Model<InferAttributes<TreeSpecies>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @ForeignKey(() => TreeSpeciesResearch)
   @Column(STRING)
-  taxonId: string | null;
+  declare taxonId: string | null;
 
   @AllowNull
   @Column(BIGINT)
-  amount: number | null;
+  declare amount: number | null;
 
   @AllowNull
   @Index("v2_tree_species_collection_index")
   @Column(STRING)
-  collection: string | null;
+  declare collection: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: CreationOptional<boolean>;
+  declare hidden: CreationOptional<boolean>;
 
   @Column(STRING)
-  speciesableType: string;
+  declare speciesableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  speciesableId: number;
+  declare speciesableId: number;
 }

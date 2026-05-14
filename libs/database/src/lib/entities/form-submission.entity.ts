@@ -62,37 +62,37 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(TEXT)
-  name: string | null;
+  declare name: string | null;
 
   @StateMachineColumn(FormSubmissionStatusStates)
-  status: CreationOptional<FormSubmissionStatus>;
+  declare status: CreationOptional<FormSubmissionStatus>;
 
   @JsonColumn()
-  answers: Dictionary<unknown>;
+  declare answers: Dictionary<unknown>;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @ForeignKey(() => Application)
   @Column(BIGINT.UNSIGNED)
-  applicationId: number | null;
+  declare applicationId: number | null;
 
   @BelongsTo(() => Application)
-  application: Application | null;
+  declare application: Application | null;
 
   get applicationUuid(): string | null {
     return this.application?.uuid ?? null;
@@ -104,10 +104,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   @AllowNull
   @Column(UUID)
-  projectPitchUuid: string | null;
+  declare projectPitchUuid: string | null;
 
   @BelongsTo(() => ProjectPitch, { foreignKey: "projectPitchUuid", targetKey: "uuid", constraints: false })
-  projectPitch: ProjectPitch | null;
+  declare projectPitch: ProjectPitch | null;
 
   get projectName() {
     return this.projectPitch?.projectName;
@@ -115,10 +115,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   @AllowNull
   @Column(UUID)
-  userId: string | null;
+  declare userId: string | null;
 
   @BelongsTo(() => User, { foreignKey: "userId", targetKey: "uuid", constraints: false })
-  user: User | null;
+  declare user: User | null;
 
   get updatedByName(): string | null {
     return this.user?.fullName ?? null;
@@ -126,10 +126,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   @AllowNull
   @Column(UUID)
-  formId: string | null;
+  declare formId: string | null;
 
   @BelongsTo(() => Form, { foreignKey: "formId", targetKey: "uuid", constraints: false })
-  form: Form | null;
+  declare form: Form | null;
 
   get formUuid() {
     return this.formId;
@@ -137,10 +137,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   @AllowNull
   @Column(UUID)
-  stageUuid: string | null;
+  declare stageUuid: string | null;
 
   @BelongsTo(() => Stage, { foreignKey: "stageUuid", targetKey: "uuid", constraints: false })
-  stage: Stage | null;
+  declare stage: Stage | null;
 
   get stageName(): string | null {
     return this.stage?.name ?? null;
@@ -148,10 +148,10 @@ export class FormSubmission extends Model<InferAttributes<FormSubmission>, Infer
 
   @AllowNull
   @Column(UUID)
-  organisationUuid: string | null;
+  declare organisationUuid: string | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationUuid", targetKey: "uuid", constraints: false })
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   get organisationName(): string | null {
     return this.organisation?.name ?? null;

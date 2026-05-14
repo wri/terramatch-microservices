@@ -30,7 +30,10 @@ import { FormDataDto } from "../entities/dto/form-data.dto";
 
 @Controller("forms/v3/submissions")
 export class SubmissionsController {
-  constructor(private readonly policyService: PolicyService, private readonly formDataService: FormDataService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly formDataService: FormDataService
+  ) {}
 
   @Get(":uuid")
   @ApiOperation({ operationId: "submissionGet", summary: "Get a single form submission by UUID" })

@@ -10,7 +10,8 @@
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s",
       "!{projectRoot}/src/test-setup.[jt]s",
-      "!{projectRoot}/test-setup.[jt]s"
+      "!{projectRoot}/test-setup.[jt]s",
+      "!{projectRoot}/eslint.config.mjs"
     ],
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
   },
@@ -46,8 +47,14 @@
     }
   ],
   "targetDefaults": {
+    "build": {
+      "options": {
+        "args": ["--config-node-env=production"]
+      }
+    },
     "serve": {
       "options": {
+        "args": ["--config-node-env=development"],
         "inspect": false
       }
     },
@@ -70,5 +77,6 @@
         "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
       }
     }
-  }
+  },
+  "analytics": false
 }

@@ -16,7 +16,10 @@ import { CreateReminderBody, ReminderDto, ReminderParamsDto } from "./dto/remind
 
 @Controller("entities/v3/:entity/:uuid/reminders")
 export class RemindersController {
-  constructor(private readonly remindersService: RemindersService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly remindersService: RemindersService,
+    private readonly policyService: PolicyService
+  ) {}
 
   @Post()
   @ApiOperation({

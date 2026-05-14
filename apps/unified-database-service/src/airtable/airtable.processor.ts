@@ -186,7 +186,7 @@ export class AirtableProcessor extends WorkerHost {
     } catch (error) /* istanbul ignore next */ {
       // Don't allow a failure in slack sending to hose our process, but do log it and send it to Sentry
       Sentry.captureException(error);
-      this.logger.error("Send to slack failed", error.stack);
+      this.logger.error("Send to slack failed", error instanceof Error ? error.stack : undefined);
     }
   }
 }

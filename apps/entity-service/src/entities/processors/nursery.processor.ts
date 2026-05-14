@@ -5,7 +5,8 @@ import {
   Project,
   ProjectUser,
   ScheduledJob,
-  Task
+  Task,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor, ExportAllOptions } from "./entity-processor";
@@ -29,6 +30,7 @@ import { normalizedFileName } from "@terramatch-microservices/common/util/filena
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { NurseryReportProcessor } from "./nursery-report.processor";
+import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -140,7 +142,7 @@ export class NurseryProcessor extends EntityProcessor<
 
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
         builder.where({ [field]: query[term] });
       }
     }
@@ -172,6 +174,7 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
 
     const dto = new NurseryFullDto(nursery, {
       ...(await this.getFeedback(nursery)),
@@ -179,6 +182,7 @@ export class NurseryProcessor extends EntityProcessor<
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
+      treesSeedlingsGrownCount,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(nursery).findAll(),
         Nursery.MEDIA,
@@ -196,7 +200,8 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
+    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {
@@ -215,6 +220,16 @@ export class NurseryProcessor extends EntityProcessor<
           })
       )[0].seedlingsYoungTrees ?? 0
     );
+  }
+
+  private async getTreesSeedlingsGrownCount(nurseryId: number) {
+    const reportIds = (
+      await NurseryReport.nurseries([nurseryId])
+        .approved()
+        .findAll({ attributes: ["id"] })
+    ).map(r => r.id);
+    if (reportIds.length === 0) return 0;
+    return (await TreeSpecies.visible().collection("nursery-seedling").nurseryReports(reportIds).sum("amount")) ?? 0;
   }
 
   async delete(nursery: Nursery) {
@@ -253,7 +268,8 @@ export class NurseryProcessor extends EntityProcessor<
         const nextTask =
           project.frameworkKey == null ? undefined : await ScheduledJob.taskDue(project.frameworkKey).findOne();
         createReport =
-          nextTask != null && DateTime.fromISO(nextTask.taskDefinition["dueAt"]) > DateTime.now().plus({ weeks: 4 });
+          nextTask != null &&
+          DateTime.fromISO((nextTask.taskDefinition as TaskDue).dueAt) > DateTime.now().plus({ weeks: 4 });
       }
 
       if (createReport) {

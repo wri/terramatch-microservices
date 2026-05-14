@@ -7,33 +7,33 @@ export class Notification extends Model<InferAttributes<Notification>, InferCrea
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 
   @Column(STRING)
-  title: string;
+  declare title: string;
 
   @Column(TEXT({ length: "long" }))
-  body: string;
+  declare body: string;
 
   @AllowNull
   @Column(STRING)
-  action: string | null;
+  declare action: string | null;
 
   @AllowNull
   @Column(STRING)
-  referencedModel: string | null;
+  declare referencedModel: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  referencedModelId: number | null;
+  declare referencedModelId: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: true })
-  unread: CreationOptional<boolean>;
+  declare unread: CreationOptional<boolean>;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hiddenFromApp: CreationOptional<boolean>;
+  declare hiddenFromApp: CreationOptional<boolean>;
 }

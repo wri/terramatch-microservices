@@ -7,15 +7,15 @@ export class PasswordReset extends Model<InferAttributes<PasswordReset>, InferCr
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Column(STRING)
-  token: string;
+  declare token: string;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 
   @BelongsTo(() => User)
-  user: User | null;
+  declare user: User | null;
 }

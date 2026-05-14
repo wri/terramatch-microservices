@@ -1,5 +1,4 @@
-/* eslint-disable */
-export default {
+module.exports = {
   displayName: "dashboard-service",
   preset: "../../jest.preset.js",
   testEnvironment: "node",

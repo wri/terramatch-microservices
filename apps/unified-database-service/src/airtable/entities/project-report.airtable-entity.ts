@@ -53,8 +53,8 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
       frameworkKey === "ppc"
         ? trees.reduce((total, { amount }) => total + (amount ?? 0), 0)
         : frameworkKey === "terrafund"
-        ? associatedNurseryReports.reduce((total, { seedlingsYoungTrees }) => total + (seedlingsYoungTrees ?? 0), 0)
-        : 0
+          ? associatedNurseryReports.reduce((total, { seedlingsYoungTrees }) => total + (seedlingsYoungTrees ?? 0), 0)
+          : 0
   },
   "technicalNarrative",
   "publicNarrative",

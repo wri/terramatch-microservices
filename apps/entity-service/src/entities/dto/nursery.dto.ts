@@ -71,6 +71,9 @@ export class NurseryLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Number })
   seedlingsGrownCount: number | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  treesSeedlingsGrownCount: number | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -121,9 +124,6 @@ export class NurseryFullDto extends NurseryLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   projectUuid: string | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  treesSeedlingsGrownCount: number | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

@@ -18,4 +18,7 @@ export { fundoFloraFormQuestionOptions } from "./2026-04-06-fundoFloraFormQuesti
 export { migrateNurseryTypeSlugs } from "./2026-04-06-migrateNurseryTypeSlugs";
 export { migrateFormQuestionsMonetaryInputType } from "./2026-04-13-migrateFormQuestionsMonetaryInputType";
 export { addOptionsListToNewField } from "./2026-04-16-addOptionsListToNewField";
+export { updateImageUrls } from "./2026-04-30-updateImageUrls";
+export { reportDefaultValues } from "./2026-05-04-reportDefaultValues";
 export { dedupeProjectReportDocuments } from "./2026-04-29-dedupeProjectReportDocuments";
+export { fixFFAggregateQuestions } from "./2026-05-11-fixFFAggregateQuestions";

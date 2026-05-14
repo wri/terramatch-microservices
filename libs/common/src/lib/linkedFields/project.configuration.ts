@@ -328,10 +328,10 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "all-beneficiaries",
-        collection: "all",
+        collection: "aggregate",
         entryTypes: ["gender", "age"]
       },
-      label: "Aggregate beneficiaries",
+      label: "Aggregate beneficiaries (collection: aggregate)",
       exportHeading: "allBeneficiariesAggregate",
       inputType: "number"
     },
@@ -340,10 +340,10 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
         type: "trackingAggregate",
         domain: "demographics",
         trackingType: "indirect-beneficiaries",
-        collection: "indirect",
+        collection: "aggregate",
         entryTypes: ["gender", "age"]
       },
-      label: "Aggregate indirect beneficiaries",
+      label: "Aggregate indirect beneficiaries (collection: aggregate)",
       exportHeading: "indirectBeneficiariesAggregate",
       inputType: "number"
     },

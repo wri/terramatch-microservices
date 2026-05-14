@@ -3,6 +3,7 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
+  HasOne,
   Index,
   Model,
   PrimaryKey,
@@ -91,6 +92,9 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
   declare uuid: CreationOptional<string>;
+
+  @HasOne(() => FormSubmission, { foreignKey: "projectPitchUuid", sourceKey: "uuid", constraints: false })
+  formSubmission: FormSubmission | null;
 
   @AllowNull
   @JsonColumn()

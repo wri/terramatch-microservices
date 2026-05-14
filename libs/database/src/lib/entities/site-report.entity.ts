@@ -94,7 +94,7 @@ type SiteReportMedia =
   }
 })
 export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees"];
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees", "invasiveTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly UNSUBMITTED_STATUSES = ["due", "started"];
@@ -183,8 +183,8 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column({ type: UUID, defaultValue: UUIDV4 })
   uuid: CreationOptional<string>;
 
-  get linkToTerramatch(): CreationOptional<string> {
-    return `https://www.terramatch.org/admin#/siteReport/${this.uuid}/show`;
+  linkToTerramatch(frontendUrl: string) {
+    return `${frontendUrl}/admin#/siteReport/${this.uuid}/show`;
   }
 
   @AllowNull
@@ -242,11 +242,11 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   }
 
   get organisationUuid() {
-    return this.site?.project?.organisationUuid;
+    return this.site?.project?.organisationUuid as string | undefined;
   }
 
   get organisationReadableType() {
-    return this.site?.project?.organisationReadableType;
+    return this.site?.project?.organisationReadableType as string | undefined;
   }
 
   get siteName() {
@@ -348,11 +348,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column(INTEGER)
   numTreesRegenerating: number | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  soilWaterRestorationDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  soilWaterRestorationDescription: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  waterStructures: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  waterStructures: string | null;
 
   @AllowNull
   @Column(STRING)
@@ -397,17 +399,21 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @Column(STRING)
   plantingStatus: PlantingStatus | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesRemoved: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  invasiveSpeciesRemoved: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  invasiveSpeciesManagement: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  invasiveSpeciesManagement: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  siteCommunityPartnersDescription: string | null;
 
-  @Column({ type: TEXT, defaultValue: "" })
-  siteCommunityPartnersIncomeIncreaseDescription: CreationOptional<string>;
+  @AllowNull
+  @Column({ type: TEXT })
+  siteCommunityPartnersIncomeIncreaseDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
@@ -450,6 +456,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "anr" }
   })
   anrTrees: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "invasive" }
+  })
+  invasiveTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",

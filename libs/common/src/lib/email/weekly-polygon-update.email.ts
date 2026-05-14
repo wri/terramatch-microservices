@@ -146,8 +146,7 @@ export class WeeklyPolygonUpdateEmail extends EmailSender<WeeklyPolygonUpdateEma
             )
             .join("")}</tbody></table>`;
 
-    const baseUrl = emailService.getFrontEndUrl();
-    const link = `${baseUrl}/terrafund/programmeOverview/${project.id}`;
+    const link = `${emailService.frontEndUrl}/terrafund/programmeOverview/${project.id}`;
 
     const i18nReplacements: Dictionary<string> = {
       "{projectName}": project.name ?? "",

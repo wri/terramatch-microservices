@@ -2,7 +2,7 @@ import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { Tracking } from "@terramatch-microservices/database/entities";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 
 describe("TrackingPolicy", () => {
   let service: PolicyService;
@@ -20,15 +20,13 @@ describe("TrackingPolicy", () => {
   });
 
   it("allows reading all trackings with framework permissions", async () => {
-    mockUserId(123);
-    mockPermissions("framework-ppc");
+    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
     await expectCan(service, "read", new Tracking());
     await expectCannot(service, "delete", new Tracking());
   });
 
   it("dany reading all trackings with projects-read permissions", async () => {
-    mockUserId(123);
-    mockPermissions("projects-read");
+    mockRequestContext({ userId: 123, permissions: ["projects-read"] });
     await expectCannot(service, "read", new Tracking());
   });
 });

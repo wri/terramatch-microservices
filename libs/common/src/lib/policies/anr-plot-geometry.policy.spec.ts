@@ -9,7 +9,7 @@ import {
   SitePolygonFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockPermissions, mockUserId } from "../util/testing";
+import { mockRequestContext, mockRequestForUser } from "../util/testing";
 
 describe("AnrPlotGeometryPolicy", () => {
   let service: PolicyService;
@@ -29,8 +29,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("polygons-manage permission", () => {
     it("allows service accounts with polygons-manage to read and create any anr plot geometry", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      mockPermissions("polygons-manage");
+      mockRequestForUser(user, "polygons-manage");
 
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.createdBy = user.id + 1;
@@ -41,8 +40,7 @@ describe("AnrPlotGeometryPolicy", () => {
 
     it("allows service accounts with polygons-manage to update and delete any anr plot geometries", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      mockPermissions("polygons-manage");
+      mockRequestForUser(user, "polygons-manage");
 
       const ownPlotGeometry = new AnrPlotGeometry();
       ownPlotGeometry.createdBy = user.id;
@@ -62,8 +60,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ frameworkKey: "ppc" });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockUserId(123);
-      mockPermissions("framework-ppc");
+      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -77,8 +74,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockUserId(user.id);
-      mockPermissions("manage-own");
+      mockRequestForUser(user, "manage-own");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -92,8 +88,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockUserId(user.id);
-      mockPermissions("projects-manage");
+      mockRequestForUser(user, "projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -107,8 +102,7 @@ describe("AnrPlotGeometryPolicy", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
-      mockUserId(user.id);
-      mockPermissions("projects-manage");
+      mockRequestForUser(user, "projects-manage");
       const anrPlotGeometry = new AnrPlotGeometry();
       anrPlotGeometry.sitePolygonId = sitePolygon.id;
 
@@ -119,8 +113,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("read-only permissions", () => {
     it("allows reading with view-dashboard permission", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      mockPermissions("view-dashboard");
+      mockRequestForUser(user, "view-dashboard");
 
       const anrPlotGeometry = new AnrPlotGeometry();
 
@@ -132,8 +125,7 @@ describe("AnrPlotGeometryPolicy", () => {
 
     it("allows reading with projects-read permission", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      mockPermissions("projects-read");
+      mockRequestForUser(user, "projects-read");
 
       const anrPlotGeometry = new AnrPlotGeometry();
 
@@ -147,8 +139,7 @@ describe("AnrPlotGeometryPolicy", () => {
   describe("no permissions", () => {
     it("denies all operations when user has no permissions", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
-      mockPermissions();
+      mockRequestForUser(user);
 
       const anrPlotGeometry = new AnrPlotGeometry();
 

@@ -23,15 +23,10 @@ if [[ $error != "null" ]]; then
   exit 100
 fi
 
-v3Result=$(gh -R wri/terramatch-microservices pr list --search "head:release" -L 1 --json headRefName,title,number)
-v3Title=$(echo "$v3Result" | jq -r .[].title)
-v3Branch=$(echo "$v3Result" | jq -r .[].headRefName)
-v3Number=$(echo "$v3Result" | jq -r .[].number)
-
-phpResult=$(gh -R wri/wri-terramatch-api pr list --search "head:release" -L 1 --json headRefName,title,number)
-phpTitle=$(echo "$phpResult" | jq -r .[].title)
-phpBranch=$(echo "$phpResult" | jq -r .[].headRefName)
-phpNumber=$(echo "$phpResult" | jq -r .[].number)
+beResult=$(gh -R wri/terramatch-microservices pr list --search "head:release" -L 1 --json headRefName,title,number)
+beTitle=$(echo "$beResult" | jq -r .[].title)
+beBranch=$(echo "$beResult" | jq -r .[].headRefName)
+beNumber=$(echo "$beResult" | jq -r .[].number)
 
 feResult=$(gh -R wri/wri-terramatch-website pr list --search "head:release" -L 1 --json headRefName,title,number)
 feTitle=$(echo "$feResult" | jq -r .[].title)
@@ -40,10 +35,9 @@ feNumber=$(echo "$feResult" | jq -r .[].number)
 
 # Enable case-insensitive matching
 shopt -s nocasematch
-if [[ ! ($v3Title =~ $release && $phpTitle =~ $release && $feTitle =~ $release) ]]; then
+if [[ ! ($beTitle =~ $release && $feTitle =~ $release) ]]; then
   echo -e "\nOne or more PR not found. Current release branches:"
-  echo "  v3: $v3Title, $v3Branch, $v3Number"
-  echo "  PHP: $phpTitle, $phpBranch, $phpNumber"
+  echo "  BE: $beTitle, $beBranch, $beNumber"
   echo "  FE: $feTitle, $feBranch, $feNumber"
   exit 100
 fi
@@ -51,8 +45,7 @@ fi
 shopt -u nocasematch
 
 echo -e "\nFound PRs:"
-echo "  v3: $v3Title, $v3Branch, $v3Number"
-echo "  PHP: $phpTitle, $phpBranch, $phpNumber"
+echo "  BE: $beTitle, $beBranch, $beNumber"
 echo "  FE: $feTitle, $feBranch, $feNumber"
 
 jiraTickets=$(echo "$jiraTicketsResponse" | jq -r ".issues[].key" | sort)
@@ -74,23 +67,14 @@ query=$(cat << QUERY
 QUERY
 )
 
-v3Tickets=$(gh api graphql \
+beTickets=$(gh api graphql \
   -F repo='terramatch-microservices' \
-  -F pr="$v3Number" \
+  -F pr="$beNumber" \
   -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
   --paginate \
   -f query="$query" \
   | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
-echo -e "\nv3 Tickets:\n$v3Tickets"
-
-phpTickets=$(gh api graphql \
-  -F repo='wri-terramatch-api' \
-  -F pr="$phpNumber" \
-  -q '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' \
-  --paginate \
-  -f query="$query" \
-  | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
-echo -e "\nPHP Tickets:\n$phpTickets"
+echo -e "\nBE Tickets:\n$beTickets"
 
 feTickets=$(gh api graphql \
   -F repo='wri-terramatch-website' \
@@ -101,18 +85,15 @@ feTickets=$(gh api graphql \
   | sed "s/.*\(TM-[0-9]*\).*/\1/" | sort | uniq | grep "TM-[0-9]")
 echo -e "\nFE Tickets:\n$feTickets"
 
-codeTickets=$(echo -e "$v3Tickets\n$phpTickets\n$feTickets" | sort | uniq)
+codeTickets=$(echo -e "$beTickets\n$feTickets" | sort | uniq)
 
 # In each of these comparisons, include the second list twice so that tickets that are in second
 # list but not in the first are left out of that comparison.
 echo -e "\nIn Jira but missing committed code:"
 echo -e "$jiraTickets\n$codeTickets\n$codeTickets" | sort | uniq -u
 
-echo -e "\nIn v3 code, but missing in Jira:"
-echo -e "$v3Tickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u
-
-echo -e "\nIn PHP code, but missing in Jira:"
-echo -e "$phpTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u
+echo -e "\nIn BE code, but missing in Jira:"
+echo -e "$beTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u
 
 echo -e "\nIn FE code, but missing in Jira:"
 echo -e "$feTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u

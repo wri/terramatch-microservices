@@ -128,14 +128,8 @@ describe("EntitiesService", () => {
   });
 
   describe("entityFrameworkExport", () => {
-    it("throws if the framework key is missing", async () => {
-      await expect(
-        service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {})
-      ).rejects.toThrowError("Framework key is required for entity export");
-    });
-
     it("returns early if the form is missing", async () => {
-      await service.entityFrameworkExport("projects", {}, [], {} as PaginatedQueryBuilder<Project>, {
+      await service.entityExport("projects", {}, {} as PaginatedQueryBuilder<Project>, {
         frameworkKey: "foo" as FrameworkKey
       });
       expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();

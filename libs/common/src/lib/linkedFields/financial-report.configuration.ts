@@ -24,7 +24,7 @@ export const FinancialReportConfiguration: LinkedFieldConfiguration<FinancialRep
   relations: {
     "fin-rep-financial-indicators-financial-collection": {
       label: "Financial collection",
-      exportHeading: "financialCollection",
+      exportHeading: "financialIndicators",
       resource: "financialIndicators",
       inputType: "financialIndicators"
     },

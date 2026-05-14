@@ -57,8 +57,7 @@ export class AdminReportReminderEmail extends EmailSender<AdminReminderEmailData
 
     const { entityModelName, entityStatus, callbackUrl, projectId } = result;
     const entityTypeName = ENTITY_TYPE_NAMES[reportType];
-    const baseUrl = emailService.getFrontEndUrl();
-    const fullCallbackUrl = `${baseUrl}${callbackUrl}`;
+    const fullCallbackUrl = `${emailService.frontEndUrl}${callbackUrl}`;
 
     const users = await User.findAll({
       where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },

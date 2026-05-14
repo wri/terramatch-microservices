@@ -113,9 +113,11 @@ const parseKey = (key: string) => {
 type ModelKey = { domain: TrackingDomain; type: TrackingType; collection: string };
 
 const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
+  if (tracking.entries == null || tracking.entries.length === 0) return null;
+
   if (tracking.domain === "restoration") {
     const types: Dictionary<string[]> = {};
-    for (const { type, subtype, amount } of tracking.entries ?? []) {
+    for (const { type, subtype, amount } of tracking.entries) {
       if (types[type] == null) types[type] = [];
       types[type].push([amount, subtype].filter(isNotNull).join(":"));
     }
@@ -131,13 +133,13 @@ const prepareForExport = (tracking: Tracking, frameworkKey?: FrameworkKey) => {
   if (tracking.type === Tracking.LIVELIHOOD_ACTIVITIES_TYPE) {
     const livelihoods =
       tracking.entries
-        ?.filter(({ type }) => type === "livelihoods")
+        .filter(({ type }) => type === "livelihoods")
         .map(({ amount, subtype }) => [amount, subtype].join(":")) ?? [];
     return `livelihoods:(${livelihoods.join(")(")})`;
   }
 
   const types: Dictionary<string[]> = {};
-  for (const { type, subtype, name, amount } of tracking.entries ?? []) {
+  for (const { type, subtype, name, amount } of tracking.entries) {
     const value = [amount, subtype];
     if (name != null) value.push(name);
 

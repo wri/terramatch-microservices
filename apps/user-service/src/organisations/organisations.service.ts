@@ -46,8 +46,7 @@ export class OrganisationsService {
     builder: PaginatedQueryBuilder<Organisation>,
     query: OrganisationIndexQueryDto
   ) {
-    const permissions = await this.policyService.getPermissions();
-    const hasFrameworkPermission = permissions.find(p => p.startsWith("framework-")) != null;
+    const hasFrameworkPermission = this.policyService.permissions.find(p => p.startsWith("framework-")) != null;
 
     if (query.view === "public") {
       builder.where({

@@ -182,6 +182,34 @@ describe("MediaProcessor", () => {
       await expectMediasEntries([media], "projects", project.uuid, query);
     });
 
+    it("should list only project-report-attached documents when fileType is documents (no site/nursery rollup)", async () => {
+      const project = await ProjectFactory.create();
+      const projectReport = await ProjectReportFactory.create({ projectId: project.id });
+      const site = await SiteFactory.create({ projectId: project.id });
+      const siteReport = await SiteReportFactory.create({ siteId: site.id, dueAt: projectReport.dueAt });
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      await NurseryReportFactory.create({ nurseryId: nursery.id, dueAt: projectReport.dueAt });
+
+      const projectReportDoc = await MediaFactory.projectReport(projectReport).create({
+        fileType: "documents"
+      });
+      await MediaFactory.siteReport(siteReport).create({
+        fileName: "duplicate-name.pdf",
+        fileType: "documents"
+      });
+
+      const query: MediaQueryDto = { fileType: "documents" };
+
+      processor = service.createAssociationProcessor(
+        "projectReports",
+        projectReport.uuid,
+        "media",
+        query
+      ) as MediaProcessor;
+
+      await expectMediasEntries([projectReportDoc], "projectReports", projectReport.uuid, query);
+    });
+
     it("should filter by modelType (e.g. Project Gallery: modelType=sites returns only site media)", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });

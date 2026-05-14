@@ -13,6 +13,10 @@ export class FormIndexQueryDto extends IndexQueryDto {
   @IsEnum(FORM_TYPES)
   @IsOptional()
   type?: FormType;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  attachedTo?: string;
 }
 
 export class FormGetQueryDto {

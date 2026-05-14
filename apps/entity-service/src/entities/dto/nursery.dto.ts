@@ -71,6 +71,9 @@ export class NurseryLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Number })
   seedlingsGrownCount: number | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  treesSeedlingsGrownCount: number | null;
+
   @ApiProperty()
   createdAt: Date;
 

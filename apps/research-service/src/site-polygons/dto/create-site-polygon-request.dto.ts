@@ -135,43 +135,6 @@ export class AttributeChangesDto {
   @IsOptional()
   @IsNumber()
   numTrees?: number;
-
-  // snake_case (backward compatibility)
-  @ApiProperty({
-    description: "Updated polygon name (snake_case, backward compatibility)",
-    required: false,
-    example: "North Field Updated"
-  })
-  @IsOptional()
-  @IsString()
-  poly_name?: string;
-
-  @ApiProperty({
-    description: "Updated planting start date (snake_case, backward compatibility)",
-    required: false,
-    example: "2023-01-15T00:00:00Z"
-  })
-  @IsOptional()
-  @IsString()
-  plantstart?: string;
-
-  @ApiProperty({
-    description: "Updated target system (snake_case, backward compatibility)",
-    required: false,
-    example: "restoration"
-  })
-  @IsOptional()
-  @IsString()
-  target_sys?: string;
-
-  @ApiProperty({
-    description: "Updated number of trees (snake_case, backward compatibility)",
-    required: false,
-    example: 150
-  })
-  @IsOptional()
-  @IsNumber()
-  num_trees?: number;
 }
 
 export class CreateSitePolygonBatchRequestDto {
@@ -277,8 +240,8 @@ export class CreateSitePolygonAttributesDto {
     For normal creation, attributes should be provided in feature \`properties\` within \`geometries\`.
     Geometry properties are ignored during version creation - use this field instead.
     
-    \`attributeChanges\` supports both camelCase (primary/preferred) and snake_case (backward compatibility).
-    camelCase takes precedence if both formats are present for the same property.
+    Empty values (empty string for \`polyName\`/\`plantStart\`/\`targetSys\`, empty array for \`practice\`/\`distr\`) explicitly clear the field on the new version.
+    Omit a field entirely to inherit the value from the base polygon.
     
     Must provide at least one of \`geometries\` or \`attributeChanges\` when creating a version.`,
     required: false,

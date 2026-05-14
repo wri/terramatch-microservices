@@ -37,7 +37,7 @@ import {
   ReportStatus,
   STARTED
 } from "@terramatch-microservices/database/constants/status";
-import { mockUserId } from "../util/testing";
+import { mockRequestContext } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
@@ -55,7 +55,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   });
 
   it("should avoid status email and actions for non-entities", async () => {
-    mockUserId();
+    mockRequestContext();
     const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.project().create());
     const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
     const updateActionsSpy = jest.spyOn(processor as any, "updateActions");
@@ -67,7 +67,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   });
 
   it("should send a status update email", async () => {
-    mockUserId();
+    mockRequestContext();
     const project = await ProjectFactory.create();
     await new EntityStatusUpdate(eventService, project).handle();
     expect(eventService.emailQueue.add).toHaveBeenCalledWith(
@@ -77,7 +77,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   });
 
   it("should update actions", async () => {
-    mockUserId();
+    mockRequestContext();
     const project = await ProjectFactory.create({ status: APPROVED });
     const action = await ActionFactory.forProject.create({ targetableId: project.id });
     await new EntityStatusUpdate(eventService, project).handle();
@@ -96,7 +96,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   });
 
   it("should update actions and not delete them if the task is not found", async () => {
-    mockUserId();
+    mockRequestContext();
     const project = await ProjectFactory.create({ status: APPROVED });
     const task = await TaskFactory.create({ projectId: project.id });
     const projectReport = await ProjectReportFactory.create({ projectId: project.id, taskId: task.id });
@@ -107,7 +107,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   });
 
   it("should update actions and not delete them if the taskId is null", async () => {
-    mockUserId();
+    mockRequestContext();
     const project = await ProjectFactory.create({ status: APPROVED });
     const projectReport = await ProjectReportFactory.create({ projectId: project.id, taskId: null });
     await ActionFactory.forProjectReport.create({ targetableId: projectReport.id });
@@ -118,7 +118,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
   it("should create an approved audit status", async () => {
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id });
 
     const feedback = faker.lorem.sentence();
     const project = await ProjectFactory.create({ status: APPROVED, feedback });
@@ -135,7 +135,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
   it("should create a needs more information audit status", async () => {
     const user = await UserFactory.create();
-    mockUserId(user.id);
+    mockRequestContext({ userId: user.id });
 
     const feedback = faker.lorem.sentence();
     const question = await FormQuestionFactory.section().create({ label: "Form Question Label" });
@@ -277,7 +277,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should send status update email for FinancialReport to createdBy user", async () => {
-      mockUserId();
+      mockRequestContext();
       const user = await UserFactory.create();
       const { id } = await FinancialReportFactory.org().create({ status: APPROVED, createdBy: user.id });
       // the org type has to be loaded on the report for this test to work (see Form's entity scope).
@@ -360,7 +360,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
   describe("handleFormSubmission", () => {
     it("should create an audit status", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const feedback = faker.lorem.sentence();
       const submission = await FormSubmissionFactory.create({ status: REJECTED, feedback });
@@ -377,7 +377,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     it("should handle submit for approval", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const application = await ApplicationFactory.create();
       const pitch = await ProjectPitchFactory.create();
@@ -403,7 +403,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     it("should handle admin feedback", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const submission = await FormSubmissionFactory.create({ status: "rejected" });
 
@@ -416,7 +416,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     it("should add a job to the entities queue on approval when stage is null", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const submission = await FormSubmissionFactory.create({ status: "approved" });
 
@@ -428,7 +428,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     it("should add a job to the entities queue on approval when stage is final in programme", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const fp = await FundingProgrammeFactory.create();
       const stages = await Promise.all([
@@ -445,7 +445,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
     it("should not add a job to the entities queue on approval when stage is not final in programme", async () => {
       const user = await UserFactory.create();
-      mockUserId(user.id);
+      mockRequestContext({ userId: user.id });
 
       const fp = await FundingProgrammeFactory.create();
       const stages = await Promise.all([

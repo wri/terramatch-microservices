@@ -5,7 +5,7 @@ import { ReportingFrameworksService } from "./reporting-frameworks.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { FrameworkFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
-import { mockUserId } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { Project, Framework, FrameworkUser } from "@terramatch-microservices/database/entities";
 
@@ -35,7 +35,7 @@ describe("ReportingFrameworksController", () => {
 
     controller = module.get<ReportingFrameworksController>(ReportingFrameworksController);
 
-    mockUserId(1);
+    mockRequestContext({ userId: 1 });
     createdFrameworkIds.length = 0;
   });
 

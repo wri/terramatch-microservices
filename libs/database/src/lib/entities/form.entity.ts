@@ -27,8 +27,15 @@ import { FinancialReport } from "./financial-report.entity";
 import { Subquery } from "../util/subquery.builder";
 import { removeMedia } from "../hooks/remove-media";
 import { removeQuestionDependencies } from "../hooks/remove-question-dependencies";
+import { Framework } from "./framework.entity";
 
 type FormMedia = "banner";
+
+type FormAttachment = {
+  name: string;
+  type: "fundingProgramme" | "framework" | "entity";
+  adminId?: string | null;
+};
 
 @Scopes(() => ({
   entity: (entity: EntityModel) => {
@@ -125,6 +132,9 @@ export class Form extends Model<Form> {
   @Column(STRING)
   frameworkKey: FrameworkKey | null;
 
+  @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
+  framework: Framework | null;
+
   @AllowNull
   @Column(STRING)
   model: string | null;
@@ -196,4 +206,32 @@ export class Form extends Model<Form> {
   @AllowNull
   @Column(STRING)
   documentationLabel: string | null;
+
+  /**
+   * The funding programme, reporting framework, or entity that is using this form.
+   *
+   * Note: for this getter to work, the stage.fundingProgramme.name must be loaded on this
+   * instance, along with framework.name
+   */
+  get attachedTo(): FormAttachment | null {
+    if (this.stage?.fundingProgramme?.name != null) {
+      return {
+        name: this.stage.fundingProgramme.name,
+        type: "fundingProgramme",
+        adminId: this.stage.fundingProgramme.uuid
+      };
+    }
+
+    if (this.type === "disturbance-report") {
+      return { name: "Disturbance Report", type: "entity" };
+    }
+    if (this.type === "srp-report") {
+      return { name: "SRP Report", type: "entity" };
+    }
+    if (this.model != null && this.framework != null) {
+      return { name: this.framework.name, type: "framework", adminId: this.frameworkKey };
+    }
+
+    return null;
+  }
 }

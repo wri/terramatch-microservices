@@ -2,7 +2,7 @@ import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-types
 import { BIGINT, GEOMETRY, STRING } from "sequelize";
 import { Polygon } from "geojson";
 
-@Table({ tableName: "landscape_geom", underscored: true })
+@Table({ tableName: "landscape_geom", underscored: true, timestamps: false })
 export class LandscapeGeometry extends Model<LandscapeGeometry> {
   static readonly LANDSCAPE_SLUGS = [
     // Ghana Cocoa Belt

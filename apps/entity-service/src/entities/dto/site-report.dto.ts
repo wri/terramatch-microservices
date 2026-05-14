@@ -284,6 +284,9 @@ export class SiteReportFullDto extends SiteReportLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   anrPractices: string[] | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  totalInvasiveTreesCount: number | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   socioeconomicBenefits: MediaDto[];
 

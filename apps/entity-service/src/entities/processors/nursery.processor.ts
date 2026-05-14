@@ -5,19 +5,31 @@ import {
   Project,
   ProjectUser,
   ScheduledJob,
-  Task
+  Task,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor, ExportAllOptions } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
-import { BadRequestException, NotAcceptableException } from "@nestjs/common";
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotAcceptableException,
+  NotFoundException
+} from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityUpdateAttributes } from "../dto/entity-update.dto";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { Archiver } from "archiver";
+import { Response } from "express";
+import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { ServerResponse } from "node:http";
+import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
+import { NurseryReportProcessor } from "./nursery-report.processor";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -34,7 +46,7 @@ const ASSOCIATION_FIELD_MAP = {
   projectUuid: "$project.uuid$"
 };
 
-const CSV_COLUMNS: Dictionary<string> = {
+const ADMIN_CSV_COLUMNS: Dictionary<string> = {
   id: "id",
   uuid: "uuid",
   linkToTerramatch: "link_to_terramatch",
@@ -47,6 +59,24 @@ const CSV_COLUMNS: Dictionary<string> = {
   updatedAt: "updated_at",
   projectExportId: "project_id"
 };
+
+const PD_CSV_COLUMNS: Dictionary<string> = {
+  organisationReadableType: "organization-readable_type",
+  organisationName: "organization-name",
+  projectName: "project_name",
+  status: "status",
+  updateRequestStatus: "update_request_status",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+const CSV_EXPORT_INCLUDES = [
+  {
+    association: "project",
+    attributes: ["name", "id", "ppcExternalId"],
+    include: [{ association: "organisation", attributes: ["name", "type"] }]
+  }
+];
 
 const CSV_ATTRIBUTES = ["id", "uuid", "projectId", "status", "updateRequestStatus", "createdAt", "updatedAt"];
 
@@ -92,7 +122,7 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
 
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const frameworkPermissions =
       permissions
         ?.filter(name => name.startsWith("framework-"))
@@ -143,6 +173,7 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
 
     const dto = new NurseryFullDto(nursery, {
       ...(await this.getFeedback(nursery)),
@@ -150,6 +181,7 @@ export class NurseryProcessor extends EntityProcessor<
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
+      treesSeedlingsGrownCount,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(nursery).findAll(),
         Nursery.MEDIA,
@@ -167,7 +199,8 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
+    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {
@@ -188,8 +221,18 @@ export class NurseryProcessor extends EntityProcessor<
     );
   }
 
+  private async getTreesSeedlingsGrownCount(nurseryId: number) {
+    const reportIds = (
+      await NurseryReport.nurseries([nurseryId])
+        .approved()
+        .findAll({ attributes: ["id"] })
+    ).map(r => r.id);
+    if (reportIds.length === 0) return 0;
+    return (await TreeSpecies.visible().collection("nursery-seedling").nurseryReports(reportIds).sum("amount")) ?? 0;
+  }
+
   async delete(nursery: Nursery) {
-    const permissions = await this.entitiesService.getPermissions();
+    const permissions = this.entitiesService.permissions;
     const managesOwn =
       permissions?.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
     if (managesOwn) {
@@ -242,26 +285,64 @@ export class NurseryProcessor extends EntityProcessor<
     return (await this.findOne(nursery.uuid)) as Nursery;
   }
 
-  async exportAll({ response, frameworkKey }: ExportAllOptions = {}) {
-    const where: WhereOptions<Nursery> = { "$project.is_test$": false, frameworkKey };
-    const permissions = await this.entitiesService.getPermissions();
-    if (permissions?.includes("manage-own")) {
-      where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
-    } else if (permissions?.includes("projects-manage")) {
-      where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+  async export(uuid: string, target: Response | Archiver) {
+    const nursery = await Nursery.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (nursery == null) throw new NotFoundException();
+
+    const { frameworkKey } = nursery;
+    if (frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
+
+    await this.entitiesService.authorize("read", nursery);
+
+    const fillArchive = async (archive: Archiver) => {
+      const fileNamePrefix = `${nursery.projectName} - ${nursery.name}`;
+      await this.entitiesService.entityExport("nurseries", PD_CSV_COLUMNS, [nursery], {
+        target: archive,
+        frameworkKey,
+        fileName: normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
+      });
+
+      const reportProcessor = this.entitiesService.createEntityProcessor("nurseryReports") as NurseryReportProcessor;
+      await reportProcessor.exportAll({ target: archive, frameworkKey, nurseryId: nursery.id, fileNamePrefix });
+    };
+
+    if (target instanceof ServerResponse) {
+      await streamZipToResponse(`${nursery.name} export`, target, fillArchive);
+    } else {
+      await fillArchive(target);
     }
-    await this.entitiesService.entityFrameworkExport(
+  }
+
+  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
+    const where: WhereOptions<Nursery> = {};
+    if (projectUuid != null) {
+      frameworkKey ??=
+        (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
+        undefined;
+      where["$project.uuid$"] = projectUuid;
+    } else {
+      where.frameworkKey = frameworkKey;
+      where["$project.is_test$"] = false;
+      const permissions = this.entitiesService.permissions;
+      if (permissions?.includes("manage-own")) {
+        where["projectId"] = { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) };
+      } else if (permissions?.includes("projects-manage")) {
+        where["projectId"] = { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) };
+      }
+    }
+    if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+    await this.entitiesService.entityExport(
       "nurseries",
-      CSV_COLUMNS,
-      CSV_ATTRIBUTES,
-      new PaginatedQueryBuilder(Nursery, 10, [
-        {
-          association: "project",
-          attributes: ["name", "id", "ppcExternalId"],
-          include: [{ association: "organisation", attributes: ["name", "type"] }]
-        }
-      ]).where(where),
-      { response, frameworkKey, ability: response == null ? undefined : "read" }
+      ADMIN_CSV_COLUMNS,
+      new PaginatedQueryBuilder(Nursery, 10, CSV_EXPORT_INCLUDES).where(where),
+      {
+        attributes: CSV_ATTRIBUTES,
+        target,
+        frameworkKey,
+        ability: target instanceof ServerResponse ? "read" : undefined,
+        fileName:
+          fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
+      }
     );
   }
 }

@@ -20,6 +20,7 @@ export interface AggregateReportsAttributes {
   treePlanted?: AggregateReportSeriesItemDto[];
   seedingRecords?: AggregateReportSeriesItemDto[];
   treesRegenerating?: AggregateReportSeriesItemDto[];
+  invasive?: AggregateReportSeriesItemDto[];
 }
 
 export type AggregateReportsResponseDto = AggregateReportsAttributes;
@@ -46,4 +47,11 @@ export class AggregateReportsDto {
     required: false
   })
   treesRegenerating?: AggregateReportSeriesItemDto[];
+
+  @ApiProperty({
+    type: [AggregateReportSeriesItemDto],
+    description: "Invasive species by reporting period (when framework supports it).",
+    required: false
+  })
+  invasive?: AggregateReportSeriesItemDto[];
 }

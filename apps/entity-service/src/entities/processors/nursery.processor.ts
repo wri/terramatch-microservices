@@ -5,7 +5,8 @@ import {
   Project,
   ProjectUser,
   ScheduledJob,
-  Task
+  Task,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
 import { EntityProcessor, ExportAllOptions } from "./entity-processor";
@@ -172,6 +173,7 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const overdueNurseryReportsTotal = await this.getTotalOverdueReports(nurseryId);
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
 
     const dto = new NurseryFullDto(nursery, {
       ...(await this.getFeedback(nursery)),
@@ -179,6 +181,7 @@ export class NurseryProcessor extends EntityProcessor<
       seedlingsGrownCount,
       nurseryReportsTotal,
       overdueNurseryReportsTotal,
+      treesSeedlingsGrownCount,
       ...(this.entitiesService.mapMediaCollection(
         await Media.for(nursery).findAll(),
         Nursery.MEDIA,
@@ -196,7 +199,8 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
+    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {
@@ -215,6 +219,16 @@ export class NurseryProcessor extends EntityProcessor<
           })
       )[0].seedlingsYoungTrees ?? 0
     );
+  }
+
+  private async getTreesSeedlingsGrownCount(nurseryId: number) {
+    const reportIds = (
+      await NurseryReport.nurseries([nurseryId])
+        .approved()
+        .findAll({ attributes: ["id"] })
+    ).map(r => r.id);
+    if (reportIds.length === 0) return 0;
+    return (await TreeSpecies.visible().collection("nursery-seedling").nurseryReports(reportIds).sum("amount")) ?? 0;
   }
 
   async delete(nursery: Nursery) {

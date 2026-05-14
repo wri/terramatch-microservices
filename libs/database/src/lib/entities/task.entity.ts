@@ -50,19 +50,19 @@ export class Task extends Model<Task> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number | null;
+  declare organisationId: number | null;
 
   @BelongsTo(() => Organisation, { constraints: false })
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   get organisationName() {
     return this.organisation?.name ?? "";
@@ -71,10 +71,10 @@ export class Task extends Model<Task> {
   @AllowNull
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number | null;
+  declare projectId: number | null;
 
   @BelongsTo(() => Project, { constraints: false })
-  project: Project | null;
+  declare project: Project | null;
 
   get projectUuid(): string {
     return this.project?.uuid ?? "";
@@ -91,10 +91,10 @@ export class Task extends Model<Task> {
   /** @deprecated this field is null for all rows in the production DB. */
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @StateMachineColumn(TaskStatusStates)
-  status: TaskStatus;
+  declare status: TaskStatus;
 
   statusCanBe(status: TaskStatus) {
     return getStateMachine(this, "status")?.canBe(this.status, status) ?? false;
@@ -103,22 +103,22 @@ export class Task extends Model<Task> {
   // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
   // make that a real constraint when the schema is controlled by v3 code.
   @Column(STRING)
-  periodKey: string;
+  declare periodKey: string;
 
   // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
   // make that a real constraint when the schema is controlled by v3 code.
   @Column(DATE)
-  dueAt: Date;
+  declare dueAt: Date;
 
   @HasOne(() => ProjectReport)
-  projectReport: ProjectReport | null;
+  declare projectReport: ProjectReport | null;
 
   @HasMany(() => SiteReport)
-  siteReports: SiteReport[] | null;
+  declare siteReports: SiteReport[] | null;
 
   @HasMany(() => NurseryReport)
-  nurseryReports: NurseryReport[] | null;
+  declare nurseryReports: NurseryReport[] | null;
 
   @HasMany(() => SrpReport)
-  srpReports: SrpReport[] | null;
+  declare srpReports: SrpReport[] | null;
 }

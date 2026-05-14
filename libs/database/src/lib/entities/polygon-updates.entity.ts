@@ -29,39 +29,39 @@ export class PolygonUpdates extends Model<PolygonUpdates> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Column({ type: UUID, field: "site_polygon_uuid" })
-  sitePolygonUuid: string;
+  declare sitePolygonUuid: string;
 
   @AllowNull
   @Column(STRING)
-  versionName: string | null;
+  declare versionName: string | null;
 
   @AllowNull
   @Column(TEXT)
-  change: string | null;
+  declare change: string | null;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  updatedById: number | null;
+  declare updatedById: number | null;
 
   @BelongsTo(() => User, { foreignKey: "updatedById" })
-  updatedBy: User | null;
+  declare updatedBy: User | null;
 
   @AllowNull
   @Column(TEXT)
-  comment: string | null;
+  declare comment: string | null;
 
   @Column({ type: STRING, values: ["update", "status"] })
-  type: PolygonUpdateType;
+  declare type: PolygonUpdateType;
 
   @AllowNull
   @Column(STRING)
-  oldStatus: string | null;
+  declare oldStatus: string | null;
 
   @AllowNull
   @Column(STRING)
-  newStatus: string | null;
+  declare newStatus: string | null;
 }

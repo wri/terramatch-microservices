@@ -34,8 +34,8 @@ export class PolygonGeometryCreationService {
         geomJson: JSON.stringify(geom),
         area:
           geom.type === "Polygon" || geom.type === "MultiPolygon"
-            ? areaResults[geometries.filter(g => g.type === "Polygon" || g.type === "MultiPolygon").indexOf(geom)]
-                ?.area ?? 0
+            ? (areaResults[geometries.filter(g => g.type === "Polygon" || g.type === "MultiPolygon").indexOf(geom)]
+                ?.area ?? 0)
             : 0
       }));
     } catch (error) {

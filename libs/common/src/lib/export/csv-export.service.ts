@@ -174,8 +174,8 @@ export class CsvExportService {
       target == null
         ? this.getS3StreamWriter(fileName, columns)
         : target instanceof ServerResponse
-        ? this.getResponseStreamWriter(fileName, target as Response, columns)
-        : this.getArchiveStreamWriter(fileName, target, columns),
+          ? this.getResponseStreamWriter(fileName, target as Response, columns)
+          : this.getArchiveStreamWriter(fileName, target, columns),
       writeRows
     );
   }
@@ -185,7 +185,11 @@ export class CsvExportService {
     try {
       await writeRows(addRow);
     } catch (error) {
-      this.logger.error(`Error exporting CSV file: [${error.message}]`, error.stack);
+      if (error instanceof Error) {
+        this.logger.error(`Error exporting CSV file: [${error.message}]`, error.stack);
+      } else {
+        this.logger.error(`Error exporting CSV file: [${error}]`);
+      }
       throw error;
     } finally {
       close();

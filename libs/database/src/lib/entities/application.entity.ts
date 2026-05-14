@@ -27,18 +27,18 @@ export class Application extends Model<InferAttributes<Application>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(UUID)
-  fundingProgrammeUuid: string | null;
+  declare fundingProgrammeUuid: string | null;
 
   @BelongsTo(() => FundingProgramme, { foreignKey: "fundingProgrammeUuid", targetKey: "uuid" })
-  fundingProgramme: FundingProgramme | null;
+  declare fundingProgramme: FundingProgramme | null;
 
   get fundingProgrammeName() {
     return this.fundingProgramme?.name ?? null;
@@ -46,10 +46,10 @@ export class Application extends Model<InferAttributes<Application>, InferCreati
 
   @AllowNull
   @Column(UUID)
-  organisationUuid: string | null;
+  declare organisationUuid: string | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationUuid", targetKey: "uuid" })
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   get organisationName() {
     return this.organisation?.name;
@@ -57,10 +57,10 @@ export class Application extends Model<InferAttributes<Application>, InferCreati
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  updatedBy: number | null;
+  declare updatedBy: number | null;
 
   @HasMany(() => FormSubmission)
-  formSubmissions: FormSubmission[] | null;
+  declare formSubmissions: FormSubmission[] | null;
 
   get projectPitchUuid() {
     return this.formSubmissions?.[0]?.projectPitchUuid ?? null;

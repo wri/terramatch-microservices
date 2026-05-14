@@ -207,7 +207,7 @@ export class UsersController {
     if (org != null) {
       const orgResource = document.addData(org.uuid, new OrganisationLightDto(org));
       const isOwner = user.organisationId === org.id;
-      const userStatus = isOwner ? "approved" : org.OrganisationUser?.status ?? "na";
+      const userStatus = isOwner ? "approved" : (org.OrganisationUser?.status ?? "na");
       userResource.relateTo("org", orgResource, { meta: { userStatus } });
     }
 

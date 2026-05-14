@@ -134,31 +134,31 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  declare status: string | null;
 
   @AllowNull
   @Column(TEXT)
-  comment: string | null;
+  declare comment: string | null;
 
   @AllowNull
   @Column(STRING)
-  firstName: string | null;
+  declare firstName: string | null;
 
   @AllowNull
   @Column(STRING)
-  lastName: string | null;
+  declare lastName: string | null;
 
   @AllowNull
   @Column(STRING)
-  type: AuditStatusType | null;
+  declare type: AuditStatusType | null;
 
   /**
    * @deprecated
@@ -167,7 +167,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
    */
   @AllowNull
   @Column(BOOLEAN)
-  isSubmitted: boolean | null;
+  declare isSubmitted: boolean | null;
 
   /**
    * @deprecated
@@ -176,7 +176,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
    */
   @AllowNull
   @Column({ type: BOOLEAN, defaultValue: true })
-  isActive: boolean | null;
+  declare isActive: boolean | null;
 
   /**
    * @deprecated
@@ -185,7 +185,7 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
    */
   @AllowNull
   @Column(BOOLEAN)
-  requestRemoved: boolean | null;
+  declare requestRemoved: boolean | null;
 
   /**
    * @deprecated
@@ -195,15 +195,15 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
    **/
   @AllowNull
   @Column({ type: DATE, defaultValue: NOW })
-  dateCreated: Date | null;
+  declare dateCreated: Date | null;
 
   @AllowNull
   @Column(STRING)
-  createdBy: string | null;
+  declare createdBy: string | null;
 
   @Column(STRING)
-  auditableType: string;
+  declare auditableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  auditableId: number;
+  declare auditableId: number;
 }

@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
 import { ModelCtor } from "sequelize-typescript";
@@ -81,7 +81,10 @@ describe("DashboardProjectsQueryBuilder", () => {
     expect(where[Op.and]).toBeDefined();
     expect(where[Op.and]?.[0]).toMatchObject({ country: "Kenya" });
     expect(where[Op.and]?.[1]).toMatchObject({ val: expect.stringContaining("JSON_CONTAINS(cohort") });
-    expect(builder["findOptions"].include?.[0]).toHaveProperty("association", "organisation");
+    expect((builder["findOptions"].include as Includeable[] | undefined)?.[0]).toHaveProperty(
+      "association",
+      "organisation"
+    );
   });
 
   it("should execute findAll with current findOptions", async () => {

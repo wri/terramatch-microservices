@@ -178,9 +178,8 @@ describe("TreeService", () => {
           amount: (counts[tree.name!]?.amount ?? 0) + (tree.amount ?? 0)
         }
       });
-      const projectReportTreesPlanted = await TreeSpeciesFactory.projectReportNurserySeedling(
-        projectReport1
-      ).createMany(3);
+      const projectReportTreesPlanted =
+        await TreeSpeciesFactory.projectReportNurserySeedling(projectReport1).createMany(3);
       projectReportTreesPlanted.push(
         await TreeSpeciesFactory.projectReportNurserySeedling(projectReport1).create({
           taxonId: "wfo-projectreporttree"

@@ -177,11 +177,11 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/siteReport/${this.uuid}/show`;
@@ -189,41 +189,41 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @ForeignKey(() => Site)
   @Column(BIGINT.UNSIGNED)
-  siteId: number;
+  declare siteId: number;
 
   @BelongsTo(() => Site)
-  site: Site | null;
+  declare site: Site | null;
 
   @BelongsTo(() => User)
-  user: User | null;
+  declare user: User | null;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
-  createdByUser: User | null;
+  declare createdByUser: User | null;
 
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
-  approvedByUser: User | null;
+  declare approvedByUser: User | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number | null;
+  declare approvedBy: number | null;
 
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number;
+  declare taskId: number;
 
   @BelongsTo(() => Task, { constraints: false })
-  task: Task | null;
+  declare task: Task | null;
 
   get projectName() {
     return this.site?.project?.name;
@@ -282,7 +282,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   }
 
   @StateMachineColumn(ReportStatusStates)
-  status: CreationOptional<ReportStatus>;
+  declare status: CreationOptional<ReportStatus>;
 
   get isComplete(): NonAttribute<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
@@ -298,145 +298,145 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  declare dueAt: Date | null;
 
   @AllowNull
   @Column(DATE)
-  submittedAt: Date | null;
+  declare submittedAt: Date | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
-  workdaysPaid: number | null;
+  declare workdaysPaid: number | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
-  workdaysVolunteer: number | null;
+  declare workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  pctSurvivalToDate: number | null;
+  declare pctSurvivalToDate: number | null;
 
   @AllowNull
   @Column(TEXT)
-  survivalCalculation: string | null;
+  declare survivalCalculation: string | null;
 
   @AllowNull
   @Column(TEXT)
-  survivalDescription: string | null;
+  declare survivalDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  maintenanceActivities: string | null;
+  declare maintenanceActivities: string | null;
 
   @AllowNull
   @Column(TEXT)
-  regenerationDescription: string | null;
+  declare regenerationDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  technicalNarrative: string | null;
+  declare technicalNarrative: string | null;
 
   @AllowNull
   @Column(TEXT)
-  publicNarrative: string | null;
+  declare publicNarrative: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  numTreesRegenerating: number | null;
+  declare numTreesRegenerating: number | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  soilWaterRestorationDescription: string | null;
+  declare soilWaterRestorationDescription: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  waterStructures: string | null;
+  declare waterStructures: string | null;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(TEXT)
-  disturbanceDetails: string | null;
+  declare disturbanceDetails: string | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: CreationOptional<number>;
+  declare completion: CreationOptional<number>;
 
   @AllowNull
   @Column(DATE)
-  approvedAt: Date | null;
+  declare approvedAt: Date | null;
 
   @AllowNull
   @Column(TEXT)
-  sharedDriveLink: string | null;
+  declare sharedDriveLink: string | null;
 
   @AllowNull
   @Column(TEXT)
-  oldModel: string | null;
+  declare oldModel: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number | null;
+  declare oldId: number | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
-  polygonStatus: string | null;
+  declare polygonStatus: string | null;
 
   @AllowNull
   @Column(TEXT)
-  paidOtherActivityDescription: string | null;
+  declare paidOtherActivityDescription: string | null;
 
   @AllowNull
   @Column(STRING)
-  plantingStatus: PlantingStatus | null;
+  declare plantingStatus: PlantingStatus | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  invasiveSpeciesRemoved: string | null;
+  declare invasiveSpeciesRemoved: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  invasiveSpeciesManagement: string | null;
+  declare invasiveSpeciesManagement: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  siteCommunityPartnersDescription: string | null;
+  declare siteCommunityPartnersDescription: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  siteCommunityPartnersIncomeIncreaseDescription: string | null;
+  declare siteCommunityPartnersIncomeIncreaseDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  nothingToReport: boolean | null;
+  declare nothingToReport: boolean | null;
 
   @AllowNull
   @JsonColumn()
-  anrPractices: string[] | null;
+  declare anrPractices: string[] | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "tree-planted" }
   })
-  treesPlanted: TreeSpecies[] | null;
+  declare treesPlanted: TreeSpecies[] | null;
 
   async loadTreesPlanted() {
     this.treesPlanted ??= await this.$get("treesPlanted");
@@ -448,28 +448,28 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     constraints: false,
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "non-tree" }
   })
-  nonTrees: TreeSpecies[] | null;
+  declare nonTrees: TreeSpecies[] | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "anr" }
   })
-  anrTrees: TreeSpecies[] | null;
+  declare anrTrees: TreeSpecies[] | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "invasive" }
   })
-  invasiveTrees: TreeSpecies[] | null;
+  declare invasiveTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",
     constraints: false,
     scope: { seedable_type: SiteReport.LARAVEL_TYPE }
   })
-  seedsPlanted: Seeding[] | null;
+  declare seedsPlanted: Seeding[] | null;
 
   static siteUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
     if (SiteReport.sequelize == null) {

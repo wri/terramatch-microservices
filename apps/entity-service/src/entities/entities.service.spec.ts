@@ -35,7 +35,7 @@ describe("EntitiesService", () => {
     service = module.get(EntitiesService);
     mediaService = module.get(MediaService);
     mediaService.getUrl.mockImplementation(
-      ({ fileName }, conversion: string) => `https://example.com/${conversion ?? ""}/${fileName}`
+      ({ fileName }, conversion?: string) => `https://example.com/${conversion ?? ""}/${fileName}`
     );
     csvExportService = module.get(CsvExportService);
     const configService: DeepMocked<ConfigService> = module.get(ConfigService);
@@ -121,9 +121,9 @@ describe("EntitiesService", () => {
       const result = service.mapMediaCollection(media, Project.MEDIA, "projects", project.uuid);
       expect(Object.keys(result)).toMatchObject(Object.keys(Project.MEDIA));
       // multi media
-      expectMediaMatchesDto(result["otherAdditionalDocuments"][0], media[0]);
+      expectMediaMatchesDto((result["otherAdditionalDocuments"] as MediaDto[])[0], media[0]);
       // non multi media
-      expectMediaMatchesDto(result["detailedProjectBudget"], media[1]);
+      expectMediaMatchesDto(result["detailedProjectBudget"] as MediaDto, media[1]);
     });
   });
 

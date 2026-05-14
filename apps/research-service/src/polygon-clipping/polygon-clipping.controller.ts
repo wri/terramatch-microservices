@@ -1,12 +1,11 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   NotFoundException,
   Post,
-  UnauthorizedException,
-  BadRequestException,
-  Request,
-  Query
+  Query,
+  UnauthorizedException
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -17,12 +16,13 @@ import { DelayedJob, Project, Site, SitePolygon, User } from "@terramatch-micros
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { buildJsonApi, buildDelayedJobResponse } from "@terramatch-microservices/common/util";
+import { buildDelayedJobResponse, buildJsonApi } from "@terramatch-microservices/common/util";
 import { ClippedVersionDto } from "./dto/clipped-version.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ClippingQueryDto } from "./dto/clipping-query.dto";
 import { isEmpty, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @ApiTags("Polygon Clipping")
 @Controller("polygonClipping/v3")
@@ -47,12 +47,8 @@ export class PolygonClippingController {
   @ExceptionResponse(BadRequestException, {
     description: "Invalid request - must provide exactly one of siteUuid or projectUuid."
   })
-  async createClippedVersions(@Query() query: ClippingQueryDto, @Request() { authenticatedUserId }) {
+  async createClippedVersions(@Query() query: ClippingQueryDto) {
     await this.policyService.authorize("update", SitePolygon);
-
-    if (authenticatedUserId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
 
     // Validate that exactly one parameter is provided
     const hasSiteUuid = !isEmpty(query.siteUuid);
@@ -62,7 +58,7 @@ export class PolygonClippingController {
       throw new BadRequestException("Exactly one of siteUuid or projectUuid must be provided");
     }
 
-    const user = await User.findByPk(authenticatedUserId, {
+    const user = await User.findByPk(authenticatedUserId(), {
       attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
@@ -115,17 +111,17 @@ export class PolygonClippingController {
       totalContent: fixablePolygons.length,
       processedContent: 0,
       progressMessage: "Starting clipping...",
-      createdBy: authenticatedUserId,
+      createdBy: authenticatedUserId(),
       metadata: {
         entity_id: entityId,
         entity_type: entityType,
         entity_name: entityName
       }
-    } as DelayedJob);
+    });
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId: authenticatedUserId,
+      userId: authenticatedUserId(),
       userFullName,
       source,
       delayedJobId: delayedJob.id,
@@ -147,17 +143,10 @@ export class PolygonClippingController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "No fixable overlapping polygons found." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
-  async createPolygonListClippedVersions(
-    @Body() payload: PolygonListClippingRequestBody,
-    @Request() { authenticatedUserId }
-  ) {
+  async createPolygonListClippedVersions(@Body() payload: PolygonListClippingRequestBody) {
     await this.policyService.authorize("update", SitePolygon);
 
-    if (authenticatedUserId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
-
-    const user = await User.findByPk(authenticatedUserId, {
+    const user = await User.findByPk(authenticatedUserId(), {
       attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
@@ -179,7 +168,7 @@ export class PolygonClippingController {
     if (fixablePolygons.length === 1) {
       const createdVersions = await this.clippingService.clipAndCreateVersions(
         fixablePolygons,
-        authenticatedUserId,
+        authenticatedUserId() as number,
         userFullName,
         source
       );
@@ -266,17 +255,17 @@ export class PolygonClippingController {
       totalContent: fixablePolygons.length,
       processedContent: 0,
       progressMessage: "Starting clipping...",
-      createdBy: authenticatedUserId,
+      createdBy: authenticatedUserId(),
       metadata: {
         ...(entityId != null && { entity_id: entityId }),
         ...(entityType != null && { entity_type: entityType }),
         entity_name: entityName
       }
-    } as DelayedJob);
+    });
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId: authenticatedUserId,
+      userId: authenticatedUserId(),
       userFullName,
       source,
       delayedJobId: delayedJob.id,

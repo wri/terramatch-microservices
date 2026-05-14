@@ -60,8 +60,8 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   treesPlantedCount: number;
 
-  @ApiProperty({ nullable: true })
-  hectaresToRestoreGoal: number;
+  @ApiProperty({ nullable: true, type: Number })
+  hectaresToRestoreGoal: number | null;
 
   @ApiProperty()
   totalHectaresRestoredSum: number;
@@ -83,9 +83,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty()
   totalSiteReports: number;
-
-  @ApiProperty()
-  totalHectaresRestoredSum: number;
 
   @ApiProperty()
   seedsPlantedCount: number;
@@ -118,9 +115,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   descriptionSitingStrategy: string | null;
-
-  @ApiProperty({ nullable: true })
-  hectaresToRestoreGoal: number;
 
   @ApiProperty({ nullable: true, type: String })
   description: string | null;

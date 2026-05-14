@@ -48,78 +48,78 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  disturbanceableType: string | null;
+  declare disturbanceableType: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  disturbanceableId: number | null;
+  declare disturbanceableId: number | null;
 
   @AllowNull
   @Column(DATE)
-  disturbanceDate: Date | null;
+  declare disturbanceDate: Date | null;
 
   @AllowNull
   @Column(STRING)
-  collection: string | null;
+  declare collection: string | null;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   @AllowNull
   @JsonColumn()
-  subtype: string[] | null;
+  declare subtype: string[] | null;
 
   @AllowNull
   @Column(STRING)
-  intensity: string | null;
+  declare intensity: string | null;
 
   @AllowNull
   @Column(STRING)
-  extent: string | null;
+  declare extent: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  peopleAffected: number | null;
+  declare peopleAffected: number | null;
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  monetaryDamage: number | null;
+  declare monetaryDamage: number | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(TEXT)
-  actionDescription: string | null;
+  declare actionDescription: string | null;
 
   @AllowNull
   @JsonColumn()
-  propertyAffected: string[] | null;
+  declare propertyAffected: string[] | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.
    */
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number | null;
+  declare oldId: number | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.
    */
   @AllowNull
   @Column(STRING)
-  oldModel: string | null;
+  declare oldModel: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: CreationOptional<boolean>;
+  declare hidden: CreationOptional<boolean>;
 }

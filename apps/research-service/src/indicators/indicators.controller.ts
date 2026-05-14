@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Param, Post, Request, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { IndicatorHectaresDto, IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
 import { InjectQueue } from "@nestjs/bullmq";
@@ -14,6 +14,7 @@ import { SitePolygonLightDto } from "../site-polygons/dto/site-polygon.dto";
 import { IndicatorsService } from "./indicators.service";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { IndicatorExportQueryDto } from "./dto/indicator-export-query.dto";
+import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 
 @Controller("research/v3/indicators")
 @ApiExtraModels(IndicatorTreeCoverLossDto, IndicatorHectaresDto)
@@ -31,11 +32,7 @@ export class IndicatorsController {
     summary: "Start indicator calculation"
   })
   @JsonApiResponse([DelayedJobDto, SitePolygonLightDto])
-  async startIndicatorCalculation(
-    @Param() { slug }: IndicatorsParamDto,
-    @Body() payload: IndicatorsBodyDto,
-    @Request() { authenticatedUserId }
-  ) {
+  async startIndicatorCalculation(@Param() { slug }: IndicatorsParamDto, @Body() payload: IndicatorsBodyDto) {
     this.logger.debug(`Starting indicator calculation for slug: ${slug}`);
 
     const { polygonUuids } = payload.data.attributes;
@@ -45,7 +42,7 @@ export class IndicatorsController {
       name: "Indicator Calculation",
       processedContent: 0,
       progressMessage: "Starting indicator calculation...",
-      createdBy: authenticatedUserId,
+      createdBy: authenticatedUserId(),
       metadata: {
         entity_name: `${polygonUuids.length} polygons`
       }

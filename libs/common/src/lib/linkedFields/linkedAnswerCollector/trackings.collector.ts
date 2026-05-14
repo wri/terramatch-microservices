@@ -182,27 +182,32 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
     },
 
     async collect(answers, models, { forExport, frameworkKey }) {
-      const keysByModel = Object.keys(questions).reduce((byModel, key) => {
-        const { modelType, domain, type, collection } = parseKey(key);
-        return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
-      }, {} as FormTypeMap<ModelKey[]>);
+      const keysByModel = Object.keys(questions).reduce(
+        (byModel, key) => {
+          const { modelType, domain, type, collection } = parseKey(key);
+          return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), { domain, type, collection }] };
+        },
+        {} as FormTypeMap<ModelKey[]>
+      );
 
       const laravelTypes = mapLaravelTypes(models);
       const trackings = await Tracking.findAll({
         where: {
-          [Op.or]: Object.entries(keysByModel).map(([modelType, keys]): WhereOptions<Tracking> => {
-            if (models[modelType] == null) {
-              throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
-            }
+          [Op.or]: (Object.entries(keysByModel) as [FormModelType, ModelKey[]][]).map(
+            ([modelType, keys]): WhereOptions<Tracking> => {
+              if (models[modelType] == null) {
+                throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+              }
 
-            return {
-              trackableType: laravelTypes[modelType],
-              trackableId: models[modelType].id,
-              [Op.or]: keys.map(
-                ({ domain, type, collection }): WhereOptions<Tracking> => ({ domain, type, collection })
-              )
-            };
-          })
+              return {
+                trackableType: laravelTypes[modelType],
+                trackableId: models[modelType].id,
+                [Op.or]: keys.map(
+                  ({ domain, type, collection }): WhereOptions<Tracking> => ({ domain, type, collection })
+                )
+              };
+            }
+          )
         },
         attributes: dtoAttributes,
         include: [{ association: "entries" }]

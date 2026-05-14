@@ -32,7 +32,7 @@ const makeMedia = (overrides: Partial<Media> = {}): Media =>
     createdAt: new Date("2024-01-15T10:00:00Z"),
     createdByUserName: "John Smith",
     ...overrides
-  } as unknown as Media);
+  }) as unknown as Media;
 
 type SharpPipelineMock = {
   rotate: jest.Mock;

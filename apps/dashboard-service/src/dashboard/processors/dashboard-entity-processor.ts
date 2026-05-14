@@ -12,7 +12,10 @@ export abstract class DashboardEntityProcessor<ModelType, LightDto, FullDto> {
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  constructor(protected readonly cacheService: CacheService, protected readonly policyService: PolicyService) {}
+  constructor(
+    protected readonly cacheService: CacheService,
+    protected readonly policyService: PolicyService
+  ) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;
 

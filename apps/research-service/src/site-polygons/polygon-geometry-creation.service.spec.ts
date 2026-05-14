@@ -239,7 +239,7 @@ describe("PolygonGeometryCreationService", () => {
       uuid,
       polygon,
       createdBy
-    } as PolygonGeometry);
+    }) as PolygonGeometry;
 
   describe("bulkInsertGeometries", () => {
     it("should return empty array for empty input", async () => {

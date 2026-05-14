@@ -25,6 +25,13 @@ export class SequelizeConfigService implements SequelizeOptionsFactory {
     const logger = new Logger("Sequelize");
     return {
       dialect: "mariadb",
+      dialectOptions: {
+        supportBigNumbers: false,
+        bigNumberStrings: false,
+        decimalAsNumber: true,
+        bigIntAsNumber: true,
+        insertIdAsNumber: true
+      },
       host: this.configService.get<string>("DB_HOST"),
       port: this.configService.get<number>("DB_PORT"),
       username: this.configService.get<string>("DB_USERNAME"),

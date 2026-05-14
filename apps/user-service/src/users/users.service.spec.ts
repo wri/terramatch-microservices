@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
@@ -9,6 +9,7 @@ import {
   FrameworkUser,
   ModelHasRole,
   Organisation,
+  PasswordReset,
   Project,
   ProjectUser,
   Role,
@@ -19,7 +20,6 @@ import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { PasswordReset } from "@terramatch-microservices/database/entities";
 import { SendLoginDetailsEmail } from "@terramatch-microservices/common/email/send-login-details.email";
 
 describe("UsersService", () => {
@@ -373,7 +373,7 @@ describe("UsersService", () => {
       jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
 
       await expect(service.update(user, { organisationUuid: "00000000-0000-0000-0000-000000000001" })).rejects.toThrow(
-        new NotFoundException("Organisation not found")
+        "Organisation not found"
       );
 
       expect(Organisation.findOne).toHaveBeenCalledWith({
@@ -443,9 +443,7 @@ describe("UsersService", () => {
       jest.spyOn(ModelHasRole, "destroy").mockResolvedValue(0);
       jest.spyOn(Role, "findOne").mockResolvedValue(null);
 
-      await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow(
-        new NotFoundException("Role not found")
-      );
+      await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow("Role not found");
     });
 
     it("should update password when password is provided", async () => {

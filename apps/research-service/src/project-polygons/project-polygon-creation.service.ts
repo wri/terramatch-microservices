@@ -107,9 +107,8 @@ export class ProjectPolygonCreationService {
 
       await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
 
-      const transformedGeometry = await this.projectPolygonGeometryService.transformFeaturesToSinglePolygon(
-        featureCollection
-      );
+      const transformedGeometry =
+        await this.projectPolygonGeometryService.transformFeaturesToSinglePolygon(featureCollection);
 
       const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
         [transformedGeometry as Geometry],

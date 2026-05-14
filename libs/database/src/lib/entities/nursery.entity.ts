@@ -105,77 +105,77 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/nursery/${this.uuid}/show`;
   }
 
   @StateMachineColumn(EntityStatusStates)
-  status: CreationOptional<EntityStatus>;
+  declare status: CreationOptional<EntityStatus>;
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @AllowNull
   @Column(DATE)
-  startDate: Date | null;
+  declare startDate: Date | null;
 
   @AllowNull
   @Column(DATE)
-  endDate: Date | null;
+  declare endDate: Date | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seedlingGrown: number | null;
+  declare seedlingGrown: number | null;
 
   @AllowNull
   @Column(TEXT)
-  plantingContribution: string | null;
+  declare plantingContribution: string | null;
 
   @AllowNull
   @Column(STRING)
-  oldModel: string | null;
+  declare oldModel: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number | null;
+  declare oldId: number | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   get projectName() {
     return this.project?.name;
@@ -193,11 +193,11 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return this.project?.organisationName;
   }
 
-  get organisationUuid() {
+  get organisationUuid(): string | undefined {
     return this.project?.organisationUuid;
   }
 
-  get organisationReadableType() {
+  get organisationReadableType(): string | undefined {
     return this.project?.organisationReadableType;
   }
 
@@ -206,8 +206,8 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     constraints: false,
     scope: { speciesable_type: Nursery.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
-  seedlings: TreeSpecies[] | null;
+  declare seedlings: TreeSpecies[] | null;
 
   @HasMany(() => NurseryReport)
-  reports: NurseryReport[] | null;
+  declare reports: NurseryReport[] | null;
 }

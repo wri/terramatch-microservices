@@ -20,7 +20,10 @@ type ProgressUpdate = {
 export type DelayedJobResult = ProgressUpdate & { payload: JsonApiDocument | DocumentBuilder | ResourceBuilder };
 
 export class DelayedJobException extends Error {
-  constructor(public errorCode: number, message: string) {
+  constructor(
+    public errorCode: number,
+    message: string
+  ) {
     super(message);
   }
 }
@@ -31,8 +34,8 @@ const serializePayload = (result: DelayedJobResult) => ({
     result.payload instanceof DocumentBuilder
       ? result.payload.serialize()
       : result.payload instanceof ResourceBuilder
-      ? result.payload.document.serialize()
-      : result.payload
+        ? result.payload.document.serialize()
+        : result.payload
 });
 
 export abstract class DelayedJobWorker<T extends DelayedJobData> extends WorkerHost {
@@ -63,7 +66,7 @@ export abstract class DelayedJobWorker<T extends DelayedJobData> extends WorkerH
       await delayedJob.update({
         status: FAILED,
         statusCode: error instanceof DelayedJobException ? error.errorCode : 500,
-        payload: { message: isString(error) ? error : (error as Error).message ?? "Unknown error occurred" }
+        payload: { message: isString(error) ? error : ((error as Error).message ?? "Unknown error occurred") }
       });
     }
   }

@@ -17,7 +17,10 @@ type DashboardEntityKey = keyof typeof DASHBOARD_PROCESSORS;
 
 @Injectable()
 export class DashboardEntitiesService {
-  constructor(private readonly cacheService: CacheService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly cacheService: CacheService,
+    private readonly policyService: PolicyService
+  ) {}
 
   createDashboardProcessor<T extends Project>(
     entity: DashboardEntityKey

@@ -11,13 +11,13 @@ export class Permission extends Model<InferAttributes<Permission>, InferCreation
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Column(STRING)
-  name: string;
+  declare name: string;
 
   @Column({ type: STRING, defaultValue: "api" })
-  guardName: CreationOptional<string>;
+  declare guardName: CreationOptional<string>;
 
   /**
    * Gets the list of permission names that the given user has access to through the roles that are

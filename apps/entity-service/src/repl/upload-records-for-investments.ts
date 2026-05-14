@@ -41,6 +41,7 @@ export const uploadRecordsForInvestments = withoutSqlLogs(async (csvPath1: strin
     LOGGER.log(`Processed ${rowCount} rows from ${csvPath1}`);
     LOGGER.log(`Processed ${rowCount2} rows from ${csvPath2}`);
   } catch (err) {
-    LOGGER.error(`Error processing CSV at ${csvPath1} row ${rowCount + 1}: ${err.message}`);
+    const message = err instanceof Error ? err.message : `${err}`;
+    LOGGER.error(`Error processing CSV at ${csvPath1} row ${rowCount + 1}: ${message}`);
   }
 });

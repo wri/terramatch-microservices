@@ -131,7 +131,7 @@ export class FilesController {
         );
         createdMedias.push(media);
       } catch (error) {
-        errors.push(new MediaBulkErrorDto(index, error.message));
+        errors.push(new MediaBulkErrorDto(index, error instanceof Error ? error.message : `${error}`));
       }
     }
     if (errors.length > 0) {

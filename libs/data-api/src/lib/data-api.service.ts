@@ -59,7 +59,10 @@ type GadmLevelCode = {
 export class DataApiService {
   private readonly logger = new TMLogger(DataApiService.name);
 
-  constructor(@InjectRedis() private readonly redis: Redis, private readonly configService: ConfigService) {}
+  constructor(
+    @InjectRedis() private readonly redis: Redis,
+    private readonly configService: ConfigService
+  ) {}
 
   async gadmLevel0(): Promise<GadmCountry[]> {
     return await this.getDataset("gadm-level-0", GADM_QUERY, gadmLevel0(), GADM_CACHE_DURATION);

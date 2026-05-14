@@ -18,30 +18,30 @@ export class I18nItem extends Model<I18nItem> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @AllowNull
   @Column(STRING)
-  status: string | null;
+  declare status: string | null;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   @AllowNull
   @Column(STRING)
-  shortValue: string | null;
+  declare shortValue: string | null;
 
   @AllowNull
   @Column(TEXT)
-  longValue: string | null;
+  declare longValue: string | null;
 
   @AllowNull
   @Column(STRING)
-  hash: string | null;
+  declare hash: string | null;
 
   @HasMany(() => I18nTranslation, { foreignKey: "i18nItemId", constraints: false })
-  i18nTranslations: I18nTranslation[] | null;
+  declare i18nTranslations: I18nTranslation[] | null;
 
   @BeforeCreate
   @BeforeUpdate

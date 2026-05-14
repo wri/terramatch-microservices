@@ -8,30 +8,30 @@ export class IndicatorOutputMsuCarbon extends Model<IndicatorOutputMsuCarbon> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Unique("unique_polygon_indicator_year")
   @ForeignKey(() => SitePolygon)
   @Column({ type: BIGINT.UNSIGNED })
-  sitePolygonId: number;
+  declare sitePolygonId: number;
 
   @Unique("unique_polygon_indicator_year")
   @Column({ type: STRING, values: INDICATOR_SLUGS })
-  indicatorSlug: IndicatorSlug;
+  declare indicatorSlug: IndicatorSlug;
 
   @Unique("unique_polygon_indicator_year")
   @Column(INTEGER)
-  yearOfAnalysis: number;
+  declare yearOfAnalysis: number;
 
   @AllowNull
   @Column({ type: INTEGER, field: "carbon_ouput" })
-  carbonOutput: number | null;
+  declare carbonOutput: number | null;
 
   @AllowNull
   @Column(STRING)
-  projectPhase: string | null;
+  declare projectPhase: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  confidence: number | null;
+  declare confidence: number | null;
 }

@@ -34,27 +34,27 @@ export class AnrPlotGeometry extends Model<InferAttributes<AnrPlotGeometry>, Inf
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => SitePolygon)
   @Column({ type: BIGINT.UNSIGNED, field: "site_polygon_id" })
-  sitePolygonId: number;
+  declare sitePolygonId: number;
 
   @BelongsTo(() => SitePolygon, { foreignKey: "sitePolygonId", targetKey: "id", constraints: false })
-  sitePolygon: SitePolygon | null;
+  declare sitePolygon: SitePolygon | null;
 
   @Column(JSON)
-  geojson: object;
+  declare geojson: object;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  plotCount: number | null;
+  declare plotCount: number | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 }

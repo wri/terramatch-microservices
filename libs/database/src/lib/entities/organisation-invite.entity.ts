@@ -30,30 +30,30 @@ export class OrganisationInvite extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number;
+  declare organisationId: number;
 
   @Column(STRING)
-  emailAddress: string;
+  declare emailAddress: string;
 
   @AllowNull
   @Column(STRING)
-  token: string | null;
+  declare token: string | null;
 
   @AllowNull
   @Column(DATE)
-  acceptedAt: Date | null;
+  declare acceptedAt: Date | null;
 
   @BelongsTo(() => Organisation)
-  organisation: Organisation | null;
+  declare organisation: Organisation | null;
 
   @BelongsTo(() => User, { foreignKey: "emailAddress", targetKey: "emailAddress" })
-  user: User | null;
+  declare user: User | null;
 }

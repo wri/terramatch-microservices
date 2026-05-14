@@ -16,9 +16,6 @@ export class ImpactStoryLightDto extends EntityDto {
   }
 
   @ApiProperty({ nullable: true, type: String })
-  uuid: string;
-
-  @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
   @ApiProperty({ nullable: true, type: String })

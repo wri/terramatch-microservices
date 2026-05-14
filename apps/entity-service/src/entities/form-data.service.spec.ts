@@ -44,7 +44,7 @@ import {
   RelationResourceCollector
 } from "@terramatch-microservices/common/linkedFields/linkedAnswerCollector";
 import { LinkedFieldResource } from "@terramatch-microservices/database/constants/linked-fields";
-import { faker } from "@faker-js/faker/.";
+import { faker } from "@faker-js/faker";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { SubmissionDto } from "./dto/submission.dto";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";

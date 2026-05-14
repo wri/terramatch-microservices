@@ -11,7 +11,7 @@ import {
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
-import { CriteriaId } from "../constants/validation-types";
+import { CriteriaId } from "../constants";
 import { transformKeysToCamelCase } from "../util/case-transformation.util";
 
 @Table({
@@ -29,27 +29,27 @@ export class CriteriaSiteHistoric extends Model<CriteriaSiteHistoric> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Column(INTEGER)
-  criteriaId: CriteriaId;
+  declare criteriaId: CriteriaId;
 
   @Column(UUID)
-  polygonId: string;
+  declare polygonId: string;
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polygonId", targetKey: "uuid" })
-  polygon: PolygonGeometry | null;
+  declare polygon: PolygonGeometry | null;
 
   @Column(BOOLEAN)
-  valid: boolean;
+  declare valid: boolean;
 
   @AllowNull
   @Column(JSON)
-  extraInfo: object | null;
+  declare extraInfo: object | null;
 
   /**
    * Transform snake_case to camelCase after reading from database

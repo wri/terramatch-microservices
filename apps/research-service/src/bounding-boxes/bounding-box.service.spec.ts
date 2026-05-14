@@ -514,7 +514,7 @@ describe("BoundingBoxService", () => {
       });
 
       const kiruEnvelope = JSON.parse(fixtures.landscapes.ikr.get("envelope") as string);
-      const coords = kiruEnvelope.coordinates[0];
+      const coords = kiruEnvelope.coordinates[0] as [number, number][];
       const minLng = Math.min(...coords.map(p => p[0]));
       const minLat = Math.min(...coords.map(p => p[1]));
       const maxLng = Math.max(...coords.map(p => p[0]));
@@ -540,7 +540,7 @@ describe("BoundingBoxService", () => {
       });
 
       const kiruEnvelope = JSON.parse(fixtures.landscapes.ikr.get("envelope") as string);
-      const kiruCoords = kiruEnvelope.coordinates[0];
+      const kiruCoords = kiruEnvelope.coordinates[0] as [number, number][];
       const kiruMinLng = Math.min(...kiruCoords.map(p => p[0]));
       const kiruMinLat = Math.min(...kiruCoords.map(p => p[1]));
       const kiruMaxLng = Math.max(...kiruCoords.map(p => p[0]));
@@ -586,7 +586,7 @@ describe("BoundingBoxService", () => {
 
       // Result should contain just the landscape data
       const kiruEnvelope = JSON.parse(fixtures.landscapes.ikr.get("envelope") as string);
-      const coords = kiruEnvelope.coordinates[0];
+      const coords = kiruEnvelope.coordinates[0] as [number, number][];
       const minLng = Math.min(...coords.map(p => p[0]));
       const minLat = Math.min(...coords.map(p => p[1]));
       const maxLng = Math.max(...coords.map(p => p[0]));
@@ -611,7 +611,7 @@ describe("BoundingBoxService", () => {
 
       // Result should contain just the landscape data
       const kiruEnvelope = JSON.parse(fixtures.landscapes.ikr.get("envelope") as string);
-      const coords = kiruEnvelope.coordinates[0];
+      const coords = kiruEnvelope.coordinates[0] as [number, number][];
       const minLng = Math.min(...coords.map(p => p[0]));
       const minLat = Math.min(...coords.map(p => p[1]));
       const maxLng = Math.max(...coords.map(p => p[0]));

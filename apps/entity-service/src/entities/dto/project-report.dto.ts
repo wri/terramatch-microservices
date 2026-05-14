@@ -295,13 +295,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   createdByLastName: string | null;
 
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated task uuid"
-  })
-  taskUuid: string | null;
-
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 

@@ -210,7 +210,7 @@ describe("FormsService", () => {
         description: textQuestion.description ?? null,
         validation: textQuestion.validation ?? null,
         name: textQuestion.uuid,
-        label: translated ? "Third Translation" : textQuestion.label ?? null
+        label: translated ? "Third Translation" : (textQuestion.label ?? null)
       };
 
       // one select question in the first section
@@ -230,7 +230,7 @@ describe("FormsService", () => {
         inputType: "select",
         label: selectQuestion.label ?? null,
         placeholder: selectQuestion.placeholder ?? null,
-        description: translated ? "Fourth Translation" : selectQuestion.description ?? null,
+        description: translated ? "Fourth Translation" : (selectQuestion.description ?? null),
         // The order should swap because of the `order` field
         options: [
           {
@@ -263,7 +263,7 @@ describe("FormsService", () => {
       const conditionQuestionMatch = {
         inputType: "conditional",
         label: conditionQuestion.label ?? null,
-        placeholder: translated ? "First Translation" : conditionQuestion.placeholder ?? null,
+        placeholder: translated ? "First Translation" : (conditionQuestion.placeholder ?? null),
         name: conditionQuestion.uuid,
         children: [
           {
@@ -306,7 +306,7 @@ describe("FormsService", () => {
       const formMatch = {
         ...pick(form, "subtitle", "description", "frameworkKey"),
         translated,
-        title: translated ? "First Translation" : form.title ?? null,
+        title: translated ? "First Translation" : (form.title ?? null),
         banner: expect.objectContaining({ url: "fake-url" }),
         sections: [
           {
@@ -750,7 +750,7 @@ describe("FormsService", () => {
 
   describe("exportSubmissions", () => {
     it("throws if the form UUID is invalid", async () => {
-      await expect(service.exportSubmissions("invalid-uuid", {} as Response)).rejects.toThrowError(
+      await expect(service.exportSubmissions("invalid-uuid", {} as Response)).rejects.toThrow(
         "Form with UUID invalid-uuid not found"
       );
     });

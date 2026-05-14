@@ -160,11 +160,12 @@ export const bulkWorkdayImport = withoutSqlLogs(async (csvPath: string, type: Su
       await persistWorkdays(config, workdays);
     }
   } catch (err) {
-    LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${err.message}`);
+    const message = err instanceof Error ? err.message : `${err}`;
+    LOGGER.error(`Error processing CSV at ${csvPath} row ${rowCount + 1}: ${message}`);
   }
 });
 
-const assertEntry = (demographicName: string, header: string, row: Dictionary<string>): Entry => {
+const assertEntry = (demographicName: keyof typeof DEMOGRAPHICS, header: string, row: Dictionary<string>): Entry => {
   const entry = DEMOGRAPHICS[demographicName];
   if (entry != null) return entry;
 
@@ -183,7 +184,7 @@ const assertEntry = (demographicName: string, header: string, row: Dictionary<st
   throw new Error(`Unknown demographic: ${header}`);
 };
 
-const entryMatcher = (a: Entry) => (b: CreationAttributes<TrackingEntry>) =>
+const entryMatcher = (a: Entry) => (b: Omit<CreationAttributes<TrackingEntry>, "trackingId">) =>
   isEqualWith(
     { type: a.type, subtype: a.subtype, name: a.name },
     { type: b.type, subtype: b.subtype, name: b.name },
@@ -203,7 +204,10 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
     })) as SupportedModel | null,
     "Report not found"
   );
-  const parent = assertNotNull(report?.[config.parentAssociation] as Site | Project | null, "Parent not found");
+  const parent = assertNotNull(
+    (report as unknown as { [config.parentAssociation]: Site | Project | null })?.[config.parentAssociation],
+    "Parent not found"
+  );
   assert(parent.ppcExternalId === parentId, "Parent ID does not match");
 
   const reportDueAt = report.dueAt == null ? null : DateTime.fromJSDate(report.dueAt).setZone("UTC");
@@ -225,7 +229,7 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
       `Collection not found: ${header}`
     );
     const collection = config.collections[columnTitlePrefix];
-    const demographicName = header.substring(columnTitlePrefix.length + 1);
+    const demographicName = header.substring(columnTitlePrefix.length + 1) as keyof typeof DEMOGRAPHICS;
     const entry = assertEntry(demographicName, header, row);
     const amount = Math.round(assertNumber(value, `Amount invalid [${value}]`));
     assert(amount >= 0, "Amount must be non-negative");
@@ -248,7 +252,7 @@ const parseRow = async (config: ModelConfigs[SupportedType], row: Dictionary<str
       ethnicity: 0
     };
     for (const { type, amount } of entries) {
-      totals[type] += amount;
+      totals[type as "gender" | "age" | "ethnicity"] += amount;
     }
 
     if (uniq(Object.values(totals)).length > 1) {

@@ -175,7 +175,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
         models = models.filter(model => laravelTypes.includes(model.modelType));
       } else {
-        const requestedLaravelType = MEDIA_OWNER_MODELS[this.query.modelType].LARAVEL_TYPE;
+        const requestedLaravelType =
+          MEDIA_OWNER_MODELS[this.query.modelType as keyof typeof MEDIA_OWNER_MODELS].LARAVEL_TYPE;
         models = models.filter(model => model.modelType === requestedLaravelType);
       }
     } else if (this.entityType === "projects") {

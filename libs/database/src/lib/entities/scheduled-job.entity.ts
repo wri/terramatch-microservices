@@ -59,14 +59,14 @@ export class ScheduledJob extends Model<ScheduledJob> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Column(STRING)
-  type: ScheduledJobType;
+  declare type: ScheduledJobType;
 
   @Column(DATE)
-  executionTime: Date;
+  declare executionTime: Date;
 
   @JsonColumn()
-  taskDefinition: ScheduledJobDefinition;
+  declare taskDefinition: ScheduledJobDefinition;
 }

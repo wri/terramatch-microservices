@@ -50,49 +50,49 @@ export class UpdateRequest extends Model<UpdateRequest> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number | null;
+  declare organisationId: number | null;
 
   @AllowNull
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number | null;
+  declare projectId: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdById: number | null;
+  declare createdById: number | null;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @StateMachineColumn(UpdateRequestStatusStates)
-  status: UpdateRequestStatus;
+  declare status: UpdateRequestStatus;
 
   @AllowNull
   @JsonColumn()
-  content: Dictionary<unknown> | null;
+  declare content: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @Column({ type: STRING, field: "updaterequestable_type" })
-  updateRequestableType: string;
+  declare updateRequestableType: string;
 
   @Column({ type: BIGINT.UNSIGNED, field: "updaterequestable_id" })
-  updateRequestableId: number;
+  declare updateRequestableId: number;
 }

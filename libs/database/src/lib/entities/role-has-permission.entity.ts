@@ -8,9 +8,9 @@ export class RoleHasPermission extends Model<
 > {
   @PrimaryKey
   @Column(BIGINT.UNSIGNED)
-  roleId!: number;
+  declare roleId: number;
 
   @PrimaryKey
   @Column(BIGINT.UNSIGNED)
-  permissionId!: number;
+  declare permissionId: number;
 }

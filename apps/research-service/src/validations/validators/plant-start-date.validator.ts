@@ -104,8 +104,8 @@ export class PlantStartDateValidator implements PolygonValidator {
     const plantStart = sitePolygon.plantStart;
     const plantStartString =
       plantStart instanceof Date
-        ? DateTime.fromJSDate(plantStart, { zone: "utc" }).toISODate() ?? undefined
-        : plantStart ?? undefined;
+        ? (DateTime.fromJSDate(plantStart, { zone: "utc" }).toISODate() ?? undefined)
+        : (plantStart ?? undefined);
 
     if (plantStart == null || plantStartString === "") {
       return {

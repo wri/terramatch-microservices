@@ -355,7 +355,7 @@ export class SitePolygonsService {
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {
     const associationDtos: Record<number, AssociationDtos> = {};
     for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
-      associationDtos[sitePolygonId] = { indicators };
+      associationDtos[Number(sitePolygonId)] = { indicators };
     }
     if (lightResource) return associationDtos;
 

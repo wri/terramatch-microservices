@@ -18,33 +18,33 @@ export class ProjectPolygon extends Model<ProjectPolygon> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Column({ type: UUID })
-  polyUuid: string;
+  declare polyUuid: string;
 
   @BelongsTo(() => PolygonGeometry, { foreignKey: "polyUuid", targetKey: "uuid" })
-  polygon: PolygonGeometry | null;
+  declare polygon: PolygonGeometry | null;
 
   @Column(STRING)
-  entityType: string;
+  declare entityType: string;
 
   @Column(BIGINT.UNSIGNED)
-  entityId: number;
-
-  @ForeignKey(() => User)
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  lastModifiedBy: number | null;
+  declare entityId: number;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare lastModifiedBy: number | null;
+
+  @ForeignKey(() => User)
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  declare createdBy: number | null;
 
   async loadPolygon() {
     if (this.polygon == null && this.polyUuid != null) {

@@ -169,7 +169,7 @@ export class ProjectReportProcessor extends ReportProcessor<
 
     for (const term of SIMPLE_FILTERS) {
       if (query[term] != null) {
-        const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+        const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
         builder.where({ [field]: query[term] });
       }
     }

@@ -27,50 +27,50 @@ export class DelayedJob extends Model<InferAttributes<DelayedJob>, InferCreation
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @StateMachineColumn(DelayedJobStatusStates)
-  status: CreationOptional<DelayedJobStatus>;
+  declare status: CreationOptional<DelayedJobStatus>;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  statusCode: number | null;
+  declare statusCode: number | null;
 
   @AllowNull
   @JsonColumn()
-  payload: object | null;
+  declare payload: object | null;
 
   @AllowNull
   @Column(INTEGER)
-  totalContent: number | null;
+  declare totalContent: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  processedContent: number | null;
+  declare processedContent: number | null;
 
   @AllowNull
   @Column(STRING)
-  progressMessage: string | null;
+  declare progressMessage: string | null;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   // Defaults to true because by default we don't want delayed jobs to show up on the bulk delayed
   // jobs popup in the FE. That is an opt-in behavior.
   @Column({ type: BOOLEAN, defaultValue: true })
-  isAcknowledged: CreationOptional<boolean>;
+  declare isAcknowledged: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @JsonColumn()
-  metadata: Metadata | null;
+  declare metadata: Metadata | null;
 }

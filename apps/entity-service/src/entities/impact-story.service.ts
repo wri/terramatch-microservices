@@ -131,12 +131,12 @@ export class ImpactStoryService {
       "organisationType",
       "category"
     ]) {
-      const fieldKey = associationFieldMap[key] ?? key;
-      const value = query[key];
+      const fieldKey = associationFieldMap[key as keyof typeof associationFieldMap] ?? key;
+      const value = query[key as keyof typeof query];
       if (value != null && value !== "") {
         if (key === "projectUuid") {
           const project = await Project.findOne({
-            where: { uuid: value },
+            where: { uuid: value as string },
             attributes: ["organisationId"]
           });
           if (project != null) {
@@ -160,7 +160,7 @@ export class ImpactStoryService {
           });
         } else if (key === "uuid") {
           builder.where({
-            "$organisation.id$": Subquery.select(Project, "organisationId").eq("uuid", value).literal
+            "$organisation.id$": Subquery.select(Project, "organisationId").eq("uuid", value as string).literal
           });
         } else if (key === "category") {
           if (Array.isArray(value) && value.length > 0) {

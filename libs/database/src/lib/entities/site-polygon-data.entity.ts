@@ -21,16 +21,16 @@ export class SitePolygonData extends Model<SitePolygonData> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @ForeignKey(() => SitePolygon)
   @Column({ type: UUID, field: "site_polygon_uuid" })
-  sitePolygonUuid: string;
+  declare sitePolygonUuid: string;
 
   @BelongsTo(() => SitePolygon, { foreignKey: "sitePolygonUuid", targetKey: "uuid" })
-  sitePolygon: SitePolygon | null;
+  declare sitePolygon: SitePolygon | null;
 
   @AllowNull
   @Column(JSON)
-  data: object | null;
+  declare data: object | null;
 }

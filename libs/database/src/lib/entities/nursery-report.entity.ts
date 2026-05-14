@@ -121,11 +121,11 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/nurseryReport/${this.uuid}/show`;
@@ -133,33 +133,33 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @ForeignKey(() => Nursery)
   @Column(BIGINT.UNSIGNED)
-  nurseryId: number;
+  declare nurseryId: number;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number | null;
+  declare approvedBy: number | null;
 
   @BelongsTo(() => Nursery)
-  nursery: Nursery | null;
+  declare nursery: Nursery | null;
 
   @BelongsTo(() => User)
-  user: User | null;
+  declare user: User | null;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
-  createdByUser: User | null;
+  declare createdByUser: User | null;
 
   @BelongsTo(() => User, { foreignKey: "approvedBy", as: "approvedByUser" })
-  approvedByUser: User | null;
+  declare approvedByUser: User | null;
 
   get projectName() {
     return this.nursery?.project?.name;
@@ -216,13 +216,13 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number;
+  declare taskId: number;
 
   @BelongsTo(() => Task, { constraints: false })
-  task: Task | null;
+  declare task: Task | null;
 
   @StateMachineColumn(ReportStatusStates)
-  status: CreationOptional<ReportStatus>;
+  declare status: CreationOptional<ReportStatus>;
 
   get isComplete(): NonAttribute<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
@@ -238,67 +238,67 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  declare dueAt: Date | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seedlingsYoungTrees: number | null;
+  declare seedlingsYoungTrees: number | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  nothingToReport: boolean | null;
+  declare nothingToReport: boolean | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @Column(DATE)
-  submittedAt: Date | null;
+  declare submittedAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  completion: CreationOptional<number>;
+  declare completion: CreationOptional<number>;
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @AllowNull
   @Column(TEXT)
-  interestingFacts: string | null;
+  declare interestingFacts: string | null;
 
   @AllowNull
   @Column(TEXT)
-  sitePrep: string | null;
+  declare sitePrep: string | null;
 
   @AllowNull
   @Column(TEXT)
-  sharedDriveLink: string | null;
+  declare sharedDriveLink: string | null;
 
   @AllowNull
   @Column(STRING)
-  oldModel: string | null;
+  declare oldModel: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number | null;
+  declare oldId: number | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: NurseryReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
-  seedlings: TreeSpecies[] | null;
+  declare seedlings: TreeSpecies[] | null;
 }

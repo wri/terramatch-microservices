@@ -41,43 +41,43 @@ export class Leadership extends Model<InferAttributes<Leadership>, InferCreation
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => Organisation)
   @Column(BIGINT.UNSIGNED)
-  organisationId: number;
+  declare organisationId: number;
 
   @BelongsTo(() => Organisation)
-  organisation: NonAttribute<Organisation | null>;
+  declare organisation: NonAttribute<Organisation | null>;
 
   @Column(STRING)
-  collection: string;
-
-  @AllowNull
-  @Column(STRING)
-  firstName: string | null;
+  declare collection: string;
 
   @AllowNull
   @Column(STRING)
-  lastName: string | null;
+  declare firstName: string | null;
 
   @AllowNull
   @Column(STRING)
-  position: string | null;
+  declare lastName: string | null;
 
   @AllowNull
   @Column(STRING)
-  gender: string | null;
+  declare position: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  declare gender: string | null;
 
   @AllowNull
   @Column(TINYINT.UNSIGNED)
-  age: number | null;
+  declare age: number | null;
 
   @AllowNull
   @Column(STRING)
-  nationality: string | null;
+  declare nationality: string | null;
 }

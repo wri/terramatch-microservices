@@ -7,15 +7,15 @@ export class Verification extends Model<Verification> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Column(STRING)
-  token: string | null;
+  declare token: string | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  userId: number;
+  declare userId: number;
 
   @BelongsTo(() => User)
-  user: User | null;
+  declare user: User | null;
 }

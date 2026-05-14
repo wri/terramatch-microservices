@@ -24,7 +24,7 @@ const StubStates: States<StubModel, StubStatus> = {
 @Table({})
 class StubModel extends Model<StubModel> {
   @StateMachineColumn(StubStates)
-  status: StubStatus;
+  declare status: StubStatus;
 }
 
 const sequelize = new Sequelize({

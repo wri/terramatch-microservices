@@ -6,29 +6,29 @@ export class FailedJob extends Model<FailedJob> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column(STRING)
-  connection: string | null;
+  declare connection: string | null;
 
   @AllowNull
   @Column(STRING)
-  queue: string | null;
+  declare queue: string | null;
 
   @AllowNull
   @Column(TEXT)
-  payload: string | null;
+  declare payload: string | null;
 
   @AllowNull
   @Column(TEXT)
-  exception: string | null;
+  declare exception: string | null;
 
   @AllowNull
   @Column(TEXT)
-  failedAt: string | null;
+  declare failedAt: string | null;
 }

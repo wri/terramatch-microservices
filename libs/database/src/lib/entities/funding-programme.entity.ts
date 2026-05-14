@@ -47,61 +47,61 @@ export class FundingProgramme extends Model<
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column(STRING)
-  name: string;
+  declare name: string;
 
   @AllowNull
   @Column(INTEGER)
-  nameId: number | null;
+  declare nameId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "name_id", constraints: false })
-  nameI18nItem: I18nItem | null;
+  declare nameI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
-  framework: Framework | null;
+  declare framework: Framework | null;
 
   @Column({ type: STRING(30), defaultValue: COMING_SOON })
-  status: CreationOptional<FundingProgrammeStatus>;
+  declare status: CreationOptional<FundingProgrammeStatus>;
 
   @Column(TEXT)
-  description: string;
+  declare description: string;
 
   @AllowNull
   @Column(INTEGER)
-  descriptionId: number | null;
+  declare descriptionId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  descriptionI18nItem: I18nItem | null;
+  declare descriptionI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(TEXT)
-  location: string | null;
+  declare location: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  locationId: number | null;
+  declare locationId: number | null;
 
   @AllowNull
   @Column(TEXT)
-  readMoreUrl: string | null;
+  declare readMoreUrl: string | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT })
-  organisationTypes: OrganisationType[] | null;
+  declare organisationTypes: OrganisationType[] | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
-  locationI18nItem: I18nItem | null;
+  declare locationI18nItem: I18nItem | null;
 
   @HasMany(() => Stage, { foreignKey: "fundingProgrammeId", sourceKey: "uuid", constraints: false })
-  stages: Stage[] | null;
+  declare stages: Stage[] | null;
 }

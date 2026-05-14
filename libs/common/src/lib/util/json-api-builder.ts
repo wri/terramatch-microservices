@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* istanbul ignore file */
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException, Type } from "@nestjs/common";
@@ -9,7 +8,7 @@ import { DelayedJobDto } from "../dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
-type Attributes = {
+export type Attributes = {
   [key: string]: AttributeValue | Attributes;
 };
 
@@ -55,7 +54,11 @@ export class ResourceBuilder {
   type: string;
   relationships?: Relationships;
 
-  constructor(public id: string, public attributes: Attributes, private documentBuilder: DocumentBuilder) {
+  constructor(
+    public id: string,
+    public attributes: Attributes,
+    private documentBuilder: DocumentBuilder
+  ) {
     this.type = Reflect.getMetadata(DTO_TYPE_METADATA, attributes.constructor);
 
     if (this.type == null && process.env["NODE_ENV"] !== "production") {
@@ -148,7 +151,10 @@ export class DocumentBuilder {
   indexData: IndexData[] = [];
   deleted: Deleted[] = [];
 
-  constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
+  constructor(
+    public readonly resourceType: string,
+    public readonly options: DocumentBuilderOptions = {}
+  ) {}
 
   /**
    * Adds data to the final JSON:API document. If the type of the resource does not match the declared

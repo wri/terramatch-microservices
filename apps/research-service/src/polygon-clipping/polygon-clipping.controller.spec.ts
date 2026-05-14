@@ -8,6 +8,7 @@ import { SitePolygon, DelayedJob, Site, User, Project } from "@terramatch-micros
 import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue, Job } from "bullmq";
+import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
 
 describe("PolygonClippingController", () => {
   let controller: PolygonClippingController;
@@ -79,35 +80,24 @@ describe("PolygonClippingController", () => {
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
-        UnauthorizedException
-      );
+      await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
-    });
-
-    it("should throw UnauthorizedException when authenticatedUserId is null", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-
-      await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: null })).rejects.toThrow(
-        UnauthorizedException
-      );
     });
 
     it("should throw BadRequestException when neither siteUuid nor projectUuid is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({}, { authenticatedUserId: 1 })).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(controller.createClippedVersions({})).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when both siteUuid and projectUuid are provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
+      mockRequestContext({ userId: 1 });
 
-      await expect(
-        controller.createClippedVersions({ siteUuid, projectUuid }, { authenticatedUserId: 1 })
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.createClippedVersions({ siteUuid, projectUuid })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw NotFoundException when no fixable polygons are found for site", async () => {
@@ -116,20 +106,18 @@ describe("PolygonClippingController", () => {
         site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
         polygonIds: []
       });
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
     it("should throw NotFoundException when site is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockRejectedValue(new NotFoundException(`Site not found: ${siteUuid}`));
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
     });
 
@@ -142,8 +130,9 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ siteUuid });
 
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
@@ -165,10 +154,9 @@ describe("PolygonClippingController", () => {
         project: { id: 1, uuid: projectUuid, name: "Test Project" } as Project,
         polygonIds: []
       });
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createClippedVersions({ projectUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
     });
 
@@ -177,10 +165,9 @@ describe("PolygonClippingController", () => {
       clippingService.getFixablePolygonsForProject.mockRejectedValue(
         new NotFoundException(`Project not found: ${projectUuid}`)
       );
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createClippedVersions({ projectUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
     });
 
@@ -193,8 +180,9 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ projectUuid });
 
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
@@ -212,32 +200,32 @@ describe("PolygonClippingController", () => {
 
     it("should throw BadRequestException when siteUuid is empty string", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await expect(controller.createClippedVersions({ siteUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow(
-        BadRequestException
-      );
+      mockRequestContext({ userId: 1 });
+      await expect(controller.createClippedVersions({ siteUuid: "" })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when projectUuid is empty string", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      await expect(controller.createClippedVersions({ projectUuid: "" }, { authenticatedUserId: 1 })).rejects.toThrow(
-        BadRequestException
-      );
+      mockRequestContext({ userId: 1 });
+      await expect(controller.createClippedVersions({ projectUuid: "" })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when siteUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
-      await expect(
-        controller.createClippedVersions({ siteUuid: null as unknown as string }, { authenticatedUserId: 1 })
-      ).rejects.toThrow(BadRequestException);
+      mockRequestContext({ userId: 1 });
+      await expect(controller.createClippedVersions({ siteUuid: null as unknown as string })).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it("should throw BadRequestException when projectUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Project, "findOne").mockResolvedValue(null);
-      await expect(
-        controller.createClippedVersions({ projectUuid: null as unknown as string }, { authenticatedUserId: 1 })
-      ).rejects.toThrow(BadRequestException);
+      mockRequestContext({ userId: 1 });
+      await expect(controller.createClippedVersions({ projectUuid: null as unknown as string })).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it("should handle project with null name", async () => {
@@ -249,8 +237,9 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ projectUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ projectUuid });
 
       expect(result).toBeDefined();
       expect(mockQueue.add).toHaveBeenCalledWith(
@@ -275,8 +264,9 @@ describe("PolygonClippingController", () => {
         getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
       } as unknown as User);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ siteUuid });
 
       expect(result).toBeDefined();
       expect(mockQueue.add).toHaveBeenCalledWith(
@@ -301,8 +291,9 @@ describe("PolygonClippingController", () => {
         getSourceFromRoles: jest.fn().mockReturnValue(null)
       } as unknown as User);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ siteUuid });
 
       expect(result).toBeDefined();
       expect(mockQueue.add).toHaveBeenCalledWith(
@@ -323,8 +314,9 @@ describe("PolygonClippingController", () => {
       });
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ siteUuid });
 
       expect(result).toBeDefined();
       expect(mockQueue.add).toHaveBeenCalledWith(
@@ -345,8 +337,9 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createClippedVersions({ siteUuid }, { authenticatedUserId: 1 });
+      const result = await controller.createClippedVersions({ siteUuid });
 
       expect(result).toBeDefined();
       expect(mockQueue.add).toHaveBeenCalled();
@@ -366,20 +359,11 @@ describe("PolygonClippingController", () => {
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
-        UnauthorizedException
-      );
+      await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
-    });
-
-    it("should throw UnauthorizedException when authenticatedUserId is null", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-
-      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: null })).rejects.toThrow(
-        UnauthorizedException
-      );
     });
 
     it("should throw BadRequestException when no polygon UUIDs are provided", async () => {
@@ -393,20 +377,18 @@ describe("PolygonClippingController", () => {
       };
 
       policyService.authorize.mockResolvedValue(undefined);
+      mockRequestContext({ userId: 1 });
 
-      await expect(
-        controller.createPolygonListClippedVersions(emptyPayload, { authenticatedUserId: 1 })
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.createPolygonListClippedVersions(emptyPayload)).rejects.toThrow(BadRequestException);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when no fixable polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue([]);
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(NotFoundException);
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(polygonUuids);
     });
 
@@ -425,8 +407,9 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+      const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(polygonUuids);
@@ -441,10 +424,9 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue([]);
+      mockRequestContext({ userId: 1 });
 
-      await expect(controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(NotFoundException);
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
     });
 
@@ -478,8 +460,9 @@ describe("PolygonClippingController", () => {
         } as Site
       ]);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+      const result = await controller.createPolygonListClippedVersions(payloadMultiple);
 
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(requestedUuids);
       expect(SitePolygon.findAll).toHaveBeenCalledWith(
@@ -548,8 +531,9 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+      await controller.createPolygonListClippedVersions(payloadMultiple);
 
       expect(DelayedJob.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -628,8 +612,9 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+      await controller.createPolygonListClippedVersions(payloadMultiple);
 
       expect(DelayedJob.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -699,8 +684,9 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+      await controller.createPolygonListClippedVersions(payloadMultiple);
 
       expect(DelayedJob.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -740,8 +726,9 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockRequestContext({ userId: 1 });
 
-      await controller.createPolygonListClippedVersions(payloadMultiple, { authenticatedUserId: 1 });
+      await controller.createPolygonListClippedVersions(payloadMultiple);
 
       expect(DelayedJob.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -772,8 +759,9 @@ describe("PolygonClippingController", () => {
         fullName: null,
         getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
       } as unknown as User);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+      const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(result).toBeDefined();
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
@@ -795,8 +783,9 @@ describe("PolygonClippingController", () => {
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+      const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(result).toBeDefined();
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
@@ -822,8 +811,9 @@ describe("PolygonClippingController", () => {
         fullName: "Test User",
         getSourceFromRoles: jest.fn().mockReturnValue(null)
       } as unknown as User);
+      mockRequestContext({ userId: 1 });
 
-      const result = await controller.createPolygonListClippedVersions(payload, { authenticatedUserId: 1 });
+      const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(result).toBeDefined();
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(

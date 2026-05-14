@@ -7,22 +7,22 @@ export class Investment extends Model<Investment> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @BelongsTo(() => Project, { constraints: false })
-  project: Project | null;
+  declare project: Project | null;
 
   @Column(DATE)
-  investmentDate: Date;
+  declare investmentDate: Date;
 
   @Column(STRING)
-  type: string;
+  declare type: string;
 }

@@ -8,7 +8,7 @@ type SrpReportAssociations = {
 };
 
 const COLUMNS: ColumnMapping<SrpReport, SrpReportAssociations>[] = [
-  ...commonEntityColumns<SrpReport>("srpReport"),
+  ...commonEntityColumns<SrpReport, SrpReportAssociations>("srpReport"),
   "frameworkKey",
   "status",
   "updateRequestStatus",

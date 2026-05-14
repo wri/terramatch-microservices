@@ -94,7 +94,7 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   declare uuid: CreationOptional<string>;
 
   @HasOne(() => FormSubmission, { foreignKey: "projectPitchUuid", sourceKey: "uuid", constraints: false })
-  formSubmission: FormSubmission | null;
+  declare formSubmission: FormSubmission | null;
 
   @AllowNull
   @JsonColumn()

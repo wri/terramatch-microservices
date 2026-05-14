@@ -4,7 +4,9 @@ export type SitePolygonPractice = (typeof SITE_POLYGON_PRACTICES)[number];
 
 export const SITE_POLYGON_TARGET_SYSTEMS = [
   "agroforest",
+  "agricultural-land",
   "grassland",
+  "open-natural-ecosystem",
   "natural-forest",
   "mangrove",
   "peatland",

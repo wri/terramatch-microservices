@@ -199,7 +199,8 @@ export class NurseryProcessor extends EntityProcessor<
     const nurseryId = nursery.id;
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount }) };
+    const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
+    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount }) };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {

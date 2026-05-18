@@ -65,6 +65,7 @@ import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
+import { isPolygonStatus } from "@terramatch-microservices/database/constants";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -410,6 +411,10 @@ export class SitePolygonsController {
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
   @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
   async updateBulkStatus(@Param("status") status: string, @Body() request: SitePolygonStatusBulkUpdateBodyDto) {
+    if (!isPolygonStatus(status)) {
+      throw new BadRequestException(`Invalid polygon status: ${status}`);
+    }
+
     await this.policyService.authorize("update", SitePolygon);
     const userId = this.policyService.userId as number;
     const user = await User.findByPk(userId, {

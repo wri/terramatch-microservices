@@ -353,7 +353,7 @@ describe("EstimatedAreaValidator", () => {
       const mockSitePolygon = {
         polygonUuid,
         siteUuid: "site-uuid-submitted",
-        status: "submitted",
+        status: "pending-approval",
         calcArea: 250,
         loadSite: jest.fn().mockResolvedValue({
           uuid: "site-uuid-submitted",
@@ -376,7 +376,7 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        polygon_status: "submitted",
+        polygon_status: "pending-approval",
         polygon_area: 250,
         is_polygon_approved: false,
         sum_area_site_approved: 1500,

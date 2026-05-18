@@ -105,7 +105,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       include: [
         {
           association: "project",
-          attributes: ["uuid", "name", "country"],
+          attributes: ["uuid", "name", "country", "survivalRate", "directSeedingSurvivalRate"],
           include: [{ association: "organisation", attributes: ["name", "uuid"] }]
         }
       ]
@@ -308,6 +308,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
+    const parentProject =
+      site.project ??
+      (await Project.findByPk(site.projectId, {
+        attributes: ["survivalRate", "directSeedingSurvivalRate"]
+      }));
+    const treesRestoredPpc =
+      regeneratedTreesCount +
+      (treesPlantedCount * ((parentProject?.survivalRate ?? 0) / 100) +
+        (seedsPlantedCount * (parentProject?.directSeedingSurvivalRate ?? 0)) / 100);
+
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const lastReport = await this.getLastReport(site.id);
@@ -325,6 +335,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       regeneratedTreesCount,
+      treesRestoredPpc,
       treesRegeneratingSpeciesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,

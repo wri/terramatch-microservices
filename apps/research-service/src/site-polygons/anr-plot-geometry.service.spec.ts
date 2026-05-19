@@ -138,7 +138,7 @@ describe("AnrPlotGeometryService", () => {
     it("should throw BadRequestException when site polygon is not eligible", async () => {
       (SitePolygon.findOne as jest.Mock).mockResolvedValue({
         uuid: "sp-1",
-        status: "submitted",
+        status: "pending-approval",
         practice: ["assisted-natural-regeneration"]
       } as SitePolygon);
 

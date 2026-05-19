@@ -33,7 +33,12 @@ import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { INDICATOR_SLUGS, PolygonStatus, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import {
+  INDICATOR_SLUGS,
+  PolygonStatus,
+  POLYGON_PENDING_APPROVAL,
+  VALIDATION_TYPES
+} from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
@@ -544,15 +549,16 @@ export class SitePolygonsService {
       await this.triggerProjectValidationJobs(sitePolygons, user.id);
     }
 
-    if (status === "submitted" && user != null) {
+    if (status === POLYGON_PENDING_APPROVAL && user != null) {
       const polygonUuids = sitePolygons
         .map(sp => sp.polygonUuid)
         .filter((uuid): uuid is string => uuid != null && uuid !== "");
       if (polygonUuids.length > 0) {
         const siteUuid = sitePolygons[0]?.siteUuid ?? undefined;
-        this.enqueuePolygonValidation(polygonUuids, user.id, { siteUuid, triggerType: "submitted" }).catch(err =>
-          this.logger.error("Failed to enqueue automated polygon validation on submit", err)
-        );
+        this.enqueuePolygonValidation(polygonUuids, user.id, {
+          siteUuid,
+          triggerType: POLYGON_PENDING_APPROVAL
+        }).catch(err => this.logger.error("Failed to enqueue automated polygon validation on submit", err));
       }
     }
 
@@ -562,7 +568,7 @@ export class SitePolygonsService {
   async enqueuePolygonValidation(
     rawPolygonUuids: string[],
     userId: number,
-    options: { siteUuid?: string; triggerType: "submitted" | "gh_push" | "upload" }
+    options: { siteUuid?: string; triggerType: "pending-approval" | "gh_push" | "upload" }
   ): Promise<void> {
     const polygonUuids = [...new Set(rawPolygonUuids.filter(uuid => uuid.length > 0))];
     if (polygonUuids.length === 0) return;

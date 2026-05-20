@@ -88,9 +88,9 @@ export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
 export const POLYGON_STATUSES_FILTERS = [
   "no-polygons",
-  "submitted",
+  "pending-approval",
   "approved",
-  "needs-more-information",
+  "information-required",
   "draft"
 ] as const;
 

@@ -320,7 +320,7 @@ describe("SitePolygonQueryBuilder", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const match = await SitePolygonFactory.create({
         siteUuid: site.uuid,
-        status: "submitted",
+        status: "pending-approval",
         practice: ["tree-planting"],
         distr: ["full"]
       });
@@ -332,12 +332,12 @@ describe("SitePolygonQueryBuilder", () => {
       });
       await SitePolygonFactory.create({
         siteUuid: site.uuid,
-        status: "submitted",
+        status: "pending-approval",
         practice: ["direct-seeding"],
         distr: ["full"]
       });
 
-      builder.hasStatuses(["submitted"]).filterPractice(["tree-planting"]);
+      builder.hasStatuses(["pending-approval"]).filterPractice(["tree-planting"]);
       const result = await builder.execute();
 
       expect(result).toHaveLength(1);

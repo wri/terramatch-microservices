@@ -393,7 +393,7 @@ describe("SitePolygonsService", () => {
   it("should only include polys with the given statuses", async () => {
     await SitePolygon.truncate();
     const draftPoly = await SitePolygonFactory.create({ status: "draft" });
-    const submittedPoly = await SitePolygonFactory.create({ status: "submitted" });
+    const submittedPoly = await SitePolygonFactory.create({ status: "pending-approval" });
     const approvedPoly = await SitePolygonFactory.create({ status: "approved" });
 
     let query = (await service.buildQuery({ size: 20 })).hasStatuses(["draft"]);
@@ -1168,7 +1168,7 @@ describe("SitePolygonsService", () => {
   describe("updateBulkStatus", () => {
     it("should update the status of multiple site polygons", async () => {
       const data = [{ type: "sitePolygons", id: "1234" }];
-      const status = "submitted";
+      const status = "pending-approval";
       const comment = "comment";
       const user = await UserFactory.create();
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
@@ -1231,7 +1231,7 @@ describe("SitePolygonsService", () => {
 
     it("should not enqueue polygon validation on submit when polygons have no geometry UUID", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "submitted";
+      const status = "pending-approval";
       const comment = "comment";
       const user = { id: 1 } as User;
       const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
@@ -1249,7 +1249,7 @@ describe("SitePolygonsService", () => {
 
     it("should enqueue polygon validation on submit when user and polygon geometry UUIDs are present", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "submitted";
+      const status = "pending-approval";
       const comment = "comment";
       const user = { id: 42 } as User;
       const sitePolygon = {
@@ -1276,7 +1276,7 @@ describe("SitePolygonsService", () => {
           entity_id: null,
           entity_type: Site.LARAVEL_TYPE,
           entity_name: site.name,
-          trigger_type: "submitted"
+          trigger_type: "pending-approval"
         }
       } as unknown as DelayedJob);
 
@@ -1309,7 +1309,7 @@ describe("SitePolygonsService", () => {
 
     it("should use site UUID as delayed job entity_name when site row is not found", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "submitted";
+      const status = "pending-approval";
       const comment = "comment";
       const user = { id: 42 } as User;
       const sitePolygon = {
@@ -1348,7 +1348,7 @@ describe("SitePolygonsService", () => {
 
     it("should not enqueue polygon validation on submit when user is null", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "submitted";
+      const status = "pending-approval";
       const comment = "comment";
       const sitePolygon = {
         id: 1,

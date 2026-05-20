@@ -248,12 +248,17 @@ export class SitePolygon extends Model<SitePolygon> {
   }
 
   static siteUuidsForStatus(polygonStatus: string) {
-    return Subquery.select(SitePolygon, "siteUuid").isNull("deletedAt").eq("isActive", true).eq("status", polygonStatus)
-      .literal;
+    return Subquery.select(SitePolygon, "siteUuid")
+      .isNull("deletedAt")
+      .isNotNull("siteUuid")
+      .eq("isActive", true)
+      .eq("status", polygonStatus).literal;
   }
 
   static siteUuidsWithPolygons() {
-    return Subquery.select(SitePolygon, "siteUuid", { distinct: true }).isNull("deletedAt").eq("isActive", true)
-      .literal;
+    return Subquery.select(SitePolygon, "siteUuid", { distinct: true })
+      .isNull("deletedAt")
+      .isNotNull("siteUuid")
+      .eq("isActive", true).literal;
   }
 }

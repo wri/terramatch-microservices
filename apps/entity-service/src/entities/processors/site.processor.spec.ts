@@ -230,7 +230,8 @@ describe("SiteProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: false,
-        projectUuid: project.uuid
+        projectUuid: project.uuid,
+        treesRestoredPpc: 0
       });
     });
 

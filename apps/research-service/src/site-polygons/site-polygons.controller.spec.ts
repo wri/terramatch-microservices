@@ -737,7 +737,10 @@ describe("SitePolygonsController", () => {
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       await expect(
-        controller.updateBulkStatus("submitted", { comment: "comment", data: [{ type: "sitePolygons", id: "1234" }] })
+        controller.updateBulkStatus("pending-approval", {
+          comment: "comment",
+          data: [{ type: "sitePolygons", id: "1234" }]
+        })
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -747,8 +750,8 @@ describe("SitePolygonsController", () => {
       jest.spyOn(User, "findByPk").mockResolvedValue(userParams as User);
       const data = [{ type: "sitePolygons", id: "1234" }];
       Object.defineProperty(policyService, "userId", { value: userParams.id });
-      await controller.updateBulkStatus("submitted", { comment: "comment", data });
-      expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("submitted", data, "comment", userParams);
+      await controller.updateBulkStatus("pending-approval", { comment: "comment", data });
+      expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("pending-approval", data, "comment", userParams);
     });
   });
 

@@ -681,7 +681,7 @@ describe("AirtableEntity", () => {
       // won't count because it's not active
       await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
       // won't count because it's not approved
-      await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "needs-more-information" });
+      await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "information-required" });
       hectaresRestoredToDate +=
         (await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "approved" })).calcArea ?? 0;
 

@@ -230,16 +230,12 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
 
   filterHasOverlap(hasOverlap?: boolean) {
     if (hasOverlap !== true) return this;
-    const sequelize = SitePolygon.sequelize;
-    if (sequelize == null) {
-      throw new BadRequestException("Database connection not available");
-    }
 
     const criteriaTable = CriteriaSite.tableName;
     this.where(
       literal(
         `EXISTS (SELECT 1 FROM ${criteriaTable} WHERE ${criteriaTable}.polygon_id = SitePolygon.poly_id AND ` +
-          `${criteriaTable}.criteria_id = ${sequelize.escape(VALIDATION_CRITERIA_IDS.OVERLAPPING)} AND ` +
+          `${criteriaTable}.criteria_id = ${SitePolygon.sql.escape(VALIDATION_CRITERIA_IDS.OVERLAPPING)} AND ` +
           `${criteriaTable}.valid = 0)`
       )
     );
@@ -247,12 +243,8 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {
-    const sequelize = SitePolygon.sequelize;
-    if (sequelize == null) {
-      throw new BadRequestException("Database connection not available");
-    }
     const orContains = values.map(slug =>
-      literal(`JSON_CONTAINS(SitePolygon.${column}, ${sequelize.escape(JSON.stringify(slug))}, '$') = 1`)
+      literal(`JSON_CONTAINS(SitePolygon.${column}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
     );
     return {
       [Op.and]: [
@@ -269,11 +261,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         const model = INDICATOR_MODEL_CLASSES[slug];
         if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const sequelize = model.sequelize!;
         const tableName = model.tableName;
         return literal(
-          `(SELECT COUNT(*) = 0 FROM ${tableName} WHERE indicator_slug = ${sequelize.escape(
+          `(SELECT COUNT(*) = 0 FROM ${tableName} WHERE indicator_slug = ${SitePolygon.sql.escape(
             slug
           )} AND site_polygon_id = SitePolygon.id)`
         );
@@ -289,11 +279,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         const model = INDICATOR_MODEL_CLASSES[slug];
         if (model == null) throw new BadRequestException(`Unrecognized indicator slug: ${slug}`);
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const sequelize = model.sequelize!;
         const tableName = model.tableName;
         return literal(
-          `(SELECT COUNT(*) > 0 from ${tableName} WHERE indicator_slug = ${sequelize.escape(
+          `(SELECT COUNT(*) > 0 from ${tableName} WHERE indicator_slug = ${SitePolygon.sql.escape(
             slug
           )} AND site_polygon_id = SitePolygon.id)`
         );

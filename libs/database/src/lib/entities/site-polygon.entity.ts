@@ -30,6 +30,7 @@ import { Subquery } from "../util/subquery.builder";
 import { statusUpdateSequelizeHook } from "../constants/status";
 import { Disturbance } from "./disturbance.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { InternalServerErrorException } from "@nestjs/common";
 
 export type Indicator =
   | IndicatorOutputTreeCoverLoss
@@ -56,6 +57,13 @@ export type Indicator =
 })
 export class SitePolygon extends Model<SitePolygon> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SitePolygon";
+
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("SitePolygon model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
 
   static active() {
     return chainScope(this, "active") as typeof SitePolygon;

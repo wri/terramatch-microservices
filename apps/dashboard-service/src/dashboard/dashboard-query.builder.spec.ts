@@ -60,8 +60,14 @@ describe("DashboardProjectsQueryBuilder", () => {
     builder.queryFilters({ country: "MX" });
     const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
     expect(where[Op.and]).toBeDefined();
-    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX" });
+    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX", isTest: false });
     expect(builder["findOptions"].include).toBeDefined();
+  });
+
+  it("should exclude test projects from queryFilters", () => {
+    builder.queryFilters({});
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+    expect(where[Op.and]?.[0]).toMatchObject({ isTest: false });
   });
 
   it("should combine where clauses using Op.and", () => {

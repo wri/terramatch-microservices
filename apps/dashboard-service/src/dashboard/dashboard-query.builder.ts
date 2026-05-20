@@ -45,7 +45,8 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
 
   queryFilters(filters: DashboardQueryDto) {
     const where: WhereOptions = {
-      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] }
+      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] },
+      isTest: false
     };
     const organisationWhere: WhereOptions = {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }

@@ -74,6 +74,11 @@ const REPORT_ENTRIES = [
     name: "polygon-affected",
     inputType: "disturbanceAffectedPolygon",
     title: "Polygon Affected"
+  },
+  {
+    name: "nursery-affected",
+    inputType: "disturbanceAffectedSite",
+    title: "Nursery Affected"
   }
 ];
 
@@ -135,6 +140,13 @@ const formatEntriesForExport = (entries: DisturbanceReportEntry[], name: string)
         if (!Array.isArray(affected)) return "";
         return affected
           .map(site => site["siteName"])
+          .filter(isNotNull)
+          .join("; ");
+      } else if (name === "nursery-affected") {
+        const affected = decodeValue(entry.value);
+        if (!Array.isArray(affected)) return "";
+        return affected
+          .map(nursery => nursery["nurseryName"])
           .filter(isNotNull)
           .join("; ");
       } else if (name === "polygon-affected") {

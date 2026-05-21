@@ -345,6 +345,11 @@ describe("DisturbanceReportProcessor", () => {
         value: JSON.stringify([{}, [{ polyName: "Poly1" }], [{ polyName: "Poly2" }, { polyName: "Poly3" }]]),
         inputType: "disturbanceAffectedPolygon"
       });
+      await DisturbanceReportEntryFactory.report(disturbanceReport[1]).create({
+        name: "nursery-affected",
+        value: JSON.stringify([{ nurseryName: "Nursery1" }, { nurseryName: "Nursery2" }]),
+        inputType: "disturbanceAffectedNursery"
+      });
 
       const media = [
         await MediaFactory.disturbanceReport(disturbanceReport[1]).create({ collectionName: "media" }),
@@ -374,7 +379,8 @@ describe("DisturbanceReportProcessor", () => {
         expect.objectContaining({
           media: [`media-url (${media[0].name})`, `media-url (${media[1].name})`],
           "site-affected": ["Alderaan; Tatooine"],
-          "polygon-affected": ["Poly1; Poly2; Poly3"]
+          "polygon-affected": ["Poly1; Poly2; Poly3"],
+          "nursery-affected": ["Nursery1; Nursery2"]
         })
       );
     });

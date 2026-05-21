@@ -266,7 +266,8 @@ export class SitePolygonsController {
       practice,
       targetSys,
       distr,
-      source
+      source,
+      hasOverlap
     } = query;
 
     if (plantStartFrom != null && plantStartTo != null && plantStartFrom.getTime() > plantStartTo.getTime()) {
@@ -341,7 +342,8 @@ export class SitePolygonsController {
       .filterPractice(practice)
       .filterDistr(distr)
       .filterTargetSys(targetSys)
-      .filterSource(source);
+      .filterSource(source)
+      .filterHasOverlap(hasOverlap);
 
     // Ensure test projects are excluded only if not included explicitly
     if (!includeTestProjects && siteId == null && projectId == null) {

@@ -1,5 +1,5 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsDate, IsEnum, IsIn, IsOptional, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -221,6 +221,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   })
   @TransformBooleanString()
   includeTestProjects?: boolean;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description: "Filter to polygons with a failed overlap validation."
+  })
+  @IsOptional()
+  @IsBoolean()
+  @TransformBooleanString()
+  hasOverlap?: boolean;
 
   @ValidateNested()
   @Type(({ object } = {} as TypeHelpOptions) => {

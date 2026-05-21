@@ -7,6 +7,10 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
     const user = await this.getUser();
 
     if (this.permissions.includes("polygons-manage")) {
+      // Research persona
+      this.builder.can("manage", SitePolygon);
+    } else if (this.permissions.includes("polygons-manage-own")) {
+      // Greenhouse
       this.builder.can(["read", "create"], SitePolygon);
       this.builder.can(["update", "delete"], SitePolygon, { createdBy: this.userId });
     }
@@ -60,7 +64,7 @@ export class SitePolygonPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["organisationId"],
+      attributes: ["emailAddress", "organisationId"],
       include: [{ association: "projects", attributes: ["id"] }]
     }));
   }

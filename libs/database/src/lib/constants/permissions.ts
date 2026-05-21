@@ -21,6 +21,7 @@ export const PERMISSIONS = {
   "manage-own": "Manage own",
   "projects-read": "Read all projects",
   "polygons-manage": "Manage polygons",
+  "polygons-manage-own": "Manage own polygons",
   "media-manage": "Manage media",
   "view-dashboard": "View dashboard",
   "projects-manage": "Manage projects"
@@ -73,7 +74,7 @@ export const ROLES: Dictionary<Permission[]> = {
   ],
   "project-developer": ["manage-own"],
   "project-manager": ["projects-manage"],
-  "greenhouse-service-account": ["projects-read", "polygons-manage", "media-manage"],
+  "greenhouse-service-account": ["projects-read", "polygons-manage-own", "media-manage"],
   "research-service-account": ["projects-read", "polygons-manage"],
   government: ["view-dashboard"],
   funder: ["view-dashboard"]

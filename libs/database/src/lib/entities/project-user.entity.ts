@@ -22,6 +22,10 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
     return Subquery.select(ProjectUser, "userId").eq("projectId", projectId).eq("isManaging", true).literal;
   }
 
+  static projectNonManagersSubquery(projectId: number) {
+    return Subquery.select(ProjectUser, "userId").eq("projectId", projectId).eq("isManaging", false).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

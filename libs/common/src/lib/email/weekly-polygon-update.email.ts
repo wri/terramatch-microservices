@@ -9,7 +9,6 @@ import { TMLogger } from "../util/tm-logger";
 import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { Op, col, fn } from "sequelize";
-import { DateTime } from "luxon";
 
 export type WeeklyPolygonUpdateEmailData = {
   sitePolygonUuids: string[];
@@ -49,10 +48,8 @@ export class WeeklyPolygonUpdateEmail extends EmailSender<WeeklyPolygonUpdateEma
   }
 
   async send(emailService: EmailService) {
-    const weekAgo = DateTime.now().minus({ days: 7 }).toJSDate();
-    for (const sitePolygonUuid of this.data.sitePolygonUuids) {
-      await this.sendForPolygon(sitePolygonUuid, weekAgo, emailService);
-    }
+    void emailService;
+    this.logger.log("Weekly polygon digest emails are disabled");
   }
 
   private async sendForPolygon(sitePolygonUuid: string, weekAgo: Date, emailService: EmailService) {

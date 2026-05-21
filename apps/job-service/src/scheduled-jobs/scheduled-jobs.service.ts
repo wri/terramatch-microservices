@@ -6,12 +6,10 @@ import {
   Notification,
   PasswordReset,
   ScheduledJob,
-  Task,
   Verification
 } from "@terramatch-microservices/database/entities";
 import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
-import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
-import { Op, QueryTypes, Transaction } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import {
   REPORT_REMINDER,
@@ -23,19 +21,8 @@ import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { DateTime } from "luxon";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
-import { WeeklyPolygonUpdateEmail } from "@terramatch-microservices/common/email/weekly-polygon-update.email";
-import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
-import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { TaskDigestEmail } from "@terramatch-microservices/common/email/task-digest.email";
-
-const TASK_DIGEST_CHUNK_SIZE = 100;
-const POLYGON_DIGEST_CHUNK_SIZE = 50;
-
-/** MySQL/MariaDB named locks so only one job-service replica runs each digest cron at a time. */
-const MYSQL_LOCK_TASK_DIGEST_WEEKLY = "tm_job_svc_task_digest_wk";
-const MYSQL_LOCK_POLYGON_UPDATES_WEEKLY = "tm_job_svc_polygon_update_wk";
 
 const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
@@ -47,7 +34,6 @@ export class ScheduledJobsService {
 
   constructor(
     @InjectQueue("scheduled-jobs") private readonly scheduledJobsQueue: Queue,
-    @InjectQueue("email") private readonly emailQueue: Queue,
     @InjectQueue("entities") private readonly entitiesQueue: Queue
   ) {}
 
@@ -133,49 +119,6 @@ export class ScheduledJobsService {
     }
   }
 
-  /**
-   * Weekly incomplete-task digest. Uses a MySQL named lock so only one replica enqueues when
-   * multiple job-service instances are deployed.
-   */
-  @Cron("0 17 * * 1", { name: "taskDigestWeekly" })
-  async enqueueTaskDigestEmails() {
-    await Task.sql.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_TASK_DIGEST_WEEKLY, transaction, async () => {
-        this.logger.log("Enqueueing task digest email jobs (incomplete tasks)");
-        let total = 0;
-        const builder = new PaginatedQueryBuilder(Task, TASK_DIGEST_CHUNK_SIZE).attributes(["id"]).where({
-          status: { [Op.notIn]: [AWAITING_APPROVAL, APPROVED] }
-        });
-        for await (const page of batchFindAll(builder)) {
-          const taskIds = page.map(({ id }) => id);
-          total += taskIds.length;
-          await new TaskDigestEmail({ taskIds }).sendLater(this.emailQueue);
-        }
-        this.logger.log(`Task digest: enqueued chunks covering up to ${total} incomplete tasks`);
-      });
-    });
-  }
-
-  /**
-   * Weekly polygon update digest. Uses a MySQL named lock so only one replica enqueues when
-   * multiple job-service instances are deployed.
-   */
-  @Cron("0 0 * * 1", { name: "weeklyPolygonUpdates" })
-  async enqueueWeeklyPolygonUpdateEmails() {
-    await Task.sql.transaction(async transaction => {
-      await this.runWithMysqlNamedLock(MYSQL_LOCK_POLYGON_UPDATES_WEEKLY, transaction, async () => {
-        this.logger.log("Enqueueing weekly polygon update email jobs");
-        const weekAgo = DateTime.now().minus({ days: 7 }).toJSDate();
-        const uuids = await WeeklyPolygonUpdateEmail.loadRecentSitePolygonUuids(weekAgo);
-        for (let i = 0; i < uuids.length; i += POLYGON_DIGEST_CHUNK_SIZE) {
-          const sitePolygonUuids = uuids.slice(i, i + POLYGON_DIGEST_CHUNK_SIZE);
-          await new WeeklyPolygonUpdateEmail({ sitePolygonUuids }).sendLater(this.emailQueue);
-        }
-        this.logger.log(`Weekly polygon updates: enqueued ${uuids.length} UUIDs in chunks`);
-      });
-    });
-  }
-
   @Cron(CronExpression.EVERY_5_MINUTES, { name: "removeStaleVerifications" })
   async removeStaleVerifications() {
     const cutoff = DateTime.utc().minus({ hours: VERIFICATION_RETENTION_HOURS }).toJSDate();
@@ -227,37 +170,6 @@ export class ScheduledJobsService {
     const ids = (await FundingProgramme.findAll({ attributes: ["id"] })).map(({ id }) => id as number);
     for (const fundingProgrammeId of ids) {
       await this.entitiesQueue.add("generateApplicationExport", { fundingProgrammeId });
-    }
-  }
-
-  /**
-   * Runs `fn` while holding a MySQL/MariaDB named lock on the current transaction connection.
-   * If the lock is not acquired (another node holds it), `fn` is skipped.
-   */
-  private async runWithMysqlNamedLock(
-    lockName: string,
-    transaction: Transaction,
-    fn: () => Promise<void>
-  ): Promise<void> {
-    const sequelize = Task.sql;
-    const rows = await sequelize.query<{ got: number }>("SELECT GET_LOCK(:name, 0) AS got", {
-      replacements: { name: lockName },
-      transaction,
-      type: QueryTypes.SELECT
-    });
-    const first = rows[0];
-    if (first == null || Number(first.got) !== 1) {
-      this.logger.debug(`Cron skipped: could not acquire named lock [${lockName}]`);
-      return;
-    }
-    try {
-      await fn();
-    } finally {
-      await sequelize.query("SELECT RELEASE_LOCK(:name) AS rel", {
-        replacements: { name: lockName },
-        transaction,
-        type: QueryTypes.SELECT
-      });
     }
   }
 }

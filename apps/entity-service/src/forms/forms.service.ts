@@ -565,6 +565,11 @@ export class FormsService {
       "formSectionId",
       formSections.map(section => section.id)
     );
+    const [formQuestionOptionI18nIds] = await this.processTranslationEntity(
+      FormQuestionOption,
+      "formQuestionId",
+      formQuestions.map(question => question.id)
+    );
     const [formTableHeaderI18nIds] = await this.processTranslationEntity(
       FormTableHeader,
       "formQuestionId",
@@ -587,6 +592,7 @@ export class FormsService {
       ...formI18nIds,
       ...formSectionI18nIds,
       ...formQuestionI18nIds,
+      ...formQuestionOptionI18nIds,
       ...formTableHeaderI18nIds,
       ...formOptionListI18nIds
     ];

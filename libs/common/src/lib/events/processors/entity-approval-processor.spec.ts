@@ -274,7 +274,7 @@ describe("EntityApprovalProcessor", () => {
         peopleAffected: 1000,
         monetaryDamage: 5000,
         propertyAffected: ["seedlings", "saplings"],
-        disturbanceStartDate: date
+        disturbanceDate: date
       });
 
       await polygon.reload();

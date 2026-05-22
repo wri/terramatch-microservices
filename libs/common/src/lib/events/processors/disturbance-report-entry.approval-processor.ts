@@ -40,8 +40,8 @@ const subtype: DisturbanceMapping<"subtype"> = { column: "subtype", mapper: mapJ
 const peopleAffected: DisturbanceMapping<"peopleAffected"> = { column: "peopleAffected", mapper: mapNumber };
 const monetaryDamage: DisturbanceMapping<"monetaryDamage"> = { column: "monetaryDamage", mapper: mapNumber };
 const propertyAffected: DisturbanceMapping<"propertyAffected"> = { column: "propertyAffected", mapper: mapJson };
-const disturbanceStartDate: DisturbanceMapping<"disturbanceStartDate"> = {
-  column: "disturbanceStartDate",
+const disturbanceStartDate: DisturbanceMapping<"disturbanceDate"> = {
+  column: "disturbanceDate",
   mapper: mapDate
 };
 

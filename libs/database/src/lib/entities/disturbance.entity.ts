@@ -64,11 +64,7 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
 
   @AllowNull
   @Column(DATE)
-  declare disturbanceStartDate: Date | null;
-
-  @AllowNull
-  @Column(DATE)
-  declare disturbanceEndDate: Date | null;
+  declare disturbanceDate: Date | null;
 
   @AllowNull
   @Column(STRING)

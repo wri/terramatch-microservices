@@ -26,8 +26,7 @@ type DisturbanceAssociations = {
 
 const COLUMNS: ColumnMapping<Disturbance, DisturbanceAssociations>[] = [
   ...commonEntityColumns<Disturbance, DisturbanceAssociations>(),
-  "disturbanceStartDate",
-  "disturbanceEndDate",
+  "disturbanceDate",
   "type",
   "subtype",
   "intensity",

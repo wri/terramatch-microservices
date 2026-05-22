@@ -11,6 +11,7 @@ import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
+import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -730,6 +731,92 @@ describe("SitePolygonsController", () => {
         writable: true,
         configurable: true
       });
+    });
+  });
+
+  describe("bulkUpdateAttributes", () => {
+    it("should throw BadRequestException when attributeChanges is empty", async () => {
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
+          attributeChanges: {}
+        })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw NotFoundException when no polygons are found", async () => {
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
+          attributeChanges: { numTrees: 100 }
+        })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw UnauthorizedException when user is not authenticated", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: null, writable: true, configurable: true });
+
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
+          attributeChanges: { numTrees: 100 }
+        })
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should authorize update for each polygon and call bulkUpdateSitePolygonAttributes", async () => {
+      const sitePolygon1 = await SitePolygonFactory.build();
+      const sitePolygon2 = await SitePolygonFactory.build();
+      const newVersion1 = await SitePolygonFactory.build({ uuid: "new-version-1" });
+      const newVersion2 = await SitePolygonFactory.build({ uuid: "new-version-2" });
+
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
+      jest
+        .spyOn(User, "findByPk")
+        .mockResolvedValue({
+          id: 1,
+          firstName: "Test",
+          lastName: "User",
+          getSourceFromRoles: () => "terramatch",
+          fullName: "Test User"
+        } as User);
+      sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion1, newVersion2]);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockImplementation(
+        async polygon => ({ uuid: polygon.uuid }) as SitePolygonLightDto
+      );
+
+      const mockSequelize = { transaction: jest.fn(callback => callback({})) };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        get: jest.fn(() => mockSequelize),
+        configurable: true
+      });
+
+      const attributeChanges = { plantStart: "2024-01-01T00:00:00Z", numTrees: 200 };
+      const data = [
+        { type: "sitePolygons", id: sitePolygon1.uuid },
+        { type: "sitePolygons", id: sitePolygon2.uuid }
+      ];
+
+      await controller.bulkUpdateAttributes({ data, attributeChanges });
+
+      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
+      expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
+        [sitePolygon1.uuid, sitePolygon2.uuid],
+        attributeChanges,
+        1,
+        "Test User",
+        "terramatch",
+        {}
+      );
     });
   });
 

@@ -14,6 +14,9 @@ import {
   AttributeChangesDto,
   CreateSitePolygonRequestDto
 } from "./dto/create-site-polygon-request.dto";
+import { SitePolygonBulkAttributeChangesDto } from "./dto/site-polygon-bulk-attribute-update.dto";
+
+const BULK_ATTRIBUTE_UPDATE_CHANGE_REASON = "Bulk attribute update via API" as const;
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
@@ -700,6 +703,33 @@ export class SitePolygonCreationService {
     for (const polygon of polygonsToUpdate) {
       await SitePolygon.update({ polyName: `${dateFormat}${suffix}` }, { where: { uuid: polygon.uuid }, transaction });
     }
+  }
+
+  async bulkUpdateSitePolygonAttributes(
+    sitePolygonUuids: string[],
+    attributeChanges: SitePolygonBulkAttributeChangesDto,
+    userId: number,
+    userFullName: string | null,
+    source: string,
+    transaction: Transaction
+  ): Promise<SitePolygon[]> {
+    const newVersions: SitePolygon[] = [];
+
+    for (const sitePolygonUuid of sitePolygonUuids) {
+      const newVersion = await this.createSitePolygonVersion(
+        sitePolygonUuid,
+        undefined,
+        attributeChanges,
+        BULK_ATTRIBUTE_UPDATE_CHANGE_REASON,
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+      newVersions.push(newVersion);
+    }
+
+    return newVersions;
   }
 
   async createSitePolygonVersion(

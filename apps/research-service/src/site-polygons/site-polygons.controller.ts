@@ -65,6 +65,7 @@ import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
+import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
 
 const MAX_PAGE_SIZE = 100 as const;
@@ -400,6 +401,105 @@ export class SitePolygonsController {
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
     else indexData.cursor = cursor;
     return document.addIndex(indexData);
+  }
+
+  @Patch("attributes")
+  @ApiOperation({
+    operationId: "bulkUpdateSitePolygonAttributes",
+    summary: "Bulk update site polygon attributes",
+    description: `Creates a new version for each site polygon with the same attribute changes applied.
+    Supported fields: plantStart, practice, targetSys, distr, numTrees.
+    At least one attribute field must be provided. Empty string or empty array explicitly clears a field.
+    Omitted fields inherit values from each polygon's active version.`
+  })
+  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, { description: "Invalid request data or empty attributeChanges." })
+  @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
+  async bulkUpdateAttributes(@Body() request: SitePolygonBulkAttributeUpdateBodyDto) {
+    const { data, attributeChanges } = request;
+
+    if (attributeChanges == null || Object.keys(attributeChanges).length === 0) {
+      throw new BadRequestException("attributeChanges must contain at least one field to update");
+    }
+
+    const uuids = data.map(item => item.id);
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["id", "uuid", "primaryUuid", "siteUuid", "createdBy", "polygonUuid"]
+    });
+
+    if (sitePolygons.length === 0) {
+      throw new NotFoundException("No site polygons found for the provided UUIDs");
+    }
+
+    const foundUuids = new Set(sitePolygons.map(sp => sp.uuid));
+    const missingUuids = uuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      await this.policyService.authorize("update", sitePolygon);
+    }
+
+    const userId = this.policyService.userId;
+    if (userId == null) {
+      throw new UnauthorizedException("User must be authenticated");
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+      include: [{ association: "roles", attributes: ["name"] }]
+    });
+    const source = user?.getSourceFromRoles() ?? "terramatch";
+    const userFullName = user?.fullName ?? null;
+
+    if (SitePolygon.sequelize == null) {
+      throw new BadRequestException("Database connection not available");
+    }
+
+    const newVersions = await SitePolygon.sequelize.transaction(async transaction =>
+      this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
+        uuids,
+        attributeChanges,
+        userId,
+        userFullName,
+        source,
+        transaction
+      )
+    );
+
+    if (source === "greenhouse") {
+      const polygonUuids = newVersions
+        .map(sp => sp.polygonUuid)
+        .filter((uuid): uuid is string => uuid != null && uuid !== "");
+      if (polygonUuids.length > 0) {
+        this.sitePolygonService
+          .enqueuePolygonValidation(polygonUuids, userId, {
+            siteUuid: newVersions[0]?.siteUuid ?? undefined,
+            triggerType: "gh_push"
+          })
+          .catch(err =>
+            this.logger.error("Failed to enqueue automated polygon validation after bulk attribute update", err)
+          );
+      }
+    }
+
+    const document = buildJsonApi(SitePolygonLightDto);
+    const associations = await this.sitePolygonService.loadAssociationDtos(newVersions, true);
+
+    for (const sitePolygon of newVersions) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
+    }
+
+    this.logger.log(`Bulk attribute update created ${newVersions.length} version(s) by user ${userId}`);
+
+    return document;
   }
 
   @Patch("status/:status")

@@ -29,9 +29,8 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
   }
 
   async send(emailService: EmailService) {
-    for (const taskId of this.data.taskIds) {
-      await this.sendForTask(taskId, emailService);
-    }
+    void emailService;
+    this.logger.log("Task digest emails are disabled");
   }
 
   private async sendForTask(taskId: number, emailService: EmailService) {

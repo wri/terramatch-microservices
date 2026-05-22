@@ -13,10 +13,7 @@ export class DisturbanceDto extends AssociationDto {
   }
 
   @ApiProperty({ nullable: true, type: String })
-  disturbanceStartDate: Date | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  disturbanceEndDate: Date | null;
+  disturbanceDate: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   collection: string | null;

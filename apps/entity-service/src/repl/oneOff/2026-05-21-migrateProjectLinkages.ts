@@ -29,8 +29,8 @@ type ProjectLinkedModel = Model & {
 };
 
 const DEFAULT_SITE_TARGETS: ProjectLinkageTarget[] = [
-  { id: 1724, uuid: "fe1cdf8f-5ee5-48c6-8496-bd4217bf5551", currentProjectId: 132, migratedProjectId: 687 },
-  { id: 1723, uuid: "7ecc9da8-c462-428d-94c6-58d89aef9221", currentProjectId: 132, migratedProjectId: 687 }
+  { id: 1723, uuid: "fe1cdf8f-5ee5-48c6-8496-bd4217bf5551", currentProjectId: 132, migratedProjectId: 687 },
+  { id: 1724, uuid: "7ecc9da8-c462-428d-94c6-58d89aef9221", currentProjectId: 132, migratedProjectId: 687 }
 ];
 
 const DEFAULT_INVESTMENT_TARGETS: ProjectLinkageTarget[] = [

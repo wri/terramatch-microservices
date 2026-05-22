@@ -44,7 +44,6 @@ const disturbanceStartDate: DisturbanceMapping<"disturbanceStartDate"> = {
   column: "disturbanceStartDate",
   mapper: mapDate
 };
-const disturbanceEndDate: DisturbanceMapping<"disturbanceEndDate"> = { column: "disturbanceEndDate", mapper: mapDate };
 
 const DISTURBANCE_MAPPING = {
   intensity,

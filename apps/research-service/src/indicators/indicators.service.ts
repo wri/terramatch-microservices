@@ -138,7 +138,7 @@ export class IndicatorsService {
       throw new NotFoundException(`Indicator slug ${slug} not found or not supported for export`);
     }
 
-    let isPpcExport = false;
+    let isPpcExport: boolean;
 
     if (entityType === "sites") {
       const attributes = intersection(

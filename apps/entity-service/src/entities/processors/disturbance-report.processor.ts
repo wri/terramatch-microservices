@@ -61,9 +61,14 @@ const REPORT_ENTRIES = [
     title: "Property Affected"
   },
   {
-    name: "date-of-disturbance",
+    name: "disturbance-start-date",
     inputType: "date",
     title: "Date of Disturbance"
+  },
+  {
+    name: "disturbance-end-date",
+    inputType: "date",
+    title: "Disturbance End Date"
   },
   {
     name: "site-affected",

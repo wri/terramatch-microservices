@@ -330,8 +330,13 @@ describe("DisturbanceReportProcessor", () => {
         value: "low",
         inputType: "select"
       });
-      const dateOfDisturbance = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
-        name: "date-of-disturbance",
+      const disturbanceStartDate = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "disturbance-start-date",
+        value: "2023-10-01",
+        inputType: "date"
+      });
+      const disturbanceEndDate = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "disturbance-end-date",
         value: "2023-10-01",
         inputType: "date"
       });
@@ -369,7 +374,8 @@ describe("DisturbanceReportProcessor", () => {
         1,
         expect.objectContaining({ uuid: disturbanceReport[0].uuid }),
         expect.objectContaining({
-          "date-of-disturbance": [dateOfDisturbance.value],
+          "disturbance-start-date": [disturbanceStartDate.value],
+          "disturbance-end-date": [disturbanceEndDate.value],
           intensity: [intensity.value]
         })
       );

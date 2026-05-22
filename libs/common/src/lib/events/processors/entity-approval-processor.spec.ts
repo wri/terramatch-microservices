@@ -252,7 +252,7 @@ describe("EntityApprovalProcessor", () => {
       });
       const date = DateTime.now().minus({ weeks: 3 }).set({ millisecond: 0 }).toJSDate();
       await DisturbanceReportEntryFactory.report(report).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: date.toISOString()
       });
       await DisturbanceReportEntryFactory.report(report).create({
@@ -274,7 +274,7 @@ describe("EntityApprovalProcessor", () => {
         peopleAffected: 1000,
         monetaryDamage: 5000,
         propertyAffected: ["seedlings", "saplings"],
-        disturbanceDate: date
+        disturbanceStartDate: date
       });
 
       await polygon.reload();

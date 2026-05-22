@@ -40,7 +40,11 @@ const subtype: DisturbanceMapping<"subtype"> = { column: "subtype", mapper: mapJ
 const peopleAffected: DisturbanceMapping<"peopleAffected"> = { column: "peopleAffected", mapper: mapNumber };
 const monetaryDamage: DisturbanceMapping<"monetaryDamage"> = { column: "monetaryDamage", mapper: mapNumber };
 const propertyAffected: DisturbanceMapping<"propertyAffected"> = { column: "propertyAffected", mapper: mapJson };
-const disturbanceDate: DisturbanceMapping<"disturbanceDate"> = { column: "disturbanceDate", mapper: mapDate };
+const disturbanceStartDate: DisturbanceMapping<"disturbanceStartDate"> = {
+  column: "disturbanceStartDate",
+  mapper: mapDate
+};
+const disturbanceEndDate: DisturbanceMapping<"disturbanceEndDate"> = { column: "disturbanceEndDate", mapper: mapDate };
 
 const DISTURBANCE_MAPPING = {
   intensity,
@@ -50,7 +54,7 @@ const DISTURBANCE_MAPPING = {
   "people-affected": peopleAffected,
   "monetary-damage": monetaryDamage,
   "property-affected": propertyAffected,
-  "date-of-disturbance": disturbanceDate
+  "disturbance-start-date": disturbanceStartDate
 };
 
 type AffectedPolygon = { polyUuid?: string };

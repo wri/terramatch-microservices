@@ -43,7 +43,7 @@ describe("DisturbanceReportEntriesCollector", () => {
         inputType: "select"
       });
       const date = await DisturbanceReportEntryFactory.report(report).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-12-01",
         inputType: "date"
       });
@@ -70,7 +70,7 @@ describe("DisturbanceReportEntriesCollector", () => {
         inputType: "select"
       });
       const date = await DisturbanceReportEntryFactory.report(report).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-12-01",
         inputType: "date"
       });
@@ -80,7 +80,7 @@ describe("DisturbanceReportEntriesCollector", () => {
         field,
         [
           { name: "extent", value: "large", inputType: "text" },
-          { name: "date-of-disturbance", value: "2023-12-02" }
+          { name: "disturbance-start-date", value: "2023-12-02" }
         ],
         false
       );

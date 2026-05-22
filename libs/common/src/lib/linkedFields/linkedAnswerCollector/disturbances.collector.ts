@@ -5,7 +5,8 @@ import { EmbeddedDisturbanceDto } from "../../dto/disturbance.dto";
 export const disturbancesCollector = polymorphicCollector(Disturbance, EmbeddedDisturbanceDto, {
   usesCollection: false,
   exportSerializer: attributeExporter([
-    "disturbanceDate",
+    "disturbanceStartDate",
+    "disturbanceEndDate",
     "type",
     "subtype",
     "intensity",

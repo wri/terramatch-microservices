@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { INDICATORS, IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { INDICATORS, IndicatorSlug, PPC } from "@terramatch-microservices/database/constants";
 import {
   IndicatorOutputHectares,
   IndicatorOutputTreeCover,
@@ -40,6 +40,8 @@ const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
   status: "Status",
   plantstart: "Plant Start Date"
 };
+
+const PPC_EXPORT_COLUMN = { key: "ppc_external_id", header: "PPC External ID" } as const;
 
 const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: string }> = {
   treeCoverLoss: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss" },
@@ -136,6 +138,8 @@ export class IndicatorsService {
       throw new NotFoundException(`Indicator slug ${slug} not found or not supported for export`);
     }
 
+    let isPpcExport = false;
+
     if (entityType === "sites") {
       const attributes = intersection(
         ["id", "uuid", "frameworkKey", "projectId", "status"],
@@ -144,6 +148,7 @@ export class IndicatorsService {
       const site = await Site.findOne({ where: { uuid: entityUuid }, attributes });
       if (site == null) throw new NotFoundException(`Site not found for uuid: ${entityUuid}`);
       await this.policyService.authorize("read", site);
+      isPpcExport = site.frameworkKey === PPC;
     } else {
       const attributes = intersection(
         ["id", "uuid", "frameworkKey", "organisationId", "status"],
@@ -152,23 +157,28 @@ export class IndicatorsService {
       const project = await Project.findOne({ where: { uuid: entityUuid }, attributes });
       if (project == null) throw new NotFoundException(`Project not found for uuid: ${entityUuid}`);
       await this.policyService.authorize("read", project);
+      isPpcExport = project.frameworkKey === PPC;
     }
 
-    const polygons = await this.getPolygonsForEntity(entityType, entityUuid);
+    const polygons = await this.getPolygonsForEntity(entityType, entityUuid, isPpcExport);
     if (polygons.length === 0) {
       this.logger.warn(`No polygons found for ${entityType} ${entityUuid}`);
-      return this.generateEmptyCsv(config.columns);
+      return this.generateEmptyCsv(config.columns, isPpcExport);
     }
 
-    const rows = await this.getPolygonIndicatorData(polygons, slug);
-    return this.generateCsv(rows, config, slug);
+    const rows = await this.getPolygonIndicatorData(polygons, slug, isPpcExport);
+    return this.generateCsv(rows, config, slug, isPpcExport);
   }
 
   private getExportConfig(slug: IndicatorSlug) {
     return EXPORT_CONFIGS[slug] ?? null;
   }
 
-  private async getPolygonsForEntity(entityType: "sites" | "projects", entityUuid: string): Promise<SitePolygon[]> {
+  private async getPolygonsForEntity(
+    entityType: "sites" | "projects",
+    entityUuid: string,
+    isPpcExport: boolean
+  ): Promise<SitePolygon[]> {
     let siteUuids: string[];
 
     if (entityType === "sites") {
@@ -186,12 +196,12 @@ export class IndicatorsService {
 
     return await SitePolygon.findAll({
       where: { siteUuid: { [Op.in]: siteUuids }, isActive: true, status: "approved" },
-      include: [{ model: Site, attributes: ["name"] }],
+      include: [{ model: Site, attributes: isPpcExport ? ["name", "ppcExternalId"] : ["name"] }],
       attributes: ["id", "polyName", "status", "plantStart", "calcArea"]
     });
   }
 
-  private async getPolygonIndicatorData(polygons: SitePolygon[], slug: IndicatorSlug) {
+  private async getPolygonIndicatorData(polygons: SitePolygon[], slug: IndicatorSlug, isPpcExport: boolean) {
     const rows: Array<Record<string, string | number | Date | null>> = [];
 
     for (const polygon of polygons) {
@@ -206,6 +216,10 @@ export class IndicatorsService {
         size: polygon.calcArea ?? 0,
         created_at: indicator.createdAt ?? null
       };
+
+      if (isPpcExport) {
+        row.ppc_external_id = polygon.site?.ppcExternalId ?? "";
+      }
 
       if (slug === "treeCoverLoss" || slug === "treeCoverLossFires") {
         const valueYears = (indicator as IndicatorOutputTreeCoverLoss).value as Record<string, number>;
@@ -310,14 +324,43 @@ export class IndicatorsService {
   private generateCsv(
     rows: Array<Record<string, string | number | Date | null>>,
     config: { columns: Record<string, string> },
-    slug: IndicatorSlug
+    slug: IndicatorSlug,
+    isPpcExport: boolean
   ): string {
-    if (rows.length === 0) return this.generateEmptyCsv(config.columns);
+    if (rows.length === 0) return this.generateEmptyCsv(config.columns, isPpcExport);
 
+    const columnsArray = this.buildExportColumnsArray(config.columns, slug, rows, isPpcExport);
+
+    const filteredRows = rows.map(row => {
+      const filteredRow: Record<string, string | number> = {};
+      columnsArray.forEach(({ key }) => {
+        const value = row[key];
+        filteredRow[key] = value instanceof Date ? value.toISOString().split("T")[0] : value == null ? "" : value;
+      });
+      return filteredRow;
+    });
+
+    return stringify(filteredRows, { header: true, columns: columnsArray });
+  }
+
+  private generateEmptyCsv(columns: Record<string, string>, isPpcExport: boolean): string {
+    const columnsArray = this.buildExportColumnsArray(columns, null, [], isPpcExport);
+    return stringify([], { header: true, columns: columnsArray });
+  }
+
+  private buildExportColumnsArray(
+    columns: Record<string, string>,
+    slug: IndicatorSlug | null,
+    rows: Array<Record<string, string | number | Date | null>>,
+    isPpcExport: boolean
+  ): Array<{ key: string; header: string }> {
     const columnsArray: Array<{ key: string; header: string }> = [];
 
-    Object.entries(config.columns).forEach(([key, header]) => {
+    Object.entries(columns).forEach(([key, header]) => {
       columnsArray.push({ key, header });
+      if (isPpcExport && key === "site_name") {
+        columnsArray.push(PPC_EXPORT_COLUMN);
+      }
     });
 
     if (slug === "treeCoverLoss" || slug === "treeCoverLossFires") {
@@ -351,20 +394,6 @@ export class IndicatorsService {
       }
     }
 
-    const filteredRows = rows.map(row => {
-      const filteredRow: Record<string, string | number> = {};
-      columnsArray.forEach(({ key }) => {
-        const value = row[key];
-        filteredRow[key] = value instanceof Date ? value.toISOString().split("T")[0] : value == null ? "" : value;
-      });
-      return filteredRow;
-    });
-
-    return stringify(filteredRows, { header: true, columns: columnsArray });
-  }
-
-  private generateEmptyCsv(columns: Record<string, string>): string {
-    const columnsArray = Object.entries(columns).map(([key, header]) => ({ key, header }));
-    return stringify([], { header: true, columns: columnsArray });
+    return columnsArray;
   }
 }

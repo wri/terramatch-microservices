@@ -193,7 +193,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-12-01",
         inputType: "date"
       });
@@ -206,7 +206,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(2);
       expect(result.dto.intensity).toBe("high");
-      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-12-01"));
+      expect(result.dto.disturbanceStartDate).toEqual(new Date("2023-12-01"));
     });
 
     it("should handle missing entry values", async () => {
@@ -228,7 +228,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(1);
       expect(result.dto.intensity).toBeNull();
-      expect(result.dto.dateOfDisturbance).toBeNull();
+      expect(result.dto.disturbanceStartDate).toBeNull();
     });
   });
 
@@ -244,7 +244,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-11-15",
         inputType: "date"
       });
@@ -257,7 +257,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(2);
       expect(result.dto.intensity).toBe("medium");
-      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-11-15"));
+      expect(result.dto.disturbanceStartDate).toEqual(new Date("2023-11-15"));
     });
 
     it("should handle missing entry values in light DTO", async () => {
@@ -274,7 +274,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(0);
       expect(result.dto.intensity).toBeNull();
-      expect(result.dto.dateOfDisturbance).toBeNull();
+      expect(result.dto.disturbanceStartDate).toBeNull();
     });
   });
 
@@ -290,7 +290,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-10-01",
         inputType: "date"
       });
@@ -300,7 +300,7 @@ describe("DisturbanceReportProcessor", () => {
 
       const intensity = entries.find(({ name }) => name === "intensity");
       expect(intensity?.value).toBe("low");
-      const date = entries.find(({ name }) => name === "date-of-disturbance");
+      const date = entries.find(({ name }) => name === "disturbance-start-date");
       expect(date?.value).toBe("2023-10-01");
     });
 

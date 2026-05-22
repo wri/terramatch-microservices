@@ -53,11 +53,14 @@ export class DisturbanceReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
   organisationUuid: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
+  @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
-  dateOfDisturbance: Date | null;
+  disturbanceStartDate: Date | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  disturbanceEndDate: Date | null;
 
   @ApiProperty()
   createdAt: Date;

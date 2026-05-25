@@ -744,6 +744,15 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it("should throw BadRequestException when attributeChanges includes unsupported fields", async () => {
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
+          attributeChanges: { unknownField: "value" } as any
+        })
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it("should throw NotFoundException when no polygons are found", async () => {
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
 
@@ -778,20 +787,16 @@ describe("SitePolygonsController", () => {
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
       policyService.authorize.mockResolvedValue(undefined);
       Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
-      jest
-        .spyOn(User, "findByPk")
-        .mockResolvedValue({
-          id: 1,
-          firstName: "Test",
-          lastName: "User",
-          getSourceFromRoles: () => "terramatch",
-          fullName: "Test User"
-        } as User);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        firstName: "Test",
+        lastName: "User",
+        getSourceFromRoles: () => "terramatch",
+        fullName: "Test User"
+      } as User);
       sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion1, newVersion2]);
       sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockImplementation(
-        async polygon => ({ uuid: polygon.uuid }) as SitePolygonLightDto
-      );
+      sitePolygonService.buildLightDto.mockImplementation(async polygon => new SitePolygonLightDto(polygon, []));
 
       const mockSequelize = { transaction: jest.fn(callback => callback({})) };
       Object.defineProperty(SitePolygon, "sequelize", {

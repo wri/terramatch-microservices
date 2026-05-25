@@ -69,6 +69,7 @@ import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-a
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
 
 const MAX_PAGE_SIZE = 100 as const;
+const BULK_ATTRIBUTE_CHANGE_KEYS = ["plantStart", "practice", "targetSys", "distr", "numTrees"] as const;
 
 @Controller("research/v3/sitePolygons")
 @ApiExtraModels(
@@ -421,6 +422,13 @@ export class SitePolygonsController {
 
     if (attributeChanges == null || Object.keys(attributeChanges).length === 0) {
       throw new BadRequestException("attributeChanges must contain at least one field to update");
+    }
+
+    const unsupportedKeys = Object.keys(attributeChanges).filter(
+      key => !BULK_ATTRIBUTE_CHANGE_KEYS.includes(key as (typeof BULK_ATTRIBUTE_CHANGE_KEYS)[number])
+    );
+    if (unsupportedKeys.length > 0) {
+      throw new BadRequestException(`Unsupported attributeChanges field(s): ${unsupportedKeys.join(", ")}`);
     }
 
     const uuids = data.map(item => item.id);

@@ -1,7 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsDateString, IsIn, IsInt, IsString, Min, ValidateIf, ValidateNested } from "class-validator";
 import { DeleteDataDto, JsonApiBulkBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+import {
+  SITE_POLYGON_DISTRIBUTIONS,
+  SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_TARGET_SYSTEMS
+} from "@terramatch-microservices/database/constants";
 
 export class SitePolygonBulkAttributeChangesDto {
   @ApiProperty({
@@ -9,8 +14,10 @@ export class SitePolygonBulkAttributeChangesDto {
     required: false,
     example: "2023-01-15T00:00:00Z"
   })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @ValidateIf((_, value) => value !== "")
+  @IsDateString()
   plantStart?: string;
 
   @ApiProperty({
@@ -19,9 +26,10 @@ export class SitePolygonBulkAttributeChangesDto {
     example: ["tree-planting"],
     type: [String]
   })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @IsString({ each: true })
+  @IsIn(SITE_POLYGON_PRACTICES, { each: true })
   practice?: string[];
 
   @ApiProperty({
@@ -29,8 +37,10 @@ export class SitePolygonBulkAttributeChangesDto {
     required: false,
     example: "natural-forest"
   })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @ValidateIf((_, value) => value !== "")
+  @IsIn(SITE_POLYGON_TARGET_SYSTEMS)
   targetSys?: string;
 
   @ApiProperty({
@@ -39,9 +49,10 @@ export class SitePolygonBulkAttributeChangesDto {
     example: ["full"],
     type: [String]
   })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @IsString({ each: true })
+  @IsIn(SITE_POLYGON_DISTRIBUTIONS, { each: true })
   distr?: string[];
 
   @ApiProperty({
@@ -49,8 +60,9 @@ export class SitePolygonBulkAttributeChangesDto {
     required: false,
     example: 150
   })
-  @IsOptional()
-  @IsNumber()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(0)
   numTrees?: number;
 }
 

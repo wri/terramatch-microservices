@@ -11,7 +11,7 @@ import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
-import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
+import type { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -745,12 +745,12 @@ describe("SitePolygonsController", () => {
     });
 
     it("should throw BadRequestException when attributeChanges includes unsupported fields", async () => {
-      await expect(
-        controller.bulkUpdateAttributes({
-          data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
-          attributeChanges: { unknownField: "value" } as any
-        })
-      ).rejects.toThrow(BadRequestException);
+      const request = {
+        data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
+        attributeChanges: { unknownField: "value" }
+      } as unknown as SitePolygonBulkAttributeUpdateBodyDto;
+
+      await expect(controller.bulkUpdateAttributes(request)).rejects.toThrow(BadRequestException);
     });
 
     it("should throw NotFoundException when no polygons are found", async () => {

@@ -9,7 +9,7 @@ import {
   RoleFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext, mockRequestForUser } from "../util/testing";
+import { mockUserContext, mockContextForUser } from "../util/testing";
 import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
 
@@ -29,7 +29,7 @@ describe("FinancialReportPolicy", () => {
   });
 
   it("allows managing financial reports in your framework", async () => {
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await FinancialReportFactory.org().create({ frameworkKey: "ppc" });
     const tf = await FinancialReportFactory.org().create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -41,7 +41,7 @@ describe("FinancialReportPolicy", () => {
   it("allows managing own financial reports", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const fr1 = await FinancialReportFactory.org(org).create();
     const fr2 = await FinancialReportFactory.org().create();
@@ -52,7 +52,7 @@ describe("FinancialReportPolicy", () => {
   });
 
   it("allows managing all financial reports with reports-manage permission", async () => {
-    mockRequestContext({ userId: 123, permissions: ["reports-manage"] });
+    mockUserContext({ userId: 123, permissions: ["reports-manage"] });
     const fr1 = await FinancialReportFactory.org().create();
     const fr2 = await FinancialReportFactory.org().create();
     await expectAuthority(service, {
@@ -65,7 +65,7 @@ describe("FinancialReportPolicy", () => {
 
   it("does not allow access for users without organisation", async () => {
     const user = await UserFactory.create({ organisationId: null });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const financialReport = await FinancialReportFactory.org().create();
     await expectCannot(service, "read", financialReport);
@@ -75,7 +75,7 @@ describe("FinancialReportPolicy", () => {
   it("allows updateAnswers for own organisation when status is started or due", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const started = await FinancialReportFactory.org(org).create({ status: STARTED });
     const due = await FinancialReportFactory.org(org).create({ status: DUE });
@@ -90,7 +90,7 @@ describe("FinancialReportPolicy", () => {
   it("allows updateAnswers when awaiting approval and nothingToReport is true", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const report = await FinancialReportFactory.org(org).create({
       status: AWAITING_APPROVAL,
@@ -102,7 +102,7 @@ describe("FinancialReportPolicy", () => {
   it("denies updateAnswers when awaiting approval without nothingToReport", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const report = await FinancialReportFactory.org(org).create({
       status: AWAITING_APPROVAL,
@@ -112,7 +112,7 @@ describe("FinancialReportPolicy", () => {
   });
 
   it("allows export and reminder actions for framework users", async () => {
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await FinancialReportFactory.org().create({ frameworkKey: "ppc" });
     await expectAuthority(service, {
       can: [
@@ -133,7 +133,7 @@ describe("FinancialReportPolicy", () => {
       isMonitoring: false,
       isManaging: true
     });
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
 
     const visible = await FinancialReportFactory.org(orgFromProject).create();
     const hidden = await FinancialReportFactory.org().create({
@@ -151,7 +151,7 @@ describe("FinancialReportPolicy", () => {
     const pmRole = await RoleFactory.create({ name: "project-manager" });
     await ModelHasRole.create({ modelId: user.id, roleId: pmRole.id, modelType: User.LARAVEL_TYPE });
 
-    mockRequestForUser(user);
+    mockContextForUser(user);
 
     const ownOrgReport = await FinancialReportFactory.org(org).create();
     const otherReport = await FinancialReportFactory.org().create();

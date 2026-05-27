@@ -10,7 +10,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext, mockRequestForUser } from "../util/testing";
+import { mockUserContext, mockContextForUser } from "../util/testing";
 
 describe("NurseryReportPolicy", () => {
   let service: PolicyService;
@@ -28,13 +28,13 @@ describe("NurseryReportPolicy", () => {
   });
 
   it("allows reading all nursery reports with view-dashboard permissions", async () => {
-    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
+    mockUserContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new NurseryReport());
     await expectCannot(service, "delete", new NurseryReport());
   });
 
   it("allows managing nursery reports in your framework", async () => {
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await NurseryReportFactory.create({ frameworkKey: "ppc" });
     const tf = await NurseryReportFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -46,7 +46,7 @@ describe("NurseryReportPolicy", () => {
   it("allows managing nursery reports for own projects", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ organisationId: org.id });
     const p2 = await ProjectFactory.create();
@@ -82,7 +82,7 @@ describe("NurseryReportPolicy", () => {
 
   it("allows managing nursery reports for managed projects", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();

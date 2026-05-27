@@ -30,7 +30,7 @@ export const serialize = (data: JsonApiDocument | DocumentBuilder | ResourceBuil
  * Note: Your service should likely be providing the real PolicyService instead of a deep mock in
  *   order to take advantage of this utility.
  */
-export function mockRequestContext({
+export function mockUserContext({
   userId,
   permissions = [],
   locale
@@ -49,14 +49,14 @@ export function mockRequestContext({
  * A utility to leave the rest of the request context mock alone and just set the permission.
  */
 export function setMockedPermissions(...permissions: string[]) {
-  mockRequestContext({ userId: UserContext.authenticatedUserId, permissions, locale: UserContext.userLocale });
+  mockUserContext({ userId: UserContext.authenticatedUserId, permissions, locale: UserContext.userLocale });
 }
 
 /**
  * A utility to represent the given user (id and locale) with a set of permissions.
  */
-export function mockRequestForUser(user: User, ...permissions: string[]) {
-  mockRequestContext({ userId: user.id, permissions, locale: user.locale });
+export function mockContextForUser(user: User, ...permissions: string[]) {
+  mockUserContext({ userId: user.id, permissions, locale: user.locale });
 }
 
 export const getRelation = (key: string) => getLinkedFieldConfig(key)?.field as LinkedRelation;

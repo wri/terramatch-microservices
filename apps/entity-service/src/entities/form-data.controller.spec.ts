@@ -8,7 +8,7 @@ import { StubProcessor } from "./entities.controller.spec";
 import { Form, Project } from "@terramatch-microservices/database/entities";
 import { FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 import { Dictionary } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -58,7 +58,7 @@ describe("FormDataController", () => {
 
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
-      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       processor.findOne.mockResolvedValue(project);
       await expect(controller.get({ entity: "projects", uuid: project.uuid })).rejects.toThrow(
         "Form for entity not found"
@@ -103,7 +103,7 @@ describe("FormDataController", () => {
 
     it("throws if the form is not found", async () => {
       const project = await ProjectFactory.create();
-      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       processor.findOne.mockResolvedValue(project);
       await expect(
         controller.update({ entity: "projects", uuid: project.uuid }, createPayload(`projects|${project.uuid}`, {}))

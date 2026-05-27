@@ -8,7 +8,7 @@ import {
   ProjectPolygonFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestForUser } from "../util/testing";
+import { mockContextForUser } from "../util/testing";
 
 describe("ProjectPolygonPolicy", () => {
   let service: PolicyService;
@@ -28,7 +28,7 @@ describe("ProjectPolygonPolicy", () => {
   describe("polygons-manage permission (Admin)", () => {
     it("should allow admins to read, create, update and delete all project polygons", async () => {
       const user = await UserFactory.create();
-      mockRequestForUser(user, "polygons-manage");
+      mockContextForUser(user, "polygons-manage");
 
       const projectPolygon = await ProjectPolygonFactory.forPitch().build();
 
@@ -46,7 +46,7 @@ describe("ProjectPolygonPolicy", () => {
       const pitch = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      mockRequestForUser(user, "framework-ppc");
+      mockContextForUser(user, "framework-ppc");
 
       await expectCan(service, "read", projectPolygon);
       await expectCan(service, "create", projectPolygon);
@@ -58,7 +58,7 @@ describe("ProjectPolygonPolicy", () => {
       const pitch = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      mockRequestForUser(user, "framework-ppc");
+      mockContextForUser(user, "framework-ppc");
 
       await expectCannot(service, "update", projectPolygon);
       await expectCannot(service, "delete", projectPolygon);
@@ -70,7 +70,7 @@ describe("ProjectPolygonPolicy", () => {
       const pitch = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      mockRequestForUser(user, "framework-ppc");
+      mockContextForUser(user, "framework-ppc");
 
       await expectCannot(service, "read", projectPolygon);
       await expectCannot(service, "create", projectPolygon);
@@ -86,7 +86,7 @@ describe("ProjectPolygonPolicy", () => {
       const projectPolygon1 = await ProjectPolygonFactory.forPitch(pitch1).build();
       const projectPolygon2 = await ProjectPolygonFactory.forPitch(pitch2).build();
 
-      mockRequestForUser(user, "framework-ppc", "framework-terrafund");
+      mockContextForUser(user, "framework-ppc", "framework-terrafund");
 
       await expectCan(service, "read", projectPolygon1);
       await expectCan(service, "read", projectPolygon2);
@@ -100,7 +100,7 @@ describe("ProjectPolygonPolicy", () => {
       const pitch = await ProjectPitchFactory.create({ organisationId: organisation.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      mockRequestForUser(user, "manage-own");
+      mockContextForUser(user, "manage-own");
 
       await expectCan(service, "read", projectPolygon);
       await expectCan(service, "create", projectPolygon);
@@ -115,7 +115,7 @@ describe("ProjectPolygonPolicy", () => {
       const pitch = await ProjectPitchFactory.create({ organisationId: organisation2.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({});
 
-      mockRequestForUser(user, "manage-own");
+      mockContextForUser(user, "manage-own");
 
       await expectCannot(service, "read", projectPolygon);
       await expectCannot(service, "create", projectPolygon);
@@ -125,7 +125,7 @@ describe("ProjectPolygonPolicy", () => {
       const user = await UserFactory.create({ organisationId: null });
       const projectPolygon = await ProjectPolygonFactory.forPitch().build();
 
-      mockRequestForUser(user, "manage-own");
+      mockContextForUser(user, "manage-own");
 
       await expectCannot(service, "read", projectPolygon);
     });
@@ -143,7 +143,7 @@ describe("ProjectPolygonPolicy", () => {
       const ownOrgPolygon = await ProjectPolygonFactory.forPitch(ownerPitch).build();
       const frameworkPolygon = await ProjectPolygonFactory.forPitch(frameworkPitch).build();
 
-      mockRequestForUser(user, "manage-own", "framework-ppc");
+      mockContextForUser(user, "manage-own", "framework-ppc");
 
       // Can fully manage own org polygons
       await expectCan(service, "read", ownOrgPolygon);
@@ -161,7 +161,7 @@ describe("ProjectPolygonPolicy", () => {
       const user = await UserFactory.create();
       const projectPolygon = await ProjectPolygonFactory.forPitch().build();
 
-      mockRequestForUser(user);
+      mockContextForUser(user);
 
       await expectCannot(service, "read", projectPolygon);
       await expectCannot(service, "create", projectPolygon);

@@ -1,11 +1,10 @@
 import { AuthGuard, AuthOptional } from "./auth.guard";
 import { Test } from "@nestjs/testing";
 import { APP_GUARD } from "@nestjs/core";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { JwtService } from "@nestjs/jwt";
 import { Controller, Get, HttpStatus, INestApplication } from "@nestjs/common";
 import { UserFactory } from "@terramatch-microservices/database/factories";
 import request from "supertest";
+import { mockContextForUser } from "../util/testing";
 
 @Controller("test")
 class TestController {
@@ -22,17 +21,13 @@ class TestController {
 }
 
 describe("AuthGuard", () => {
-  let jwtService: DeepMocked<JwtService>;
   let app: INestApplication;
 
   beforeEach(async () => {
     app = (
       await Test.createTestingModule({
         controllers: [TestController],
-        providers: [
-          { provide: JwtService, useValue: (jwtService = createMock<JwtService>()) },
-          { provide: APP_GUARD, useClass: AuthGuard }
-        ]
+        providers: [{ provide: APP_GUARD, useClass: AuthGuard }]
       }).compile()
     ).createNestApplication();
     await app.init();
@@ -43,54 +38,21 @@ describe("AuthGuard", () => {
     jest.restoreAllMocks();
   });
 
-  it("should return an error when no auth header is present", async () => {
+  it("should return an error when no user is found in context", async () => {
     await request(app.getHttpServer()).get("/test").expect(HttpStatus.UNAUTHORIZED);
   });
 
-  it("should not return an error when a valid auth header is present", async () => {
-    const token = "fake jwt token";
-    jwtService.verifyAsync.mockResolvedValue({ sub: "fakeuserid" });
-
-    await request(app.getHttpServer()).get("/test").set("Authorization", `Bearer ${token}`).expect(HttpStatus.OK);
+  it("should use the user found in context for auth", async () => {
+    mockContextForUser(await UserFactory.create());
+    await request(app.getHttpServer()).get("/test").expect(HttpStatus.OK);
   });
 
-  it("should use an api key for login", async () => {
-    const apiKey = "fake-api-key";
-    await UserFactory.create({ apiKey });
-    jwtService.decode.mockReturnValue(null);
-
-    await request(app.getHttpServer()).get("/test").set("Authorization", `Bearer ${apiKey}`).expect(HttpStatus.OK);
-  });
-
-  it("should throw when the api key is not recognized", async () => {
-    jwtService.decode.mockReturnValue(null);
-
-    await request(app.getHttpServer())
-      .get("/test")
-      .set("Authorization", "Bearer foobar")
-      .expect(HttpStatus.UNAUTHORIZED);
-  });
-
-  it("should allow missing auth on an endpoint with @OptionalBearerAuth", async () => {
+  it("should allow missing auth on an endpoint with @AuthOptional", async () => {
     await request(app.getHttpServer()).get("/test/optional-auth").expect(HttpStatus.OK);
   });
 
-  it("should allow invalid auth on an endpoint with @OptionalBearerAuth", async () => {
-    jwtService.verifyAsync.mockRejectedValue(new Error("Invalid token"));
-
-    await request(app.getHttpServer())
-      .get("/test/optional-auth")
-      .set("Authorization", "Bearer invalid-token")
-      .expect(HttpStatus.OK);
-  });
-
-  it("should allow valid auth on an endpoint with @OptionalBearerAuth", async () => {
-    const token = "valid-token";
-    jwtService.verifyAsync.mockResolvedValue({ sub: "fakeuserid" });
-
-    await request(app.getHttpServer())
-      .get("/test/optional-auth")
-      .set("Authorization", `Bearer ${token}`)
-      .expect(HttpStatus.OK);
+  it("should allow valid auth on an endpoint with @AuthOptional", async () => {
+    mockContextForUser(await UserFactory.create());
+    await request(app.getHttpServer()).get("/test/optional-auth").expect(HttpStatus.OK);
   });
 });

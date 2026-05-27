@@ -8,7 +8,7 @@ import {
   SiteFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext, mockRequestForUser } from "../util/testing";
+import { mockUserContext, mockContextForUser } from "../util/testing";
 
 describe("SitePolygonPolicy", () => {
   let service: PolicyService;
@@ -27,7 +27,7 @@ describe("SitePolygonPolicy", () => {
 
   it("allows service accounts with polygons-manage-own to read and create any polygon", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "polygons-manage-own");
+    mockContextForUser(user, "polygons-manage-own");
 
     const sitePolygon = new SitePolygon();
     sitePolygon.createdBy = 999; // Different user
@@ -38,7 +38,7 @@ describe("SitePolygonPolicy", () => {
 
   it("allows service accounts with polygons-manage-own to update and delete only their own polygons", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "polygons-manage-own");
+    mockContextForUser(user, "polygons-manage-own");
 
     const ownPolygon = new SitePolygon();
     ownPolygon.createdBy = user.id;
@@ -54,7 +54,7 @@ describe("SitePolygonPolicy", () => {
 
   it("allows service accounts with polygons-manage to take any action on any polygon", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "polygons-manage");
+    mockContextForUser(user, "polygons-manage");
 
     const sitePolygon = new SitePolygon();
     await expectCan(service, "read", sitePolygon);
@@ -66,7 +66,7 @@ describe("SitePolygonPolicy", () => {
   it("allows managing polygons within frameworks", async () => {
     const site = await SiteFactory.create({ frameworkKey: "ppc" });
 
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -79,7 +79,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -92,7 +92,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -105,7 +105,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: false });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -113,14 +113,14 @@ describe("SitePolygonPolicy", () => {
   });
 
   it("disallows reading polygons without polygons-manage", async () => {
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
     await expectCannot(service, "read", SitePolygon);
   });
 
   it("allows deleting polygons within frameworks", async () => {
     const site = await SiteFactory.create({ frameworkKey: "ppc" });
 
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -133,7 +133,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -146,7 +146,7 @@ describe("SitePolygonPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
 
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
@@ -158,7 +158,7 @@ describe("SitePolygonPolicy", () => {
     const sitePolygon = new SitePolygon();
     sitePolygon.siteUuid = site.uuid;
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
 
     await expectCannot(service, "delete", sitePolygon);
   });
@@ -168,7 +168,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage-own");
+      mockContextForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -181,7 +181,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage-own");
+      mockContextForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -194,7 +194,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage-own");
+      mockContextForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;

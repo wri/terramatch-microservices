@@ -10,7 +10,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
 import { StoreFormAttributes } from "./dto/form.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 describe("FormsController", () => {
   let module: TestingModule;
@@ -32,7 +32,7 @@ describe("FormsController", () => {
 
     controller = module.get(FormsController);
 
-    mockRequestContext({ userId: 123, permissions: ["custom-forms-manage", "framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["custom-forms-manage", "framework-ppc"] });
   });
 
   afterEach(() => {

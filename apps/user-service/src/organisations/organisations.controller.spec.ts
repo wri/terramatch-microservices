@@ -28,7 +28,7 @@ import {
   OwnershipStake,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
@@ -1094,7 +1094,7 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
 
       const updatePayload = {
         data: {
@@ -1121,7 +1121,7 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
 
       const updatePayload = {
         data: {
@@ -1171,7 +1171,7 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
 
       const updatePayload = {
         data: {
@@ -1195,7 +1195,7 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext();
+      mockUserContext();
 
       const updatePayload = {
         data: {
@@ -1219,7 +1219,7 @@ describe("OrganisationsController", () => {
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
       emailQueue.add.mockRejectedValue(new Error("Queue error"));
 
       const updatePayload = {

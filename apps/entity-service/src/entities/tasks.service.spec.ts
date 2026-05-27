@@ -32,7 +32,7 @@ import { AuditStatus } from "@terramatch-microservices/database/entities/audit-s
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 describe("TasksService", () => {
   let service: TasksService;
@@ -78,7 +78,7 @@ describe("TasksService", () => {
         paginationTotal = expected.length
       }: { permissions?: string[]; sortField?: string; sortUp?: boolean; paginationTotal?: number } = {}
     ) {
-      mockRequestContext({ userId, permissions });
+      mockUserContext({ userId, permissions });
       const { tasks, total } = await service.getTasks(query);
       expect(tasks.length).toBe(expected.length);
       expect(total).toBe(paginationTotal);
@@ -229,7 +229,7 @@ describe("TasksService", () => {
     it("should add all task details", async () => {
       const project = await ProjectFactory.create();
       const task = await TaskFactory.create({ projectId: project.id });
-      mockRequestContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
       const projectReport = await ProjectReportFactory.create({
         taskId: task.id,
         projectId: project.id,
@@ -310,7 +310,7 @@ describe("TasksService", () => {
 
     it("should throw if there is an incomplete report", async () => {
       const project = await ProjectFactory.create();
-      mockRequestContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
       const task = await TaskFactory.create({ projectId: project.id });
       await ProjectReportFactory.create({
         taskId: task.id,
@@ -323,7 +323,7 @@ describe("TasksService", () => {
 
     it("should ensure all reports are in a complete state", async () => {
       const project = await ProjectFactory.create();
-      mockRequestContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId, permissions: [`framework-${project.frameworkKey}`] });
       const task = await TaskFactory.create({ projectId: project.id });
       const projectReport = await ProjectReportFactory.create({
         taskId: task.id,
@@ -370,7 +370,7 @@ describe("TasksService", () => {
   describe("approveBulkReports", () => {
     it("should approve reports and update their status", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const task = await TaskFactory.create();
       const siteReport = await SiteReportFactory.create({ taskId: task.id, status: "due" });
@@ -397,7 +397,7 @@ describe("TasksService", () => {
 
     it("should handle empty arrays of UUIDs", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const task = await TaskFactory.create();
 
@@ -418,7 +418,7 @@ describe("TasksService", () => {
 
     it("should handle null UUIDs arrays", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const task = await TaskFactory.create();
 

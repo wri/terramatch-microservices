@@ -21,7 +21,7 @@ import { InternalServerErrorException, NotAcceptableException, NotFoundException
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { mockRequestContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
@@ -397,7 +397,7 @@ describe("NurseryProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
-      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       expect(nursery.projectId).toBe(project.id);
       expect(nursery.frameworkKey).toBe(project.frameworkKey);
@@ -411,7 +411,7 @@ describe("NurseryProcessor", () => {
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
       });
-      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
@@ -432,7 +432,7 @@ describe("NurseryProcessor", () => {
           dueAt: DateTime.now().plus({ weeks: 5 }).toISO()
         }
       });
-      mockRequestContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
       const nursery = await processor.create({ parentUuid: project.uuid });
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);

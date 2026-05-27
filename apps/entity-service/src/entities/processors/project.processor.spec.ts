@@ -52,7 +52,7 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { mockRequestForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockContextForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
@@ -718,7 +718,7 @@ describe("ProjectProcessor", () => {
     it("creates a test project if the org is a test org", async () => {
       const org = await OrganisationFactory.create({ isTest: true });
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(true);
@@ -727,7 +727,7 @@ describe("ProjectProcessor", () => {
     it("creates blank project if there is no application", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(false);
@@ -738,7 +738,7 @@ describe("ProjectProcessor", () => {
     it("establishes a project user connection", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });

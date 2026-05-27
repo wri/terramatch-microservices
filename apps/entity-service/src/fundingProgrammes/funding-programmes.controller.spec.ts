@@ -14,8 +14,8 @@ import {
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import {
-  mockRequestContext,
-  mockRequestForUser,
+  mockUserContext,
+  mockContextForUser,
   serialize,
   setMockedPermissions
 } from "@terramatch-microservices/common/util/testing";
@@ -75,7 +75,7 @@ describe("FundingProgrammesController", () => {
 
     it("returns no funding programmes if the user doesn't have an org", async () => {
       const user = await UserFactory.create();
-      mockRequestForUser(user, "manage-own");
+      mockContextForUser(user, "manage-own");
       await FundingProgrammeFactory.createMany(3);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       await controller.index({ translated: false });
@@ -88,7 +88,7 @@ describe("FundingProgrammesController", () => {
       const org2 = await OrganisationFactory.create({ type: "gov" });
       const user = await UserFactory.create({ organisationId: org.id });
       await OrganisationUserFactory.create({ organisationId: org2.id, userId: user.id, status: "approved" });
-      mockRequestForUser(user, "manage-own");
+      mockContextForUser(user, "manage-own");
       await FundingProgramme.truncate();
       const programmes = [
         await FundingProgrammeFactory.create({
@@ -120,7 +120,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       await FundingProgramme.truncate();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockRequestForUser(user, "framework-ppc");
+      mockContextForUser(user, "framework-ppc");
       await controller.index({});
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
@@ -151,7 +151,7 @@ describe("FundingProgrammesController", () => {
     it("translates by default", async () => {
       const programme = await FundingProgrammeFactory.create();
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       await controller.get({ uuid: programme.uuid }, {});
       await programme.reload();
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
@@ -328,7 +328,7 @@ describe("FundingProgrammesController", () => {
   describe("exportAll", () => {
     it("throws if the export is not found", async () => {
       await SavedExport.truncate();
-      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+      mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
       await expect(controller.exportAll({ uuid: "uuid" })).rejects.toThrow(NotFoundException);
     });
 
@@ -338,7 +338,7 @@ describe("FundingProgrammesController", () => {
       exports[0].setDataValue("createdAt", DateTime.fromJSDate(exports[0].createdAt).minus({ days: 1 }).toJSDate());
       await exports[0].save();
 
-      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+      mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
       csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("test"));
       await controller.exportAll({ uuid: fp.uuid });
       expect(csvExportService.generateExportDto).toHaveBeenCalledWith(exports[1].name);

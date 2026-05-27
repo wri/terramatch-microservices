@@ -3,7 +3,7 @@ import { PolicyService } from "./policy.service";
 import { expectCan, expectCannot } from "./policy.service.spec";
 import { User } from "@terramatch-microservices/database/entities";
 import { UserFactory } from "@terramatch-microservices/database/factories";
-import { mockRequestContext } from "../util/testing";
+import { mockUserContext } from "../util/testing";
 
 describe("UserPolicy", () => {
   let service: PolicyService;
@@ -15,7 +15,7 @@ describe("UserPolicy", () => {
 
     service = await module.resolve(PolicyService);
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
   });
 
   afterEach(async () => {
@@ -23,17 +23,17 @@ describe("UserPolicy", () => {
   });
 
   it("allows reading any user as admin", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "read", new User());
   });
 
   it("allows reading all users as admin", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "readAll", User);
   });
 
   it("allows creating users as admin", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "create", User);
   });
 
@@ -50,7 +50,7 @@ describe("UserPolicy", () => {
   });
 
   it("allows updating any user as admin", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "update", new User());
   });
 
@@ -63,7 +63,7 @@ describe("UserPolicy", () => {
   });
 
   it("allows verify any user with users-manage", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "verify", new User());
   });
 
@@ -132,7 +132,7 @@ describe("UserPolicy", () => {
   });
 
   it("allows deleting any user as users-manage", async () => {
-    mockRequestContext({ userId: 123, permissions: ["users-manage"] });
+    mockUserContext({ userId: 123, permissions: ["users-manage"] });
     await expectCan(service, "delete", new User());
   });
 

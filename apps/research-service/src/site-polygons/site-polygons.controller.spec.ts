@@ -13,7 +13,7 @@ import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/datab
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import type { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
-import { Transaction } from "sequelize";
+import { Sequelize, Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { serialize } from "@terramatch-microservices/common/util/testing";
@@ -31,6 +31,22 @@ import { VersionUpdateBody } from "./dto/version-update.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+
+function getSharedSequelize(): Sequelize {
+  const connection = User.sequelize;
+  if (connection == null) {
+    throw new Error("Test database connection is not initialized");
+  }
+  return connection;
+}
+
+function restoreSitePolygonSequelize(): void {
+  Object.defineProperty(SitePolygon, "sequelize", {
+    value: getSharedSequelize(),
+    writable: true,
+    configurable: true
+  });
+}
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -178,6 +194,7 @@ describe("SitePolygonsController", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    restoreSitePolygonSequelize();
   });
 
   describe("findMany", () => {
@@ -320,8 +337,8 @@ describe("SitePolygonsController", () => {
 
     it("should execute real filterValidationStatus logic", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      const poly1 = await SitePolygonFactory.create({ validationStatus: "passed" });
-      const poly2 = await SitePolygonFactory.create({ validationStatus: null });
+      const poly1 = await SitePolygonFactory.build({ validationStatus: "passed" });
+      const poly2 = await SitePolygonFactory.build({ validationStatus: null });
 
       mockQueryBuilder([poly1, poly2], 2);
 
@@ -798,9 +815,13 @@ describe("SitePolygonsController", () => {
       sitePolygonService.loadAssociationDtos.mockResolvedValue({});
       sitePolygonService.buildLightDto.mockImplementation(async polygon => new SitePolygonLightDto(polygon, []));
 
-      const mockSequelize = { transaction: jest.fn(callback => callback({})) };
+      const originalSequelize = SitePolygon.sequelize;
+      const mockSequelize = {
+        transaction: jest.fn((callback: (transaction: object) => unknown) => callback({}))
+      };
       Object.defineProperty(SitePolygon, "sequelize", {
-        get: jest.fn(() => mockSequelize),
+        value: mockSequelize,
+        writable: true,
         configurable: true
       });
 
@@ -810,18 +831,26 @@ describe("SitePolygonsController", () => {
         { type: "sitePolygons", id: sitePolygon2.uuid }
       ];
 
-      await controller.bulkUpdateAttributes({ data, attributeChanges });
+      try {
+        await controller.bulkUpdateAttributes({ data, attributeChanges });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
-      expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
-        [sitePolygon1.uuid, sitePolygon2.uuid],
-        attributeChanges,
-        1,
-        "Test User",
-        "terramatch",
-        {}
-      );
+        expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
+        expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
+        expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
+          [sitePolygon1.uuid, sitePolygon2.uuid],
+          attributeChanges,
+          1,
+          "Test User",
+          "terramatch",
+          {}
+        );
+      } finally {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize ?? getSharedSequelize(),
+          writable: true,
+          configurable: true
+        });
+      }
     });
   });
 

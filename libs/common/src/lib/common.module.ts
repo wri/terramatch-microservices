@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common";
-import { RequestContextModule } from "nestjs-request-context";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { AuthGuard } from "./guards";
 import { JwtModule } from "@nestjs/jwt";
@@ -22,13 +21,13 @@ import { FileService } from "./file/file.service";
 import { CsvExportService } from "./export/csv-export.service";
 import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-notification.processor";
 import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
+import { UserContextMiddleware } from "./middleware/user-context.middleware";
 
 export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
 const IS_REPL = process.env["REPL"] === "true";
 
 @Module({
   imports: [
-    RequestContextModule,
     JwtModule.registerAsync({
       imports: [ConfigModule.forRoot({ isGlobal: true })],
       inject: [ConfigService],
@@ -74,6 +73,7 @@ const IS_REPL = process.env["REPL"] === "true";
     AnalyticsEventService,
     CsvExportService,
     GreenhouseNotificationService,
+    UserContextMiddleware,
 
     ...(IS_REPL ? [] : [GreenhouseNotificationProcessor, EmailProcessor, AnalyticsProcessor])
   ],
@@ -92,4 +92,8 @@ const IS_REPL = process.env["REPL"] === "true";
     GreenhouseNotificationService
   ]
 })
-export class CommonModule {}
+export class CommonModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(UserContextMiddleware).forRoutes("*");
+  }
+}

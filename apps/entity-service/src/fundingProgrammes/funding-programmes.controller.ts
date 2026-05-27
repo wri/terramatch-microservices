@@ -35,7 +35,6 @@ import {
   getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
-import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataService } from "../entities/form-data.service";
 import { difference, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -46,6 +45,7 @@ import { BadRequestException } from "@nestjs/common/exceptions/bad-request.excep
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("fundingProgrammes/v3/fundingProgrammes")
 export class FundingProgrammesController {
@@ -69,7 +69,7 @@ export class FundingProgrammesController {
     let fundingProgrammes: FundingProgramme[];
     if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // non-admins only have access to FPs that match their org types
-      const orgUuids = await User.orgUuids(authenticatedUserId());
+      const orgUuids = await User.orgUuids(UserContext.authenticatedUserId);
       const types =
         orgUuids.length === 0
           ? []
@@ -93,7 +93,7 @@ export class FundingProgrammesController {
       fundingProgrammes = await FundingProgramme.findAll();
     }
 
-    const locale = query.translated === false ? undefined : userLocale();
+    const locale = query.translated === false ? undefined : UserContext.userLocale;
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
       requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`
@@ -113,7 +113,7 @@ export class FundingProgrammesController {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
-    const locale = translated === false ? undefined : userLocale();
+    const locale = translated === false ? undefined : UserContext.userLocale;
     await this.policyService.authorize("read", fundingProgramme);
 
     return await this.formDataService.addFundingProgrammeDtos(

@@ -20,7 +20,6 @@ import {
 } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
-import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
@@ -33,6 +32,7 @@ import { DateTime } from "luxon";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { FormsService } from "../forms/forms.service";
 import { Response } from "express";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 const FILTER_COLUMNS = ["organisationUuid", "fundingProgrammeUuid"] as const;
 const SORT_COLUMNS = ["createdAt", "updatedAt"] as const;
@@ -59,7 +59,7 @@ export class ApplicationsController {
 
     if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // admins have access to everything, so we just filter what's available for non-admins
-      const orgUuids = await User.orgUuids(authenticatedUserId());
+      const orgUuids = await User.orgUuids(UserContext.authenticatedUserId);
       builder.where({ organisationUuid: { [Op.in]: orgUuids } });
     }
 
@@ -163,7 +163,7 @@ export class ApplicationsController {
         await this.formDataService.addFundingProgrammeDtos(
           document,
           [fundingProgramme],
-          translated === false ? undefined : userLocale()
+          translated === false ? undefined : UserContext.userLocale
         );
       }
     }

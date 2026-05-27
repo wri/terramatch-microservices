@@ -8,7 +8,7 @@ import { SiteReportFactory } from "@terramatch-microservices/database/factories"
 import { DisturbancesController } from "./disturbances.controller";
 import { DisturbanceService } from "./disturbance.service";
 import { DisturbanceQueryDto } from "./dto/disturbance-query.dto";
-import { mockRequestContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("DisturbanceController", () => {
   let controller: DisturbancesController;
@@ -25,7 +25,7 @@ describe("DisturbanceController", () => {
 
     controller = module.get(DisturbancesController);
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
   });
 
   afterEach(() => {

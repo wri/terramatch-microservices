@@ -14,7 +14,7 @@ import { Relationship, Resource } from "@terramatch-microservices/common/util";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { UsersService } from "./users.service";
 import { User } from "@terramatch-microservices/database/entities";
 import { Queue } from "bullmq";
@@ -56,20 +56,20 @@ describe("UsersController", () => {
 
   describe("findOne", () => {
     it("should throw not found if the user is not found", async () => {
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.findOne("0")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw an error if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       const { uuid } = await UserFactory.create();
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.findOne(uuid!)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should return the currently logged in user if the id is "me"', async () => {
       const { id, uuid } = await UserFactory.create();
-      mockRequestContext({ userId: id });
+      mockUserContext({ userId: id });
       const result = serialize(await controller.findOne("me"));
       expect((result.data as Resource).id).toBe(uuid);
     });
@@ -77,14 +77,14 @@ describe("UsersController", () => {
     it("should return the indicated user if the logged in user is allowed to access", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const { id, uuid } = await UserFactory.create();
-      mockRequestContext({ userId: id + 1 });
+      mockUserContext({ userId: id + 1 });
       const result = serialize(await controller.findOne(uuid!));
       expect((result.data as Resource).id).toBe(uuid);
     });
 
     it("should return a document without includes if there is no org", async () => {
       const { id } = await UserFactory.create();
-      mockRequestContext({ userId: id });
+      mockUserContext({ userId: id });
       const result = serialize(await controller.findOne("me"));
       expect(result.included).not.toBeDefined();
     });
@@ -93,7 +93,7 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$add("organisationsConfirmed", org);
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
       const result = serialize(await controller.findOne("me"));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
@@ -111,7 +111,7 @@ describe("UsersController", () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$set("organisation", org);
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
       const result = serialize(await controller.findOne("me"));
       expect(result.included).toHaveLength(1);
       expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
@@ -135,7 +135,7 @@ describe("UsersController", () => {
         isMonitoring: true,
         isManaging: false
       });
-      mockRequestContext({ userId: user.id + 1 });
+      mockUserContext({ userId: user.id + 1 });
 
       const result = serialize(await controller.findOne(user.uuid!));
       const data = result.data as Resource;
@@ -151,13 +151,13 @@ describe("UsersController", () => {
 
   describe("verifyUser", () => {
     it("should throw not found if the user is not found", async () => {
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.verifyUser("missing-uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw unauthorized if policy does not authorize", async () => {
       const { uuid } = await UserFactory.create();
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.verifyUser(uuid!)).rejects.toThrow(UnauthorizedException);
@@ -165,7 +165,7 @@ describe("UsersController", () => {
 
     it("should verify user and return JSON:API document", async () => {
       const user = await UserFactory.create({ emailAddressVerifiedAt: null });
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       policyService.authorize.mockResolvedValue(undefined);
 
       const result = serialize(await controller.verifyUser(user.uuid!));
@@ -277,7 +277,7 @@ describe("UsersController", () => {
     it("authorizes creation when request is authenticated", async () => {
       const user = await UserFactory.create();
       const attributes = new UserCreateAttributes();
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       userCreationService.createNewUser.mockResolvedValue(user);
 
       await controller.create(createRequest(attributes));
@@ -289,7 +289,7 @@ describe("UsersController", () => {
     it("does not authorize creation when request is unauthenticated", async () => {
       const user = await UserFactory.create();
       const attributes = new UserCreateAttributes();
-      mockRequestContext();
+      mockUserContext();
       userCreationService.createNewUser.mockResolvedValue(user);
 
       await controller.create(createRequest(attributes));

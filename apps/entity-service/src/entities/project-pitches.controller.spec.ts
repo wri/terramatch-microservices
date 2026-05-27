@@ -6,7 +6,7 @@ import { ProjectPitchService } from "./project-pitch.service";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 
 describe("ProjectPitchesController", () => {
@@ -38,7 +38,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 0,
         pageNumber: 1
       };
-      mockRequestContext({ permissions: ["framework-ppc"] });
+      mockUserContext({ permissions: ["framework-ppc"] });
 
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
@@ -56,7 +56,7 @@ describe("ProjectPitchesController", () => {
         paginationTotal: 3,
         pageNumber: 1
       };
-      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+      mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
       projectPitchService.getProjectPitches.mockResolvedValue(mockResponse);
 
       const result = serialize(await controller.projectPitchIndex(new ProjectPitchQueryDto()));

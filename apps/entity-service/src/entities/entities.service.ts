@@ -69,7 +69,7 @@ import {
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { userLocale } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -214,7 +214,7 @@ export class EntitiesService {
   }
 
   get userLocale() {
-    return userLocale() ?? "en-US";
+    return UserContext.userLocale ?? "en-US";
   }
 
   async localizeText(text: string, params?: ITranslateParams) {

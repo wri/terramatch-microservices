@@ -48,12 +48,12 @@ import { getLinkedFieldConfig } from "../linkedFields";
 import { isField, LinkedField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { APPROVAL_PROCESSERS } from "./processors";
-import { authenticatedUserId } from "../guards/auth.guard";
 import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 import { ProjectManagerEmail } from "../email/project-manager.email";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
+import { UserContext } from "../contexts/user.context";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
 
@@ -210,7 +210,10 @@ export class EntityStatusUpdate extends EventProcessor {
 
     if (submission.status === "awaiting-approval") {
       if (submission.applicationId != null) {
-        await Application.update({ updatedBy: authenticatedUserId() }, { where: { id: submission.applicationId } });
+        await Application.update(
+          { updatedBy: UserContext.authenticatedUserId },
+          { where: { id: submission.applicationId } }
+        );
       }
 
       if (submission.projectPitchUuid != null) {
@@ -255,7 +258,7 @@ export class EntityStatusUpdate extends EventProcessor {
   private async sendApplicationSubmittedEmail(submission: FormSubmission) {
     this.logger.log(`Sending application submitted email queue [${JSON.stringify({ id: submission.id })}]`);
 
-    const userId = authenticatedUserId();
+    const userId = UserContext.authenticatedUserId;
     if (userId == null) {
       this.logger.error("Cannot send application submitted email without authenticated user");
       return;
@@ -318,7 +321,7 @@ export class EntityStatusUpdate extends EventProcessor {
       }
     }
     const type = status === NEEDS_MORE_INFORMATION ? "change-request" : "status";
-    await AuditStatus.createAudit(model, authenticatedUserId(), type, comment);
+    await AuditStatus.createAudit(model, UserContext.authenticatedUserId, type, comment);
   }
 
   private async getNeedsMoreInfoComment() {

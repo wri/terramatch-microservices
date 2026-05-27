@@ -34,7 +34,7 @@ import {
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import {
-  mockRequestContext,
+  mockUserContext,
   mockTranslateFieldsWithOriginal,
   serialize
 } from "@terramatch-microservices/common/util/testing";
@@ -181,7 +181,7 @@ describe("FormsService", () => {
 
   describe("addFullDto", () => {
     const setupTestForm = async (translated: boolean) => {
-      mockRequestContext({ userId: (await UserFactory.create()).id });
+      mockUserContext({ userId: (await UserFactory.create()).id });
       mediaService.getUrl.mockReturnValue("fake-url");
       localizationService.translateIds.mockResolvedValue({
         1: "First Translation",
@@ -344,7 +344,7 @@ describe("FormsService", () => {
 
   describe("store", () => {
     beforeEach(() => {
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
       localizationService.generateI18nId.mockResolvedValue(1);
     });
 

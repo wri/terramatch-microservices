@@ -11,11 +11,11 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntitiesService } from "../entities/entities.service";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FileService } from "@terramatch-microservices/common/file/file.service";
 import { ConfigService } from "@nestjs/config";
 import { streamZip } from "@terramatch-microservices/common/util/zip-stream";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 export type EntityServiceExportJobData = {
   delayedJobId: number;
@@ -38,7 +38,7 @@ export class EntityServiceExportsProcessor extends DelayedJobWorker<EntityServic
   static async queueProjectExport(queue: Queue, projectUuid: string, projectName: string) {
     const delayedJob = await DelayedJob.create({
       name: "Project Zip Export",
-      createdBy: authenticatedUserId()
+      createdBy: UserContext.authenticatedUserId
     });
     const data: EntityServiceExportJobData = { delayedJobId: delayedJob.id, projectUuid, projectName };
     await queue.add(PROJECT_EXPORT, data);

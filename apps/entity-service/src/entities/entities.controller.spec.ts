@@ -16,7 +16,7 @@ import {
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Response } from "express";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { Resource, ResourceBuilder } from "@terramatch-microservices/common/util";
@@ -77,7 +77,7 @@ describe("EntitiesController", () => {
 
   describe("entityIndex", () => {
     it("should call findMany", async () => {
-      mockRequestContext({ permissions: ["projects-read"] });
+      mockUserContext({ permissions: ["projects-read"] });
       const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" } as EntityQueryDto;
       await controller.entityIndex({ entity: "projects" }, query);
       expect(processor.findMany).toHaveBeenCalledWith(query);
@@ -112,7 +112,7 @@ describe("EntitiesController", () => {
     });
 
     it("should return a presigned url", async () => {
-      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+      mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
       csvExportService().generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
       const result = serialize(
         (await controller.entityExportAll(

@@ -32,7 +32,6 @@ import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
-import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
 import { Op } from "sequelize";
@@ -40,6 +39,7 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FundingProgrammeDto, StageDto } from "../fundingProgrammes/dto/funding-programme.dto";
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Injectable()
 export class FormDataService {
@@ -57,7 +57,7 @@ export class FormDataService {
       const newUpdateRequest = await UpdateRequest.create({
         updateRequestableType: laravelType(model),
         updateRequestableId: model.id,
-        createdById: authenticatedUserId(),
+        createdById: UserContext.authenticatedUserId,
         frameworkKey: model.frameworkKey,
         content: answers,
         projectId: await getProjectId(model),
@@ -133,7 +133,7 @@ export class FormDataService {
       undefined;
     if (form == null) throw new BadRequestException("Form not found for submission");
 
-    locale ??= userLocale() ?? "en-US";
+    locale ??= UserContext.userLocale ?? "en-US";
 
     formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
     formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
@@ -321,7 +321,7 @@ export class FormDataService {
           ? permissions.find(permission => permission.startsWith("framework-")) != null
           : permissions.includes(`framework-${answersModel.frameworkKey}`);
       if (answersModel.createdBy == null && !isAdmin) {
-        answersModel.createdBy = authenticatedUserId() ?? null;
+        answersModel.createdBy = UserContext.authenticatedUserId ?? null;
       }
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case

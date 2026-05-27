@@ -5,20 +5,20 @@ import { UpdateRecordsQueryDto } from "./dto/update-records-query.dto";
 import { DeleteRecordsQueryDto } from "./dto/delete-records-query.dto";
 import { UpdateAllQueryDto } from "./dto/update-all-query.dto";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
-import { authenticatedUserId, permissions } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("unified-database/v3/webhook")
 export class WebhookController {
   constructor(private readonly airtableService: AirtableService) {}
 
   private async authorize() {
-    const userId = authenticatedUserId();
+    const userId = UserContext.authenticatedUserId;
     if (userId == null) throw new UnauthorizedException();
 
     // This isn't a perfect match for what this controller does, but it is close, and all admins have
     // this permission, so it's a reasonable way for now to restrict this controller to logged in
     // admins.
-    if (!permissions()?.includes("reports-manage")) {
+    if (!UserContext.permissions?.includes("reports-manage")) {
       throw new UnauthorizedException();
     }
   }

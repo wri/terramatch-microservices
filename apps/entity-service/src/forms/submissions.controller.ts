@@ -25,8 +25,8 @@ import {
   ProjectPitch,
   User
 } from "@terramatch-microservices/database/entities";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { FormDataDto } from "../entities/dto/form-data.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("forms/v3/submissions")
 export class SubmissionsController {
@@ -98,7 +98,7 @@ export class SubmissionsController {
     const form = await Form.findOne({ where: { stageId: stageUuid } });
     if (form == null) throw new BadRequestException("Form for stage not found");
 
-    const user = await User.findByPk(authenticatedUserId(), {
+    const user = await User.findByPk(UserContext.authenticatedUserId, {
       attributes: ["uuid", "locale"],
       include: [{ association: "organisation" }] // pull full org for DTO creation below
     });
@@ -129,12 +129,12 @@ export class SubmissionsController {
         await Application.create({
           organisationUuid: user.organisation.uuid,
           fundingProgrammeUuid: programme.uuid,
-          updatedBy: authenticatedUserId()
+          updatedBy: UserContext.authenticatedUserId
         })
       ).id;
     if (previousSubmission?.applicationId != null) {
       await Application.update(
-        { updatedBy: authenticatedUserId() },
+        { updatedBy: UserContext.authenticatedUserId },
         { where: { id: previousSubmission?.applicationId } }
       );
     }
@@ -164,7 +164,10 @@ export class SubmissionsController {
     const form = submission.formId == null ? undefined : await Form.findOne({ where: { uuid: submission.formId } });
     if (form == null) throw new NotFoundException("Form for submission not found");
 
-    const user = await User.findOne({ where: { id: authenticatedUserId() }, attributes: ["uuid", "locale"] });
+    const user = await User.findOne({
+      where: { id: UserContext.authenticatedUserId },
+      attributes: ["uuid", "locale"]
+    });
 
     const attributes = payload.data.attributes;
     if (attributes.answers != null) {
@@ -173,7 +176,10 @@ export class SubmissionsController {
 
       await submission.update({ userId: user?.uuid });
       if (submission.applicationId != null) {
-        await Application.update({ updatedBy: authenticatedUserId() }, { where: { id: submission.applicationId } });
+        await Application.update(
+          { updatedBy: UserContext.authenticatedUserId },
+          { where: { id: submission.applicationId } }
+        );
       }
     }
 
@@ -189,7 +195,7 @@ export class SubmissionsController {
 
       await submission.save();
     } else {
-      await AuditStatus.ensureRecentAudit(submission, authenticatedUserId());
+      await AuditStatus.ensureRecentAudit(submission, UserContext.authenticatedUserId);
     }
 
     return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user?.locale);

@@ -3,7 +3,7 @@ import { AuthService } from "./auth.service";
 import { LoginBody } from "./dto/login-request.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ApiOperation } from "@nestjs/swagger";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -13,7 +13,7 @@ export class LoginController {
   constructor(private readonly authService: AuthService) {}
 
   @Post()
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "authLogin",
     description: "Receive a JWT Token in exchange for login credentials"

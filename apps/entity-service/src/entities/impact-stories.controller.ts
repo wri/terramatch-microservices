@@ -12,10 +12,10 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import {
-  buildJsonApi,
-  getStableRequestQuery,
   buildDeletedResponse,
-  getDtoType
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -26,7 +26,7 @@ import { ImpactStoryParamDto } from "./dto/impact-story-param.dto";
 import { ImpactStoryFullDto, ImpactStoryLightDto, ImpactStoryMedia } from "./dto/impact-story.dto";
 import { EntitiesService } from "./entities.service";
 import { ImpactStory } from "@terramatch-microservices/database/entities";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { PolicyService } from "@terramatch-microservices/common";
 import { CreateImpactStoryBody } from "./dto/create-impact-story.dto";
 import { UpdateImpactStoryBody } from "./dto/update-impact-story.dto";
@@ -41,7 +41,7 @@ export class ImpactStoriesController {
   ) {}
 
   @Get()
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "impactStoryIndex",
     summary: "Get impact stories."
@@ -91,7 +91,7 @@ export class ImpactStoriesController {
   }
 
   @Get(":uuid")
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "impactStoryGet",
     summary: "Get an impact story by uuid."
@@ -157,7 +157,7 @@ export class ImpactStoriesController {
     operationId: "impactStoryUpdate",
     summary: "Update an existing impact story",
     description: `Update an impact story by UUID. Requires authentication and appropriate permissions.
-    
+
     All fields except status are optional. Status is required.`
   })
   @JsonApiResponse(ImpactStoryFullDto)

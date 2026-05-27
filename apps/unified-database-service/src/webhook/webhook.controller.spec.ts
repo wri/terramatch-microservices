@@ -4,7 +4,7 @@ import { AirtableService } from "../airtable/airtable.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UnauthorizedException } from "@nestjs/common";
 
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 describe("WebhookController", () => {
   let controller: WebhookController;
@@ -25,13 +25,13 @@ describe("WebhookController", () => {
 
   describe("updateRecords", () => {
     it("should throw an error if the user doesn't have the correct permissions", async () => {
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.updateRecords({ entityType: "projects" })).rejects.toThrow(UnauthorizedException);
     });
 
     it("should call into the service with query params", async () => {
       const updatedSince = new Date();
-      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
+      mockUserContext({ userId: 1, permissions: ["reports-manage"] });
       let result = await controller.updateRecords({ entityType: "projects", startPage: 2, updatedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.updateAirtable).toHaveBeenCalledWith("projects", 2, updatedSince);
@@ -44,7 +44,7 @@ describe("WebhookController", () => {
 
   describe("removeDeletedRecords", () => {
     it("should throw an error if the user doesn't have the correct permissions", async () => {
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(
         controller.removeDeletedRecords({ entityType: "projects", deletedSince: new Date() })
       ).rejects.toThrow(UnauthorizedException);
@@ -52,7 +52,7 @@ describe("WebhookController", () => {
 
     it("should call into the service with query params", async () => {
       const deletedSince = new Date();
-      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
+      mockUserContext({ userId: 1, permissions: ["reports-manage"] });
       const result = await controller.removeDeletedRecords({ entityType: "projects", deletedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.deleteFromAirtable).toHaveBeenCalledWith("projects", deletedSince);
@@ -61,13 +61,13 @@ describe("WebhookController", () => {
 
   describe("updateAll", () => {
     it("should throw an error if the user doesn't have the correct permissions", async () => {
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.updateAll({ updatedSince: new Date() })).rejects.toThrow(UnauthorizedException);
     });
 
     it("should call into the service with query params", async () => {
       const updatedSince = new Date();
-      mockRequestContext({ userId: 1, permissions: ["reports-manage"] });
+      mockUserContext({ userId: 1, permissions: ["reports-manage"] });
       const result = await controller.updateAll({ updatedSince: updatedSince });
       expect(result).toEqual({ status: "OK" });
       expect(service.updateAll).toHaveBeenCalledWith(updatedSince);

@@ -1,1 +1,1 @@
-export { AuthGuard, NoBearerAuth, OptionalBearerAuth } from "./auth.guard";
+export { AuthGuard, AuthOptional } from "./auth.guard";

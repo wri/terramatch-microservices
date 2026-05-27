@@ -1,4 +1,4 @@
-import { Get, Query, Controller } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -6,7 +6,7 @@ import { TreeRestorationGoalDto } from "./dto/tree-restoration-goal.dto";
 import { TreeRestorationGoalService } from "./dto/tree-restoration-goal.service";
 import { CacheService } from "./dto/cache.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 
 @Controller("dashboard/v3/treeRestorationGoal")
 export class TreeRestorationGoalController {
@@ -16,7 +16,7 @@ export class TreeRestorationGoalController {
   ) {}
 
   @Get()
-  @NoBearerAuth
+  @AuthOptional
   @JsonApiResponse(TreeRestorationGoalDto)
   @ApiOperation({ operationId: "getTreeRestorationGoal", summary: "Get tree restoration goal statistics" })
   async getTreeRestorationGoal(@Query() query: DashboardQueryDto) {

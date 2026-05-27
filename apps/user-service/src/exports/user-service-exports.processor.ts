@@ -8,7 +8,6 @@ import { Job, Queue } from "bullmq";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { InternalServerErrorException } from "@nestjs/common";
 import { DelayedJob, Media, Organisation } from "@terramatch-microservices/database/entities";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -16,6 +15,7 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { Dictionary, startCase } from "lodash";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 export type UserServiceExportJobData = {
   delayedJobId: number;
@@ -75,7 +75,7 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
   static async queueOrganisationExport(queue: Queue, fileName: string) {
     const delayedJob = await DelayedJob.create({
       name: "Organisation CSV Export",
-      createdBy: authenticatedUserId()
+      createdBy: UserContext.authenticatedUserId
     });
     const data: UserServiceExportJobData = { delayedJobId: delayedJob.id, fileName: fileName };
     await queue.add(ORGANISATIONS_EXPORT, data);

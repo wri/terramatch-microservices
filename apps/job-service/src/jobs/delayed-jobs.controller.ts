@@ -16,7 +16,7 @@ import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobBulkUpdateBodyDto } from "./dto/delayed-job-update.dto";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("jobs/v3/delayedJobs")
 export class DelayedJobsController {
@@ -31,7 +31,7 @@ export class DelayedJobsController {
     const runningJobs = await DelayedJob.findAll({
       where: {
         isAcknowledged: false,
-        createdBy: authenticatedUserId()
+        createdBy: UserContext.authenticatedUserId
       },
       order: [["createdAt", "DESC"]]
     });
@@ -79,7 +79,7 @@ export class DelayedJobsController {
     const jobs = await DelayedJob.findAll({
       where: {
         uuid: { [Op.in]: jobUpdates.map(({ id }) => id) },
-        createdBy: authenticatedUserId()
+        createdBy: UserContext.authenticatedUserId
       },
       order: [["createdAt", "DESC"]]
     });

@@ -8,11 +8,6 @@ export const NoBearerAuth = SetMetadata(NO_BEARER_AUTH, true);
 const OPTIONAL_BEARER_AUTH = "optionalBearerAuth";
 export const OptionalBearerAuth = SetMetadata(OPTIONAL_BEARER_AUTH, true);
 
-export const authenticatedUserId = () => UserContext.current?.authenticatedUserId;
-export const permissions = () => UserContext.current?.permissions;
-export const policyBuilder = () => UserContext.current?.policyBuilder;
-export const userLocale = () => UserContext.current?.userLocale;
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -30,7 +25,7 @@ export class AuthGuard implements CanActivate {
     ]);
     if (optionalAuth) return true;
 
-    if (authenticatedUserId() == null) throw new UnauthorizedException();
+    if (UserContext.authenticatedUserId == null) throw new UnauthorizedException();
     return true;
   }
 }

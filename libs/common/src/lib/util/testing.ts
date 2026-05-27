@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "./json-api-builder";
-import { RequestContext } from "nestjs-request-context";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { LinkedField, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -12,8 +11,8 @@ import { Model } from "sequelize-typescript";
 import { Attributes } from "sequelize";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { PolicyBuilder } from "../policies/policy.service";
-import { authenticatedUserId, userLocale } from "../guards/auth.guard";
 import { User } from "@terramatch-microservices/database/entities";
+import { UserContext } from "../contexts/user.context";
 
 /**
  * A utility for unit tests that can take any likely response from a standard v3 controller and
@@ -36,23 +35,21 @@ export function mockRequestContext({
   permissions = [],
   locale
 }: { userId?: number; permissions?: string[] | null; locale?: ValidLocale | null } = {}) {
-  jest.spyOn(RequestContext, "currentContext", "get").mockReturnValue({
-    req: {
-      authenticatedUserId: userId,
-      permissions: permissions,
-      // this is unusual, but it allows the caller to explicitly set a missing locale for testing
-      userLocale: locale === null ? locale : (locale ?? "en-US"),
-      policyBuilder: userId == null || permissions == null ? undefined : new PolicyBuilder(userId, permissions)
-    },
-    res: {}
-  });
+  jest.spyOn(UserContext, "authenticatedUserId", "get").mockReturnValue(userId);
+  jest.spyOn(UserContext, "permissions", "get").mockReturnValue(permissions as string[]);
+  jest
+    .spyOn(UserContext, "policyBuilder", "get")
+    .mockReturnValue(userId == null || permissions == null ? undefined : new PolicyBuilder(userId, permissions));
+  jest
+    .spyOn(UserContext, "userLocale", "get")
+    .mockReturnValue((locale === null ? locale : (locale ?? "en-US")) as ValidLocale);
 }
 
 /**
  * A utility to leave the rest of the request context mock alone and just set the permission.
  */
 export function setMockedPermissions(...permissions: string[]) {
-  mockRequestContext({ userId: authenticatedUserId(), permissions, locale: userLocale() });
+  mockRequestContext({ userId: UserContext.authenticatedUserId, permissions, locale: UserContext.userLocale });
 }
 
 /**

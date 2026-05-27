@@ -3,8 +3,8 @@ import { ApiOperation } from "@nestjs/swagger";
 import { ActionDto } from "@terramatch-microservices/common/dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { ActionsService } from "./actions.service";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("users/v3/actions")
 export class ActionsController {
@@ -20,7 +20,7 @@ export class ActionsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   @ExceptionResponse(BadRequestException, { description: "Invalid query parameters" })
   async index() {
-    const userId = authenticatedUserId() as number;
+    const userId = UserContext.authenticatedUserId as number;
 
     const data = await this.actionsService.getActions(userId);
 

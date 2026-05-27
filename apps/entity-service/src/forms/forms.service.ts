@@ -56,7 +56,6 @@ import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
-import { authenticatedUserId, userLocale } from "@terramatch-microservices/common/guards/auth.guard";
 import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
@@ -68,6 +67,7 @@ import {
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -599,7 +599,7 @@ export class FormsService {
   }
 
   private get userLocale() {
-    const locale = userLocale();
+    const locale = UserContext.userLocale;
     if (locale == null) {
       throw new BadRequestException("Locale is required");
     }
@@ -636,7 +636,7 @@ export class FormsService {
   private async storeForm(form: Form, attributes: StoreFormAttributes) {
     // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
     // rows are all numerical IDs.
-    form.updatedBy = `${authenticatedUserId()}`;
+    form.updatedBy = `${UserContext.authenticatedUserId}`;
     form.title = attributes.title;
     form.titleId = await this.localizationService.generateI18nId(attributes.title, form.titleId);
     form.subtitle = attributes.subtitle ?? null;

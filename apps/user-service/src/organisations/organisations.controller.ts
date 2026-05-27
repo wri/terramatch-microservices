@@ -44,7 +44,6 @@ import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/fi
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
@@ -52,6 +51,7 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { DateTime } from "luxon";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { USER_SERVICE_EXPORT_QUEUE, UserServiceExportsProcessor } from "../exports/user-service-exports.processor";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("organisations/v3/organisations")
 export class OrganisationsController {
@@ -182,7 +182,7 @@ export class OrganisationsController {
     await this.organisationsService.update(organisation, updatePayload.data.attributes);
 
     if (isStatusChange && oldStatus !== newStatus) {
-      const userId = authenticatedUserId();
+      const userId = UserContext.authenticatedUserId;
       if (userId != null) {
         try {
           if (newStatus === "approved") {

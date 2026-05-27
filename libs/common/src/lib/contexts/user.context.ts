@@ -13,6 +13,22 @@ export class UserContext {
     UserContext.contextStore.run(new UserContext(userId, permissions, locale), next);
   }
 
+  static get authenticatedUserId() {
+    return UserContext.current?.authenticatedUserId;
+  }
+
+  static get permissions() {
+    return UserContext.current?.permissions;
+  }
+
+  static get policyBuilder() {
+    return UserContext.current?.policyBuilder;
+  }
+
+  static get userLocale() {
+    return UserContext.current?.userLocale;
+  }
+
   public policyBuilder: PolicyBuilder;
 
   constructor(

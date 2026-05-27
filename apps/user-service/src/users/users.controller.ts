@@ -32,7 +32,7 @@ import {
   getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
-import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { UserCreateBaseBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { UserQueryDto } from "./dto/user-query.dto";
@@ -150,7 +150,7 @@ export class UsersController {
   }
 
   @Post()
-  @OptionalBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "userCreation",
     description: "Create a new user"

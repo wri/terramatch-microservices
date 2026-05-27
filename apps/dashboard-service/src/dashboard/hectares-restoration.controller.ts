@@ -1,10 +1,10 @@
-import { Get, Query, Controller } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { HectareRestorationDto } from "./dto/hectare-restoration.dto";
 import { HectaresRestorationService } from "./hectares-restoration.service";
 
@@ -16,7 +16,7 @@ export class HectaresRestorationController {
   ) {}
 
   @Get()
-  @NoBearerAuth
+  @AuthOptional
   @JsonApiResponse([HectareRestorationDto])
   @ApiOperation({ operationId: "getHectaresRestoration", summary: "Get hectares restoration" })
   async getHectaresRestoration(@Query() query: DashboardQueryDto) {

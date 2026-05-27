@@ -4,7 +4,7 @@ import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { isEmpty } from "lodash";
 import { LandscapeGeometry, Project, ProjectPitch, Site } from "@terramatch-microservices/database/entities";
@@ -13,7 +13,7 @@ type ParameterType = "polygonUuid" | "siteUuid" | "projectUuid" | "projectPitchU
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
-@NoBearerAuth
+@AuthOptional
 export class BoundingBoxController {
   constructor(private readonly boundingBoxService: BoundingBoxService) {}
 

@@ -4,7 +4,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util/json-api-builder";
 import { DashboardEntitiesService } from "./dashboard-entities.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { CacheService } from "./dto/cache.service";
 import { DashboardProjectsFullDto, DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardImpactStoryFullDto, DashboardImpactStoryLightDto } from "./dto/dashboard-impact-story.dto";
@@ -34,7 +34,7 @@ export class DashboardEntitiesController {
   ) {}
 
   @Get(":entity")
-  @OptionalBearerAuth
+  @AuthOptional
   @ApiParam({
     name: "entity",
     enum: DASHBOARD_ENTITIES,
@@ -184,7 +184,7 @@ export class DashboardEntitiesController {
   }
 
   @Get(":entity/:uuid")
-  @OptionalBearerAuth
+  @AuthOptional
   @ApiParam({
     name: "entity",
     enum: DASHBOARD_ENTITIES,

@@ -5,7 +5,7 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { VerificationUserService } from "./verification-user.service";
 import { ResendVerificationBody, VerificationUserBody } from "./dto/verification-user-request.dto";
 import { ResendVerificationResponseDto, VerificationUserResponseDto } from "./dto/verification-user-response.dto";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 @Controller("auth/v3/verifications")
@@ -13,7 +13,7 @@ export class VerificationUserController {
   constructor(private readonly verificationUserService: VerificationUserService) {}
 
   @Post()
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "verifyUser",
     description: "Receive a token to verify a user and return the verification status"
@@ -30,7 +30,7 @@ export class VerificationUserController {
   }
 
   @Post("resend")
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "resendUserVerification",
     description: "Resend a verification email for a user by email address"

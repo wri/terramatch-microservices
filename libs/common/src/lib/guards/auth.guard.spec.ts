@@ -1,4 +1,4 @@
-import { AuthGuard, NoBearerAuth, OptionalBearerAuth } from "./auth.guard";
+import { AuthGuard, AuthOptional } from "./auth.guard";
 import { Test } from "@nestjs/testing";
 import { APP_GUARD } from "@nestjs/core";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -14,13 +14,7 @@ class TestController {
     return "test";
   }
 
-  @NoBearerAuth
-  @Get("/no-auth")
-  noAuth() {
-    return "no-auth";
-  }
-
-  @OptionalBearerAuth
+  @AuthOptional
   @Get("/optional-auth")
   optionalAuth() {
     return "optional-auth";
@@ -58,15 +52,6 @@ describe("AuthGuard", () => {
     jwtService.verifyAsync.mockResolvedValue({ sub: "fakeuserid" });
 
     await request(app.getHttpServer()).get("/test").set("Authorization", `Bearer ${token}`).expect(HttpStatus.OK);
-  });
-
-  it("should ignore bearer token on an endpoint with @NoBearerAuth", async () => {
-    await request(app.getHttpServer()).get("/test/no-auth").expect(HttpStatus.OK);
-
-    await request(app.getHttpServer())
-      .get("/test/no-auth")
-      .set("Authorization", "Bearer fake jwt token")
-      .expect(HttpStatus.OK);
   });
 
   it("should use an api key for login", async () => {

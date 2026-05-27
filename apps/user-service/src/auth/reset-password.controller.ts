@@ -5,7 +5,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { ResetPasswordRequest } from "./dto/reset-password-request.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { ResetPasswordResponseDto } from "./dto/reset-password-response.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
@@ -14,7 +14,7 @@ export class ResetPasswordController {
   constructor(private readonly resetPasswordService: ResetPasswordService) {}
 
   @Post()
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "requestPasswordReset",
     description: "Send password reset email with a token"
@@ -30,7 +30,7 @@ export class ResetPasswordController {
   }
 
   @Put(":token")
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "resetPassword",
     description: "Reset password using the provided token"
@@ -46,7 +46,7 @@ export class ResetPasswordController {
   }
 
   @Get(":token")
-  @NoBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "getResetPassword",
     description: "Get the reset password status for a token"

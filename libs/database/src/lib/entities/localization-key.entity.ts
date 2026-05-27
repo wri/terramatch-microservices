@@ -9,18 +9,18 @@ export class LocalizationKey extends Model<InferAttributes<LocalizationKey>, Inf
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Column(STRING)
-  key: string | null;
+  declare key: string | null;
 
   @Column(TEXT)
-  value: string | null;
+  declare value: string | null;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  valueId: number;
+  declare valueId: number;
 
   @BelongsTo(() => I18nItem, { foreignKey: "value_id", constraints: false })
-  i18nItem: I18nItem | null;
+  declare i18nItem: I18nItem | null;
 }

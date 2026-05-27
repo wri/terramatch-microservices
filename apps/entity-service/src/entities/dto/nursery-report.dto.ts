@@ -88,7 +88,11 @@ export class NurseryReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated task uuid"
+  })
   taskUuid: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
@@ -119,50 +123,13 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
   }
 
   @ApiProperty({ nullable: true, type: String })
-  reportTitle: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated nursery name"
-  })
-  nurseryName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated nursery uuid"
-  })
-  nurseryUuid: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated organisation name"
-  })
-  organisationName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated organisation uuid"
-  })
-  organisationUuid: string | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  dueAt: Date | null;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  title: string | null;
 
   @ApiProperty({ nullable: true, type: Number })
   seedlingsYoungTrees: number | null;
@@ -187,36 +154,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   approvedByLastName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project name"
-  })
-  projectName: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project uuid"
-  })
-  projectUuid: string | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated task uuid"
-  })
-  taskUuid: string | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  submittedAt: Date | null;
-
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

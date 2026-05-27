@@ -36,44 +36,44 @@ export class Invasive extends Model<InferAttributes<Invasive>, InferCreationAttr
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column(STRING)
-  invasiveableType: string;
+  declare invasiveableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  invasiveableId: number;
+  declare invasiveableId: number;
 
   @AllowNull
   @Column(STRING)
-  collection: string | null;
+  declare collection: string | null;
 
   @AllowNull
   @Column(STRING)
-  type: string | null;
+  declare type: string | null;
 
   @AllowNull
   @Column(TEXT)
-  name: string | null;
+  declare name: string | null;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.
    */
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number;
+  declare oldId: number;
 
   /**
    * @deprecated This property is no longer in use and will be removed in future versions.
    */
   @AllowNull
   @Column(STRING)
-  oldModel: string | null;
+  declare oldModel: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: CreationOptional<boolean>;
+  declare hidden: CreationOptional<boolean>;
 }

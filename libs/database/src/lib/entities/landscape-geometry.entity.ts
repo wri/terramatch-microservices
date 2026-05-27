@@ -16,14 +16,14 @@ export class LandscapeGeometry extends Model<LandscapeGeometry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Column(STRING)
-  slug: string;
+  declare slug: string;
 
   @Column(STRING(50))
-  landscape: string;
+  declare landscape: string;
 
   @Column({ type: GEOMETRY })
-  geometry: Polygon;
+  declare geometry: Polygon;
 }

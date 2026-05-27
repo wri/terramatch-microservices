@@ -32,7 +32,7 @@ export const SitePolygonFactory = FactoryGirl.define(SitePolygon, async () => {
     targetSys: faker.helpers.arrayElement(TARGET_SYS),
     distr: faker.helpers.arrayElements(DISTR, { min: 1, max: 2 }),
     numTrees: faker.number.int({ min: 0, max: 1000000 }),
-    status: "submitted",
+    status: "pending-approval",
     lat: faker.location.latitude({ min: -90, max: 90, precision: 16 }),
     long: faker.location.longitude({ min: -180, max: 180, precision: 16 }),
     source: "terramatch",

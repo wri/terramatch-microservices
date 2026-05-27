@@ -1,10 +1,11 @@
 import Debug from "debug";
 import { CLUSTER, Environment, Service } from "./consts";
 import { ECSClient, ListTasksCommand } from "@aws-sdk/client-ecs";
+import { Command } from "commander";
 
 export const rootDebug = Debug("tm-v3-cli");
 
-export const printVerboseHook = thisCommand => {
+export const printVerboseHook = (thisCommand: Command) => {
   const options = thisCommand.opts();
 
   if (options.verbose as boolean) {

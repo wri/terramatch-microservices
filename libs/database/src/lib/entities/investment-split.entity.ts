@@ -7,22 +7,22 @@ export class InvestmentSplit extends Model<InvestmentSplit> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @ForeignKey(() => Investment)
   @Column(BIGINT.UNSIGNED)
-  investmentId: number;
+  declare investmentId: number;
 
   @BelongsTo(() => Investment)
-  investment: Investment | null;
+  declare investment: Investment | null;
 
   @Column(STRING)
-  funder: string;
+  declare funder: string;
 
   @Column(DECIMAL(15, 2))
-  amount: number;
+  declare amount: number;
 }

@@ -54,7 +54,10 @@ const MIME_TYPES = {
 export class MediaService {
   private logger = new TMLogger(MediaService.name);
 
-  constructor(private readonly fileService: FileService, private readonly configService: ConfigService) {}
+  constructor(
+    private readonly fileService: FileService,
+    private readonly configService: ConfigService
+  ) {}
 
   get endpoint() {
     const endpoint = this.configService.get<string>("AWS_ENDPOINT");
@@ -410,7 +413,7 @@ export class MediaService {
     try {
       res = await fetch(url);
     } catch (error) {
-      throw new BadRequestException(`Failed to download file from URL ${url}: ${error.message}`);
+      throw new BadRequestException(`Failed to download file from URL ${url}: ${(error as Error).message}`);
     }
 
     if (!res.ok) {

@@ -6,7 +6,7 @@ import { User } from "@terramatch-microservices/database/entities";
  * is a function with the same signature as the closure argument.
  */
 export const withoutSqlLogs =
-  <T extends (...args: unknown[]) => Promise<unknown>>(
+  <T extends (...args: never[]) => Promise<unknown>>(
     closure: T
   ): ((...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>) =>
   async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> => {

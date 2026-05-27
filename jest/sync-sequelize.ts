@@ -1,5 +1,10 @@
 import { User } from "../libs/database/src/lib/entities";
 
 beforeAll(async () => {
-  await User.sequelize!.sync();
+  try {
+    await User.sequelize!.sync();
+  } catch (e) {
+    console.error("Failed to sync database:", e);
+    throw e;
+  }
 });

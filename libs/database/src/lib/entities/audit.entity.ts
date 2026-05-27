@@ -29,46 +29,46 @@ export class Audit extends Model<InferAttributes<Audit>, InferCreationAttributes
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @AllowNull
   @Column({ type: STRING, defaultValue: User.LARAVEL_TYPE })
-  userType: string | null;
+  declare userType: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  userId: number | null;
+  declare userId: number | null;
 
   @Column(STRING)
-  event: string;
+  declare event: string;
 
   @Column(STRING)
-  auditableType: string;
+  declare auditableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  auditableId: number;
+  declare auditableId: number;
 
   @AllowNull
   @JsonColumn({ type: TEXT, emptyArrayAsObject: true })
-  oldValues: Dictionary<unknown> | null;
+  declare oldValues: Dictionary<unknown> | null;
 
   @AllowNull
   @JsonColumn({ type: TEXT, emptyArrayAsObject: true })
-  newValues: Dictionary<unknown> | null;
+  declare newValues: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(STRING)
-  url: string | null;
+  declare url: string | null;
 
   @AllowNull
   @Column(STRING(45))
-  ipAddress: string | null;
+  declare ipAddress: string | null;
 
   @AllowNull
   @Column(STRING(1023))
-  userAgent: string | null;
+  declare userAgent: string | null;
 
   @AllowNull
   @Column(STRING)
-  tags: string | null;
+  declare tags: string | null;
 }

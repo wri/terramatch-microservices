@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { DisturbanceReport } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities.service";
@@ -194,7 +193,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-12-01",
         inputType: "date"
       });
@@ -207,7 +206,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(2);
       expect(result.dto.intensity).toBe("high");
-      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-12-01"));
+      expect(result.dto.disturbanceStartDate).toEqual(new Date("2023-12-01"));
     });
 
     it("should handle missing entry values", async () => {
@@ -229,7 +228,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(1);
       expect(result.dto.intensity).toBeNull();
-      expect(result.dto.dateOfDisturbance).toBeNull();
+      expect(result.dto.disturbanceStartDate).toBeNull();
     });
   });
 
@@ -245,7 +244,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-11-15",
         inputType: "date"
       });
@@ -258,7 +257,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(2);
       expect(result.dto.intensity).toBe("medium");
-      expect(result.dto.dateOfDisturbance).toEqual(new Date("2023-11-15"));
+      expect(result.dto.disturbanceStartDate).toEqual(new Date("2023-11-15"));
     });
 
     it("should handle missing entry values in light DTO", async () => {
@@ -275,7 +274,7 @@ describe("DisturbanceReportProcessor", () => {
       expect(result.dto).toBeDefined();
       expect(result.dto.entries).toHaveLength(0);
       expect(result.dto.intensity).toBeNull();
-      expect(result.dto.dateOfDisturbance).toBeNull();
+      expect(result.dto.disturbanceStartDate).toBeNull();
     });
   });
 
@@ -291,7 +290,7 @@ describe("DisturbanceReportProcessor", () => {
         inputType: "select"
       });
       await DisturbanceReportEntryFactory.report(disturbanceReport).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: "2023-10-01",
         inputType: "date"
       });
@@ -301,7 +300,7 @@ describe("DisturbanceReportProcessor", () => {
 
       const intensity = entries.find(({ name }) => name === "intensity");
       expect(intensity?.value).toBe("low");
-      const date = entries.find(({ name }) => name === "date-of-disturbance");
+      const date = entries.find(({ name }) => name === "disturbance-start-date");
       expect(date?.value).toBe("2023-10-01");
     });
 
@@ -331,8 +330,13 @@ describe("DisturbanceReportProcessor", () => {
         value: "low",
         inputType: "select"
       });
-      const dateOfDisturbance = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
-        name: "date-of-disturbance",
+      const disturbanceStartDate = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "disturbance-start-date",
+        value: "2023-10-01",
+        inputType: "date"
+      });
+      const disturbanceEndDate = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
+        name: "disturbance-end-date",
         value: "2023-10-01",
         inputType: "date"
       });
@@ -345,6 +349,11 @@ describe("DisturbanceReportProcessor", () => {
         name: "polygon-affected",
         value: JSON.stringify([{}, [{ polyName: "Poly1" }], [{ polyName: "Poly2" }, { polyName: "Poly3" }]]),
         inputType: "disturbanceAffectedPolygon"
+      });
+      await DisturbanceReportEntryFactory.report(disturbanceReport[1]).create({
+        name: "nursery-affected",
+        value: JSON.stringify([{ nurseryName: "Nursery1" }, { nurseryName: "Nursery2" }]),
+        inputType: "disturbanceAffectedNursery"
       });
 
       const media = [
@@ -365,7 +374,8 @@ describe("DisturbanceReportProcessor", () => {
         1,
         expect.objectContaining({ uuid: disturbanceReport[0].uuid }),
         expect.objectContaining({
-          "date-of-disturbance": [dateOfDisturbance.value],
+          "disturbance-start-date": [disturbanceStartDate.value],
+          "disturbance-end-date": [disturbanceEndDate.value],
           intensity: [intensity.value]
         })
       );
@@ -375,7 +385,8 @@ describe("DisturbanceReportProcessor", () => {
         expect.objectContaining({
           media: [`media-url (${media[0].name})`, `media-url (${media[1].name})`],
           "site-affected": ["Alderaan; Tatooine"],
-          "polygon-affected": ["Poly1; Poly2; Poly3"]
+          "polygon-affected": ["Poly1; Poly2; Poly3"],
+          "nursery-affected": ["Nursery1; Nursery2"]
         })
       );
     });

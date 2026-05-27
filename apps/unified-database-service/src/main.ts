@@ -41,7 +41,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.UNIFIED_DATABASE_SERVICE_PORT ?? 4040;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.UNIFIED_DATABASE_SERVICE_PORT ?? 4040);
   await app.listen(port);
 
   Logger.log(`TerraMatch Unified Database Service is running on: http://localhost:${port}`);

@@ -41,7 +41,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.USER_SERVICE_PORT ?? 4010;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.USER_SERVICE_PORT ?? 4010);
   await app.listen(port);
 
   Logger.log(`TerraMatch User Service is running on: http://localhost:${port}`);

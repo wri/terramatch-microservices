@@ -82,7 +82,10 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  constructor(private readonly csvExportService: CsvExportService, private readonly mediaService: MediaService) {
+  constructor(
+    private readonly csvExportService: CsvExportService,
+    private readonly mediaService: MediaService
+  ) {
     super();
   }
 
@@ -111,7 +114,8 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
         }
       }
     } catch (error) {
-      throw new DelayedJobException(500, `Failed to export organisations to CSV: ${error.message}`);
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new DelayedJobException(500, `Failed to export organisations to CSV: ${message}`);
     } finally {
       close();
     }

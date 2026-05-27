@@ -8,34 +8,34 @@ export class IndicatorOutputFieldMonitoring extends Model<IndicatorOutputFieldMo
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Unique("unique_polygon_indicator_year")
   @ForeignKey(() => SitePolygon)
   @Column({ type: BIGINT.UNSIGNED })
-  sitePolygonId: number;
+  declare sitePolygonId: number;
 
   @Unique("unique_polygon_indicator_year")
   @Column({ type: STRING, values: INDICATOR_SLUGS })
-  indicatorSlug: IndicatorSlug;
+  declare indicatorSlug: IndicatorSlug;
 
   @Unique("unique_polygon_indicator_year")
   @Column(INTEGER)
-  yearOfAnalysis: number;
+  declare yearOfAnalysis: number;
 
   @AllowNull
   @Column(INTEGER)
-  treeCount: number | null;
+  declare treeCount: number | null;
 
   @AllowNull
   @Column(STRING)
-  projectPhase: string | null;
+  declare projectPhase: string | null;
 
   @AllowNull
   @Column(STRING)
-  species: string | null;
+  declare species: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  survivalRate: number | null;
+  declare survivalRate: number | null;
 }

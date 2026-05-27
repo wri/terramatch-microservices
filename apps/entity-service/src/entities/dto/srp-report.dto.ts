@@ -56,7 +56,11 @@ export class SrpReportLightDto extends EntityDto {
   })
   organisationUuid: string | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated task uuid"
+  })
   taskUuid: string | null;
 
   @ApiProperty()
@@ -100,12 +104,6 @@ export class SrpReportFullDto extends SrpReportLightDto {
   @ApiProperty({ nullable: true, type: Date })
   approvedAt: Date | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  submittedAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  dueAt: Date | null;
-
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
 
@@ -126,13 +124,6 @@ export class SrpReportFullDto extends SrpReportLightDto {
 
   @ApiProperty({ type: Number })
   totalUniqueRestorationPartners: number;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated task uuid"
-  })
-  taskUuid: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

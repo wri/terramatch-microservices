@@ -1,5 +1,4 @@
-/* eslint-disable */
-export default {
+module.exports = {
   displayName: "job-service-e2e",
   preset: "../../jest.preset.js",
   globalSetup: "<rootDir>/src/support/global-setup.ts",

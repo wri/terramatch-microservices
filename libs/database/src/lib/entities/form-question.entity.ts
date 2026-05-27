@@ -49,128 +49,128 @@ export class FormQuestion extends Model<FormQuestion> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @ForeignKey(() => FormSection)
   @Column(BIGINT.UNSIGNED)
-  formSectionId: number;
+  declare formSectionId: number;
 
   @BelongsTo(() => FormSection)
-  formSection: FormSection | null;
+  declare formSection: FormSection | null;
 
   @AllowNull
   @Column(UUID)
-  parentId: string | null;
+  declare parentId: string | null;
 
   @BelongsTo(() => FormQuestion, { foreignKey: "parentId", targetKey: "uuid", constraints: false })
-  parent: FormQuestion | null;
+  declare parent: FormQuestion | null;
 
   @AllowNull
   @Column(STRING)
-  linkedFieldKey: string | null;
+  declare linkedFieldKey: string | null;
 
   @Column(STRING)
-  inputType: InputType;
+  declare inputType: InputType;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @Column(TEXT)
-  label: string;
+  declare label: string;
 
   @AllowNull
   @Column(INTEGER)
-  labelId: number | null;
+  declare labelId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "label_id", constraints: false })
-  labelI18nItem: I18nItem | null;
+  declare labelI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  descriptionId: number | null;
+  declare descriptionId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  descriptionI18nItem: I18nItem | null;
+  declare descriptionI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
-  placeholder: string | null;
+  declare placeholder: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  placeholderId: number | null;
+  declare placeholderId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "placeholder_id", constraints: false })
-  placeholderI18nItem: I18nItem | null;
+  declare placeholderI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
-  optionsList: string | null;
+  declare optionsList: string | null;
 
   @Column({ type: BOOLEAN, field: "multichoice", defaultValue: false })
-  multiChoice: boolean;
+  declare multiChoice: boolean;
 
   @AllowNull
   @Column(STRING)
-  collection: string | null;
+  declare collection: string | null;
 
   @Column(TINYINT)
-  order: number;
+  declare order: number;
 
   @AllowNull
   @JsonColumn()
-  additionalProps: object | null;
+  declare additionalProps: object | null;
 
   @AllowNull
   @Column(TEXT("tiny"))
-  additionalText: string | null;
+  declare additionalText: string | null;
 
   @AllowNull
   @Column(STRING)
-  additionalUrl: string | null;
+  declare additionalUrl: string | null;
 
   @AllowNull
   @Column(BOOLEAN)
-  showOnParentCondition: boolean | null;
+  declare showOnParentCondition: boolean | null;
 
   @AllowNull
   @JsonColumn()
-  validation: object | null;
+  declare validation: object | null;
 
   @AllowNull
   @Column({ type: BOOLEAN, defaultValue: false })
-  optionsOther: boolean | null;
+  declare optionsOther: boolean | null;
 
   @Column({ type: BOOLEAN, defaultValue: true })
-  conditionalDefault: boolean;
+  declare conditionalDefault: boolean;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  isParentConditionalDefault: boolean;
+  declare isParentConditionalDefault: boolean;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  minCharacterLimit: number | null;
+  declare minCharacterLimit: number | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 90000 })
-  maxCharacterLimit: number | null;
+  declare maxCharacterLimit: number | null;
 
   @AllowNull
   @JsonColumn()
-  years: number[] | null;
+  declare years: number[] | null;
 
   @HasMany(() => FormQuestionOption)
-  options: FormQuestionOption[] | null;
+  declare options: FormQuestionOption[] | null;
 
   /**
    * Returns true if this question is hidden based on the parent conditional's answer

@@ -16,27 +16,27 @@ export class PointGeometry extends Model<PointGeometry> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column({ type: GEOMETRY, field: "geom" })
-  point: Point;
+  declare point: Point;
 
   @AllowNull
   @Column({ type: DECIMAL(15, 2), field: "est_area" })
-  estimatedArea: number;
+  declare estimatedArea: number;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @ForeignKey(() => User)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  lastModifiedBy: number | null;
+  declare lastModifiedBy: number | null;
 }

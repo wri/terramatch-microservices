@@ -82,77 +82,77 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column(STRING)
-  modelType: string;
+  declare modelType: string;
 
   @Column(BIGINT.UNSIGNED)
-  modelId: number;
+  declare modelId: number;
 
   @Column(STRING)
-  collectionName: string;
+  declare collectionName: string;
 
   @Column(STRING)
-  name: string;
+  declare name: string;
 
   @Column(STRING)
-  fileName: string;
+  declare fileName: string;
 
   @AllowNull
   @Column(STRING)
-  mimeType: string | null;
+  declare mimeType: string | null;
 
   @Column(BIGINT.UNSIGNED)
-  size: number;
+  declare size: number;
 
   @AllowNull
   @Column(DOUBLE(11, 8))
-  lat: number | null;
+  declare lat: number | null;
 
   @AllowNull
   @Column(DOUBLE(11, 8))
-  lng: number | null;
+  declare lng: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: true })
-  isPublic: CreationOptional<boolean>;
+  declare isPublic: CreationOptional<boolean>;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  isCover: CreationOptional<boolean>;
+  declare isCover: CreationOptional<boolean>;
 
   @AllowNull
   @Column(ENUM("media", "documents"))
-  fileType: "media" | "documents" | null;
+  declare fileType: "media" | "documents" | null;
 
   @JsonColumn()
-  customProperties: Dictionary<object | string | number | null>;
+  declare customProperties: Dictionary<object | string | number | null>;
 
   @JsonColumn()
-  generatedConversions: Dictionary<boolean>;
+  declare generatedConversions: Dictionary<boolean>;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  orderColumn: number | null;
+  declare orderColumn: number | null;
 
   @AllowNull
   @Column(STRING(100))
-  photographer: string | null;
+  declare photographer: string | null;
 
   @AllowNull
   @Column(STRING(500))
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @BelongsTo(() => User, { constraints: false })
-  createdByUser: User | null;
+  declare createdByUser: User | null;
 
   get createdByUserName() {
     const { firstName, lastName } = this.createdByUser ?? {};
@@ -168,37 +168,35 @@ export class Media extends Model<InferAttributes<Media>, InferCreationAttributes
   }
 
   get profileImageScale(): number | null {
-    const scale = (this.customProperties?.["profile_image_scale"] as number | null | undefined) ?? null;
-    return scale;
+    return (this.customProperties?.["profile_image_scale"] as number | null | undefined) ?? null;
   }
 
   get profileImagePosition(): object | null {
-    const position = (this.customProperties?.["profile_image_position"] as object | null | undefined) ?? null;
-    return position;
+    return (this.customProperties?.["profile_image_position"] as object | null | undefined) ?? null;
   }
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @Column({ type: STRING, defaultValue: "s3" })
-  disk: CreationOptional<string>;
+  declare disk: CreationOptional<string>;
 
   /**
    * @deprecated this field is 's3' for all rows in the DB and may be safely ignored
    */
   @AllowNull
   @Column({ type: STRING, defaultValue: "s3" })
-  conversionsDisk: string | null;
+  declare conversionsDisk: string | null;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
   @JsonColumn({ defaultValue: [] })
-  manipulations: CreationOptional<string[]>;
+  declare manipulations: CreationOptional<string[]>;
 
   /**
    * @deprecated this field is unused in our database. All rows contain "[]"
    */
   @JsonColumn({ defaultValue: [] })
-  responsiveImages: CreationOptional<string[]>;
+  declare responsiveImages: CreationOptional<string[]>;
 }

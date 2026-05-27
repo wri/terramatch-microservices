@@ -9,6 +9,7 @@ import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
 import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJobFactory } from "@terramatch-microservices/database/factories";
+import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 
 describe("DelayedJobsController", () => {
   let controller: DelayedJobsController;
@@ -122,10 +123,10 @@ describe("DelayedJobsController", () => {
 
       const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
-      expect(result.data![0].id).toBe(job1.uuid);
-      expect(result.data![0].attributes.entityName).toBeUndefined();
-      expect(result.data![1].id).toBe(job2.uuid);
-      expect(result.data![1].attributes.entityName).toBe("TestEntity1");
+      expect((result.data as Resource[])[0].id).toBe(job1.uuid);
+      expect((result.data as Resource[])[0].attributes.entityName).toBeUndefined();
+      expect((result.data as Resource[])[1].id).toBe(job2.uuid);
+      expect((result.data as Resource[])[1].attributes.entityName).toBe("TestEntity1");
 
       const updatedJob = await DelayedJob.findOne({ where: { uuid: job1.uuid } });
       expect(updatedJob?.isAcknowledged).toBe(true);
@@ -160,10 +161,10 @@ describe("DelayedJobsController", () => {
 
       const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
-      expect(result.data![0].id).toBe(job1.uuid);
-      expect(result.data![1].id).toBe(job2.uuid);
-      expect(result.data![0].attributes.entityName).toBe("TestEntity1"); // Check entity_name for job1
-      expect(result.data![1].attributes.entityName).toBe("TestEntity2"); // Check entity_name for job2
+      expect((result.data as Resource[])[0].id).toBe(job1.uuid);
+      expect((result.data as Resource[])[1].id).toBe(job2.uuid);
+      expect((result.data as Resource[])[0].attributes.entityName).toBe("TestEntity1"); // Check entity_name for job1
+      expect((result.data as Resource[])[1].attributes.entityName).toBe("TestEntity2"); // Check entity_name for job2
 
       const updatedJob1 = await DelayedJob.findOne({ where: { uuid: job1.uuid } });
       const updatedJob2 = await DelayedJob.findOne({ where: { uuid: job2.uuid } });
@@ -222,10 +223,10 @@ describe("DelayedJobsController", () => {
 
       const result = serialize(await controller.bulkUpdateJobs(payload));
       expect(result.data).toHaveLength(2);
-      expect(result.data![0].id).toBe(pendingJob.uuid);
-      expect(result.data![0].attributes.entityName).toBe("TestEntityPending");
-      expect(result.data![1].id).toBe(pendingJob2.uuid);
-      expect(result.data![1].attributes.entityName).toBe("TestEntityPending2");
+      expect((result.data as Resource[])[0].id).toBe(pendingJob.uuid);
+      expect((result.data as Resource[])[0].attributes.entityName).toBe("TestEntityPending");
+      expect((result.data as Resource[])[1].id).toBe(pendingJob2.uuid);
+      expect((result.data as Resource[])[1].attributes.entityName).toBe("TestEntityPending2");
     });
   });
 

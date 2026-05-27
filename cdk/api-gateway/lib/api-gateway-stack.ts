@@ -13,7 +13,6 @@ import { HttpAlbIntegration, HttpUrlIntegration } from "aws-cdk-lib/aws-apigatew
 import { ApplicationListener, IApplicationListener } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
-import * as process from "node:process";
 
 const V3_SERVICES = {
   "user-service": ["auth", "users", "organisations", "userAssociations"],
@@ -50,22 +49,22 @@ const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
 type AddProxyProps = { targetHost: string; service?: never } | { targetHost?: never; service: string };
 
 export class ApiGatewayStack extends Stack {
-  private readonly httpApi: HttpApi;
-  private readonly env: string;
+  private readonly _httpApi: HttpApi;
+  private readonly _env: string;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     if (process.env.TM_ENV == null) throw new Error("No TM_ENV defined");
-    this.env = process.env.TM_ENV ?? "local";
+    this._env = process.env.TM_ENV ?? "local";
 
-    const enabledServices =
+    const enabledServices: string[] =
       process.env.ENABLED_SERVICES == null || process.env.ENABLED_SERVICES === ""
         ? Object.keys(V3_SERVICES)
         : process.env.ENABLED_SERVICES.split(",");
 
     const httpApiProps: HttpApiProps = {
-      apiName: `TerraMatch API Gateway - ${this.env}`,
+      apiName: `TerraMatch API Gateway - ${this._env}`,
       corsPreflight: {
         allowMethods: [
           CorsHttpMethod.GET,
@@ -83,13 +82,13 @@ export class ApiGatewayStack extends Stack {
       defaultDomainMapping: {
         domainName: DomainName.fromDomainNameAttributes(
           this,
-          `API Domain Name - ${this.env}`,
-          DOMAIN_MAPPINGS[this.env]
+          `API Domain Name - ${this._env}`,
+          DOMAIN_MAPPINGS[this._env]
         )
       }
     };
 
-    this.httpApi = new HttpApi(this, `TerraMatch API Gateway - ${this.env}`, httpApiProps);
+    this._httpApi = new HttpApi(this, `TerraMatch API Gateway - ${this._env}`, httpApiProps);
 
     for (const [service, namespaces] of Object.entries(V3_SERVICES)) {
       if (!enabledServices.includes(service)) continue;
@@ -112,7 +111,7 @@ export class ApiGatewayStack extends Stack {
   }
 
   private addHttpUrlProxy(name: string, sourcePath: string, targetUrl: string) {
-    this.httpApi.addRoutes({
+    this._httpApi.addRoutes({
       path: sourcePath,
       methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: new HttpUrlIntegration(name, targetUrl)
@@ -123,7 +122,7 @@ export class ApiGatewayStack extends Stack {
   private _vpcLink: IVpcLink;
   private addAlbProxy(name: string, sourcePath: string, service: string) {
     if (this._vpcLink == null) {
-      this._vpcLink = VpcLink.fromVpcLinkAttributes(this, `vpc-link-${this.env}`, {
+      this._vpcLink = VpcLink.fromVpcLinkAttributes(this, `vpc-link-${this._env}`, {
         vpcLinkId: "t74cf1",
         vpc: Vpc.fromLookup(this, "wri-terramatch-vpc", {
           vpcId: "vpc-0beac5973796d96b1"
@@ -136,12 +135,12 @@ export class ApiGatewayStack extends Stack {
       this._serviceListeners.set(
         service,
         (serviceListener = ApplicationListener.fromLookup(this, `${service} Listener`, {
-          loadBalancerTags: { service: `${service}-${this.env}` }
+          loadBalancerTags: { service: `${service}-${this._env}` }
         }))
       );
     }
 
-    this.httpApi.addRoutes({
+    this._httpApi.addRoutes({
       path: sourcePath,
       methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: new HttpAlbIntegration(name, serviceListener, { vpcLink: this._vpcLink })

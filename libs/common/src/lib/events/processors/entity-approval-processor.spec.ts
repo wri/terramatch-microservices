@@ -252,7 +252,7 @@ describe("EntityApprovalProcessor", () => {
       });
       const date = DateTime.now().minus({ weeks: 3 }).set({ millisecond: 0 }).toJSDate();
       await DisturbanceReportEntryFactory.report(report).create({
-        name: "date-of-disturbance",
+        name: "disturbance-start-date",
         value: date.toISOString()
       });
       await DisturbanceReportEntryFactory.report(report).create({

@@ -172,8 +172,9 @@ export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
       return [];
     }
 
+    // Project managers perform approvals; PDs (non-managers) receive status update emails.
     return await User.findAll({
-      where: { id: { [Op.in]: ProjectUser.projectUsersSubquery(projectId) } },
+      where: { id: { [Op.in]: ProjectUser.projectNonManagersSubquery(projectId) } },
       attributes: ["emailAddress", "locale"]
     });
   }

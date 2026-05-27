@@ -5,7 +5,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { IndicatorsService } from "./indicators.service";
 import { getQueueToken } from "@nestjs/bullmq";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
-import { serialize } from "@terramatch-microservices/common/util/testing";
+import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 
@@ -62,7 +62,7 @@ describe("IndicatorsController", () => {
   });
 
   describe("startIndicatorCalculation", () => {
-    const mockRequest = { authenticatedUserId: 1 };
+    mockRequestContext({ userId: 1 });
 
     it("should create a indicators job", async () => {
       const request: IndicatorsBodyDto = {
@@ -76,7 +76,7 @@ describe("IndicatorsController", () => {
         }
       };
       const slug: IndicatorSlug = "treeCoverLoss";
-      const result = serialize(await controller.startIndicatorCalculation({ slug }, request, mockRequest));
+      const result = serialize(await controller.startIndicatorCalculation({ slug }, request));
       expect(mockQueue.add).toHaveBeenCalledWith("indicatorCalculation", {
         slug,
         ...request.data.attributes,

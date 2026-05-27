@@ -60,8 +60,8 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   treesPlantedCount: number;
 
-  @ApiProperty({ nullable: true })
-  hectaresToRestoreGoal: number;
+  @ApiProperty({ nullable: true, type: Number })
+  hectaresToRestoreGoal: number | null;
 
   @ApiProperty()
   totalHectaresRestoredSum: number;
@@ -85,9 +85,6 @@ export class SiteFullDto extends SiteLightDto {
   totalSiteReports: number;
 
   @ApiProperty()
-  totalHectaresRestoredSum: number;
-
-  @ApiProperty()
   seedsPlantedCount: number;
 
   @ApiProperty()
@@ -98,6 +95,12 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty()
   regeneratedTreesCount: number;
+
+  @ApiProperty({
+    description:
+      "PPC estimated trees restored from approved site reports: tree species planted × parent project survival rate + seeds planted × parent project direct seeding survival rate + sum of ANR estimates (numTreesRegenerating) on reports."
+  })
+  treesRestoredPpc: number;
 
   @ApiProperty({
     description: "Sum of tree species amounts for collection 'anr' across approved site reports for this site"
@@ -118,9 +121,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   descriptionSitingStrategy: string | null;
-
-  @ApiProperty({ nullable: true })
-  hectaresToRestoreGoal: number;
 
   @ApiProperty({ nullable: true, type: String })
   description: string | null;

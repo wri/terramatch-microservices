@@ -118,6 +118,7 @@ describe("IndicatorsService", () => {
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", expect.objectContaining({ uuid: "site-uuid" }));
       expect(result).toContain("Polygon Name");
       expect(result).toContain("Size (ha)");
+      expect(result).toContain("PPC External ID");
     });
 
     it("should export tree cover loss data with dynamic years", async () => {
@@ -213,6 +214,94 @@ describe("IndicatorsService", () => {
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", mockProject);
       expect(result).toContain("Polygon 1");
       expect(result).toContain("2020");
+    });
+
+    it("should include ppc_external_id column for PPC site exports", async () => {
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "ppc" } as Site;
+      const mockPolygon = {
+        id: 1,
+        polyName: "Polygon 1",
+        status: "approved",
+        plantStart: new Date("2020-01-01"),
+        calcArea: 100.5,
+        site: { name: "Test Site", ppcExternalId: 42_001 } as Site
+      } as unknown as SitePolygon;
+
+      const mockIndicator = {
+        indicatorSlug: "treeCoverLoss",
+        yearOfAnalysis: 2023,
+        value: { "2020": 0.5 },
+        createdAt: new Date("2023-01-01")
+      } as IndicatorOutputTreeCoverLoss;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
+      jest.spyOn(IndicatorOutputTreeCoverLoss, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
+
+      const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
+
+      expect(result).toContain("PPC External ID");
+      expect(result).toContain("42001");
+    });
+
+    it("should include empty ppc_external_id column for non-PPC site exports", async () => {
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "terrafund-3" } as Site;
+      const mockPolygon = {
+        id: 1,
+        polyName: "Polygon 1",
+        status: "approved",
+        plantStart: new Date("2020-01-01"),
+        calcArea: 100.5,
+        site: { name: "Test Site", ppcExternalId: null } as Site
+      } as unknown as SitePolygon;
+
+      const mockIndicator = {
+        indicatorSlug: "treeCoverLoss",
+        yearOfAnalysis: 2023,
+        value: { "2020": 0.5 },
+        createdAt: new Date("2023-01-01")
+      } as IndicatorOutputTreeCoverLoss;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
+      jest.spyOn(IndicatorOutputTreeCoverLoss, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
+
+      const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
+
+      expect(result).toContain("PPC External ID");
+      expect(result).toMatch(/Test Site,,approved|Test Site,"",approved/);
+      expect(result).not.toContain("99999");
+    });
+
+    it("should leave ppc_external_id empty when PPC site has no external id", async () => {
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "ppc" } as Site;
+      const mockPolygon = {
+        id: 1,
+        polyName: "Polygon 1",
+        status: "approved",
+        plantStart: new Date("2020-01-01"),
+        calcArea: 100.5,
+        site: { name: "Test Site", ppcExternalId: null } as Site
+      } as unknown as SitePolygon;
+
+      const mockIndicator = {
+        indicatorSlug: "treeCoverLoss",
+        yearOfAnalysis: 2023,
+        value: { "2020": 0.5 },
+        createdAt: new Date("2023-01-01")
+      } as IndicatorOutputTreeCoverLoss;
+
+      jest.spyOn(Site, "findOne").mockResolvedValue(mockSite);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([mockPolygon]);
+      jest.spyOn(IndicatorOutputTreeCoverLoss, "findOne").mockResolvedValue(mockIndicator);
+      mockPolicyService.authorize.mockResolvedValue(undefined);
+
+      const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
+
+      expect(result).toContain("PPC External ID");
+      expect(result).toMatch(/Test Site,,approved|Test Site,"",approved/);
     });
   });
 

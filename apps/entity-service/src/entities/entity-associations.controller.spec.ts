@@ -107,7 +107,7 @@ describe("EntityAssociationsController", () => {
         )
       );
 
-      const processor = entitiesService.createAssociationProcessor.mock.results[0].value;
+      const processor = entitiesService.createAssociationProcessor.mock.results[0].value as StubProcessor;
       expect(processor.addDtos).toHaveBeenCalled();
       expect(result.meta.resourceType).toBe("trackings");
     });

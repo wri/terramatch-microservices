@@ -8,54 +8,54 @@ export class IndicatorOutputTreeCount extends Model<IndicatorOutputTreeCount> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Unique("unique_polygon_indicator_year")
   @ForeignKey(() => SitePolygon)
   @Column({ type: BIGINT.UNSIGNED })
-  sitePolygonId: number;
+  declare sitePolygonId: number;
 
   @Unique("unique_polygon_indicator_year")
   @Column({ type: STRING, values: INDICATOR_SLUGS })
-  indicatorSlug: IndicatorSlug;
+  declare indicatorSlug: IndicatorSlug;
 
   @Unique("unique_polygon_indicator_year")
   @Column(INTEGER)
-  yearOfAnalysis: number;
+  declare yearOfAnalysis: number;
 
   @AllowNull
   @Column(STRING)
-  surveyType: string | null;
+  declare surveyType: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  surveyId: number | null;
+  declare surveyId: number | null;
 
   @AllowNull
   @Column(INTEGER)
-  treeCount: number | null;
+  declare treeCount: number | null;
 
   @AllowNull
   @Column(STRING)
-  uncertaintyType: string | null;
+  declare uncertaintyType: string | null;
 
   @AllowNull
   @Column(STRING)
-  imagerySource: string | null;
+  declare imagerySource: string | null;
 
   @AllowNull
   @Column(DATE)
-  collectionDate: Date | null;
+  declare collectionDate: Date | null;
 
   @AllowNull
   @Column(STRING)
-  imageryId: string | null;
+  declare imageryId: string | null;
 
   @AllowNull
   @Column(STRING)
-  projectPhase: string | null;
+  declare projectPhase: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  confidence: number | null;
+  declare confidence: number | null;
 }

@@ -11,7 +11,10 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
     order: ["id"]
   };
 
-  constructor(private readonly MODEL: ModelCtor<T>, include?: Includeable[]) {
+  constructor(
+    private readonly MODEL: ModelCtor<T>,
+    include?: Includeable[]
+  ) {
     if (include != null && include.length > 0) {
       this.findOptions.include = include;
     }
@@ -42,7 +45,8 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
 
   queryFilters(filters: DashboardQueryDto) {
     const where: WhereOptions = {
-      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] }
+      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] },
+      isTest: false
     };
     const organisationWhere: WhereOptions = {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
@@ -129,7 +133,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
     const keys = this.getComplexKeys(where);
     if (keys.length === 0) return;
     if (keys.length !== 1 || keys[0] !== Op.and) return where;
-    return where[Op.and];
+    return (where as { [Op.and]: WhereOptions[] })[Op.and];
   }
 
   private combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions): WhereOptions {

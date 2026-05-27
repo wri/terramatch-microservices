@@ -56,7 +56,7 @@ import {
 import { orderBy, sortBy, uniq } from "lodash";
 import { Model } from "sequelize-typescript";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
-import { FindOptions, Op } from "sequelize";
+import { FindOptions, Op, WhereAttributeHash } from "sequelize";
 import { DateTime } from "luxon";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { createMock } from "@golevelup/ts-jest";
@@ -681,7 +681,7 @@ describe("AirtableEntity", () => {
       // won't count because it's not active
       await SitePolygonFactory.create({ siteUuid: site2Uuid, isActive: false });
       // won't count because it's not approved
-      await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "needs-more-information" });
+      await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "information-required" });
       hectaresRestoredToDate +=
         (await SitePolygonFactory.create({ siteUuid: site2Uuid, status: "approved" })).calcArea ?? 0;
 
@@ -700,7 +700,7 @@ describe("AirtableEntity", () => {
           fields: {
             uuid,
             name,
-            framework: FRAMEWORK_NAMES[frameworkKey ?? ""] ?? frameworkKey,
+            framework: FRAMEWORK_NAMES[frameworkKey as keyof typeof FRAMEWORK_NAMES] ?? frameworkKey,
             organisationUuid: organisationUuids[organisationId ?? 0],
             applicationUuid: applicationUuids[applicationId ?? 0],
             hectaresRestoredToDate: calculatedValues[uuid]?.hectaresRestoredToDate ?? 0
@@ -730,7 +730,7 @@ describe("AirtableEntity", () => {
         fields: {
           uuid,
           projectCountry,
-          projectCountryName: COUNTRIES[projectCountry ?? ""],
+          projectCountryName: COUNTRIES[projectCountry as keyof typeof COUNTRIES],
           states,
           stateNames: states?.map(state => STATES[state.split(".")[0]][state])
         }
@@ -971,8 +971,9 @@ describe("AirtableEntity", () => {
       }
       const deletedSince = new Date();
       const result = new Test(dataApi).getDeletePageFindOptions(deletedSince, 0);
-      expect(result.where?.[Op.or]).not.toBeNull();
-      expect(result.where?.[Op.or]?.[Op.and]?.updatedAt?.[Op.gte]).toBe(deletedSince);
+      const or = (result.where as { [Op.or]: { [Op.and]: WhereAttributeHash } })[Op.or];
+      expect(or).not.toBeNull();
+      expect(or[Op.and].updatedAt?.[Op.gte]).toBe(deletedSince);
     });
   });
 });

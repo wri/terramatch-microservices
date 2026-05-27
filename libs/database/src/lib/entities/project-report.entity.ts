@@ -268,18 +268,18 @@ export class ProjectReport extends Model<ProjectReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
-  framework: Framework | null;
+  declare framework: Framework | null;
 
   get frameworkUuid(): string | undefined {
     return this.framework?.uuid;
@@ -287,19 +287,19 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
-  projectId: number;
+  declare projectId: number;
 
   @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  createdBy: number | null;
+  declare createdBy: number | null;
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
-  createdByUser: User | null;
+  declare createdByUser: User | null;
 
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  approvedBy: number;
+  declare approvedBy: number;
 
   get createdByFirstName() {
     return this.createdByUser?.firstName;
@@ -310,10 +310,10 @@ export class ProjectReport extends Model<ProjectReport> {
   }
 
   @BelongsTo(() => Project)
-  project: Project | null;
+  declare project: Project | null;
 
   @BelongsTo(() => User)
-  user: User | null;
+  declare user: User | null;
 
   get projectName() {
     return this.project?.name;
@@ -345,18 +345,18 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(STRING)
-  title: string | null;
+  declare title: string | null;
 
   @ForeignKey(() => Task)
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  taskId: number | null;
+  declare taskId: number | null;
 
   @BelongsTo(() => Task, { constraints: false })
-  task: Task | null;
+  declare task: Task | null;
 
   @StateMachineColumn(ReportStatusStates)
-  status: ReportStatus;
+  declare status: ReportStatus;
 
   get isComplete() {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
@@ -374,394 +374,394 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(STRING)
-  updateRequestStatus: UpdateRequestStatus | null;
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)
-  feedback: string | null;
+  declare feedback: string | null;
 
   @AllowNull
   @JsonColumn()
-  feedbackFields: string[] | null;
+  declare feedbackFields: string[] | null;
 
   @AllowNull
   @Column(INTEGER)
-  completion: number | null;
+  declare completion: number | null;
 
   @AllowNull
   @Column(DATE)
-  dueAt: Date | null;
+  declare dueAt: Date | null;
 
   @AllowNull
   @Column(DATE)
-  submittedAt: Date | null;
+  declare submittedAt: Date | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
-  workdaysPaid: number | null;
+  declare workdaysPaid: number | null;
 
   @AllowNull
   @Column(INTEGER({ unsigned: true, length: 10 }))
-  workdaysVolunteer: number | null;
+  declare workdaysVolunteer: number | null;
 
   @AllowNull
   @Column(TEXT)
-  landscapeCommunityContribution: string | null;
+  declare landscapeCommunityContribution: string | null;
 
   @AllowNull
   @Column(TEXT)
-  topThreeSuccesses: string | null;
+  declare topThreeSuccesses: string | null;
 
   @AllowNull
   @Column(TEXT)
-  challengesFaced: string | null;
+  declare challengesFaced: string | null;
 
   @AllowNull
   @Column(TEXT)
-  lessonsLearned: string | null;
+  declare lessonsLearned: string | null;
 
   @AllowNull
   @Column(TEXT)
-  maintenanceAndMonitoringActivities: string | null;
+  declare maintenanceAndMonitoringActivities: string | null;
 
   @AllowNull
   @Column(TEXT)
-  significantChange: string | null;
+  declare significantChange: string | null;
 
   @AllowNull
   @Column(TINYINT.UNSIGNED)
-  pctSurvivalToDate: number | null;
+  declare pctSurvivalToDate: number | null;
 
   @AllowNull
   @Column(TEXT)
-  survivalCalculation: string | null;
+  declare survivalCalculation: string | null;
 
   @AllowNull
   @Column(TEXT)
-  survivalComparison: string | null;
+  declare survivalComparison: string | null;
 
   @AllowNull
   @Column(TEXT)
-  newJobsDescription: string | null;
+  declare newJobsDescription: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  newJobsCreated: number | null;
+  declare newJobsCreated: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  newVolunteers: number | null;
+  declare newVolunteers: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftJobsNonYouth: number | null;
+  declare ftJobsNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftJobsYouth: number | null;
+  declare ftJobsYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerNonYouth: number | null;
+  declare volunteerNonYouth: number | null;
 
   @AllowNull
   @Column(TEXT)
-  volunteersWorkDescription: string | null;
+  declare volunteersWorkDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  beneficiariesDescription: string | null;
+  declare beneficiariesDescription: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesIncomeIncrease: number | null;
+  declare beneficiariesIncomeIncrease: number | null;
 
   @AllowNull
   @Column(TEXT)
-  beneficiariesIncomeIncreaseDescription: string | null;
+  declare beneficiariesIncomeIncreaseDescription: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesTrainingWomen: number | null;
+  declare beneficiariesTrainingWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesTrainingMen: number | null;
+  declare beneficiariesTrainingMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesTrainingOther: number | null;
+  declare beneficiariesTrainingOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesTrainingYouth: number | null;
+  declare beneficiariesTrainingYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesTrainingNonYouth: number | null;
+  declare beneficiariesTrainingNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesOther: number | null;
+  declare beneficiariesOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiaries: number | null;
+  declare beneficiaries: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesWomen: number | null;
+  declare beneficiariesWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesMen: number | null;
+  declare beneficiariesMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesNonYouth: number | null;
+  declare beneficiariesNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesYouth: number | null;
+  declare beneficiariesYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesSmallholder: number | null;
+  declare beneficiariesSmallholder: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesLargeScale: number | null;
+  declare beneficiariesLargeScale: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  beneficiariesSkillsKnowledgeIncrease: number | null;
+  declare beneficiariesSkillsKnowledgeIncrease: number | null;
 
   @AllowNull
   @Column(TEXT)
-  beneficiariesSkillsKnowledgeIncreaseDescription: string | null;
+  declare beneficiariesSkillsKnowledgeIncreaseDescription: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  indirectBeneficiaries: number | null;
+  declare indirectBeneficiaries: number | null;
 
   @AllowNull
   @Column(TEXT)
-  indirectBeneficiariesDescription: string | null;
+  declare indirectBeneficiariesDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  sharedDriveLink: string | null;
+  declare sharedDriveLink: string | null;
 
   @AllowNull
   @Column(TEXT)
-  communityProgress: string | null;
+  declare communityProgress: string | null;
 
   @AllowNull
   @Column(TEXT)
-  localEngagementDescription: string | null;
+  declare localEngagementDescription: string | null;
 
   @AllowNull
   @Column(TEXT)
-  localEngagement: string | null;
+  declare localEngagement: string | null;
 
   @AllowNull
   @Column(TEXT)
-  equitableOpportunities: string | null;
+  declare equitableOpportunities: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  resilienceProgress: string | null;
+  declare resilienceProgress: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  localGovernance: string | null;
+  declare localGovernance: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  adaptiveManagement: string | null;
+  declare adaptiveManagement: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  scalabilityReplicability: string | null;
+  declare scalabilityReplicability: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  convergenceJobsDescription: string | null;
+  declare convergenceJobsDescription: string | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  convergenceSchemes: string | null;
+  declare convergenceSchemes: string | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED })
-  convergenceAmount: number | null;
+  declare convergenceAmount: number | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED })
-  volunteerScstobc: number | null;
+  declare volunteerScstobc: number | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED })
-  beneficiariesScstobc: number | null;
+  declare beneficiariesScstobc: number | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED })
-  beneficiariesScstobcFarmers: number | null;
+  declare beneficiariesScstobcFarmers: number | null;
 
   @AllowNull
   @Column({ type: TEXT })
-  communityPartnersAssetsDescription: string | null;
+  declare communityPartnersAssetsDescription: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  peopleKnowledgeSkillsIncreased: number | null;
+  declare peopleKnowledgeSkillsIncreased: number | null;
 
   @AllowNull
   @Column(TEXT)
-  technicalNarrative: string | null;
+  declare technicalNarrative: string | null;
 
   @AllowNull
   @Column(TEXT)
-  publicNarrative: string | null;
+  declare publicNarrative: string | null;
 
   @AllowNull
   @Column({ type: INTEGER.UNSIGNED })
-  totalUniqueRestorationPartners: number | null;
+  declare totalUniqueRestorationPartners: number | null;
 
   @AllowNull
   @Column(TEXT)
-  businessMilestones: string | null;
+  declare businessMilestones: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftSmallholderFarmers: number | null;
+  declare ftSmallholderFarmers: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptSmallholderFarmers: number | null;
+  declare ptSmallholderFarmers: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seasonalMen: number | null;
+  declare seasonalMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seasonalWomen: number | null;
+  declare seasonalWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seasonalYouth: number | null;
+  declare seasonalYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seasonalSmallholderFarmers: number | null;
+  declare seasonalSmallholderFarmers: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  seasonalTotal: number | null;
+  declare seasonalTotal: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerOther: number | null;
+  declare volunteerOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerWomen: number | null;
+  declare volunteerWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerMen: number | null;
+  declare volunteerMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerYouth: number | null;
+  declare volunteerYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerSmallholderFarmers: number | null;
+  declare volunteerSmallholderFarmers: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  volunteerTotal: number | null;
+  declare volunteerTotal: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  plantedTrees: number | null;
+  declare plantedTrees: number | null;
 
   @AllowNull
   @Column(STRING)
-  oldModel: string;
+  declare oldModel: string;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  oldId: number | null;
+  declare oldId: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  siteAddition: boolean;
+  declare siteAddition: boolean;
 
   @Column({ type: TEXT, defaultValue: "" })
-  paidOtherActivityDescription: string;
+  declare paidOtherActivityDescription: string;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })
-  answers: Dictionary<unknown> | null;
+  declare answers: Dictionary<unknown> | null;
 
   @AllowNull
   @Column(STRING)
-  plantingStatus: PlantingStatus | null;
+  declare plantingStatus: PlantingStatus | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftOther: number | null;
+  declare ftOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftWomen: number | null;
+  declare ftWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftMen: number | null;
+  declare ftMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftYouth: number | null;
+  declare ftYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ftTotal: number | null;
+  declare ftTotal: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptOther: number | null;
+  declare ptOther: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptWomen: number | null;
+  declare ptWomen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptMen: number | null;
+  declare ptMen: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptYouth: number | null;
+  declare ptYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptNonYouth: number | null;
+  declare ptNonYouth: number | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
-  ptTotal: number | null;
+  declare ptTotal: number | null;
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
     scope: { speciesable_type: ProjectReport.LARAVEL_TYPE, collection: "nursery-seedling" }
   })
-  nurserySeedlings: TreeSpecies[] | null;
+  declare nurserySeedlings: TreeSpecies[] | null;
 
   @AllowNull
   @Column(TEXT)
-  elpDescription: string | null;
+  declare elpDescription: string | null;
 }

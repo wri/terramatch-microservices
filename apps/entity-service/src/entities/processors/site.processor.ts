@@ -35,6 +35,7 @@ import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
+import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -104,7 +105,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       include: [
         {
           association: "project",
-          attributes: ["uuid", "name", "country"],
+          attributes: ["uuid", "name", "country", "survivalRate", "directSeedingSurvivalRate"],
           include: [{ association: "organisation", attributes: ["name", "uuid"] }]
         }
       ]
@@ -151,7 +152,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
 
     for (const term of SIMPLE_FILTERS) {
-      const field = ASSOCIATION_FIELD_MAP[term] ?? term;
+      const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
@@ -211,7 +212,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     for (const siteUuid of siteUuids) {
       const sitesPolygons = polygonsBySite[siteUuid] ?? [];
-      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => Number(polygon.calcArea) ?? 0);
+      hectaresMap[siteUuid] = sumBy(sitesPolygons, polygon => polygon.calcArea ?? 0);
     }
 
     return hectaresMap;
@@ -307,6 +308,16 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const regeneratedTreesCount = sumBy(approvedSiteReports, "numTreesRegenerating");
 
+    const parentProject =
+      site.project ??
+      (await Project.findByPk(site.projectId, {
+        attributes: ["survivalRate", "directSeedingSurvivalRate"]
+      }));
+    const treesRestoredPpc =
+      regeneratedTreesCount +
+      (treesPlantedCount * ((parentProject?.survivalRate ?? 0) / 100) +
+        (seedsPlantedCount * (parentProject?.directSeedingSurvivalRate ?? 0)) / 100);
+
     const hectaresData = await this.getHectaresRestoredSum([site.uuid]);
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const lastReport = await this.getLastReport(site.id);
@@ -324,6 +335,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       overdueSiteReportsTotal: await this.getTotalOverdueReports(siteId),
       selfReportedWorkdayCount: await this.getSelfReportedWorkdayCount(siteId, true),
       regeneratedTreesCount,
+      treesRestoredPpc,
       treesRegeneratingSpeciesCount,
       treesPlantedCount,
       plantingStatus: lastReport?.plantingStatus as PlantingStatus,
@@ -476,7 +488,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         const nextTask =
           project.frameworkKey == null ? undefined : await ScheduledJob.taskDue(project.frameworkKey).findOne();
         createReport =
-          nextTask != null && DateTime.fromISO(nextTask.taskDefinition["dueAt"]) > DateTime.now().plus({ weeks: 4 });
+          nextTask != null &&
+          DateTime.fromISO((nextTask.taskDefinition as TaskDue).dueAt) > DateTime.now().plus({ weeks: 4 });
       }
 
       if (createReport) {

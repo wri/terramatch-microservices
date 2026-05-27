@@ -17,7 +17,7 @@ import { TreeCoverLossFiresCalculator } from "./calculators/tree-cover-loss-fire
 import { RestorationByEcoRegionCalculator } from "./calculators/restoration-by-eco-region.calculator";
 import { RestorationByTypeCalculator } from "./calculators/restoration-by-type.calculator";
 import { Polygon } from "geojson";
-import { Op } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { stringify } from "csv-stringify/sync";
 import { PolicyService } from "@terramatch-microservices/common";
 import { intersection } from "lodash";
@@ -30,13 +30,8 @@ export const CALCULATE_INDICATORS: Record<string, CalculateIndicator> = {
   restorationByLandUse: new RestorationByTypeCalculator("targetSys", INDICATORS[6])
 };
 
-const SLUG_MAPPINGS = {
-  treeCoverLoss: IndicatorOutputTreeCoverLoss,
-  treeCoverLossFires: IndicatorOutputTreeCoverLoss,
-  restorationByEcoRegion: IndicatorOutputHectares,
-  restorationByStrategy: IndicatorOutputHectares,
-  restorationByLandUse: IndicatorOutputHectares
-};
+const HECTARES_SLUGS = ["restorationByEcoRegion", "restorationByStrategy", "restorationByLandUse"] as const;
+const TREE_COVER_LOSS_SLUGS = ["treeCoverLoss", "treeCoverLossFires"] as const;
 
 const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
   poly_name: "Polygon Name",
@@ -45,6 +40,8 @@ const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
   status: "Status",
   plantstart: "Plant Start Date"
 };
+
+const PPC_EXPORT_COLUMN = { key: "ppc_external_id", header: "PPC External ID" } as const;
 
 const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: string }> = {
   treeCoverLoss: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss" },
@@ -76,7 +73,10 @@ const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: s
 export class IndicatorsService {
   private readonly logger = new TMLogger(IndicatorsService.name);
 
-  constructor(private readonly dataApiService: DataApiService, private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly dataApiService: DataApiService,
+    private readonly policyService: PolicyService
+  ) {}
 
   async process(slug: IndicatorSlug, polygonUuids: string[]) {
     const results = await Promise.all(polygonUuids.map(polygonUuid => this.processPolygon(slug, polygonUuid)));
@@ -86,7 +86,7 @@ export class IndicatorsService {
   async processPolygon(
     slug: IndicatorSlug,
     polygonUuid: string
-  ): Promise<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>> {
+  ): Promise<CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>> {
     const calculator = CALCULATE_INDICATORS[slug];
     if (calculator == null) {
       throw new BadRequestException(`Unknown calculator: ${slug}`);
@@ -98,19 +98,27 @@ export class IndicatorsService {
     }
 
     const results = await calculator.calculate(polygonUuid, geoJson, this.dataApiService);
-    return results as Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>;
+    return results as CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>;
   }
 
   async saveResults(
-    results: Array<Partial<IndicatorOutputHectares> | Partial<IndicatorOutputTreeCoverLoss>>,
+    results: CreationAttributes<IndicatorOutputHectares>[] | CreationAttributes<IndicatorOutputTreeCoverLoss>[],
     slug: IndicatorSlug
   ) {
     try {
-      await SLUG_MAPPINGS[slug].bulkCreate(results, {
-        updateOnDuplicate: ["value", "updatedAt"],
-        ignoreDuplicates: false,
-        returning: true
-      });
+      if (HECTARES_SLUGS.includes(slug as (typeof HECTARES_SLUGS)[number])) {
+        await IndicatorOutputHectares.bulkCreate(results as CreationAttributes<IndicatorOutputHectares>[], {
+          updateOnDuplicate: ["value", "updatedAt"],
+          ignoreDuplicates: false,
+          returning: true
+        });
+      } else if (TREE_COVER_LOSS_SLUGS.includes(slug as (typeof TREE_COVER_LOSS_SLUGS)[number])) {
+        await IndicatorOutputTreeCoverLoss.bulkCreate(results as CreationAttributes<IndicatorOutputTreeCoverLoss>[], {
+          updateOnDuplicate: ["value", "updatedAt"],
+          ignoreDuplicates: false,
+          returning: true
+        });
+      }
       this.logger.debug(`Successfully saved/updated ${results.length} results for slug: ${slug}`);
     } catch (error) {
       this.logger.error(`Failed to save results for slug: ${slug}`, `${error}`);
@@ -180,7 +188,7 @@ export class IndicatorsService {
 
     return await SitePolygon.findAll({
       where: { siteUuid: { [Op.in]: siteUuids }, isActive: true, status: "approved" },
-      include: [{ model: Site, attributes: ["name"] }],
+      include: [{ model: Site, attributes: ["name", "ppcExternalId"] }],
       attributes: ["id", "polyName", "status", "plantStart", "calcArea"]
     });
   }
@@ -197,6 +205,7 @@ export class IndicatorsService {
         status: polygon.status,
         plantstart: polygon.plantStart,
         site_name: polygon.site?.name ?? "",
+        ppc_external_id: polygon.site?.ppcExternalId ?? "",
         size: polygon.calcArea ?? 0,
         created_at: indicator.createdAt ?? null
       };
@@ -308,10 +317,37 @@ export class IndicatorsService {
   ): string {
     if (rows.length === 0) return this.generateEmptyCsv(config.columns);
 
+    const columnsArray = this.buildExportColumnsArray(config.columns, slug, rows);
+
+    const filteredRows = rows.map(row => {
+      const filteredRow: Record<string, string | number> = {};
+      columnsArray.forEach(({ key }) => {
+        const value = row[key];
+        filteredRow[key] = value instanceof Date ? value.toISOString().split("T")[0] : value == null ? "" : value;
+      });
+      return filteredRow;
+    });
+
+    return stringify(filteredRows, { header: true, columns: columnsArray });
+  }
+
+  private generateEmptyCsv(columns: Record<string, string>): string {
+    const columnsArray = this.buildExportColumnsArray(columns, null, []);
+    return stringify([], { header: true, columns: columnsArray });
+  }
+
+  private buildExportColumnsArray(
+    columns: Record<string, string>,
+    slug: IndicatorSlug | null,
+    rows: Array<Record<string, string | number | Date | null>>
+  ): Array<{ key: string; header: string }> {
     const columnsArray: Array<{ key: string; header: string }> = [];
 
-    Object.entries(config.columns).forEach(([key, header]) => {
+    Object.entries(columns).forEach(([key, header]) => {
       columnsArray.push({ key, header });
+      if (key === "site_name") {
+        columnsArray.push(PPC_EXPORT_COLUMN);
+      }
     });
 
     if (slug === "treeCoverLoss" || slug === "treeCoverLossFires") {
@@ -345,20 +381,6 @@ export class IndicatorsService {
       }
     }
 
-    const filteredRows = rows.map(row => {
-      const filteredRow: Record<string, string | number> = {};
-      columnsArray.forEach(({ key }) => {
-        const value = row[key];
-        filteredRow[key] = value instanceof Date ? value.toISOString().split("T")[0] : value == null ? "" : value;
-      });
-      return filteredRow;
-    });
-
-    return stringify(filteredRows, { header: true, columns: columnsArray });
-  }
-
-  private generateEmptyCsv(columns: Record<string, string>): string {
-    const columnsArray = Object.entries(columns).map(([key, header]) => ({ key, header }));
-    return stringify([], { header: true, columns: columnsArray });
+    return columnsArray;
   }
 }

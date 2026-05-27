@@ -9,16 +9,16 @@ import {
   ModelHasRole,
   Notification,
   Organisation,
+  OrganisationInvite,
   OrganisationUser,
+  PasswordReset,
   Project,
   ProjectInvite,
   ProjectUser,
   Role,
-  User,
-  OrganisationInvite,
-  PasswordReset
+  User
 } from "@terramatch-microservices/database/entities";
-import { FindOptions, Op, WhereOptions } from "sequelize";
+import { FindOptions, Op, WhereAttributeHash } from "sequelize";
 import { UserAssociationCreateAttributes, UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -165,10 +165,10 @@ export class UserAssociationService {
       attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
     };
     if (query.isManager != null) {
-      if (query.isManager === true) {
-        (findOptions.where as WhereOptions<ProjectUser>)["isManaging"] = true;
+      if (query.isManager) {
+        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = true;
       } else {
-        (findOptions.where as WhereOptions<ProjectUser>)["isMonitoring"] = true;
+        (findOptions.where as WhereAttributeHash<ProjectUser>).isMonitoring = true;
       }
     }
     return ProjectUser.findAll(findOptions);
@@ -282,7 +282,7 @@ export class UserAssociationService {
       attributes: ["id", "userId", "status"]
     };
     if (query.status != null) {
-      (findOptions.where as WhereOptions<OrganisationUser>)["status"] = query.status;
+      (findOptions.where as WhereAttributeHash<OrganisationUser>)["status"] = query.status;
     }
     return OrganisationUser.findAll(findOptions);
   }
@@ -325,7 +325,7 @@ export class UserAssociationService {
     filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
-      const status = isOwner ? "approved" : orgUser?.status ?? "";
+      const status = isOwner ? "approved" : (orgUser?.status ?? "");
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,

@@ -40,7 +40,7 @@ function isCompletedPlantingAnswer(answer: unknown) {
 
 const OPTIONS_TYPES: FieldInputType[] = ["select", "radio", "select-image"];
 
-const READABLE_MONTHS = {
+const READABLE_MONTHS: Record<number, string> = {
   1: "January",
   2: "February",
   3: "March",
@@ -67,7 +67,7 @@ const prepareValueForExport = (
 
     const selected = castArray(initialValue as string | number | string[] | number[]);
     if (question.optionsList === "months") {
-      return selected.map(month => READABLE_MONTHS[month]);
+      return selected.map(month => READABLE_MONTHS[Number(month)]);
     } else {
       return selected.map(selection => question.options?.find(({ slug }) => slug === selection)?.label ?? selection);
     }
@@ -103,7 +103,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           ? []
           : await FormQuestion.findAll({
               where: { uuid: propertyQuestionUuids, inputType: OPTIONS_TYPES },
-              attributes: ["id", "optionsList"],
+              attributes: ["uuid", "id", "optionsList"],
               include: [{ association: "options", attributes: ["slug", "label"] }]
             });
 
@@ -113,7 +113,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           continue;
         }
 
-        const initialValue = models[modelType][property];
+        const initialValue = (models[modelType] as unknown as Dictionary<unknown>)[property];
         if (forExport) {
           answers[questionUuid] = prepareValueForExport(initialValue, inputType, questionUuid, questions);
         } else {
@@ -141,7 +141,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           });
 
           answers[questionUuid] =
-            tracking == null ? 0 : (await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0;
+            tracking == null ? 0 : ((await TrackingEntry.tracking(tracking.id).gender().sum("amount")) ?? 0);
         } else if (props.type === "trackingDescription") {
           // Pull the description from the first matching demographic that has a non-null description.
           // For this one we ignore the "visible" flag.

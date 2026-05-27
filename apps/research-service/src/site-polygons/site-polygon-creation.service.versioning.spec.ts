@@ -518,7 +518,7 @@ describe("SitePolygonCreationService - Versioning", () => {
 
     it("should not track status in description", () => {
       const basePolygon = { uuid: "test", status: "approved" } as SitePolygon;
-      const changes = { status: "draft" };
+      const changes: Partial<SitePolygon> = { status: "draft" };
 
       const description = service["buildDetailedChangeDescription"](basePolygon, changes, false);
 

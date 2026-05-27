@@ -6,21 +6,21 @@ export class I18nTranslation extends Model<I18nTranslation> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @AllowNull
   @Column(INTEGER({ length: 11 }))
-  i18nItemId: number;
+  declare i18nItemId: number;
 
   @AllowNull
   @Column(STRING)
-  language: string | null;
+  declare language: string | null;
 
   @AllowNull
   @Column(STRING)
-  shortValue: string | null;
+  declare shortValue: string | null;
 
   @AllowNull
   @Column(TEXT)
-  longValue: string | null;
+  declare longValue: string | null;
 }

@@ -86,8 +86,8 @@ export class DashboardEntitiesController {
         const category = Array.isArray(impactStory.category)
           ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
           : impactStory.category != null && impactStory.category !== ""
-          ? [impactStory.category]
-          : [];
+            ? [impactStory.category]
+            : [];
 
         const dto = new DashboardImpactStoryLightDto(impactStory, {
           organisation,
@@ -236,8 +236,8 @@ export class DashboardEntitiesController {
       const category = Array.isArray(impactStory.category)
         ? impactStory.category.filter((cat: string) => cat != null && cat !== "")
         : impactStory.category != null && impactStory.category !== ""
-        ? [impactStory.category]
-        : [];
+          ? [impactStory.category]
+          : [];
 
       const dto = new DashboardImpactStoryFullDto(impactStory, {
         organisation,

@@ -70,7 +70,7 @@ export class ReportGenerationService {
               siteId: id,
               status: DUE,
               dueAt
-            } as SiteReport)
+            }) as SiteReport
         )
       );
     }
@@ -89,7 +89,7 @@ export class ReportGenerationService {
               nurseryId: id,
               status: DUE,
               dueAt
-            } as NurseryReport)
+            }) as NurseryReport
         )
       );
     }

@@ -17,5 +17,7 @@ module.exports = {
     }
   },
 
-  setupFilesAfterEnv: ["./jest/setup-jest.ts"]
+  setupFilesAfterEnv: [`${__dirname}/jest/setup-jest.ts`],
+
+  transformIgnorePatterns: ["node_modules/(?!(uuid|@faker-js/faker|mariadb)/)"]
 };

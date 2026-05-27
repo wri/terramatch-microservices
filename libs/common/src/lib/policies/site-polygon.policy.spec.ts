@@ -25,9 +25,9 @@ describe("SitePolygonPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows service accounts with polygons-manage to read and create any polygon", async () => {
+  it("allows service accounts with polygons-manage-own to read and create any polygon", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "polygons-manage");
+    mockRequestForUser(user, "polygons-manage-own");
 
     const sitePolygon = new SitePolygon();
     sitePolygon.createdBy = 999; // Different user
@@ -36,9 +36,9 @@ describe("SitePolygonPolicy", () => {
     await expectCan(service, "create", sitePolygon);
   });
 
-  it("allows service accounts with polygons-manage to update and delete only their own polygons", async () => {
+  it("allows service accounts with polygons-manage-own to update and delete only their own polygons", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "polygons-manage");
+    mockRequestForUser(user, "polygons-manage-own");
 
     const ownPolygon = new SitePolygon();
     ownPolygon.createdBy = user.id;
@@ -50,6 +50,17 @@ describe("SitePolygonPolicy", () => {
     await expectCan(service, "delete", ownPolygon);
     await expectCannot(service, "update", otherPolygon);
     await expectCannot(service, "delete", otherPolygon);
+  });
+
+  it("allows service accounts with polygons-manage to take any action on any polygon", async () => {
+    const user = await UserFactory.create();
+    mockRequestForUser(user, "polygons-manage");
+
+    const sitePolygon = new SitePolygon();
+    await expectCan(service, "read", sitePolygon);
+    await expectCan(service, "create", sitePolygon);
+    await expectCan(service, "update", sitePolygon);
+    await expectCan(service, "delete", sitePolygon);
   });
 
   it("allows managing polygons within frameworks", async () => {
@@ -152,12 +163,12 @@ describe("SitePolygonPolicy", () => {
     await expectCannot(service, "delete", sitePolygon);
   });
 
-  describe("service accounts with polygons-manage", () => {
+  describe("service accounts with polygons-manage-own", () => {
     it("allows service accounts to delete their own site polygons", async () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage");
+      mockRequestForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -170,7 +181,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage");
+      mockRequestForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;
@@ -183,7 +194,7 @@ describe("SitePolygonPolicy", () => {
       const user = await UserFactory.create();
       const site = await SiteFactory.create();
 
-      mockRequestForUser(user, "polygons-manage");
+      mockRequestForUser(user, "polygons-manage-own");
 
       const sitePolygon = new SitePolygon();
       sitePolygon.siteUuid = site.uuid;

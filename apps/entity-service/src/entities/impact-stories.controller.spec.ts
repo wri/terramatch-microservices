@@ -11,6 +11,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { CreateImpactStoryBody } from "./dto/create-impact-story.dto";
 import { UpdateImpactStoryBody } from "./dto/update-impact-story.dto";
 import { ImpactStoryBulkDeleteBodyDto } from "./dto/bulk-delete-impact-stories.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
 describe("ImpactStoriesController", () => {
   let controller: ImpactStoriesController;
@@ -132,7 +133,7 @@ describe("ImpactStoriesController", () => {
     } as unknown as ReturnType<typeof Media.for>);
 
     jest.spyOn(entitiesService, "mapMediaCollection").mockReturnValue({
-      media: mockMedia
+      media: mockMedia as unknown as MediaDto[]
     });
   });
 

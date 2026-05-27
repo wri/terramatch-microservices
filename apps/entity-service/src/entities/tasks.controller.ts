@@ -25,7 +25,10 @@ import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-r
 
 @Controller("entities/v3/tasks")
 export class TasksController {
-  constructor(private readonly policyService: PolicyService, private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly tasksService: TasksService
+  ) {}
 
   @Get()
   @ApiOperation({

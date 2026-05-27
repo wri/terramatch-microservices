@@ -423,7 +423,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.createUserAssociation(project, {
         emailAddress: user.emailAddress,
@@ -447,7 +447,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
       jwtService.signAsync.mockResolvedValue("fake-token");
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.createUserAssociation(project, {
         emailAddress: "new@example.com",
@@ -552,7 +552,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false });
 
@@ -577,7 +577,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(existingProjectUser);
       jest.spyOn(ProjectUser, "create");
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false });
 
@@ -747,7 +747,7 @@ describe("UserAssociationService", () => {
       ] as [OrganisationUser, boolean]);
       jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
       jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.requestOrgJoin(org, user.id);
 
@@ -777,7 +777,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       jest.spyOn(User, "findAll").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
@@ -798,7 +798,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save");
       jest.spyOn(User, "findAll").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
@@ -832,7 +832,7 @@ describe("UserAssociationService", () => {
       ] as [OrganisationUser, boolean]);
       jest.spyOn(User, "findAll").mockResolvedValue([]);
       jest.spyOn(Notification, "bulkCreate");
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
@@ -856,7 +856,7 @@ describe("UserAssociationService", () => {
       ] as [OrganisationUser, boolean]);
       jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
       jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
-      emailQueue.add = jest.fn().mockRejectedValue(new Error("Queue error"));
+      emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 
       const result = await service.requestOrgJoin(org, user.id);
@@ -883,7 +883,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       jest.spyOn(user, "save").mockResolvedValue(user);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.updateOrgUserStatus(org, user.uuid as string, "approved");
 
@@ -908,7 +908,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       jest.spyOn(user, "save");
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
 
@@ -932,7 +932,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       jest.spyOn(user, "save").mockResolvedValue(user);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       await service.updateOrgUserStatus(org, user.uuid as string, "approved");
 
@@ -1010,7 +1010,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      emailQueue.add = jest.fn().mockRejectedValue(new Error("Queue error"));
+      emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 
       const result = await service.updateOrgUserStatus(org, user.uuid as string, "approved");
@@ -1054,7 +1054,7 @@ describe("UserAssociationService", () => {
       jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
       jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
       jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
-      emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+      emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.inviteOrganisationUser(org, "new@example.com", "http://frontend/auth/signup");
 

@@ -1,15 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* istanbul ignore file */
 import { DTO_TYPE_METADATA } from "../decorators/json-api-dto.decorator";
 import { InternalServerErrorException, Type } from "@nestjs/common";
 import { PaginationType } from "../decorators/json-api-response.decorator";
 import { cloneDeep } from "lodash";
+import { DateTime } from "luxon";
 import * as qs from "qs";
 import { DelayedJobDto } from "../dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
 type AttributeValue = string | number | boolean;
-type Attributes = {
+export type Attributes = {
   [key: string]: AttributeValue | Attributes;
 };
 
@@ -55,7 +55,11 @@ export class ResourceBuilder {
   type: string;
   relationships?: Relationships;
 
-  constructor(public id: string, public attributes: Attributes, private documentBuilder: DocumentBuilder) {
+  constructor(
+    public id: string,
+    public attributes: Attributes,
+    private documentBuilder: DocumentBuilder
+  ) {
     this.type = Reflect.getMetadata(DTO_TYPE_METADATA, attributes.constructor);
 
     if (this.type == null && process.env["NODE_ENV"] !== "production") {
@@ -148,7 +152,10 @@ export class DocumentBuilder {
   indexData: IndexData[] = [];
   deleted: Deleted[] = [];
 
-  constructor(public readonly resourceType: string, public readonly options: DocumentBuilderOptions = {}) {}
+  constructor(
+    public readonly resourceType: string,
+    public readonly options: DocumentBuilderOptions = {}
+  ) {}
 
   /**
    * Adds data to the final JSON:API document. If the type of the resource does not match the declared
@@ -246,13 +253,18 @@ export const buildDeletedResponse = (resourceType: string, ids: string | string[
     .serialize({ deletedResourceIds: Array.isArray(ids) ? ids : [ids] });
 
 export const getStableRequestQuery = (originalQuery: object) => {
-  const normalizedQuery = cloneDeep(originalQuery) as { page?: { number?: number }; sideloads?: object[] };
+  const normalizedQuery = cloneDeep(originalQuery) as Record<string, unknown> & {
+    page?: { number?: number };
+    sideloads?: object[];
+  };
   if (normalizedQuery.page?.number != null) delete normalizedQuery.page.number;
   if (normalizedQuery.sideloads != null) delete normalizedQuery.sideloads;
 
-  // guarantee order of array query params.
-  for (const value of Object.values(normalizedQuery)) {
+  for (const [key, value] of Object.entries(normalizedQuery)) {
     if (Array.isArray(value)) value.sort();
+    if (value instanceof Date) {
+      normalizedQuery[key] = DateTime.fromJSDate(value, { zone: "utc" }).toISO();
+    }
   }
   const query = qs.stringify(normalizedQuery, { arrayFormat: "indices", sort: (a, b) => a.localeCompare(b) });
   return query.length === 0 ? query : `?${query}`;

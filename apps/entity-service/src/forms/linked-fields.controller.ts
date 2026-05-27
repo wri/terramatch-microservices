@@ -27,9 +27,9 @@ const fieldAdder =
         label: field.label,
         name: `${field.label}${nameSuffix}`,
         inputType: field.inputType,
-        optionListKey: isField(field) ? field.optionListKey ?? null : null,
-        multiChoice: !isRelation(field) ? field.multiChoice ?? null : null,
-        collection: isRelation(field) ? field.collection ?? null : null
+        optionListKey: isField(field) ? (field.optionListKey ?? null) : null,
+        multiChoice: !isRelation(field) ? (field.multiChoice ?? null) : null,
+        collection: isRelation(field) ? (field.collection ?? null) : null
       })
     );
   };

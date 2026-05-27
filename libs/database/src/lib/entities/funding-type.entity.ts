@@ -46,35 +46,35 @@ export class FundingType extends Model<InferAttributes<FundingType>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  organisationId: string;
+  declare organisationId: string;
 
   @AllowNull
   @Column(STRING)
-  source: string | null;
+  declare source: string | null;
 
   @Column(DECIMAL(15, 2))
-  amount: number;
+  declare amount: number;
 
   @Column(INTEGER.UNSIGNED)
-  year: number;
+  declare year: number;
 
   @Column(TEXT)
-  type: string;
+  declare type: string;
 
   @AllowNull
   @ForeignKey(() => FinancialReport)
   @Column(BIGINT.UNSIGNED)
-  financialReportId: number | null;
+  declare financialReportId: number | null;
 
   @BelongsTo(() => Organisation, { foreignKey: "organisationId", targetKey: "uuid" })
-  organisation: NonAttribute<Organisation>;
+  declare organisation: NonAttribute<Organisation>;
 
   get organisationName(): NonAttribute<string | undefined> {
     return this.organisation?.name ?? undefined;

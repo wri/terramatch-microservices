@@ -43,7 +43,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.RESEARCH_SERVICE_PROXY_PORT ?? 4030;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.RESEARCH_SERVICE_PROXY_PORT ?? 4030);
   await app.listen(port);
 
   Logger.log(`TerraMatch Research Service is running on: http://localhost:${port}`);

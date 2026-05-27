@@ -10,38 +10,38 @@ export class FormOptionListOption extends Model<FormOptionListOption> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Column(BIGINT.UNSIGNED)
-  formOptionListId: number;
+  declare formOptionListId: number;
 
   @BelongsTo(() => FormOptionList, { foreignKey: "formOptionListId", constraints: false })
-  formOptionList: FormOptionList | null;
+  declare formOptionList: FormOptionList | null;
 
   @AllowNull
   @Column(STRING)
-  slug: string | null;
+  declare slug: string | null;
 
   @AllowNull
   @Column(STRING)
-  altValue: string | null;
+  declare altValue: string | null;
 
   @AllowNull
   @Column(STRING)
-  label: string | null;
+  declare label: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  labelId: number | null;
+  declare labelId: number | null;
 
   @BelongsTo(() => I18nItem, { foreignKey: "labelId", constraints: false })
-  labelTranslated: I18nItem | null;
+  declare labelTranslated: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
-  imageUrl: string | null;
+  declare imageUrl: string | null;
 }

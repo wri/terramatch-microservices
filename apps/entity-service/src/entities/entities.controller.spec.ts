@@ -41,7 +41,6 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
   delete = jest.fn(() => Promise.resolve());
   update = jest.fn(() => Promise.resolve());
   create = jest.fn(() => Promise.resolve(new Project()));
-  loadAssociationData = jest.fn(() => Promise.resolve({} as Record<number, ProjectLightDto>));
   export = jest.fn(() => Promise.resolve());
   exportAll = jest.fn(() => Promise.resolve());
 }
@@ -88,10 +87,6 @@ describe("EntitiesController", () => {
       const projects = await ProjectFactory.createMany(2);
       // @ts-expect-error stub processor type issues
       processor.findMany.mockResolvedValue({ models: projects, paginationTotal: 2 });
-      processor.loadAssociationData.mockResolvedValue({ [projects[0].id]: new ProjectLightDto() } as Record<
-        number,
-        ProjectLightDto
-      >);
       jest.spyOn(policyService(), "authorize").mockResolvedValue();
 
       const result = serialize(await controller.entityIndex({ entity: "projects" }, {} as EntityQueryDto));

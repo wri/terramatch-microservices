@@ -17,7 +17,10 @@ type SelectOptions<T extends Model> = {
 };
 
 export class Subquery<T extends Model> {
-  private constructor(public readonly modelStatic: ModelStatic<T>, public readonly tableAlias: string) {}
+  private constructor(
+    public readonly modelStatic: ModelStatic<T>,
+    public readonly tableAlias: string
+  ) {}
 
   public static select<T extends Model>(
     modelStatic: ModelStatic<T>,

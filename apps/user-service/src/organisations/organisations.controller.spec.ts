@@ -78,7 +78,7 @@ describe("OrganisationsController", () => {
 
     controller = module.get(OrganisationsController);
 
-    emailQueue.add = jest.fn().mockResolvedValue({} as Job);
+    emailQueue.add.mockResolvedValue({} as Job);
   });
 
   afterEach(() => {
@@ -285,13 +285,16 @@ describe("OrganisationsController", () => {
               where: { collectionName: "documentation" }
             });
 
-            const mediaByIndicatorId = mediaCollection.reduce((acc, media) => {
-              if (acc[media.modelId] == null) {
-                acc[media.modelId] = [];
-              }
-              acc[media.modelId].push(media);
-              return acc;
-            }, {} as Record<number, Media[]>);
+            const mediaByIndicatorId = mediaCollection.reduce(
+              (acc, media) => {
+                if (acc[media.modelId] == null) {
+                  acc[media.modelId] = [];
+                }
+                acc[media.modelId].push(media);
+                return acc;
+              },
+              {} as Record<number, Media[]>
+            );
 
             for (const indicator of financialIndicators) {
               const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];

@@ -40,7 +40,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
 
-  const port = process.env.NODE_ENV === "production" ? 80 : process.env.DASHBOARD_SERVICE_PORT ?? 4060;
+  const port = process.env.NODE_ENV === "production" ? 80 : (process.env.DASHBOARD_SERVICE_PORT ?? 4060);
   await app.listen(port);
 
   Logger.log(`TerraMatch Dashboard Service is running on: http://localhost:${port}`);

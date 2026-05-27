@@ -1,5 +1,4 @@
 import { DateTime } from "luxon";
-import { Valid } from "luxon/src/_util";
 
 // A collection of assertions for use in REPL scripts.
 // Note: These should not be used in normal service / library code!
@@ -25,7 +24,7 @@ export const assertDate = (value: string | null, message: string, format = "M/d/
   const stringValue = assertNotNull(value, message);
   const result = DateTime.fromFormat(stringValue, format);
   assert(result.isValid, message);
-  return result as DateTime<Valid>;
+  return result as DateTime<true>;
 };
 
 export const assertMember = <T>(value: T | null | undefined, set: readonly T[], message: string) => {

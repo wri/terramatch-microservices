@@ -87,13 +87,16 @@ export abstract class EntityProcessor<
   abstract readonly LIGHT_DTO: Type<LightDto>;
   abstract readonly FULL_DTO: Type<FullDto>;
 
-  constructor(protected readonly entitiesService: EntitiesService, protected readonly resource: ProcessableEntity) {}
+  constructor(
+    protected readonly entitiesService: EntitiesService,
+    protected readonly resource: ProcessableEntity
+  ) {}
 
   abstract findOne(uuid: string): Promise<ModelType | null>;
   abstract findMany(query: EntityQueryDto): Promise<PaginatedResult<ModelType>>;
 
   abstract getFullDto(model: ModelType): Promise<DtoResult<FullDto>>;
-  abstract getLightDto(model: ModelType, lightResource?: EntityDto): Promise<DtoResult<LightDto>>;
+  abstract getLightDto(model: ModelType, associatedData?: object): Promise<DtoResult<LightDto>>;
 
   abstract export(uuid: string, target: Response | Archiver): Promise<void>;
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
@@ -188,12 +191,6 @@ export abstract class EntityProcessor<
     await model.save();
   }
 
-  /* istanbul ignore next */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  loadAssociationData(ids: number[]): Promise<Record<number, object>> {
-    return Promise.resolve({});
-  }
-
   /**
    * Creates a new entity with the provided attributes.
    * This method must be implemented by concrete processors.
@@ -201,6 +198,11 @@ export abstract class EntityProcessor<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected loadAssociationData(ids: number[]): Promise<Record<number, object>> {
+    return Promise.resolve({});
   }
 
   protected async authorizedCreation(modelCtor: ModelCtor<ModelType>, attributes: CreationAttributes<ModelType>) {

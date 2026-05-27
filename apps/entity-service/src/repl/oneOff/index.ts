@@ -22,3 +22,6 @@ export { updateImageUrls } from "./2026-04-30-updateImageUrls";
 export { reportDefaultValues } from "./2026-05-04-reportDefaultValues";
 export { dedupeProjectReportDocuments } from "./2026-04-29-dedupeProjectReportDocuments";
 export { fixFFAggregateQuestions } from "./2026-05-11-fixFFAggregateQuestions";
+export { renameSitePolygonStatuses } from "./2026-05-18-renameSitePolygonStatuses";
+export { restoreDeletedProjects } from "./2026-05-20-restoreDeletedProjects";
+export { migrateProjectLinkages } from "./2026-05-21-migrateProjectLinkages";

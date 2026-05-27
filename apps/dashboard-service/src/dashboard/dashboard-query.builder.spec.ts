@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Includeable, Op } from "sequelize";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { Project } from "@terramatch-microservices/database/entities";
 import { ModelCtor } from "sequelize-typescript";
@@ -60,8 +60,14 @@ describe("DashboardProjectsQueryBuilder", () => {
     builder.queryFilters({ country: "MX" });
     const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
     expect(where[Op.and]).toBeDefined();
-    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX" });
+    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX", isTest: false });
     expect(builder["findOptions"].include).toBeDefined();
+  });
+
+  it("should exclude test projects from queryFilters", () => {
+    builder.queryFilters({});
+    const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
+    expect(where[Op.and]?.[0]).toMatchObject({ isTest: false });
   });
 
   it("should combine where clauses using Op.and", () => {
@@ -81,7 +87,10 @@ describe("DashboardProjectsQueryBuilder", () => {
     expect(where[Op.and]).toBeDefined();
     expect(where[Op.and]?.[0]).toMatchObject({ country: "Kenya" });
     expect(where[Op.and]?.[1]).toMatchObject({ val: expect.stringContaining("JSON_CONTAINS(cohort") });
-    expect(builder["findOptions"].include?.[0]).toHaveProperty("association", "organisation");
+    expect((builder["findOptions"].include as Includeable[] | undefined)?.[0]).toHaveProperty(
+      "association",
+      "organisation"
+    );
   });
 
   it("should execute findAll with current findOptions", async () => {

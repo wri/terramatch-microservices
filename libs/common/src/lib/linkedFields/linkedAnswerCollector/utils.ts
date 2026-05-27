@@ -10,11 +10,18 @@ import {
 import { InternalServerErrorException, LoggerService } from "@nestjs/common";
 import { Dictionary, intersection, pick } from "lodash";
 import { FormModels, FormTypeMap, RelationResourceCollector } from "./index";
-import { Attributes, CreationAttributes, Includeable, Op, WhereAttributeHash } from "sequelize";
+import {
+  Attributes,
+  CountOptions,
+  CreationAttributes,
+  Includeable,
+  Op,
+  WhereAttributeHash,
+  WhereOptions
+} from "sequelize";
 import { FormModel, FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { apiAttributes } from "../../dto/json-api-attributes";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { CountOptions } from "sequelize/lib/model";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 
@@ -97,14 +104,14 @@ export const scopedSync = <M extends UuidModel>(
         }
 
         const existing = models.find(({ uuid }) => uuid === answer.uuid);
-        const updateAttributes = pick(answer, assignableAttributes);
+        const updateAttributes: Dictionary<unknown> = pick(answer, assignableAttributes);
         if (modelAttributes.includes("hidden")) updateAttributes["hidden"] = hidden;
         if (existing != null) {
           await existing.update(updateAttributes);
         } else {
           // count options requires a strong type to get the TS compiler to recognize the correct override
           const countOptions: Omit<CountOptions<Attributes<M>>, "group"> = {
-            where: { uuid: answer.uuid },
+            where: { uuid: answer.uuid } as WhereOptions<M>,
             paranoid: false
           };
           // Keep the UUID from the client if one was provided, but protect against collisions in the DB
@@ -146,7 +153,7 @@ export const polymorphicSync = <M extends PolymorphicModel & UuidModel>(
         [typeAttribute]: laravelType(model),
         [idAttribute]: model.id,
         collection: hasCollection ? field.collection : undefined
-      } as unknown as Partial<CreationAttributes<M>>),
+      }) as unknown as Partial<CreationAttributes<M>>,
     options
   );
 };
@@ -181,25 +188,29 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
       },
 
       async collect(answers, models, { forExport }) {
-        const collectionsByModel = Object.keys(questions).reduce((byModel, key) => {
-          const [modelType, collection] = key.split(":") as [FormModelType, string];
-          return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
-        }, {} as FormTypeMap<string[]>);
+        const collectionsByModel = Object.keys(questions).reduce(
+          (byModel, key) => {
+            const [modelType, collection] = key.split(":") as [FormModelType, string];
+            return { ...byModel, [modelType]: [...(byModel[modelType] ?? []), collection] };
+          },
+          {} as FormTypeMap<string[]>
+        );
 
         const laravelTypes = mapLaravelTypes(models);
         const modelInstances = await modelClass.findAll({
           where: {
-            [Op.or]: Object.entries(collectionsByModel).map(([modelType, collections]) => {
-              if (models[modelType] == null) {
-                throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+            [Op.or]: (Object.entries(collectionsByModel) as [FormModelType, string[]][]).map(
+              ([modelType, collections]) => {
+                if (models[modelType] == null) {
+                  throw new InternalServerErrorException(`Model for type not found: ${modelType}`);
+                }
+                return {
+                  [typeAttribute]: laravelTypes[modelType],
+                  [idAttribute]: models[modelType].id,
+                  ...(hasCollection ? { collection: { [Op.in]: collections } } : {})
+                } as WhereAttributeHash<Attributes<M>>;
               }
-              const attributes = {
-                [typeAttribute]: laravelTypes[modelType],
-                [idAttribute]: models[modelType].id
-              } as Record<Attributes<M>, string | number>;
-              if (hasCollection) attributes["collection"] = { [Op.in]: collections };
-              return attributes as WhereAttributeHash<Attributes<M>>;
-            })
+            )
           },
           attributes: dtoAttributes,
           include: options.include

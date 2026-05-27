@@ -69,39 +69,39 @@ export class Seeding extends Model<InferAttributes<Seeding>, InferCreationAttrib
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @AllowNull
   @ForeignKey(() => TreeSpeciesResearch)
   @Column(STRING)
-  taxonId: string | null;
+  declare taxonId: string | null;
 
   @AllowNull
   @Column(BIGINT)
-  amount: number | null;
+  declare amount: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  hidden: CreationOptional<boolean>;
+  declare hidden: CreationOptional<boolean>;
 
   @AllowNull
   @Column(DOUBLE)
-  weightOfSample: number | null;
+  declare weightOfSample: number | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  seedsInSample: number | null;
+  declare seedsInSample: number | null;
 
   @Column(STRING)
-  seedableType: string;
+  declare seedableType: string;
 
   @Column(BIGINT.UNSIGNED)
-  seedableId: number;
+  declare seedableId: number;
 }

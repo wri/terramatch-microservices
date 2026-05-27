@@ -41,7 +41,7 @@ export function mockRequestContext({
       authenticatedUserId: userId,
       permissions: permissions,
       // this is unusual, but it allows the caller to explicitly set a missing locale for testing
-      userLocale: locale === null ? locale : locale ?? "en-US",
+      userLocale: locale === null ? locale : (locale ?? "en-US"),
       policyBuilder: userId == null || permissions == null ? undefined : new PolicyBuilder(userId, permissions)
     },
     res: {}

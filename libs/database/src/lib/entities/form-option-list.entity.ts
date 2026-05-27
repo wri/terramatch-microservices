@@ -9,16 +9,16 @@ export class FormOptionList extends Model<FormOptionList> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @Unique
   @Column(STRING)
-  key: string;
+  declare key: string;
 
   @HasMany(() => FormOptionListOption, { foreignKey: "formOptionListId", constraints: false })
-  listOptions: FormOptionListOption[] | null;
+  declare listOptions: FormOptionListOption[] | null;
 }

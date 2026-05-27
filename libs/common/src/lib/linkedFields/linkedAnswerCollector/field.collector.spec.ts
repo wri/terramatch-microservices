@@ -5,7 +5,10 @@ import {
   NurseryFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
-  SiteFactory
+  SiteFactory,
+  FormSectionFactory,
+  FormQuestionOptionFactory,
+  OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
 import { VirtualTrackingAggregate } from "@terramatch-microservices/database/constants/linked-fields";
@@ -18,6 +21,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { FieldResourceCollector } from "./index";
 import { CollectorTestHarness, getField } from "../../util/testing";
+import { DateTime } from "luxon";
 
 describe("FieldCollector", () => {
   let harness: CollectorTestHarness;
@@ -39,19 +43,64 @@ describe("FieldCollector", () => {
     collector.addField(getField("pro-name"), "projects", "three");
     collector.addField(getField("site-landscape-community-contribution"), "sites", "four");
 
-    const site = await SiteFactory.create({ landscapeCommunityContribution: faker.lorem.paragraph(2) });
-    const nursery = await NurseryFactory.create();
-    await harness.expectAnswers(
-      { sites: site, nurseries: nursery },
-      { one: site.name, two: nursery.name, four: site.landscapeCommunityContribution }
-    );
+    // Set up some more complicated questions to handle prepareValueForExport coverage
+    const section = await FormSectionFactory.form().create();
+    const anr = await FormQuestionFactory.section(section).create({
+      inputType: "select",
+      linkedFieldKey: "site-anr-practices"
+    });
+    const options = await FormQuestionOptionFactory.forQuestion(anr).createMany(3);
+    collector.addField(getField("site-anr-practices"), "sites", anr.uuid);
 
+    // Missing options
+    const restoration = await FormQuestionFactory.section(section).create({
+      inputType: "select-image",
+      linkedFieldKey: "site-restoration-strategy"
+    });
+    collector.addField(getField("site-restoration-strategy"), "sites", restoration.uuid);
+
+    const months = await FormQuestionFactory.section(section).create({
+      inputType: "select",
+      optionsList: "months",
+      linkedFieldKey: "org-fin_start_month"
+    });
+    collector.addField(getField("org-fin_start_month"), "organisations", months.uuid);
+
+    collector.addField(getField("site-start-date"), "sites", "five");
+
+    const site = await SiteFactory.create({
+      landscapeCommunityContribution: faker.lorem.paragraph(2),
+      anrPractices: [options[0].slug as string, options[2].slug as string],
+      restorationStrategy: ["fake-restoration-slug"],
+      startDate: faker.date.past()
+    });
+    const nursery = await NurseryFactory.create();
+    const org = await OrganisationFactory.create({
+      finStartMonth: 3
+    });
     await harness.expectAnswers(
-      { sites: site, nurseries: nursery },
+      { sites: site, nurseries: nursery, organisations: org },
       {
         one: site.name,
         two: nursery.name,
-        four: site.landscapeCommunityContribution
+        four: site.landscapeCommunityContribution,
+        [anr.uuid]: [options[0].slug, options[2].slug],
+        [months.uuid]: 3,
+        [restoration.uuid]: ["fake-restoration-slug"],
+        five: site.startDate
+      }
+    );
+
+    await harness.expectAnswers(
+      { sites: site, nurseries: nursery, organisations: org },
+      {
+        one: site.name,
+        two: nursery.name,
+        four: site.landscapeCommunityContribution,
+        [anr.uuid]: [options[0].label, options[2].label],
+        [months.uuid]: ["March"],
+        [restoration.uuid]: ["fake-restoration-slug"],
+        five: DateTime.fromJSDate(site.startDate as Date).toFormat("yyyy-MM-dd HH:mm:ss")
       },
       { forExport: true }
     );

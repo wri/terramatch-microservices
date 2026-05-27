@@ -9,7 +9,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
+import { Attributes, col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
@@ -144,8 +144,14 @@ export class TreeService {
       const parent = report instanceof SiteReport ? report.site : report.nursery;
       const trees = groupBy(
         flattenDeep([
-          parentModel.TREE_ASSOCIATIONS.map(association => parent?.[association] ?? ([] as TreeSpecies[])),
-          Project.TREE_ASSOCIATIONS.map(association => parent?.project?.[association] ?? ([] as TreeSpecies[]))
+          parentModel.TREE_ASSOCIATIONS.map(
+            association =>
+              (parent as unknown as undefined | { [association]: TreeSpecies[] | null })?.[association] ?? []
+          ),
+          Project.TREE_ASSOCIATIONS.map(
+            association =>
+              (parent?.project as unknown as undefined | { [association]: TreeSpecies[] | null })?.[association] ?? []
+          )
         ]),
         "collection"
       ) as Dictionary<TreeSpecies[]>;
@@ -186,13 +192,20 @@ export class TreeService {
       const entityModel = await (entity === "sites"
         ? Site.findOne(whereOptions)
         : entity === "nurseries"
-        ? Nursery.findOne(whereOptions)
-        : ProjectReport.findOne(whereOptions));
+          ? Nursery.findOne(whereOptions)
+          : ProjectReport.findOne(whereOptions));
       if (entityModel == null) throw new NotFoundException();
 
       const uniqueTrees = uniqueTreeNames(
         groupBy(
-          flatten(Project.TREE_ASSOCIATIONS.map(association => entityModel.project?.[association] ?? [])),
+          flatten(
+            Project.TREE_ASSOCIATIONS.map(
+              association =>
+                (entityModel.project as unknown as undefined | { [association]: TreeSpecies[] | null })?.[
+                  association
+                ] ?? []
+            )
+          ),
           "collection"
         )
       );
@@ -263,7 +276,7 @@ export class TreeService {
     const records: InstanceType<TreeReportModelType>[] = await model.findAll({
       attributes: [],
       where: {
-        [model.PARENT_ID]: report[model.PARENT_ID],
+        [model.PARENT_ID]: report[model.PARENT_ID as keyof Attributes<typeof report>],
         dueAt: { [Op.lt]: report.dueAt }
       },
       include: modelIncludes
@@ -271,7 +284,11 @@ export class TreeService {
 
     const trees = groupBy(
       flattenDeep(
-        records.map(record => model.TREE_ASSOCIATIONS.map(association => record[association] as TreeSpecies[]))
+        records.map(record =>
+          model.TREE_ASSOCIATIONS.map(
+            association => (record as unknown as { [association]: TreeSpecies[] })[association]
+          )
+        )
       ),
       "collection"
     );

@@ -7,17 +7,17 @@ export class SavedExport extends Model<InferAttributes<SavedExport>, InferCreati
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: CreationOptional<number>;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: CreationOptional<string>;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)
-  name: string | null;
+  declare name: string | null;
 
   @ForeignKey(() => FundingProgramme)
   @Column(BIGINT.UNSIGNED)
-  fundingProgrammeId: number;
+  declare fundingProgrammeId: number;
 }

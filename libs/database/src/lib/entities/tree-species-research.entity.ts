@@ -6,29 +6,29 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 export class TreeSpeciesResearch extends Model<TreeSpeciesResearch> {
   @PrimaryKey
   @Column(STRING)
-  taxonId: string;
+  declare taxonId: string;
 
   @Unique
   @Column(STRING)
-  scientificName: string;
+  declare scientificName: string;
 
   @Column(STRING)
-  family: string;
+  declare family: string;
 
   @Column(STRING)
-  genus: string;
+  declare genus: string;
 
   @Column(STRING)
-  specificEpithet: string;
+  declare specificEpithet: string;
 
   @Column(STRING)
-  infraspecificEpithet: string;
+  declare infraspecificEpithet: string;
 
   @AllowNull
   @JsonColumn()
-  nativeDistribution: string[] | null;
+  declare nativeDistribution: string[] | null;
 
   @AllowNull
   @JsonColumn()
-  suitability: string[] | null;
+  declare suitability: string[] | null;
 }

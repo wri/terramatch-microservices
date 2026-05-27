@@ -121,91 +121,91 @@ export class Form extends Model<Form> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  override id: number;
+  declare id: number;
 
   @Index
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  uuid: string;
+  declare uuid: string;
 
   @AllowNull
   @Column(STRING)
-  frameworkKey: FrameworkKey | null;
+  declare frameworkKey: FrameworkKey | null;
 
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
-  framework: Framework | null;
+  declare framework: Framework | null;
 
   @AllowNull
   @Column(STRING)
-  model: string | null;
+  declare model: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
-  override version: number;
+  declare version: number;
 
   @AllowNull
   @Column(STRING)
-  type: FormType | null;
+  declare type: FormType | null;
 
   @Column(TEXT)
-  title: string;
+  declare title: string;
 
   @AllowNull
   @Column(INTEGER)
-  titleId: number | null;
+  declare titleId: number | null;
 
   @AllowNull
   @Column(TEXT)
-  subtitle: string | null;
+  declare subtitle: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  subtitleId: number | null;
+  declare subtitleId: number | null;
 
   @AllowNull
   @Column(TEXT)
-  description: string | null;
+  declare description: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  descriptionId: number | null;
+  declare descriptionId: number | null;
 
   @AllowNull
   @Column(TEXT)
-  documentation: string | null;
+  declare documentation: string | null;
 
   @AllowNull
   @Column(TEXT)
-  submissionMessage: string | null;
+  declare submissionMessage: string | null;
 
   @AllowNull
   @Column(INTEGER)
-  submissionMessageId: number | null;
+  declare submissionMessageId: number | null;
 
   @AllowNull
   @Column(TEXT)
-  duration: string | null;
+  declare duration: string | null;
 
   @Column(BOOLEAN)
-  published: boolean;
+  declare published: boolean;
 
   @AllowNull
   @Column(UUID)
-  stageId: string | null;
+  declare stageId: string | null;
 
   @BelongsTo(() => Stage, { foreignKey: "stageId", targetKey: "uuid", constraints: false })
-  stage: Stage | null;
+  declare stage: Stage | null;
 
   @Column(STRING)
-  updatedBy: string | null;
+  declare updatedBy: string | null;
 
   @AllowNull
   @Column(DATE)
-  deadlineAt: Date | null;
+  declare deadlineAt: Date | null;
 
   @AllowNull
   @Column(STRING)
-  documentationLabel: string | null;
+  declare documentationLabel: string | null;
 
   /**
    * The funding programme, reporting framework, or entity that is using this form.

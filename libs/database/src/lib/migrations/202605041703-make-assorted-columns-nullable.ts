@@ -1,5 +1,5 @@
 import { RunnableMigration } from "umzug";
-import { QueryInterface } from "sequelize";
+import { Attributes, ModelAttributeColumnOptions, QueryInterface } from "sequelize";
 import { ProjectReport, SiteReport } from "../entities";
 
 export const NULLABLE_COLUMNS = {
@@ -33,28 +33,36 @@ export const makeAssortedColumnsNullable: RunnableMigration<QueryInterface> = {
   async up({ context }) {
     const projectReportAttributes = ProjectReport.getAttributes();
     for (const column of NULLABLE_COLUMNS.projectReports) {
-      const { type, field } = projectReportAttributes[column];
-      await context.changeColumn("v2_project_reports", field, { type, allowNull: true });
+      const { type, field } = projectReportAttributes[
+        column as keyof Attributes<ProjectReport>
+      ] as ModelAttributeColumnOptions;
+      await context.changeColumn("v2_project_reports", field as string, { type, allowNull: true });
     }
 
     const siteReportAttributes = SiteReport.getAttributes();
     for (const column of NULLABLE_COLUMNS.siteReports) {
-      const { type, field } = siteReportAttributes[column];
-      await context.changeColumn("v2_site_reports", field, { type, allowNull: true });
+      const { type, field } = siteReportAttributes[
+        column as keyof Attributes<SiteReport>
+      ] as ModelAttributeColumnOptions;
+      await context.changeColumn("v2_site_reports", field as string, { type, allowNull: true });
     }
   },
 
   async down({ context }) {
     const projectReportAttributes = ProjectReport.getAttributes();
     for (const column of NULLABLE_COLUMNS.projectReports) {
-      const { type, field } = projectReportAttributes[column];
-      await context.changeColumn("v2_project_reports", field, { type, allowNull: false });
+      const { type, field } = projectReportAttributes[
+        column as keyof Attributes<ProjectReport>
+      ] as ModelAttributeColumnOptions;
+      await context.changeColumn("v2_project_reports", field as string, { type, allowNull: false });
     }
 
     const siteReportAttributes = SiteReport.getAttributes();
     for (const column of NULLABLE_COLUMNS.siteReports) {
-      const { type, field } = siteReportAttributes[column];
-      await context.changeColumn("v2_site_reports", field, { type, allowNull: false });
+      const { type, field } = siteReportAttributes[
+        column as keyof Attributes<SiteReport>
+      ] as ModelAttributeColumnOptions;
+      await context.changeColumn("v2_site_reports", field as string, { type, allowNull: false });
     }
   }
 };

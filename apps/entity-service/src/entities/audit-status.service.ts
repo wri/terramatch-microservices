@@ -233,8 +233,8 @@ export class AuditStatusService {
       status: attributes.status ?? null,
       comment: attributes.comment ?? null,
       type: attributes.type ?? null,
-      isActive: attributes.type === "change-request" ? attributes.isActive ?? null : null,
-      requestRemoved: attributes.type === "change-request" ? attributes.requestRemoved ?? null : null,
+      isActive: attributes.type === "change-request" ? (attributes.isActive ?? null) : null,
+      requestRemoved: attributes.type === "change-request" ? (attributes.requestRemoved ?? null) : null,
       createdBy: user.emailAddress, // this is storing the email of the user, not the ID
       firstName: user.firstName,
       lastName: user.lastName

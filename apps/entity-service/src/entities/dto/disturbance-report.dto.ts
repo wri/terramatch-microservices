@@ -53,11 +53,8 @@ export class DisturbanceReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation uuid" })
   organisationUuid: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
+  @ApiProperty({ nullable: true, type: String })
   intensity: string | null;
-
-  @ApiProperty({ nullable: true, type: Date })
-  dateOfDisturbance: Date | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -70,6 +67,12 @@ export class DisturbanceReportLightDto extends EntityDto {
 
   @ApiProperty({ type: Number })
   reportId: number;
+
+  @ApiProperty({ nullable: true, type: Date })
+  disturbanceStartDate: Date | null;
+
+  @ApiProperty({ nullable: true, type: Date })
+  disturbanceEndDate: Date | null;
 }
 
 export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof DisturbanceReport.MEDIA>;

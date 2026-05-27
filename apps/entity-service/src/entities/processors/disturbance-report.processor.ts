@@ -61,9 +61,14 @@ const REPORT_ENTRIES = [
     title: "Property Affected"
   },
   {
-    name: "date-of-disturbance",
+    name: "disturbance-start-date",
     inputType: "date",
-    title: "Date of Disturbance"
+    title: "Disturbance Start Date"
+  },
+  {
+    name: "disturbance-end-date",
+    inputType: "date",
+    title: "Disturbance End Date"
   },
   {
     name: "site-affected",
@@ -103,7 +108,8 @@ const CSV_COLUMNS: Dictionary<string> = {
   projectUuid: "Project UUID",
   projectName: "Project Name",
   status: "Status",
-  dateOfDisturbance: "Date of Disturbance",
+  disturbanceStartDate: "Disturbance Start Date",
+  disturbanceEndDate: "Disturbance End Date",
   extent: "Extent",
   propertyAffected: "Property Affected",
   peopleAffected: "People Affected",
@@ -282,14 +288,16 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   async getFullDto(disturbanceReport: DisturbanceReport) {
     const entries = await this.getDisturbanceReportEntries(disturbanceReport);
     const intensity = entries.find(entry => entry.name === "intensity")?.value ?? null;
-    const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
+    const disturbanceStartDate = entries.find(entry => entry.name === "disturbance-start-date")?.value;
+    const disturbanceEndDate = entries.find(entry => entry.name === "disturbance-end-date")?.value;
     const mediaCollection = await Media.for(disturbanceReport).findAll();
     const dto = new DisturbanceReportFullDto(disturbanceReport, {
       ...(await this.getFeedback(disturbanceReport)),
       reportId: disturbanceReport.id,
       entries,
       intensity,
-      dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null,
+      disturbanceStartDate: disturbanceStartDate != null ? new Date(disturbanceStartDate) : null,
+      disturbanceEndDate: disturbanceEndDate != null ? new Date(disturbanceEndDate) : null,
       ...(this.entitiesService.mapMediaCollection(
         mediaCollection,
         DisturbanceReport.MEDIA,
@@ -319,7 +327,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   async getLightDto(disturbanceReport: DisturbanceReport) {
     const entries = await this.getDisturbanceReportEntries(disturbanceReport);
     const intensity = entries.find(entry => entry.name === "intensity")?.value ?? null;
-    const dateOfDisturbance = entries.find(entry => entry.name === "date-of-disturbance")?.value;
+    const disturbanceStartDate = entries.find(entry => entry.name === "disturbance-start-date")?.value;
+    const disturbanceEndDate = entries.find(entry => entry.name === "disturbance-end-date")?.value;
 
     return {
       id: disturbanceReport.uuid,
@@ -327,7 +336,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         reportId: disturbanceReport.id,
         entries,
         intensity,
-        dateOfDisturbance: dateOfDisturbance != null ? new Date(dateOfDisturbance) : null
+        disturbanceStartDate: disturbanceStartDate != null ? new Date(disturbanceStartDate) : null,
+        disturbanceEndDate: disturbanceEndDate != null ? new Date(disturbanceEndDate) : null
       })
     };
   }

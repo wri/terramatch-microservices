@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { IndicatorsService } from "./indicators.service";
 import { DataApiService } from "@terramatch-microservices/data-api";
-import { IndicatorSlug, PPC } from "@terramatch-microservices/database/constants";
+import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import {
   PolygonGeometry,
@@ -118,6 +118,7 @@ describe("IndicatorsService", () => {
       expect(mockPolicyService.authorize).toHaveBeenCalledWith("read", expect.objectContaining({ uuid: "site-uuid" }));
       expect(result).toContain("Polygon Name");
       expect(result).toContain("Size (ha)");
+      expect(result).toContain("PPC External ID");
     });
 
     it("should export tree cover loss data with dynamic years", async () => {
@@ -216,7 +217,7 @@ describe("IndicatorsService", () => {
     });
 
     it("should include ppc_external_id column for PPC site exports", async () => {
-      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: PPC } as Site;
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "ppc" } as Site;
       const mockPolygon = {
         id: 1,
         polyName: "Polygon 1",
@@ -244,7 +245,7 @@ describe("IndicatorsService", () => {
       expect(result).toContain("42001");
     });
 
-    it("should omit ppc_external_id column for non-PPC site exports", async () => {
+    it("should include empty ppc_external_id column for non-PPC site exports", async () => {
       const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "terrafund-3" } as Site;
       const mockPolygon = {
         id: 1,
@@ -252,7 +253,7 @@ describe("IndicatorsService", () => {
         status: "approved",
         plantStart: new Date("2020-01-01"),
         calcArea: 100.5,
-        site: { name: "Test Site", ppcExternalId: 99_999 } as Site
+        site: { name: "Test Site", ppcExternalId: null } as Site
       } as unknown as SitePolygon;
 
       const mockIndicator = {
@@ -269,12 +270,13 @@ describe("IndicatorsService", () => {
 
       const result = await service.exportIndicatorToCsv("sites", "site-uuid", "treeCoverLoss");
 
-      expect(result).not.toContain("PPC External ID");
+      expect(result).toContain("PPC External ID");
+      expect(result).toMatch(/Test Site,,approved|Test Site,"",approved/);
       expect(result).not.toContain("99999");
     });
 
     it("should leave ppc_external_id empty when PPC site has no external id", async () => {
-      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: PPC } as Site;
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "ppc" } as Site;
       const mockPolygon = {
         id: 1,
         polyName: "Polygon 1",

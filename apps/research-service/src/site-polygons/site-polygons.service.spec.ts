@@ -1697,5 +1697,51 @@ describe("SitePolygonsService", () => {
 
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
+
+    it("skips validation job creation when project lookup returns null", async () => {
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ id: 15, projectId: 400, name: "Site Fifteen" } as Site]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue(null);
+      const delayedJobSpy = jest.spyOn(DelayedJob, "create");
+
+      await service.triggerProjectValidationJobs([{ siteUuid: "site-15" } as SitePolygon], 6);
+
+      expect(delayedJobSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("creates one project validation job per unique project", async () => {
+      jest
+        .spyOn(Site, "findAll")
+        .mockResolvedValue([
+          { id: 21, projectId: 500, name: "Site Twenty One" } as Site,
+          { id: 22, projectId: 500, name: "Site Twenty Two" } as Site
+        ]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue({ id: 500, name: "Project Five Hundred" } as Project);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({ id: 123 } as DelayedJob);
+
+      await service.triggerProjectValidationJobs(
+        [{ siteUuid: "site-21" } as SitePolygon, { siteUuid: "site-22" } as SitePolygon],
+        7
+      );
+
+      expect(Project.findByPk).toHaveBeenCalledTimes(1);
+      expect(Project.findByPk).toHaveBeenCalledWith(500, { attributes: ["id", "name"] });
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Project Area Validation Refresh",
+          createdBy: 7,
+          metadata: {
+            entity_id: 500,
+            entity_type: Project.LARAVEL_TYPE,
+            entity_name: "Project Five Hundred"
+          }
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith("projectValidation", {
+        projectId: 500,
+        validationTypes: ["ESTIMATED_AREA"],
+        delayedJobId: 123
+      });
+    });
   });
 });

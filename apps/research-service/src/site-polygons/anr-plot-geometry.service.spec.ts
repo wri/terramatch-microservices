@@ -205,6 +205,115 @@ describe("AnrPlotGeometryService", () => {
   });
 
   describe("upsertPlot", () => {
+    const collectionWithFeature = (feature: Partial<FeatureCollection["features"][number]>): FeatureCollection => ({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [0, 0],
+                [0.001, 0],
+                [0.001, 0.001],
+                [0, 0.001],
+                [0, 0]
+              ]
+            ]
+          },
+          properties: { plotId: 1 },
+          ...feature
+        }
+      ]
+    });
+
+    it("should throw BadRequestException when geometry type is unsupported", async () => {
+      const badCollection = collectionWithFeature({
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [0, 0],
+            [1, 1]
+          ]
+        }
+      });
+
+      await expect(service.upsertPlot(sitePolygonId, badCollection, 1)).rejects.toThrow(
+        'unsupported geometry type "LineString"'
+      );
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when properties are null or not an object", async () => {
+      await expect(service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: null }), 1)).rejects.toThrow(
+        "invalid properties"
+      );
+      await expect(
+        service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: ["plotId"] as never }), 1)
+      ).rejects.toThrow("invalid properties");
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when plotId is missing or invalid", async () => {
+      await expect(
+        service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: { areaM2: 10 } }), 1)
+      ).rejects.toThrow("plotId is required");
+      await expect(
+        service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: { plotId: 0 } }), 1)
+      ).rejects.toThrow("plotId must be a positive finite number");
+      await expect(
+        service.upsertPlot(
+          sitePolygonId,
+          collectionWithFeature({ properties: { plotId: Number.POSITIVE_INFINITY } }),
+          1
+        )
+      ).rejects.toThrow("plotId must be a positive finite number");
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when optional properties have invalid types", async () => {
+      await expect(
+        service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: { plotId: 1, areaM2: "10" } }), 1)
+      ).rejects.toThrow("areaM2 must be a finite number");
+      await expect(
+        service.upsertPlot(sitePolygonId, collectionWithFeature({ properties: { plotId: 1, select: 123 } }), 1)
+      ).rejects.toThrow("select must be a string or null");
+      expect(AnrPlotGeometry.sql.transaction).not.toHaveBeenCalled();
+    });
+
+    it("should accept MultiPolygon geometry and optional null select", async () => {
+      (AnrPlotGeometry.destroy as jest.Mock).mockResolvedValue(1);
+      (AnrPlotGeometry.create as jest.Mock).mockResolvedValue(mockPlot);
+      const multiPolygonCollection = collectionWithFeature({
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [0, 0],
+                [0.001, 0],
+                [0.001, 0.001],
+                [0, 0.001],
+                [0, 0]
+              ]
+            ]
+          ]
+        },
+        properties: { plotId: 2, areaM2: undefined, select: null }
+      });
+
+      await service.upsertPlot(sitePolygonId, multiPolygonCollection, 10);
+
+      expect(AnrPlotGeometry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          geojson: multiPolygonCollection,
+          plotCount: 1
+        }),
+        expect.objectContaining({ transaction: expect.anything() })
+      );
+    });
+
     it("should throw BadRequestException when feature properties use snake_case", async () => {
       const badCollection: FeatureCollection = {
         type: "FeatureCollection",

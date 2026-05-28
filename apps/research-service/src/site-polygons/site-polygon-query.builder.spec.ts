@@ -632,6 +632,14 @@ describe("SitePolygonQueryBuilder", () => {
         siteUuid: site.uuid,
         updatedAt: new Date(Date.UTC(2025, 1, 1))
       });
+      await SitePolygon.update(
+        { updatedAt: new Date(Date.UTC(2023, 1, 1)) },
+        { where: { id: older.id }, silent: true }
+      );
+      await SitePolygon.update(
+        { updatedAt: new Date(Date.UTC(2025, 1, 1)) },
+        { where: { id: newer.id }, silent: true }
+      );
 
       builder.modifiedSince(new Date(Date.UTC(2024, 1, 1)));
       const result = await builder.execute();

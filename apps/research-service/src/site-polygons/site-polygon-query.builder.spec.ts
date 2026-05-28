@@ -3,6 +3,8 @@ import { SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { SitePolygonFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import { BadRequestException } from "@nestjs/common";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 
 describe("SitePolygonQueryBuilder", () => {
   let builder: SitePolygonQueryBuilder;
@@ -342,6 +344,103 @@ describe("SitePolygonQueryBuilder", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(match.id);
+    });
+  });
+
+  describe("no-op filters", () => {
+    it("hasStatuses should not filter when statuses are not provided", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonA = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft" });
+      const polygonB = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved" });
+
+      builder.hasStatuses(undefined);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([polygonA.id, polygonB.id].sort());
+    });
+
+    it("modifiedSince should not filter when date is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonA = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const polygonB = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      builder.modifiedSince(undefined);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([polygonA.id, polygonB.id].sort());
+    });
+
+    it("filterPlantStartRange should not filter when both bounds are undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const withDate = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        plantStart: new Date(Date.UTC(2024, 0, 1))
+      });
+      const withoutDate = await SitePolygonFactory.create({ siteUuid: site.uuid, plantStart: null });
+
+      builder.filterPlantStartRange(undefined, undefined);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([withDate.id, withoutDate.id].sort());
+    });
+
+    it("filterPractice, filterDistr, filterTargetSys and filterSource should no-op on empty arrays", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        practice: ["tree-planting"],
+        distr: ["full"],
+        targetSys: "mangrove",
+        source: "terramatch"
+      });
+
+      builder.filterPractice([]);
+      builder.filterDistr([]);
+      builder.filterTargetSys([]);
+      builder.filterSource([]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
+    });
+
+    it("filterHasOverlap should not filter when flag is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      builder.filterHasOverlap(undefined);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
+    });
+
+    it("addSearch should no-op when requested fields do not include searchable columns", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polyName: "Alpha Polygon"
+      });
+
+      await builder.addSearch("Alpha", []);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
+    });
+  });
+
+  describe("project attribute validation", () => {
+    it("should throw BadRequestException for an unrecognized landscape slug", async () => {
+      await expect(builder.filterProjectAttributes(undefined, "does-not-exist-slug" as LandscapeSlug)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 });

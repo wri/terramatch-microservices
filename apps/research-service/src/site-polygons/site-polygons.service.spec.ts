@@ -1184,7 +1184,6 @@ describe("SitePolygonsService", () => {
       await SitePolygonFactory.create({
         siteUuid: site.uuid,
         polygonUuid: polygonGeometry.uuid,
-        pointUuid,
         primaryUuid,
         isActive: true
       });

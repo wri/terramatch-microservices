@@ -1,7 +1,13 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { SitePolygonFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
-import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/entities";
+import {
+  SitePolygonFactory,
+  ProjectFactory,
+  SiteFactory,
+  IndicatorOutputTreeCoverFactory,
+  LandscapeGeometryFactory
+} from "@terramatch-microservices/database/factories";
+import { CriteriaSite, SitePolygon, Site } from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { BadRequestException } from "@nestjs/common";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -550,6 +556,145 @@ describe("SitePolygonQueryBuilder", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(polygon.id);
+    });
+
+    it("should filter by project UUIDs", async () => {
+      const projectA = await ProjectFactory.create();
+      const projectB = await ProjectFactory.create();
+      const siteA = await SiteFactory.create({ projectId: projectA.id });
+      const siteB = await SiteFactory.create({ projectId: projectB.id });
+      const polygonA = await SitePolygonFactory.create({ siteUuid: siteA.uuid });
+      await SitePolygonFactory.create({ siteUuid: siteB.uuid });
+
+      await builder.filterProjectUuids([projectA.uuid]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygonA.id);
+    });
+
+    it("should exclude polygons from test projects", async () => {
+      const testProject = await ProjectFactory.create({ isTest: true });
+      const regularProject = await ProjectFactory.create({ isTest: false });
+      const testSite = await SiteFactory.create({ projectId: testProject.id });
+      const regularSite = await SiteFactory.create({ projectId: regularProject.id });
+      await SitePolygonFactory.create({ siteUuid: testSite.uuid });
+      const regularPolygon = await SitePolygonFactory.create({ siteUuid: regularSite.uuid });
+
+      await builder.excludeTestProjects();
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(regularPolygon.id);
+    });
+
+    it("should filter by cohort and landscape when both are provided", async () => {
+      const landscape = await LandscapeGeometryFactory.create({
+        slug: "afr100-palawan" as LandscapeSlug,
+        landscape: "Palawan"
+      });
+      const matchingProject = await ProjectFactory.create({
+        cohort: ["2024-q4"],
+        landscape: landscape.landscape
+      });
+      const wrongLandscapeProject = await ProjectFactory.create({
+        cohort: ["2024-q4"],
+        landscape: "Different Landscape"
+      });
+      const wrongCohortProject = await ProjectFactory.create({
+        cohort: ["2023-q3"],
+        landscape: landscape.landscape
+      });
+      const matchingSite = await SiteFactory.create({ projectId: matchingProject.id });
+      const wrongLandscapeSite = await SiteFactory.create({ projectId: wrongLandscapeProject.id });
+      const wrongCohortSite = await SiteFactory.create({ projectId: wrongCohortProject.id });
+      const matchingPolygon = await SitePolygonFactory.create({ siteUuid: matchingSite.uuid });
+      await SitePolygonFactory.create({ siteUuid: wrongLandscapeSite.uuid });
+      await SitePolygonFactory.create({ siteUuid: wrongCohortSite.uuid });
+
+      await builder.filterProjectAttributes(["2024-q4"], landscape.slug as LandscapeSlug);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(matchingPolygon.id);
+    });
+  });
+
+  describe("modifiedSince", () => {
+    it("should return only polygons updated after the provided date", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const older = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        updatedAt: new Date(Date.UTC(2023, 1, 1))
+      });
+      const newer = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        updatedAt: new Date(Date.UTC(2025, 1, 1))
+      });
+
+      builder.modifiedSince(new Date(Date.UTC(2024, 1, 1)));
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(newer.id);
+      expect(result.map(p => p.id)).not.toContain(older.id);
+    });
+  });
+
+  describe("indicator filters", () => {
+    it("isMissingIndicators should return polygons without the selected indicator", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const withIndicator = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const withoutIndicator = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      await IndicatorOutputTreeCoverFactory.create({
+        sitePolygonId: withIndicator.id,
+        indicatorSlug: "treeCover",
+        yearOfAnalysis: 2024
+      });
+
+      builder.isMissingIndicators(["treeCover"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(withoutIndicator.id);
+    });
+
+    it("hasPresentIndicators should return polygons with the selected indicator", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const withIndicator = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      await IndicatorOutputTreeCoverFactory.create({
+        sitePolygonId: withIndicator.id,
+        indicatorSlug: "treeCover",
+        yearOfAnalysis: 2025
+      });
+
+      builder.hasPresentIndicators(["treeCover"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(withIndicator.id);
+    });
+
+    it("should throw for unknown indicator slugs", () => {
+      expect(() => builder.isMissingIndicators(["not-a-real-indicator" as never])).toThrow(BadRequestException);
+      expect(() => builder.hasPresentIndicators(["not-a-real-indicator" as never])).toThrow(BadRequestException);
+    });
+  });
+
+  describe("builder constructor defaults", () => {
+    it("marks site include as required", () => {
+      const includes = ((
+        builder as unknown as { findOptions: { include: Array<{ model?: unknown; required?: boolean }> } }
+      ).findOptions.include ?? []) as Array<{ model?: unknown; required?: boolean }>;
+      const siteInclude = includes.find(include => include.model === Site);
+
+      expect(siteInclude?.required).toBe(true);
     });
   });
 });

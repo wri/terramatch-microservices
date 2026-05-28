@@ -184,6 +184,24 @@ describe("SitePolygonsService", () => {
     expect(treeCoverLoss?.value).toEqual({ "2015": 0.3, "2020": 0.5 });
   });
 
+  it("should filter tree cover loss fires data by plant start year range", async () => {
+    const plantStart = new Date("2021-06-15");
+    const sitePolygon = await SitePolygonFactory.create({ plantStart });
+    await IndicatorOutputTreeCoverLossFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "treeCoverLossFires",
+      value: { "2010": 0.1, "2011": 0.2, "2021": 0.5, "2022": 0.8 }
+    });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const indicators = associations[sitePolygon.id]?.indicators;
+    const treeCoverLossFires = indicators?.find(
+      i => i.indicatorSlug === "treeCoverLossFires"
+    ) as IndicatorTreeCoverLossDto;
+
+    expect(treeCoverLossFires?.value).toEqual({ "2011": 0.2, "2021": 0.5 });
+  });
+
   it("should group tree species by site and report correctly", async () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;

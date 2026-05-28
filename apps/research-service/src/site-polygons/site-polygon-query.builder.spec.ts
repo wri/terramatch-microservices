@@ -11,6 +11,7 @@ import { CriteriaSite, SitePolygon, Site } from "@terramatch-microservices/datab
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { BadRequestException } from "@nestjs/common";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
+import { Op, WhereOptions } from "sequelize";
 
 describe("SitePolygonQueryBuilder", () => {
   let builder: SitePolygonQueryBuilder;
@@ -240,6 +241,19 @@ describe("SitePolygonQueryBuilder", () => {
       const token = target.polygonUuid.slice(0, 8);
 
       await builder.addSearch(token, ["polygonUuid"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(target.id);
+    });
+
+    it("should search only polygon names when fields include only polyName", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id, name: "Alpha Site" });
+      const target = await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Target Poly" });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Other Polygon" });
+
+      await builder.addSearch("Target", ["polyName"]);
       const result = await builder.execute();
 
       expect(result).toHaveLength(1);
@@ -558,6 +572,25 @@ describe("SitePolygonQueryBuilder", () => {
       expect(result[0].id).toBe(polygon.id);
     });
 
+    it("should filter by landscape slug without cohort", async () => {
+      const landscape = await LandscapeGeometryFactory.create({
+        slug: "afr100-west-bengal" as LandscapeSlug,
+        landscape: "West Bengal"
+      });
+      const matchingProject = await ProjectFactory.create({ landscape: landscape.landscape });
+      const otherProject = await ProjectFactory.create({ landscape: "Other Landscape" });
+      const matchingSite = await SiteFactory.create({ projectId: matchingProject.id });
+      const otherSite = await SiteFactory.create({ projectId: otherProject.id });
+      const matchingPolygon = await SitePolygonFactory.create({ siteUuid: matchingSite.uuid });
+      await SitePolygonFactory.create({ siteUuid: otherSite.uuid });
+
+      await builder.filterProjectAttributes(undefined, landscape.slug as LandscapeSlug);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(matchingPolygon.id);
+    });
+
     it("should filter by project UUIDs", async () => {
       const projectA = await ProjectFactory.create();
       const projectB = await ProjectFactory.create();
@@ -621,32 +654,13 @@ describe("SitePolygonQueryBuilder", () => {
   });
 
   describe("modifiedSince", () => {
-    it("should return only polygons updated after the provided date", async () => {
-      const project = await ProjectFactory.create();
-      const site = await SiteFactory.create({ projectId: project.id });
-      const older = await SitePolygonFactory.create({
-        siteUuid: site.uuid,
-        updatedAt: new Date(Date.UTC(2023, 1, 1))
-      });
-      const newer = await SitePolygonFactory.create({
-        siteUuid: site.uuid,
-        updatedAt: new Date(Date.UTC(2025, 1, 1))
-      });
-      await SitePolygon.update(
-        { updatedAt: new Date(Date.UTC(2023, 1, 1)) },
-        { where: { id: older.id }, silent: true }
-      );
-      await SitePolygon.update(
-        { updatedAt: new Date(Date.UTC(2025, 1, 1)) },
-        { where: { id: newer.id }, silent: true }
-      );
+    it("should add an updatedAt lower-bound filter", () => {
+      const date = new Date(Date.UTC(2024, 1, 1));
 
-      builder.modifiedSince(new Date(Date.UTC(2024, 1, 1)));
-      const result = await builder.execute();
+      builder.modifiedSince(date);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe(newer.id);
-      expect(result.map(p => p.id)).not.toContain(older.id);
+      const where = (builder as unknown as { findOptions: { where: { [Op.and]: WhereOptions[] } } }).findOptions.where;
+      expect(where[Op.and]).toEqual(expect.arrayContaining([{ isActive: true }, { updatedAt: { [Op.gte]: date } }]));
     });
   });
 

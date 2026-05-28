@@ -12,6 +12,7 @@ import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import type { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
+import type { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Sequelize, Transaction } from "sequelize";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
@@ -545,6 +546,45 @@ describe("SitePolygonsController", () => {
       expect(result.data).toBeDefined();
     });
 
+    it("should throw BadRequestException when geometries are missing for normal creation", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const request = { data: { type: "sitePolygons", attributes: { geometries: [] } } };
+
+      await expect(controller.create(request as CreateSitePolygonJsonApiRequestDto)).rejects.toThrow(
+        BadRequestException
+      );
+      expect(sitePolygonCreationService.createSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should enqueue polygon validation when greenhouse creates polygons", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Green", lastName: "House" });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("greenhouse");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const sitePolygon = await SitePolygonFactory.build({ polygonUuid: "polygon-uuid-1", siteUuid: "site-uuid-1" });
+      sitePolygonCreationService.createSitePolygons.mockResolvedValue({
+        data: [sitePolygon],
+        included: []
+      });
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      const geometries = [{ type: "FeatureCollection", features: [] }];
+      const request = { data: { type: "sitePolygons", attributes: { geometries } } };
+
+      await controller.create(request as CreateSitePolygonJsonApiRequestDto);
+
+      expect(sitePolygonService.enqueuePolygonValidation).toHaveBeenCalledWith(["polygon-uuid-1"], 1, {
+        siteUuid: "site-uuid-1",
+        triggerType: "gh_push"
+      });
+    });
+
     it("should include validations in response when present", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const user = await UserFactory.build({ firstName: "Test", lastName: "User" });
@@ -781,6 +821,21 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it("should throw NotFoundException when some requested polygons are missing", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ uuid: "found-uuid" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: [
+            { type: "sitePolygons", id: "found-uuid" },
+            { type: "sitePolygons", id: "missing-uuid" }
+          ],
+          attributeChanges: { numTrees: 100 }
+        })
+      ).rejects.toThrow("Site polygons not found for UUIDs: missing-uuid");
+    });
+
     it("should throw UnauthorizedException when user is not authenticated", async () => {
       const sitePolygon = await SitePolygonFactory.build();
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
@@ -852,9 +907,106 @@ describe("SitePolygonsController", () => {
         });
       }
     });
+
+    it("should throw BadRequestException when database connection is not available", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        firstName: "Test",
+        lastName: "User",
+        getSourceFromRoles: () => "terramatch",
+        fullName: "Test User"
+      } as User);
+
+      const originalSequelize = SitePolygon.sequelize;
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      try {
+        await expect(
+          controller.bulkUpdateAttributes({
+            data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
+            attributeChanges: { numTrees: 100 }
+          })
+        ).rejects.toThrow(BadRequestException);
+      } finally {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize ?? getSharedSequelize(),
+          writable: true,
+          configurable: true
+        });
+      }
+    });
+
+    it("should enqueue polygon validation when greenhouse bulk attribute update creates versions", async () => {
+      const sitePolygon = await SitePolygonFactory.build();
+      const newVersion = await SitePolygonFactory.build({
+        uuid: "new-version-greenhouse",
+        polygonUuid: "polygon-greenhouse",
+        siteUuid: "site-greenhouse"
+      });
+
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        firstName: "Green",
+        lastName: "House",
+        getSourceFromRoles: () => "greenhouse",
+        fullName: "Green House"
+      } as User);
+      sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion]);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const originalSequelize = SitePolygon.sequelize;
+      const mockSequelize = {
+        transaction: jest.fn((callback: (transaction: object) => unknown) => callback({}))
+      };
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: mockSequelize,
+        writable: true,
+        configurable: true
+      });
+
+      try {
+        await controller.bulkUpdateAttributes({
+          data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
+          attributeChanges: { numTrees: 100 }
+        });
+
+        expect(sitePolygonService.enqueuePolygonValidation).toHaveBeenCalledWith(["polygon-greenhouse"], 1, {
+          siteUuid: "site-greenhouse",
+          triggerType: "gh_push"
+        });
+      } finally {
+        Object.defineProperty(SitePolygon, "sequelize", {
+          value: originalSequelize ?? getSharedSequelize(),
+          writable: true,
+          configurable: true
+        });
+      }
+    });
   });
 
   describe("bulkStatusUpdate", () => {
+    it("should throw BadRequestException for invalid status", async () => {
+      await expect(
+        controller.updateBulkStatus("not-a-status", {
+          comment: "comment",
+          data: [{ type: "sitePolygons", id: "1234" }]
+        })
+      ).rejects.toThrow(BadRequestException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+    });
+
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
       await expect(
@@ -967,6 +1119,56 @@ describe("SitePolygonsController", () => {
       await expect(controller.deleteOne("non-existent-uuid")).rejects.toThrow(NotFoundException);
       expect(policyService.authorize).not.toHaveBeenCalled();
       expect(sitePolygonService.deleteSitePolygon).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("bulkDelete", () => {
+    const bulkDeletePayload = (ids: string[]): SitePolygonBulkDeleteBodyDto => ({
+      data: ids.map(id => ({ type: "sitePolygons", id }))
+    });
+
+    it("should throw NotFoundException when no polygons are found", async () => {
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+
+      await expect(controller.bulkDelete(bulkDeletePayload(["missing-uuid"]))).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when some requested polygons are missing", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ uuid: "found-uuid" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+
+      await expect(controller.bulkDelete(bulkDeletePayload(["found-uuid", "missing-uuid"]))).rejects.toThrow(
+        "Site polygons not found for UUIDs: missing-uuid"
+      );
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should throw UnauthorizedException when delete authorization fails", async () => {
+      const sitePolygon = await SitePolygonFactory.build({ uuid: "delete-me" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.bulkDelete(bulkDeletePayload(["delete-me"]))).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+    });
+
+    it("should authorize each polygon and return a deleted response", async () => {
+      const sitePolygon1 = await SitePolygonFactory.build({ uuid: "delete-me-1" });
+      const sitePolygon2 = await SitePolygonFactory.build({ uuid: "delete-me-2" });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(["delete-me-1", "delete-me-2"]);
+
+      const result = await controller.bulkDelete(bulkDeletePayload(["delete-me-1", "delete-me-2"]));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon1);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon2);
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([sitePolygon1, sitePolygon2]);
+      expect(result.meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
     });
   });
 

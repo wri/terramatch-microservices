@@ -1171,6 +1171,13 @@ describe("SitePolygonsService", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const polygonGeometry = await PolygonGeometryFactory.create();
       const pointUuid = crypto.randomUUID();
+      await PointGeometry.create({
+        uuid: pointUuid,
+        point: { type: "Point", coordinates: [0, 0] },
+        estimatedArea: 0,
+        createdBy: null,
+        lastModifiedBy: null
+      } as never);
       const primaryUuid = "primary-uuid-point-unique";
       const pointDestroySpy = jest.spyOn(PointGeometry, "destroy");
 
@@ -1203,6 +1210,13 @@ describe("SitePolygonsService", () => {
       const site = await SiteFactory.create({ projectId: project.id });
       const sharedPolygonGeometry = await PolygonGeometryFactory.create();
       const sharedPointUuid = crypto.randomUUID();
+      await PointGeometry.create({
+        uuid: sharedPointUuid,
+        point: { type: "Point", coordinates: [0, 0] },
+        estimatedArea: 0,
+        createdBy: null,
+        lastModifiedBy: null
+      } as never);
       const primaryUuid = "primary-uuid-point-shared";
       const pointDestroySpy = jest.spyOn(PointGeometry, "destroy");
 
@@ -1232,6 +1246,31 @@ describe("SitePolygonsService", () => {
   });
 
   describe("updateBulkStatus", () => {
+    it("should create audit status records with null user fields", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-a" }];
+      const status = "draft";
+      const sitePolygon = { id: 10, uuid: "polygon-a", siteUuid: "site-a" } as SitePolygon;
+      const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+
+      await service.updateBulkStatus(status, data, undefined, null);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith([
+        expect.objectContaining({
+          auditableType: SitePolygon.LARAVEL_TYPE,
+          auditableId: 10,
+          createdBy: null,
+          firstName: null,
+          lastName: null,
+          comment: null,
+          status,
+          type: "status"
+        })
+      ]);
+    });
+
     it("should skip audit status bulkCreate when no polygons were returned", async () => {
       const data = [{ type: "sitePolygons", id: "missing-polygon" }];
       const status = "approved";
@@ -1602,6 +1641,31 @@ describe("SitePolygonsService", () => {
         expect.objectContaining({ jobId: expect.any(String) })
       );
     });
+
+    it("uses site name when siteUuid is provided and site is found", async () => {
+      jest.spyOn(Site, "findOne").mockResolvedValue({ id: 11, name: "Named Site" } as Site);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({ id: 88, uuid: "dj-88" } as unknown as DelayedJob);
+
+      await service.enqueuePolygonValidation(["geom-x"], 4, { triggerType: "upload", siteUuid: "site-11" });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "Named Site",
+            trigger_type: "upload"
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["geom-x"],
+          delayedJobId: 88,
+          siteUuid: "site-11"
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
+    });
   });
 
   describe("triggerProjectValidationJobs", () => {
@@ -1621,6 +1685,17 @@ describe("SitePolygonsService", () => {
       await service.triggerProjectValidationJobs([{ siteUuid: "site-uuid-10" } as SitePolygon], 1);
 
       expect(findProjectSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("catches errors when project lookup throws and continues without throwing", async () => {
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ id: 12, projectId: 300, name: "Site Twelve" } as Site]);
+      jest.spyOn(Project, "findByPk").mockRejectedValue(new Error("project lookup failed"));
+
+      await expect(service.triggerProjectValidationJobs([{ siteUuid: "site-12" } as SitePolygon], 5)).resolves.toBe(
+        undefined
+      );
+
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
   });

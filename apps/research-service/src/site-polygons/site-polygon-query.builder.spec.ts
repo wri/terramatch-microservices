@@ -77,6 +77,17 @@ describe("SitePolygonQueryBuilder", () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(polyPassed.id);
     });
+
+    it("should return no records when filtering with an empty statuses array", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, validationStatus: "passed" });
+
+      await builder.filterValidationStatus([]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(0);
+    });
   });
 
   describe("filterPolygonUuids", () => {
@@ -177,6 +188,56 @@ describe("SitePolygonQueryBuilder", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(included.id);
+    });
+
+    it("should apply only upper bound when from is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const to = new Date(Date.UTC(2024, 5, 30));
+      const included = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        plantStart: new Date(Date.UTC(2024, 5, 29))
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        plantStart: new Date(Date.UTC(2024, 6, 1))
+      });
+
+      builder.filterPlantStartRange(undefined, to);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(included.id);
+    });
+  });
+
+  describe("addSearch", () => {
+    it("should search only site names when fields include only siteName", async () => {
+      const project = await ProjectFactory.create();
+      const siteAlpha = await SiteFactory.create({ projectId: project.id, name: "Alpha Site" });
+      const siteBeta = await SiteFactory.create({ projectId: project.id, name: "Beta Site" });
+      await SitePolygonFactory.create({ siteUuid: siteAlpha.uuid, polyName: "Polygon One" });
+      await SitePolygonFactory.create({ siteUuid: siteBeta.uuid, polyName: "Alpha Polygon Name" });
+
+      await builder.addSearch("Alpha", ["siteName"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].siteUuid).toBe(siteAlpha.uuid);
+    });
+
+    it("should search polygon UUID when fields include polygonUuid", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const target = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const token = target.polygonUuid.slice(0, 8);
+
+      await builder.addSearch(token, ["polygonUuid"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(target.id);
     });
   });
 

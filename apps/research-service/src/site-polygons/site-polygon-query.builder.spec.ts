@@ -94,6 +94,22 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("filterSiteUuids", () => {
+    it("should filter by site uuids", async () => {
+      const project = await ProjectFactory.create();
+      const site1 = await SiteFactory.create({ projectId: project.id });
+      const site2 = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site1.uuid });
+      await SitePolygonFactory.create({ siteUuid: site2.uuid });
+
+      await builder.filterSiteUuids([site1.uuid]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].siteUuid).toBe(site1.uuid);
+    });
+  });
+
   describe("filterPlantStartRange", () => {
     it("should include bounds inclusively and exclude null plantStart", async () => {
       const project = await ProjectFactory.create();
@@ -141,6 +157,26 @@ describe("SitePolygonQueryBuilder", () => {
       const result = await builder.execute();
 
       expect(result.map(p => p.id).sort()).toEqual([onStart.id, onEnd.id, inside.id].sort());
+    });
+
+    it("should apply only lower bound when to is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const from = new Date(Date.UTC(2024, 5, 1));
+      const included = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        plantStart: new Date(Date.UTC(2024, 5, 2))
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        plantStart: new Date(Date.UTC(2024, 4, 31))
+      });
+
+      builder.filterPlantStartRange(from, undefined);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(included.id);
     });
   });
 
@@ -441,6 +477,18 @@ describe("SitePolygonQueryBuilder", () => {
       await expect(builder.filterProjectAttributes(undefined, "does-not-exist-slug" as LandscapeSlug)).rejects.toThrow(
         BadRequestException
       );
+    });
+
+    it("should not filter by cohort when cohort is empty", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      await builder.filterProjectAttributes([]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
     });
   });
 });

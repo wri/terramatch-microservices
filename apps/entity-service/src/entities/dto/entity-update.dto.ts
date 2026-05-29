@@ -50,7 +50,7 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @ApiProperty({
     required: false,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Polygon data submission tracking"
+    description: "Polygon submission status tracking"
   })
   polygonDataSubmission?: string;
 

@@ -120,7 +120,7 @@ export const importProjectCohortLandscape = withoutSqlLogs(async (opts: ImportPr
       continue;
     }
 
-    const nextCohort = [row.cohort];
+    const nextCohort = row.cohort;
     const nextLandscape = row.landscape;
     const alreadyApplied = isEqual(project.cohort, nextCohort) && project.landscape === nextLandscape;
 
@@ -131,7 +131,7 @@ export const importProjectCohortLandscape = withoutSqlLogs(async (opts: ImportPr
     }
 
     console.log(
-      `Project ${project.id} (${row.uuid}): cohort ${JSON.stringify(project.cohort)} -> ${JSON.stringify(nextCohort)}, landscape ${JSON.stringify(project.landscape)} -> ${JSON.stringify(nextLandscape)}`
+      `Project ${project.id} (${row.uuid}): cohort ${project.cohort} -> ${nextCohort}, landscape ${project.landscape} -> ${nextLandscape}`
     );
 
     if (!dryRun) {

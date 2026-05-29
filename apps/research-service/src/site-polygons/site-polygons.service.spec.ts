@@ -324,8 +324,8 @@ describe("SitePolygonsService", () => {
   it("should only include projects in the cohort given", async () => {
     await SitePolygon.truncate();
     await Project.truncate();
-    const tf = await ProjectFactory.create({ cohort: ["terrafund"] });
-    const ppc = await ProjectFactory.create({ cohort: ["ppc"] });
+    const tf = await ProjectFactory.create({ cohort: "terrafund" });
+    const ppc = await ProjectFactory.create({ cohort: "ppc" });
     const tfSite = await SiteFactory.create({ projectId: tf.id });
     const ppcSite = await SiteFactory.create({ projectId: ppc.id });
     const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
@@ -378,12 +378,12 @@ describe("SitePolygonsService", () => {
   it("should filter based on landscape and cohort", async () => {
     const landscapes = await LandscapeGeometryFactory.createMany(2);
     const inLandscape1 = await Promise.all([
-      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: ["ppc"] }),
-      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: ["terrafund"] })
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "terrafund" })
     ]);
     const inLandscape2 = await Promise.all([
-      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: ["ppc"] }),
-      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: ["terrafund"] })
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "terrafund" })
     ]);
 
     const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));

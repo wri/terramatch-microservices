@@ -1,4 +1,4 @@
-import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions, Sequelize } from "sequelize";
+import { Attributes, Filterable, FindOptions, Includeable, Op, OrderItem, WhereOptions } from "sequelize";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { isObject, flatten, isEmpty } from "lodash";
@@ -65,22 +65,10 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
     this.where(where);
 
     if (filters?.cohort != null && filters.cohort.length > 0) {
-      const cohortConditions = filters.cohort
-        .map(cohort => {
-          const escapedCohort = this.sql.escape(`"${cohort}"`);
-          return `JSON_CONTAINS(cohort, ${escapedCohort})`;
-        })
-        .join(" OR ");
-      this.where(Sequelize.literal(`(${cohortConditions})`));
+      this.where({ cohort: { [Op.in]: filters.cohort } });
     } else {
       const defaultCohorts = ["terrafund", "terrafund-cohort-1", "terrafund-cohort-2", "terrafund-cohort-3"];
-      const defaultCohortConditions = defaultCohorts
-        .map(cohort => {
-          const escapedCohort = this.sql.escape(`"${cohort}"`);
-          return `JSON_CONTAINS(cohort, ${escapedCohort})`;
-        })
-        .join(" OR ");
-      this.where(Sequelize.literal(`(${defaultCohortConditions})`));
+      this.where({ cohort: { [Op.in]: defaultCohorts } });
     }
 
     this.findOptions.include = [

@@ -86,7 +86,7 @@ describe("DashboardProjectsQueryBuilder", () => {
     const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
     expect(where[Op.and]).toBeDefined();
     expect(where[Op.and]?.[0]).toMatchObject({ country: "Kenya" });
-    expect(where[Op.and]?.[1]).toMatchObject({ val: expect.stringContaining("JSON_CONTAINS(cohort") });
+    expect(where[Op.and]?.[1]).toMatchObject({ cohort: { [Op.in]: ["2023"] } });
     expect((builder["findOptions"].include as Includeable[] | undefined)?.[0]).toHaveProperty(
       "association",
       "organisation"

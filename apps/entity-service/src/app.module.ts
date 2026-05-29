@@ -39,7 +39,10 @@ import { AggregateReportsService } from "./entities/aggregate-reports.service";
 import { ReportingFrameworksController } from "./reportingFrameworks/reporting-frameworks.controller";
 import { ReportingFrameworksService } from "./reportingFrameworks/reporting-frameworks.service";
 import { ExportImageService } from "./entities/export-image.service";
-import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "./jobs/entity-service-exports.processor";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  EntityServiceDelayedJobsProcessor
+} from "./jobs/entity-service-delayed-jobs.processor";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -93,7 +96,7 @@ const IS_REPL = process.env["REPL"] === "true";
     ReportingFrameworksService,
     ExportImageService,
 
-    ...(IS_REPL ? [] : [EntitiesQueueProcessor, EntityServiceExportsProcessor])
+    ...(IS_REPL ? [] : [EntitiesQueueProcessor, EntityServiceDelayedJobsProcessor])
   ]
 })
 export class AppModule {}

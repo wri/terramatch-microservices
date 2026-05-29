@@ -1,9 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import {
-  EntityServiceExportJobData,
-  EntityServiceExportsProcessor,
+  EntityExportJobData,
+  EntityServiceDelayedJobsProcessor,
   PROJECT_EXPORT
-} from "./entity-service-exports.processor";
+} from "./entity-service-delayed-jobs.processor";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities/entities.service";
 import { FileService } from "@terramatch-microservices/common/file/file.service";
@@ -14,9 +14,9 @@ import { DelayedJobException } from "@terramatch-microservices/common/workers/de
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 
-describe("EntityServiceExportsProcessor", () => {
+describe("EntityServiceDelayedJobsProcessor", () => {
   let module: TestingModule;
-  const service = () => module.get(EntityServiceExportsProcessor);
+  const service = () => module.get(EntityServiceDelayedJobsProcessor);
   const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
   const entityService = (): DeepMocked<EntitiesService> => module.get(EntitiesService);
   const fileService = (): DeepMocked<FileService> => module.get(FileService);
@@ -24,7 +24,7 @@ describe("EntityServiceExportsProcessor", () => {
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
-        EntityServiceExportsProcessor,
+        EntityServiceDelayedJobsProcessor,
         { provide: EntitiesService, useValue: createMock<EntitiesService>() },
         { provide: FileService, useValue: createMock<FileService>() },
         {
@@ -46,16 +46,16 @@ describe("EntityServiceExportsProcessor", () => {
 
   describe("processDelayedJob", () => {
     it("throws if the job name is unknown", async () => {
-      await expect(service().processDelayedJob({ name: "unknown" } as Job<EntityServiceExportJobData>)).rejects.toThrow(
+      await expect(service().processDelayedJob({ name: "unknown" } as Job<EntityExportJobData>)).rejects.toThrow(
         "Unsupported job name: unknown"
       );
     });
 
     it("throws if the bucket is undefined", async () => {
       configService().get.mockReturnValue(undefined);
-      await expect(
-        service().processDelayedJob({ name: PROJECT_EXPORT } as Job<EntityServiceExportJobData>)
-      ).rejects.toThrow("AWS_BUCKET configuration is missing");
+      await expect(service().processDelayedJob({ name: PROJECT_EXPORT } as Job<EntityExportJobData>)).rejects.toThrow(
+        "AWS_BUCKET configuration is missing"
+      );
     });
 
     it("throws if the processor throws", async () => {
@@ -63,7 +63,7 @@ describe("EntityServiceExportsProcessor", () => {
       processor.export.mockRejectedValue(new Error("Processor error"));
       entityService().createEntityProcessor.mockReturnValue(processor);
       await expect(
-        service().processDelayedJob({ name: PROJECT_EXPORT, data: {} } as Job<EntityServiceExportJobData>)
+        service().processDelayedJob({ name: PROJECT_EXPORT, data: {} } as Job<EntityExportJobData>)
       ).rejects.toThrow(DelayedJobException);
     });
 
@@ -75,7 +75,7 @@ describe("EntityServiceExportsProcessor", () => {
           await service().processDelayedJob({
             name: PROJECT_EXPORT,
             data: { projectName: "Restore Dune", projectUuid: "fake-uuid" }
-          } as Job<EntityServiceExportJobData>)
+          } as Job<EntityExportJobData>)
         ).payload
       );
       expect(processor.export).toHaveBeenCalledWith("fake-uuid", expect.anything());

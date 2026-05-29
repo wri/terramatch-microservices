@@ -16,15 +16,25 @@ import { ConfigService } from "@nestjs/config";
 import { streamZip } from "@terramatch-microservices/common/util/zip-stream";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { EntityType } from "@terramatch-microservices/database/constants/entities";
 
-export type EntityServiceExportJobData = {
+export type EntityExportJobData = {
   delayedJobId: number;
   projectUuid: string;
   projectName: string;
 };
 
+export type MediaExportJobData = {
+  delayedJobId: number;
+  entityType: EntityType;
+  entityUuid: string;
+};
+
+export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobData;
+
 export const ENTITY_SERVICE_EXPORT_QUEUE = "entityServiceExports";
 export const PROJECT_EXPORT = "projectExport";
+export const MEDIA_EXPORT = "mediaExport";
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
 @Processor(ENTITY_SERVICE_EXPORT_QUEUE, {
@@ -32,16 +42,26 @@ const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (ins
   removeOnComplete: { age: KEEP_JOBS_TIMEOUT },
   removeOnFail: { age: KEEP_JOBS_TIMEOUT }
 })
-export class EntityServiceExportsProcessor extends DelayedJobWorker<EntityServiceExportJobData> {
-  protected readonly logger = new TMLogger(EntityServiceExportsProcessor.name);
+export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntityServiceDelayedJobData> {
+  protected readonly logger = new TMLogger(EntityServiceDelayedJobsProcessor.name);
 
   static async queueProjectExport(queue: Queue, projectUuid: string, projectName: string) {
     const delayedJob = await DelayedJob.create({
       name: "Project Zip Export",
       createdBy: UserContext.authenticatedUserId
     });
-    const data: EntityServiceExportJobData = { delayedJobId: delayedJob.id, projectUuid, projectName };
+    const data: EntityExportJobData = { delayedJobId: delayedJob.id, projectUuid, projectName };
     await queue.add(PROJECT_EXPORT, data);
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+
+  static async queueMediaExport(queue: Queue, entityType: EntityType, entityUuid: string) {
+    const delayedJob = await DelayedJob.create({
+      name: "Entity Media Export",
+      createdBy: UserContext.authenticatedUserId
+    });
+    const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid };
+    await queue.add(MEDIA_EXPORT, data);
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
@@ -53,11 +73,15 @@ export class EntityServiceExportsProcessor extends DelayedJobWorker<EntityServic
     super();
   }
 
-  async processDelayedJob(job: Job<EntityServiceExportJobData>) {
-    if (job.name !== PROJECT_EXPORT) {
+  async processDelayedJob(job: Job<EntityServiceDelayedJobData>) {
+    if (job.name === PROJECT_EXPORT) {
+      return await this.processEntityExport(job as Job<EntityExportJobData>);
+    } else {
       throw new InternalServerErrorException(`Unsupported job name: ${job.name}`);
     }
+  }
 
+  private async processEntityExport(job: Job<EntityExportJobData>) {
     const bucket = this.configService.get("AWS_BUCKET");
     if (bucket == null) throw new InternalServerErrorException("AWS_BUCKET configuration is missing");
 

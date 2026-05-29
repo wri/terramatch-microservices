@@ -46,7 +46,10 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { kebabCase } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
-import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "../jobs/entity-service-exports.processor";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  EntityServiceDelayedJobsProcessor
+} from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Project } from "@terramatch-microservices/database/entities";
@@ -158,6 +161,23 @@ export class EntitiesController {
 
   @Get(":entity/:uuid/export")
   @ApiOperation({
+    operationId: "entityAssetGet",
+    summary: "Get all assets associated with a given entity in a zip file"
+  })
+  @JsonApiResponse([FileDownloadDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityAssetGet<T extends EntityModel>(@Param() { entity, uuid }: SpecificEntityDto) {
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    const model = await processor.findOne(uuid);
+    if (model == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", model);
+
+    return await EntityServiceDelayedJobsProcessor.queueMediaExport(this.exportQueue, entity, uuid);
+  }
+
+  @Get(":entity/:uuid/export")
+  @ApiOperation({
     operationId: "entityExport",
     summary: "Export a given entity as CSV or ZIP archive."
   })
@@ -183,7 +203,7 @@ export class EntitiesController {
       if (project.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
       await this.policyService.authorize("read", project);
 
-      return await EntityServiceExportsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
+      return await EntityServiceDelayedJobsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
     }
 
     const processor = this.entitiesService.createEntityProcessor<T>(entity);

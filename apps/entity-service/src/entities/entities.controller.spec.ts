@@ -22,7 +22,7 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { Resource, ResourceBuilder } from "@terramatch-microservices/common/util";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { getQueueToken } from "@nestjs/bullmq";
-import { ENTITY_SERVICE_EXPORT_QUEUE, PROJECT_EXPORT } from "../jobs/entity-service-exports.processor";
+import { ENTITY_SERVICE_EXPORT_QUEUE, PROJECT_EXPORT } from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {

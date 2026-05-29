@@ -11,7 +11,6 @@ import { Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
-import type { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import type { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Sequelize, Transaction } from "sequelize";
@@ -792,22 +791,12 @@ describe("SitePolygonsController", () => {
   });
 
   describe("bulkUpdateAttributes", () => {
-    it("should throw BadRequestException when attributeChanges is empty", async () => {
-      await expect(
-        controller.bulkUpdateAttributes({
-          data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
-          attributeChanges: {}
-        })
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("should throw BadRequestException when attributeChanges includes unsupported fields", async () => {
-      const request = {
-        data: [{ type: "sitePolygons", id: "123e4567-e89b-12d3-a456-426614174000" }],
-        attributeChanges: { unknownField: "value" }
-      } as unknown as SitePolygonBulkAttributeUpdateBodyDto;
-
-      await expect(controller.bulkUpdateAttributes(request)).rejects.toThrow(BadRequestException);
+    beforeEach(() => {
+      Object.defineProperty(policyService, "userId", {
+        value: 1,
+        writable: true,
+        configurable: true
+      });
     });
 
     it("should throw NotFoundException when no polygons are found", async () => {
@@ -836,20 +825,6 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow("Site polygons not found for UUIDs: missing-uuid");
     });
 
-    it("should throw UnauthorizedException when user is not authenticated", async () => {
-      const sitePolygon = await SitePolygonFactory.build();
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
-      policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", { value: null, writable: true, configurable: true });
-
-      await expect(
-        controller.bulkUpdateAttributes({
-          data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
-          attributeChanges: { numTrees: 100 }
-        })
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
     it("should authorize update for each polygon and call bulkUpdateSitePolygonAttributes", async () => {
       const sitePolygon1 = await SitePolygonFactory.build();
       const sitePolygon2 = await SitePolygonFactory.build();
@@ -858,7 +833,6 @@ describe("SitePolygonsController", () => {
 
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
       policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
       jest.spyOn(User, "findByPk").mockResolvedValue({
         id: 1,
         firstName: "Test",
@@ -870,78 +844,24 @@ describe("SitePolygonsController", () => {
       sitePolygonService.loadAssociationDtos.mockResolvedValue({});
       sitePolygonService.buildLightDto.mockImplementation(async polygon => new SitePolygonLightDto(polygon, []));
 
-      const originalSequelize = SitePolygon.sequelize;
-      const mockSequelize = {
-        transaction: jest.fn((callback: (transaction: object) => unknown) => callback({}))
-      };
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
-      });
-
       const attributeChanges = { plantStart: "2024-01-01T00:00:00Z", numTrees: 200 };
       const data = [
         { type: "sitePolygons", id: sitePolygon1.uuid },
         { type: "sitePolygons", id: sitePolygon2.uuid }
       ];
 
-      try {
-        await controller.bulkUpdateAttributes({ data, attributeChanges });
+      await controller.bulkUpdateAttributes({ data, attributeChanges });
 
-        expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
-        expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
-        expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
-          [sitePolygon1.uuid, sitePolygon2.uuid],
-          attributeChanges,
-          1,
-          "Test User",
-          "terramatch",
-          {}
-        );
-      } finally {
-        Object.defineProperty(SitePolygon, "sequelize", {
-          value: originalSequelize ?? getSharedSequelize(),
-          writable: true,
-          configurable: true
-        });
-      }
-    });
-
-    it("should throw BadRequestException when database connection is not available", async () => {
-      const sitePolygon = await SitePolygonFactory.build();
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
-      policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
-      jest.spyOn(User, "findByPk").mockResolvedValue({
-        id: 1,
-        firstName: "Test",
-        lastName: "User",
-        getSourceFromRoles: () => "terramatch",
-        fullName: "Test User"
-      } as User);
-
-      const originalSequelize = SitePolygon.sequelize;
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: null,
-        writable: true,
-        configurable: true
-      });
-
-      try {
-        await expect(
-          controller.bulkUpdateAttributes({
-            data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
-            attributeChanges: { numTrees: 100 }
-          })
-        ).rejects.toThrow(BadRequestException);
-      } finally {
-        Object.defineProperty(SitePolygon, "sequelize", {
-          value: originalSequelize ?? getSharedSequelize(),
-          writable: true,
-          configurable: true
-        });
-      }
+      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
+      expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
+        [sitePolygon1.uuid, sitePolygon2.uuid],
+        attributeChanges,
+        1,
+        "Test User",
+        "terramatch",
+        expect.anything()
+      );
     });
 
     it("should enqueue polygon validation when greenhouse bulk attribute update creates versions", async () => {
@@ -954,7 +874,6 @@ describe("SitePolygonsController", () => {
 
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
       policyService.authorize.mockResolvedValue(undefined);
-      Object.defineProperty(policyService, "userId", { value: 1, writable: true, configurable: true });
       jest.spyOn(User, "findByPk").mockResolvedValue({
         id: 1,
         firstName: "Green",
@@ -966,33 +885,15 @@ describe("SitePolygonsController", () => {
       sitePolygonService.loadAssociationDtos.mockResolvedValue({});
       sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
 
-      const originalSequelize = SitePolygon.sequelize;
-      const mockSequelize = {
-        transaction: jest.fn((callback: (transaction: object) => unknown) => callback({}))
-      };
-      Object.defineProperty(SitePolygon, "sequelize", {
-        value: mockSequelize,
-        writable: true,
-        configurable: true
+      await controller.bulkUpdateAttributes({
+        data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
+        attributeChanges: { numTrees: 100 }
       });
 
-      try {
-        await controller.bulkUpdateAttributes({
-          data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
-          attributeChanges: { numTrees: 100 }
-        });
-
-        expect(sitePolygonService.enqueuePolygonValidation).toHaveBeenCalledWith(["polygon-greenhouse"], 1, {
-          siteUuid: "site-greenhouse",
-          triggerType: "gh_push"
-        });
-      } finally {
-        Object.defineProperty(SitePolygon, "sequelize", {
-          value: originalSequelize ?? getSharedSequelize(),
-          writable: true,
-          configurable: true
-        });
-      }
+      expect(sitePolygonService.enqueuePolygonValidation).toHaveBeenCalledWith(["polygon-greenhouse"], 1, {
+        siteUuid: "site-greenhouse",
+        triggerType: "gh_push"
+      });
     });
   });
 

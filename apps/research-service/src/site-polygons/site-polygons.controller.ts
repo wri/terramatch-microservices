@@ -69,7 +69,6 @@ import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-a
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
 
 const MAX_PAGE_SIZE = 100 as const;
-const BULK_ATTRIBUTE_CHANGE_KEYS = ["plantStart", "practice", "targetSys", "distr", "numTrees"] as const;
 
 @Controller("research/v3/sitePolygons")
 @ApiExtraModels(
@@ -420,17 +419,6 @@ export class SitePolygonsController {
   async bulkUpdateAttributes(@Body() request: SitePolygonBulkAttributeUpdateBodyDto) {
     const { data, attributeChanges } = request;
 
-    if (attributeChanges == null || Object.keys(attributeChanges).length === 0) {
-      throw new BadRequestException("attributeChanges must contain at least one field to update");
-    }
-
-    const unsupportedKeys = Object.keys(attributeChanges).filter(
-      key => !BULK_ATTRIBUTE_CHANGE_KEYS.includes(key as (typeof BULK_ATTRIBUTE_CHANGE_KEYS)[number])
-    );
-    if (unsupportedKeys.length > 0) {
-      throw new BadRequestException(`Unsupported attributeChanges field(s): ${unsupportedKeys.join(", ")}`);
-    }
-
     const uuids = data.map(item => item.id);
 
     const sitePolygons = await SitePolygon.findAll({
@@ -452,10 +440,7 @@ export class SitePolygonsController {
       await this.policyService.authorize("update", sitePolygon);
     }
 
-    const userId = this.policyService.userId;
-    if (userId == null) {
-      throw new UnauthorizedException("User must be authenticated");
-    }
+    const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
@@ -464,11 +449,7 @@ export class SitePolygonsController {
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
 
-    if (SitePolygon.sequelize == null) {
-      throw new BadRequestException("Database connection not available");
-    }
-
-    const newVersions = await SitePolygon.sequelize.transaction(async transaction =>
+    const newVersions = await SitePolygon.sql.transaction(async transaction =>
       this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
         uuids,
         attributeChanges,

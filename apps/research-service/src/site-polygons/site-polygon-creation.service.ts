@@ -49,16 +49,13 @@ const validateAndSortStrictStringArray = (
   validValues: readonly string[],
   fieldName: string
 ): string[] | null => {
-  if (value == null) {
-    throw new BadRequestException(`${fieldName} cannot be null`);
-  }
   if (!Array.isArray(value)) {
     throw new BadRequestException(`${fieldName} must be an array`);
   }
   if (value.length === 0) return null;
 
-  const nonStringValues = value.filter(item => typeof item !== "string");
-  if (nonStringValues.length > 0) {
+  const hasNonString = value.find(item => typeof item !== "string") != null;
+  if (hasNonString) {
     throw new BadRequestException(`${fieldName} must contain only strings`);
   }
 
@@ -75,9 +72,6 @@ const validateAndSortStrictStringArray = (
 };
 
 const validateTargetSystem = (value: unknown): string | null => {
-  if (value == null) {
-    throw new BadRequestException("targetSys cannot be null");
-  }
   if (typeof value !== "string") {
     throw new BadRequestException("targetSys must be a string");
   }
@@ -90,9 +84,6 @@ const validateTargetSystem = (value: unknown): string | null => {
 };
 
 const validatePlantStart = (value: unknown): Date | null => {
-  if (value == null) {
-    throw new BadRequestException("plantStart cannot be null");
-  }
   if (typeof value !== "string") {
     throw new BadRequestException("plantStart must be a string");
   }

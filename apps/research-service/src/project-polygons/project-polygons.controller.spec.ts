@@ -46,42 +46,43 @@ describe("ProjectPolygonsController", () => {
     jest.restoreAllMocks();
   });
 
-  describe("findOne", () => {
+  describe("findMany", () => {
     it("should throw UnauthorizedException if the policy does not authorize", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      await expect(controller.findOne({ projectPitchUuid: "test-uuid" })).rejects.toThrow(UnauthorizedException);
+      await expect(controller.findMany({ projectPitchUuid: "test-uuid" })).rejects.toThrow(UnauthorizedException);
     });
 
     it("should throw BadRequestException when projectPitchUuid is not provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const query: ProjectPolygonQueryDto = {};
-      await expect(controller.findOne(query)).rejects.toThrow(BadRequestException);
-      await expect(controller.findOne(query)).rejects.toThrow("projectPitchUuid query parameter is required");
+      await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+      await expect(controller.findMany(query)).rejects.toThrow("projectPitchUuid query parameter is required");
     });
 
-    it("should throw NotFoundException when project polygon is not found", async () => {
+    it("should return an empty list when no project polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const projectPitchUuid = "550e8400-e29b-41d4-a716-446655440000";
-      projectPolygonService.findByProjectPitchUuid.mockResolvedValue(null);
+      projectPolygonService.findManyByProjectPitchUuid.mockResolvedValue([]);
 
-      await expect(controller.findOne({ projectPitchUuid })).rejects.toThrow(NotFoundException);
-      await expect(controller.findOne({ projectPitchUuid })).rejects.toThrow(
-        `Project polygon not found for project pitch: ${projectPitchUuid}`
-      );
+      const result = serialize(await controller.findMany({ projectPitchUuid }));
+
+      expect(result.data).toEqual([]);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
     });
 
-    it("should return a valid project polygon when found", async () => {
+    it("should return project polygons when found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const pitch = await ProjectPitchFactory.build();
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      projectPolygonService.findByProjectPitchUuid.mockResolvedValue(projectPolygon);
+      projectPolygonService.findManyByProjectPitchUuid.mockResolvedValue([projectPolygon]);
 
-      const result = serialize(await controller.findOne({ projectPitchUuid: pitch.uuid }));
+      const result = serialize(await controller.findMany({ projectPitchUuid: pitch.uuid }));
 
-      expect(result.data).not.toBeNull();
-      const resource = result.data as Resource;
-      expect(resource.id).toBe(`?projectPitchUuid=${pitch.uuid}`);
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data).toHaveLength(1);
+      const resource = (result.data as Resource[])[0];
+      expect(resource.id).toBe(projectPolygon.uuid);
       expect(resource.type).toBe("projectPolygons");
       expect(resource.attributes).toHaveProperty("uuid", projectPolygon.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("read", ProjectPolygon);
@@ -92,11 +93,11 @@ describe("ProjectPolygonsController", () => {
       const pitch = await ProjectPitchFactory.build();
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
-      projectPolygonService.findByProjectPitchUuid.mockResolvedValue(projectPolygon);
+      projectPolygonService.findManyByProjectPitchUuid.mockResolvedValue([projectPolygon]);
 
-      const result = serialize(await controller.findOne({ projectPitchUuid: pitch.uuid }));
+      const result = serialize(await controller.findMany({ projectPitchUuid: pitch.uuid }));
 
-      const resource = result.data as Resource;
+      const resource = (result.data as Resource[])[0];
       expect(resource.attributes).toHaveProperty("projectPitchUuid", pitch.uuid);
     });
   });

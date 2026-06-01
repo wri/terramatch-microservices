@@ -67,6 +67,9 @@ export class SiteLightDto extends EntityDto {
   totalHectaresRestoredSum: number;
 
   @ApiProperty()
+  totalSiteReports: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -80,9 +83,6 @@ export class SiteFullDto extends SiteLightDto {
     super();
     populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }
-
-  @ApiProperty()
-  totalSiteReports: number;
 
   @ApiProperty()
   seedsPlantedCount: number;

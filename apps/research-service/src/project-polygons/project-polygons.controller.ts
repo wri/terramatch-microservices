@@ -186,15 +186,17 @@ export class ProjectPolygonsController {
 
     const projectPitchUuid = payload.data.attributes.projectPitchUuid;
 
-    const createdProjectPolygon = await this.projectPolygonCreationService.uploadProjectPolygonFromFile(
+    const createdProjectPolygons = await this.projectPolygonCreationService.uploadProjectPolygonFromFile(
       file,
       projectPitchUuid,
       userId
     );
 
     const document = buildJsonApi(ProjectPolygonDto);
-    const dto = await this.projectPolygonService.buildDto(createdProjectPolygon, projectPitchUuid);
-    document.addData(createdProjectPolygon.uuid, dto);
+    for (const projectPolygon of createdProjectPolygons) {
+      const dto = await this.projectPolygonService.buildDto(projectPolygon, projectPitchUuid);
+      document.addData(projectPolygon.uuid, dto);
+    }
     return document;
   }
   @Patch(":polyUuid")

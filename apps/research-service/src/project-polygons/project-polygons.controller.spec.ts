@@ -405,7 +405,7 @@ describe("ProjectPolygonsController", () => {
       const file = createMockFile();
       const payload = { data: { type: "projectPolygons", attributes: { projectPitchUuid: pitch.uuid } } };
 
-      projectPolygonCreationService.uploadProjectPolygonFromFile.mockResolvedValue(projectPolygon);
+      projectPolygonCreationService.uploadProjectPolygonFromFile.mockResolvedValue([projectPolygon]);
 
       const result = serialize(await controller.uploadFile(file, payload as ProjectPolygonUploadRequestDto));
 

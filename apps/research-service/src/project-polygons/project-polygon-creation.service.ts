@@ -137,7 +137,7 @@ export class ProjectPolygonCreationService {
   }
 
   private async deleteExistingProjectPolygon(projectPitchId: number, transaction: Transaction): Promise<void> {
-    const existingProjectPolygon = await ProjectPolygon.findOne({
+    const existingProjectPolygons = await ProjectPolygon.findAll({
       where: {
         entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitchId
@@ -145,11 +145,15 @@ export class ProjectPolygonCreationService {
       transaction
     });
 
-    if (existingProjectPolygon == null) {
+    if (existingProjectPolygons == null) {
       return;
     }
 
-    await this.projectPolygonsService.deleteProjectPolygonAndGeometry(existingProjectPolygon, transaction);
+    await Promise.all(
+      existingProjectPolygons.map(projectPolygon =>
+        this.projectPolygonsService.deleteProjectPolygonAndGeometry(projectPolygon, transaction)
+      )
+    );
   }
 
   private groupGeometriesByProjectPitchId(geometries: { type: string; features: Feature[] }[]): {

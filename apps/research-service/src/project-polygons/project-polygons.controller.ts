@@ -18,12 +18,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import {
-  buildDeletedResponse,
-  buildJsonApi,
-  getDtoType,
-  getStableRequestQuery
-} from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";

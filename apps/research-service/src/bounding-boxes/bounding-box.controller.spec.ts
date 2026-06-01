@@ -58,6 +58,7 @@ describe("BoundingBoxController", () => {
 
   const mockBoundingBoxService = {
     getPolygonBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
+    getPolygonsBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getSiteBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getProjectBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getProjectPitchBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
@@ -103,7 +104,7 @@ describe("BoundingBoxController", () => {
   });
 
   describe("getBoundingBox", () => {
-    type BoundingBoxServiceArgs = [string] | [string, string[]];
+    type BoundingBoxServiceArgs = [string] | [string[]] | [string, string[]];
 
     const testQueryParameters = async (
       queryParams: BoundingBoxQueryDto,
@@ -134,6 +135,15 @@ describe("BoundingBoxController", () => {
         where: { uuid: "site-123" },
         attributes: ["frameworkKey", "projectId"]
       });
+    });
+
+    it("should call getPolygonsBoundingBox when polygonUuids are provided", async () => {
+      await testQueryParameters(
+        { polygonUuids: ["polygon-123", "polygon-456"] },
+        "getPolygonsBoundingBox",
+        [["polygon-123", "polygon-456"]],
+        "?polygonUuids%5B0%5D=polygon-123&polygonUuids%5B1%5D=polygon-456"
+      );
     });
 
     it("should call getProjectBoundingBox when projectUuid is provided", async () => {
@@ -225,7 +235,7 @@ describe("BoundingBoxController", () => {
 
       await expect(controller.getBoundingBox(query)).rejects.toThrow(
         new BadRequestException(
-          "No valid filter parameters provided. Please specify one of: polygonUuid, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
+          "No valid filter parameters provided. Please specify one of: polygonUuid, polygonUuids, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
         )
       );
     });
@@ -236,6 +246,7 @@ describe("BoundingBoxController", () => {
         { polygonUuid: "polygon-123", projectUuid: "project-123" },
         { siteUuid: "site-123", projectUuid: "project-123" },
         { polygonUuid: "polygon-123", country: "US" },
+        { polygonUuid: "polygon-123", polygonUuids: ["polygon-456"] },
         { siteUuid: "site-123", landscapes: ["ikr"] },
         { projectUuid: "project-123", country: "US", landscapes: ["ikr"] },
         { projectPitchUuid: "pitch-123", polygonUuid: "polygon-123" },

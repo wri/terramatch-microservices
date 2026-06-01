@@ -74,6 +74,9 @@ export class NurseryLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Number })
   treesSeedlingsGrownCount: number | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  nurseryReportsTotal: number | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -109,9 +112,6 @@ export class NurseryFullDto extends NurseryLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   oldModel: string | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  nurseryReportsTotal: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
   overdueNurseryReportsTotal: number | null;

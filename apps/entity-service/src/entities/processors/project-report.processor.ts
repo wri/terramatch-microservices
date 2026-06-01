@@ -399,7 +399,8 @@ export class ProjectReportProcessor extends ReportProcessor<
   protected async getSeedlingsGrown(projectReport: ProjectReport) {
     if (projectReport.frameworkKey == "ppc") {
       return (
-        (await TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount")) ?? 0
+        (await TreeSpecies.visible().collection("nursery-seedling").projectReports([projectReport.id]).sum("amount")) ??
+        0
       );
     }
 

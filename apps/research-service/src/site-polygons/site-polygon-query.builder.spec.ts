@@ -627,15 +627,15 @@ describe("SitePolygonQueryBuilder", () => {
         landscape: "Palawan"
       });
       const matchingProject = await ProjectFactory.create({
-        cohort: ["2024-q4"],
+        cohort: "2024-q4",
         landscape: landscape.landscape
       });
       const wrongLandscapeProject = await ProjectFactory.create({
-        cohort: ["2024-q4"],
+        cohort: "2024-q4",
         landscape: "Different Landscape"
       });
       const wrongCohortProject = await ProjectFactory.create({
-        cohort: ["2023-q3"],
+        cohort: "2023-q3",
         landscape: landscape.landscape
       });
       const matchingSite = await SiteFactory.create({ projectId: matchingProject.id });

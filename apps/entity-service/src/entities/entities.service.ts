@@ -276,6 +276,8 @@ export class EntitiesService {
 
   duplicateMedia = (media: Media, newOwner: MediaOwnerModel) => this.mediaService.duplicateMedia(media, newOwner);
 
+  getMediaStream = (media: Media) => this.mediaService.getMediaStream(media);
+
   mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),

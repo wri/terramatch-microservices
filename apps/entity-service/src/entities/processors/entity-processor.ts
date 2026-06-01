@@ -101,6 +101,11 @@ export abstract class EntityProcessor<
   abstract export(uuid: string, target: Response | Archiver): Promise<void>;
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async exportMedia(uuids: string[], target: Archiver): Promise<void> {
+    throw new InternalServerErrorException("Export media not supported on this entity processor");
+  }
+
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
 

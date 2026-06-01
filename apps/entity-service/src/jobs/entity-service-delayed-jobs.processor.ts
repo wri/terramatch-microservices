@@ -28,6 +28,7 @@ export type MediaExportJobData = {
   delayedJobId: number;
   entityType: EntityType;
   entityUuid: string;
+  entityName: string;
 };
 
 export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobData;
@@ -55,12 +56,12 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  static async queueMediaExport(queue: Queue, entityType: EntityType, entityUuid: string) {
+  static async queueMediaExport(queue: Queue, entityType: EntityType, entityUuid: string, entityName: string) {
     const delayedJob = await DelayedJob.create({
       name: "Entity Media Export",
       createdBy: UserContext.authenticatedUserId
     });
-    const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid };
+    const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid, entityName };
     await queue.add(MEDIA_EXPORT, data);
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
@@ -73,25 +74,31 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     super();
   }
 
+  private get bucket() {
+    const bucket = this.configService.get("AWS_BUCKET");
+    if (bucket == null) throw new InternalServerErrorException("AWS_BUCKET configuration is missing");
+
+    return bucket;
+  }
+
   async processDelayedJob(job: Job<EntityServiceDelayedJobData>) {
     if (job.name === PROJECT_EXPORT) {
-      return await this.processEntityExport(job as Job<EntityExportJobData>);
+      return await this.processEntityExport(job.data as EntityExportJobData);
+    } else if (job.name === MEDIA_EXPORT) {
+      return await this.processMediaExport(job.data as MediaExportJobData);
     } else {
       throw new InternalServerErrorException(`Unsupported job name: ${job.name}`);
     }
   }
 
-  private async processEntityExport(job: Job<EntityExportJobData>) {
-    const bucket = this.configService.get("AWS_BUCKET");
-    if (bucket == null) throw new InternalServerErrorException("AWS_BUCKET configuration is missing");
-
-    const fileName = `exports/pd-exports/${timestampFileName(`${job.data.projectName} full export`, ".zip")}`;
+  private async processEntityExport({ projectName, projectUuid }: EntityExportJobData) {
+    const fileName = `exports/pd-exports/${timestampFileName(`${projectName} full export`, ".zip")}`;
 
     try {
-      const stream = this.fileService.uploadStream(bucket, fileName, "application/zip");
+      const stream = this.fileService.uploadStream(this.bucket, fileName, "application/zip");
       const processor = this.entitiesService.createEntityProcessor("projects");
       await streamZip(stream, async archive => {
-        await processor.export(job.data.projectUuid, archive);
+        await processor.export(projectUuid, archive);
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
@@ -100,8 +107,30 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
 
     return {
       payload: buildJsonApi(FileDownloadDto).addData(
-        `projectExport|${job.data.projectUuid}`,
-        new FileDownloadDto(await this.fileService.generatePresignedUrl(bucket, fileName))
+        `projectExport|${projectUuid}`,
+        new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, fileName))
+      )
+    };
+  }
+
+  private async processMediaExport({ entityType, entityUuid, entityName }: MediaExportJobData) {
+    const fileName = `exports/media-exports/${timestampFileName(`${entityName} - assets`, ".zip")}`;
+
+    try {
+      const stream = this.fileService.uploadStream(this.bucket, fileName, "application/zip");
+      const processor = this.entitiesService.createEntityProcessor(entityType);
+      await streamZip(stream, async archive => {
+        await processor.exportMedia([entityUuid], archive);
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new DelayedJobException(500, `Failed to export entity media: ${message}`);
+    }
+
+    return {
+      payload: buildJsonApi(FileDownloadDto).addData(
+        `mediaExport|${entityType}|${entityUuid}`,
+        new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, fileName))
       )
     };
   }

@@ -108,6 +108,36 @@ export class BoundingBoxService {
     );
   }
 
+  async getPolygonsBoundingBox(polygonUuids: string[]): Promise<BoundingBoxDto> {
+    const uniquePolygonUuids = Array.from(new Set(polygonUuids.filter(uuid => !isEmpty(uuid))));
+
+    if (uniquePolygonUuids.length === 0) {
+      throw new NotFoundException("No polygon UUIDs were provided");
+    }
+
+    const polygons = await PolygonGeometry.findAll({
+      where: { uuid: { [Op.in]: uniquePolygonUuids } },
+      attributes: ["uuid"]
+    });
+
+    if (polygons.length === 0) {
+      throw new NotFoundException("No polygons found for provided UUIDs");
+    }
+
+    const foundUuids = new Set(polygons.map(polygon => String(polygon.get("uuid"))));
+    const missingUuids = uniquePolygonUuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Polygons not found for UUIDs: ${missingUuids.join(", ")}`);
+    }
+
+    return this.getBoundingBoxFromGeometries(
+      PolygonGeometry,
+      { uuid: { [Op.in]: uniquePolygonUuids } },
+      "geom",
+      EntityType.POLYGON
+    );
+  }
+
   async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {
     const site = await Site.findOne({
       where: { uuid: siteUuid },

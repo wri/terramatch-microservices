@@ -4,17 +4,25 @@ import { JSON as JSON_TYPE, QueryInterface, STRING } from "sequelize";
 const COHORT_TO_SINGLE_SELECT = `
 UPDATE v2_projects
 SET cohort = CASE
-  WHEN JSON_TYPE(cohort) = 'ARRAY' THEN JSON_UNQUOTE(JSON_EXTRACT(cohort, CONCAT('$[', JSON_LENGTH(cohort) - 1, ']')))
-  WHEN JSON_TYPE(cohort) = 'STRING' THEN JSON_UNQUOTE(cohort)
+  WHEN JSON_TYPE(cohort) = 'ARRAY' AND JSON_LENGTH(cohort) > 0
+    THEN JSON_EXTRACT(cohort, CONCAT('$[', JSON_LENGTH(cohort) - 1, ']'))
+  WHEN JSON_TYPE(cohort) = 'ARRAY' THEN NULL
+  WHEN JSON_TYPE(cohort) = 'STRING' THEN cohort
   ELSE NULL
 END
 WHERE cohort IS NOT NULL
   AND JSON_TYPE(cohort) IN ('ARRAY', 'STRING');
 `;
 
+const COHORT_STRIP_JSON_QUOTES = `
+UPDATE v2_projects
+SET cohort = TRIM(BOTH '"' FROM cohort)
+WHERE cohort IS NOT NULL;
+`;
+
 const COHORT_TO_JSON_ARRAY = `
 UPDATE v2_projects
-SET cohort = JSON_ARRAY(JSON_UNQUOTE(cohort))
+SET cohort = JSON_ARRAY(cohort)
 WHERE cohort IS NOT NULL;
 `;
 
@@ -28,6 +36,8 @@ export const convertProjectCohortToSingleSelect: RunnableMigration<QueryInterfac
       type: STRING(255),
       allowNull: true
     });
+
+    await context.sequelize.query(COHORT_STRIP_JSON_QUOTES);
   },
 
   async down({ context }) {

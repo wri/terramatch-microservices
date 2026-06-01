@@ -95,29 +95,28 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     }
 
     const { fileName } = job.data;
-    const { addRow, close } = this.csvExportService.getS3StreamWriter(fileName, ORGANISATION_CSV_COLUMNS);
+    const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
     try {
-      const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
-      for await (const page of batchFindAll(builder)) {
-        const pageMedia = await Media.for(page).findAll();
-        for (const org of page) {
-          const additional = pageMedia
-            .filter(media => media.modelId === org.id)
-            .reduce(
-              (acc, media) => ({
-                ...acc,
-                [media.collectionName]: this.mediaService.getUrl(media)
-              }),
-              {}
-            );
-          addRow(org, additional);
+      await this.csvExportService.writeCsv(fileName, null, ORGANISATION_CSV_COLUMNS, async addRow => {
+        for await (const page of batchFindAll(builder)) {
+          const pageMedia = await Media.for(page).findAll();
+          for (const org of page) {
+            const additional = pageMedia
+              .filter(media => media.modelId === org.id)
+              .reduce(
+                (acc, media) => ({
+                  ...acc,
+                  [media.collectionName]: this.mediaService.getUrl(media)
+                }),
+                {}
+              );
+            addRow(org, additional);
+          }
         }
-      }
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
       throw new DelayedJobException(500, `Failed to export organisations to CSV: ${message}`);
-    } finally {
-      close();
     }
 
     return {

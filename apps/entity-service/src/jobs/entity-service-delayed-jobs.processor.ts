@@ -95,10 +95,11 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     const fileName = `exports/pd-exports/${timestampFileName(`${projectName} full export`, ".zip")}`;
 
     try {
-      const stream = this.fileService.uploadStream(this.bucket, fileName, "application/zip");
-      const processor = this.entitiesService.createEntityProcessor("projects");
-      await streamZip(stream, async archive => {
-        await processor.export(projectUuid, archive);
+      await this.fileService.uploadStream(this.bucket, fileName, "application/zip", async stream => {
+        const processor = this.entitiesService.createEntityProcessor("projects");
+        await streamZip(stream, async archive => {
+          await processor.export(projectUuid, archive);
+        });
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
@@ -117,10 +118,11 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     const fileName = `exports/media-exports/${timestampFileName(`${entityName} - assets`, ".zip")}`;
 
     try {
-      const stream = this.fileService.uploadStream(this.bucket, fileName, "application/zip");
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      await streamZip(stream, async archive => {
-        await processor.exportMedia([entityUuid], archive);
+      await this.fileService.uploadStream(this.bucket, fileName, "application/zip", async stream => {
+        const processor = this.entitiesService.createEntityProcessor(entityType);
+        await streamZip(stream, async archive => {
+          await processor.exportMedia([entityUuid], archive);
+        });
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;

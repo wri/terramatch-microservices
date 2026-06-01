@@ -3,7 +3,7 @@ import { stringify } from "csv-stringify";
 import { FileService } from "../file/file.service";
 import { ConfigService } from "@nestjs/config";
 import { FileDownloadDto } from "../dto/file-download.dto";
-import { Dictionary, groupBy, pick } from "lodash";
+import { Dictionary, groupBy, isString, pick } from "lodash";
 import { Model } from "sequelize";
 import { DateTime } from "luxon";
 import { Response } from "express";
@@ -116,72 +116,48 @@ export class CsvExportService {
     return new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, `exports/${fileName}`));
   }
 
-  getS3StreamWriter(fileName: string, columns: Dictionary<string>) {
-    return this.getStreamWriter(this.fileService.uploadStream(this.bucket, `exports/${fileName}`, "text/csv"), columns);
-  }
-
-  getResponseStreamWriter(fileName: string, response: Response, columns: Dictionary<string>) {
-    response.set({
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
-      "Access-Control-Expose-Headers": "Content-Disposition"
-    });
-    return this.getStreamWriter(response, columns);
-  }
-
-  getArchiveStreamWriter(fileName: string, archive: Archiver, columns: Dictionary<string>) {
-    const target = new PassThrough();
-    archive.append(target, { name: fileName });
-    return this.getStreamWriter(target, columns);
-  }
-
-  /**
-   * Returns a StreamWriter that will send all CSV to the given destination WritableStream. For most
-   * use cases, one of the other utility methods will be more appropriate.
-   *
-   * @see getResponseStreamWriter
-   * @see getArchiveStreamWriter
-   * @see getS3StreamWriter
-   */
-  getStreamWriter(destination: NodeJS.WritableStream, columns: Dictionary<string>): StreamWriter {
-    const stringifier = stringify({ header: true, columns });
-    stringifier.pipe(destination);
-
-    const keys = Object.keys(columns);
-    return {
-      addRow: (model: Model, additional?: Dictionary<unknown>) => {
-        const row = Object.entries({ ...pick(model, keys), ...additional }).reduce(
-          (acc, [key, value]) => ({ ...acc, [key]: this.serializeCell(value) }),
-          {}
-        );
-        stringifier.write(row);
-      },
-      close: () => stringifier.end()
-    };
-  }
-
   /**
    * A utility to make it easy for services to write to an arbitrary destination. If target is undefined,
    * the file will be sent to the environment's default bucket.
    */
   async writeCsv(
     fileName: string,
-    target: Archiver | Response | undefined,
+    target: Archiver | Response | string | undefined | null,
     columns: Dictionary<string>,
     writeRows: RowWriter
   ) {
-    await this.writeToStream(
-      target == null
-        ? this.getS3StreamWriter(fileName, columns)
-        : target instanceof ServerResponse
-          ? this.getResponseStreamWriter(fileName, target as Response, columns)
-          : this.getArchiveStreamWriter(fileName, target, columns),
-      writeRows
-    );
+    if (target == null || isString(target)) {
+      if (target == null) fileName = `exports/${fileName}`;
+      await this.fileService.uploadStream(target ?? this.bucket, fileName, "text/csv", async stream => {
+        await this.writeToStream(stream, columns, writeRows);
+      });
+    } else if (target instanceof ServerResponse) {
+      target.set({
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
+        "Access-Control-Expose-Headers": "Content-Disposition"
+      });
+      await this.writeToStream(target, columns, writeRows);
+    } else {
+      const passThrough = new PassThrough();
+      target.append(passThrough, { name: fileName });
+      await this.writeToStream(passThrough, columns, writeRows);
+    }
   }
 
-  async writeToStream(stream: StreamWriter, writeRows: RowWriter) {
-    const { addRow, close } = stream;
+  async writeToStream(destination: NodeJS.WritableStream, columns: Dictionary<string>, writeRows: RowWriter) {
+    const stringifier = stringify({ header: true, columns });
+    stringifier.pipe(destination);
+
+    const keys = Object.keys(columns);
+    const addRow = (model: Model, additional?: Dictionary<unknown>) => {
+      const row = Object.entries({ ...pick(model, keys), ...additional }).reduce(
+        (acc, [key, value]) => ({ ...acc, [key]: this.serializeCell(value) }),
+        {}
+      );
+      stringifier.write(row);
+    };
+
     try {
       await writeRows(addRow);
     } catch (error) {
@@ -192,7 +168,7 @@ export class CsvExportService {
       }
       throw error;
     } finally {
-      close();
+      stringifier.end();
     }
   }
 

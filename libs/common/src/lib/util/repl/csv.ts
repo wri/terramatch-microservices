@@ -19,12 +19,11 @@ export const parseCsv = async (path: string, onRow: CsvRowCallback) => {
 
 export const writeCsv = async (fileName: string, columns: Dictionary<string>, writeRows: RowWriter) => {
   const csvService = getService(CsvExportService);
-  const stream = IS_AWS
-    ? getService(FileService).uploadStream(REPL_BUCKET, fileName, "text/csv")
-    : fs.createWriteStream(fileName);
-  await csvService.writeToStream(csvService.getStreamWriter(stream, columns), writeRows);
+
   if (IS_AWS) {
-    return await getService(FileService).generatePresignedUrl(REPL_BUCKET, fileName);
+    await csvService.writeCsv(fileName, REPL_BUCKET, columns, writeRows);
+  } else {
+    await csvService.writeToStream(fs.createWriteStream(fileName), columns, writeRows);
   }
 };
 

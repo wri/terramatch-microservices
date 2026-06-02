@@ -97,7 +97,7 @@ export const POLYGON_STATUSES_FILTERS = [
 
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
 
-export type ProgressTick = (progressCount: number) => Promise<void>;
+export type ProgressTick = (progressCount?: number) => Promise<void>;
 
 const ASSOCIATION_PROCESSORS = {
   trackings: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
@@ -363,37 +363,27 @@ export class EntitiesService {
     generateFileName: (model: T, media: Media) => string,
     progressTick?: ProgressTick
   ) {
-    const mediaByModelId = groupBy(await Media.for(models).findAll(), "modelId");
-    const missingModels = models.length - Object.keys(mediaByModelId).length;
-    if (missingModels > 0) {
-      this.logger.log("Missing models", missingModels);
-      await progressTick?.(missingModels);
-    }
-
-    for (const [modelId, media] of Object.entries(mediaByModelId)) {
-      const model = models.find(({ id }) => `${id}` === modelId) as T;
-      // In the case of a ton of media, we want to avoid trying to stream them all to / from S3
-      // at once, so chunk into smaller sets and process each set before moving on to the next.
-      for (const subset of chunk(media, 5)) {
-        await Promise.allSettled(
-          subset.map(async m => {
-            try {
-              const stream = await this.mediaService.getMediaStream(m);
-              archive.append(stream, { name: generateFileName(model, m) });
-            } catch (err) {
-              // swallow errors with a warning to prevent the archive stream as a whole from failing
-              const message = err instanceof Error ? err.message : `${err}`;
-              this.logger.warn(`Failed to get asset stream [${message}]`, {
-                mediaId: m.id,
-                mediaFileName: m.fileName
-              });
-            }
-          })
-        );
-      }
-
-      this.logger.log("processed one model");
-      await progressTick?.(1);
+    const media = await Media.for(models).findAll();
+    // In the case of a ton of media, we want to avoid trying to stream them all to / from S3
+    // at once, so chunk into smaller sets and process each set before moving on to the next.
+    for (const subset of chunk(media, 5)) {
+      await Promise.allSettled(
+        subset.map(async m => {
+          try {
+            const stream = await this.mediaService.getMediaStream(m);
+            const model = models.find(({ id }) => id === m.modelId) as T;
+            archive.append(stream, { name: generateFileName(model, m) });
+            await progressTick?.();
+          } catch (err) {
+            // swallow errors with a warning to prevent the archive stream as a whole from failing
+            const message = err instanceof Error ? err.message : `${err}`;
+            this.logger.warn(`Failed to get asset stream [${message}]`, {
+              mediaId: m.id,
+              mediaFileName: m.fileName
+            });
+          }
+        })
+      );
     }
   }
 }

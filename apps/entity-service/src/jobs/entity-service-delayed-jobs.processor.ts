@@ -6,6 +6,7 @@ import {
 import { Job, Queue } from "bullmq";
 import {
   DelayedJob,
+  Media,
   Nursery,
   NurseryReport,
   Project,
@@ -24,8 +25,11 @@ import { ConfigService } from "@nestjs/config";
 import { streamZip } from "@terramatch-microservices/common/util/zip-stream";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
-import { EntityType } from "@terramatch-microservices/database/constants/entities";
-import { Op } from "sequelize";
+import { EntityType, ReportModel } from "@terramatch-microservices/database/constants/entities";
+import { Attributes, ModelStatic, Op, WhereOptions } from "sequelize";
+import { Literal } from "sequelize/lib/utils";
+import { Dictionary } from "lodash";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 export type EntityExportJobData = {
   delayedJobId: number;
@@ -47,18 +51,66 @@ export const ENTITY_SERVICE_EXPORT_QUEUE = "entityServiceExports";
 export const PROJECT_EXPORT = "projectExport";
 export const MEDIA_EXPORT = "mediaExport";
 
-const totalForProjectMediaExport = async (projectUuid: string) => {
-  const projectId = (await Project.findOne({ where: { uuid: projectUuid } }))?.id;
-  if (projectId == null) return null;
+type ReportDependency<T extends ReportModel> = {
+  model: ModelStatic<T>;
+  reportType: string;
+  parentType: string;
+  parentAttribute: keyof Attributes<T>;
+};
 
-  const projectReportTotal = await ProjectReport.count({ where: { projectId } });
-  const siteTotal = await Site.count({ where: { projectId } });
-  const siteReportTotal = await SiteReport.count({ where: { siteId: { [Op.in]: Site.idsSubquery(projectId) } } });
-  const nurseryTotal = await Nursery.count({ where: { projectId } });
-  const nurseryReportTotal = await NurseryReport.count({
-    where: { nurseryId: { [Op.in]: Nursery.idsSubquery(projectId) } }
+const PROJECT_REPORT_DEP: ReportDependency<ProjectReport> = {
+  model: ProjectReport,
+  reportType: ProjectReport.LARAVEL_TYPE,
+  parentType: Project.LARAVEL_TYPE,
+  parentAttribute: "projectId"
+};
+const SITE_REPORT_DEP: ReportDependency<SiteReport> = {
+  model: SiteReport,
+  reportType: SiteReport.LARAVEL_TYPE,
+  parentType: Site.LARAVEL_TYPE,
+  parentAttribute: "siteId"
+};
+const NURSERY_REPORT_DEP: ReportDependency<NurseryReport> = {
+  model: NurseryReport,
+  reportType: NurseryReport.LARAVEL_TYPE,
+  parentType: Nursery.LARAVEL_TYPE,
+  parentAttribute: "nurseryId"
+};
+
+const REPORT_DEPENDENCIES = [PROJECT_REPORT_DEP, SITE_REPORT_DEP, NURSERY_REPORT_DEP];
+
+const totalForMediaExport = async (entityType: EntityType, uuid: string) => {
+  // Mapping of modelType to modelId literal for Media queries
+  const entityScopes: Dictionary<Literal> = {};
+
+  if (entityType === "projects") {
+    const projectIdSubquery = Subquery.select(Project, "id").eq("uuid", uuid).literal;
+    entityScopes[Project.LARAVEL_TYPE] = projectIdSubquery;
+    entityScopes[Site.LARAVEL_TYPE] = Subquery.select(Site, "id").eq("projectId", projectIdSubquery).literal;
+    entityScopes[Nursery.LARAVEL_TYPE] = Subquery.select(Nursery, "id").eq("projectId", projectIdSubquery).literal;
+  } else if (entityType === "sites") {
+    entityScopes[Site.LARAVEL_TYPE] = Subquery.select(Site, "id").eq("uuid", uuid).literal;
+  } else if (entityType === "nurseries") {
+    entityScopes[Nursery.LARAVEL_TYPE] = Subquery.select(Nursery, "id").eq("uuid", uuid).literal;
+  }
+
+  for (const dep of REPORT_DEPENDENCIES) {
+    const { model, parentType, reportType, parentAttribute } = dep as ReportDependency<ReportModel>;
+    if (entityScopes[parentType] != null) {
+      entityScopes[reportType] = Subquery.select(model, "id").in(parentAttribute, entityScopes[parentType]).literal;
+    }
+  }
+
+  const total = await Media.count({
+    where: {
+      [Op.or]: Object.entries(entityScopes).reduce(
+        (acc, [modelType, modelIds]) => [...acc, { modelType, modelId: { [Op.in]: modelIds } }],
+        [] as WhereOptions[]
+      )
+    }
   });
-  return 1 + projectReportTotal + siteTotal + siteReportTotal + nurseryTotal + nurseryReportTotal;
+  // Only report progress if there are more than 100 media being added to the zip
+  return total > 100 ? total : null;
 };
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
@@ -87,7 +139,7 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     entityName: string,
     jobName: string
   ) {
-    const totalContent = entityType === "projects" ? await totalForProjectMediaExport(entityUuid) : null;
+    const totalContent = await totalForMediaExport(entityType, entityUuid);
     const delayedJob = await DelayedJob.create({
       name: jobName,
       createdBy: UserContext.authenticatedUserId,
@@ -156,7 +208,7 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     } = job;
 
     let totalProcessed = 0;
-    const progressTick = async (progressCount: number) => {
+    const progressTick = async (progressCount = 1) => {
       if (totalContent == null) return;
 
       // only update the total every 10 ticks;

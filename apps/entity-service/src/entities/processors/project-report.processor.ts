@@ -17,7 +17,7 @@ import {
   TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ProcessableAssociation } from "../entities.service";
+import { ProcessableAssociation, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
@@ -329,7 +329,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     );
   }
 
-  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
     const reports = await ProjectReport.findAll({
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["dueAt", "id"],
@@ -339,11 +339,16 @@ export class ProjectReportProcessor extends ReportProcessor<
 
     const dirName = await this.entitiesService.localizeText("Project Reports");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
-    await this.entitiesService.exportMedia(reports, archive, (report, media) => {
-      const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
-      const projectName = report.project?.name ?? defaultName;
-      return `${dirName}/${media.isPublic ? "public" : "private"}/${projectName}/${prefix}${media.fileName}`;
-    });
+    await this.entitiesService.exportMedia(
+      reports,
+      archive,
+      (report, media) => {
+        const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+        const projectName = report.project?.name ?? defaultName;
+        return `${dirName}/${media.isPublic ? "public" : "private"}/${projectName}/${prefix}${media.fileName}`;
+      },
+      progressTick
+    );
   }
 
   protected async exportReports(

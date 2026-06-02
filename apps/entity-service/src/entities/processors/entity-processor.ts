@@ -2,7 +2,7 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { Response } from "express";
 import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
-import { EntitiesService, ProcessableEntity } from "../entities.service";
+import { EntitiesService, ProcessableEntity, ProgressTick } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
@@ -103,7 +103,7 @@ export abstract class EntityProcessor<
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async exportMedia(uuids: string[] | Literal, target: Archiver): Promise<void> {
+  async exportMedia(uuids: string[] | Literal, target: Archiver, progressTick?: ProgressTick): Promise<void> {
     throw new InternalServerErrorException("Export media not supported on this entity processor");
   }
 

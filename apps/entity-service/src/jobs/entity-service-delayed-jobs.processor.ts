@@ -4,7 +4,15 @@ import {
   DelayedJobWorker
 } from "@terramatch-microservices/common/workers/delayed-job-worker.processor";
 import { Job, Queue } from "bullmq";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
+import {
+  DelayedJob,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -17,6 +25,7 @@ import { streamZip } from "@terramatch-microservices/common/util/zip-stream";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { Op } from "sequelize";
 
 export type EntityExportJobData = {
   delayedJobId: number;
@@ -29,6 +38,7 @@ export type MediaExportJobData = {
   entityType: EntityType;
   entityUuid: string;
   entityName: string;
+  totalContent: number | null;
 };
 
 export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobData;
@@ -36,6 +46,20 @@ export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobDa
 export const ENTITY_SERVICE_EXPORT_QUEUE = "entityServiceExports";
 export const PROJECT_EXPORT = "projectExport";
 export const MEDIA_EXPORT = "mediaExport";
+
+const totalForProjectMediaExport = async (projectUuid: string) => {
+  const projectId = (await Project.findOne({ where: { uuid: projectUuid } }))?.id;
+  if (projectId == null) return null;
+
+  const projectReportTotal = await ProjectReport.count({ where: { projectId } });
+  const siteTotal = await Site.count({ where: { projectId } });
+  const siteReportTotal = await SiteReport.count({ where: { siteId: { [Op.in]: Site.idsSubquery(projectId) } } });
+  const nurseryTotal = await Nursery.count({ where: { projectId } });
+  const nurseryReportTotal = await NurseryReport.count({
+    where: { nurseryId: { [Op.in]: Nursery.idsSubquery(projectId) } }
+  });
+  return 1 + projectReportTotal + siteTotal + siteReportTotal + nurseryTotal + nurseryReportTotal;
+};
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
 @Processor(ENTITY_SERVICE_EXPORT_QUEUE, {
@@ -57,11 +81,14 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
   }
 
   static async queueMediaExport(queue: Queue, entityType: EntityType, entityUuid: string, entityName: string) {
+    const totalContent = entityType === "projects" ? await totalForProjectMediaExport(entityUuid) : null;
     const delayedJob = await DelayedJob.create({
       name: "Entity Media Export",
-      createdBy: UserContext.authenticatedUserId
+      createdBy: UserContext.authenticatedUserId,
+      totalContent,
+      isAcknowledged: totalContent == null
     });
-    const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid, entityName };
+    const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid, entityName, totalContent };
     await queue.add(MEDIA_EXPORT, data);
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
@@ -85,7 +112,7 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     if (job.name === PROJECT_EXPORT) {
       return await this.processEntityExport(job.data as EntityExportJobData);
     } else if (job.name === MEDIA_EXPORT) {
-      return await this.processMediaExport(job.data as MediaExportJobData);
+      return await this.processMediaExport(job as Job<MediaExportJobData>);
     } else {
       throw new InternalServerErrorException(`Unsupported job name: ${job.name}`);
     }
@@ -117,7 +144,23 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     };
   }
 
-  private async processMediaExport({ entityType, entityUuid, entityName }: MediaExportJobData) {
+  private async processMediaExport(job: Job<MediaExportJobData>) {
+    const {
+      data: { entityType, entityUuid, entityName, totalContent }
+    } = job;
+
+    let totalProcessed = 0;
+    const progressTick = async (progressCount: number) => {
+      if (totalContent == null) return;
+
+      // only update the total every 10 ticks;
+      const shouldUpdate = Math.floor(totalProcessed / 10) !== Math.floor((totalProcessed + progressCount) / 10);
+      totalProcessed += progressCount;
+      if (shouldUpdate) {
+        await this.updateJobProgress(job, { processedContent: totalProcessed });
+      }
+    };
+
     const fileName = `exports/media-exports/${timestampFileName(
       `${entityName} - ${await this.entitiesService.localizeText("assets")}`,
       ".zip"
@@ -127,12 +170,17 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
       await this.fileService.uploadStream(this.bucket, fileName, "application/zip", async stream => {
         const processor = this.entitiesService.createEntityProcessor(entityType);
         await streamZip(stream, async archive => {
-          await processor.exportMedia([entityUuid], archive);
+          await processor.exportMedia([entityUuid], archive, progressTick);
         });
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
       throw new DelayedJobException(500, `Failed to export entity media: ${message}`);
+    }
+
+    // make sure we register as 100%
+    if (totalContent != null) {
+      await this.updateJobProgress(job, { processedContent: totalContent });
     }
 
     return {

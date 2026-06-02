@@ -20,6 +20,7 @@ import { Response } from "express";
 import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 import { Literal } from "sequelize/types/utils";
+import { ProgressTick } from "../entities.service";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -282,7 +283,7 @@ export class NurseryReportProcessor extends ReportProcessor<
     );
   }
 
-  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
     const reports = await NurseryReport.findAll({
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["dueAt", "id"],
@@ -292,11 +293,16 @@ export class NurseryReportProcessor extends ReportProcessor<
 
     const dirName = await this.entitiesService.localizeText("Nursery Reports");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
-    await this.entitiesService.exportMedia(reports, archive, (report, media) => {
-      const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
-      const nurseryName = report.nursery?.name ?? defaultName;
-      return `${dirName}/${media.isPublic ? "public" : "private"}/${nurseryName}/${prefix}${media.fileName}`;
-    });
+    await this.entitiesService.exportMedia(
+      reports,
+      archive,
+      (report, media) => {
+        const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+        const nurseryName = report.nursery?.name ?? defaultName;
+        return `${dirName}/${media.isPublic ? "public" : "private"}/${nurseryName}/${prefix}${media.fileName}`;
+      },
+      progressTick
+    );
   }
 
   protected async exportReports(

@@ -35,7 +35,7 @@ import {
   NotFoundException,
   UnauthorizedException
 } from "@nestjs/common";
-import { ProcessableEntity } from "../entities.service";
+import { ProcessableEntity, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -864,7 +864,7 @@ export class ProjectProcessor extends EntityProcessor<
     );
   }
 
-  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
     const projects = await Project.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
     if (projects.length === 0) return;
 
@@ -874,16 +874,17 @@ export class ProjectProcessor extends EntityProcessor<
       projects,
       archive,
       (project, media) =>
-        `${dirName}/${media.isPublic ? "public" : "private"}/${project.name ?? defaultName}/${media.fileName}`
+        `${dirName}/${media.isPublic ? "public" : "private"}/${project.name ?? defaultName}/${media.fileName}`,
+      progressTick
     );
 
     const projectIds = projects.map(({ id }) => id);
     const reportProcessor = this.entitiesService.createEntityProcessor("projectReports");
-    await reportProcessor.exportMedia(ProjectReport.uuidsSubquery(projectIds), archive);
+    await reportProcessor.exportMedia(ProjectReport.uuidsSubquery(projectIds), archive, progressTick);
     const siteProcessor = this.entitiesService.createEntityProcessor("sites");
-    await siteProcessor.exportMedia(Site.uuidsSubquery(projectIds), archive);
+    await siteProcessor.exportMedia(Site.uuidsSubquery(projectIds), archive, progressTick);
     const nurseryProcessor = this.entitiesService.createEntityProcessor("nurseries");
-    await nurseryProcessor.exportMedia(Nursery.uuidsSubquery(projectIds), archive);
+    await nurseryProcessor.exportMedia(Nursery.uuidsSubquery(projectIds), archive, progressTick);
   }
 
   private async getProjectCreationOrg(application: Application | undefined) {

@@ -32,6 +32,7 @@ import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-s
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { Literal } from "sequelize/types/utils";
+import { ProgressTick } from "../entities.service";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -349,7 +350,7 @@ export class NurseryProcessor extends EntityProcessor<
     );
   }
 
-  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
     const nurseries = await Nursery.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
     if (nurseries.length === 0) return;
 
@@ -359,10 +360,15 @@ export class NurseryProcessor extends EntityProcessor<
       nurseries,
       archive,
       (nursery, media) =>
-        `${dirName}/${media.isPublic ? "public" : "private"}/${nursery.name ?? defaultName}/${media.fileName}`
+        `${dirName}/${media.isPublic ? "public" : "private"}/${nursery.name ?? defaultName}/${media.fileName}`,
+      progressTick
     );
 
     const reportProcessor = this.entitiesService.createEntityProcessor("nurseryReports");
-    await reportProcessor.exportMedia(NurseryReport.uuidsSubquery(Nursery.idsForUuidsSubquery(uuids)), archive);
+    await reportProcessor.exportMedia(
+      NurseryReport.uuidsSubquery(Nursery.idsForUuidsSubquery(uuids)),
+      archive,
+      progressTick
+    );
   }
 }

@@ -17,7 +17,7 @@ import { BadRequestException, InternalServerErrorException, NotFoundException } 
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { ProcessableAssociation } from "../entities.service";
+import { ProcessableAssociation, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { PAID_OTHER, VOLUNTEER_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
 import { Dictionary } from "lodash";
@@ -338,7 +338,7 @@ export class SiteReportProcessor extends ReportProcessor<
     );
   }
 
-  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
     const reports = await SiteReport.findAll({
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["dueAt", "id"],
@@ -348,11 +348,16 @@ export class SiteReportProcessor extends ReportProcessor<
 
     const dirName = await this.entitiesService.localizeText("Site Reports");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
-    await this.entitiesService.exportMedia(reports, archive, (report, media) => {
-      const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
-      const siteName = report.site?.name ?? defaultName;
-      return `${dirName}/${media.isPublic ? "public" : "private"}/${siteName}/${prefix}${media.fileName}`;
-    });
+    await this.entitiesService.exportMedia(
+      reports,
+      archive,
+      (report, media) => {
+        const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+        const siteName = report.site?.name ?? defaultName;
+        return `${dirName}/${media.isPublic ? "public" : "private"}/${siteName}/${prefix}${media.fileName}`;
+      },
+      progressTick
+    );
   }
 
   protected async exportReports(

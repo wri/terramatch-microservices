@@ -26,7 +26,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { NurseryReportProcessor } from "./nursery-report.processor";

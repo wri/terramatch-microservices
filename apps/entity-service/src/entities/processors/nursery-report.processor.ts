@@ -17,7 +17,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [

@@ -70,6 +70,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { Archiver } from "archiver";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -276,8 +277,6 @@ export class EntitiesService {
 
   duplicateMedia = (media: Media, newOwner: MediaOwnerModel) => this.mediaService.duplicateMedia(media, newOwner);
 
-  getMediaStream = (media: Media) => this.mediaService.getMediaStream(media);
-
   mediaDto(media: Media, additional: AssociationDtoAdditionalProps) {
     return new MediaDto(media, {
       url: this.fullUrl(media),
@@ -354,5 +353,30 @@ export class EntitiesService {
         await processPage(source);
       }
     });
+  }
+
+  async exportMedia<T extends EntityModel>(
+    models: T[],
+    archive: Archiver,
+    generateFilename: (model: T, media: Media) => string
+  ) {
+    const media = await Media.for(models).findAll();
+    await Promise.allSettled(
+      media.map(async m => {
+        try {
+          const stream = await this.mediaService.getMediaStream(m);
+          const model = models.find(({ id }) => id === m.modelId) as T;
+          const fileName = generateFilename(model, m);
+          archive.append(stream, { name: fileName });
+        } catch (err) {
+          // swallow errors with a warning to prevent the archive stream as awhole from failing
+          const message = err instanceof Error ? err.message : `${err}`;
+          this.logger.warn(`Failed to get asset stream [${message}]`, {
+            mediaId: m.id,
+            mediaFileName: m.fileName
+          });
+        }
+      })
+    );
   }
 }

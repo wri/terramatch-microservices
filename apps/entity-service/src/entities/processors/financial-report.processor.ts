@@ -20,7 +20,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
 

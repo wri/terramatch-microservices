@@ -6,7 +6,7 @@ import {
 import { Job, Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { InternalServerErrorException } from "@nestjs/common";
-import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { EntitiesService } from "../entities/entities.service";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";

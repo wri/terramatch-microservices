@@ -43,7 +43,7 @@ import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import {
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
   READY_FOR_BASELINE_AUDIT_TYPE

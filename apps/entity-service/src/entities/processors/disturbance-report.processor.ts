@@ -22,7 +22,7 @@ import { Dictionary, flatten, kebabCase } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 
 const REPORT_ENTRIES = [
   {

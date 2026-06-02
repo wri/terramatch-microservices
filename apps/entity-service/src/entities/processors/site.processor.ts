@@ -29,14 +29,13 @@ import { PlantingStatus } from "@terramatch-microservices/database/constants/sta
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
-import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -99,8 +98,6 @@ const CSV_ATTRIBUTES = [
 export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullDto, EntityUpdateAttributes> {
   readonly LIGHT_DTO = SiteLightDto;
   readonly FULL_DTO = SiteFullDto;
-
-  private readonly logger = new TMLogger(SiteProcessor.name);
 
   async findOne(uuid: string) {
     return await Site.findOne({
@@ -572,28 +569,15 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
   }
 
   async exportMedia(uuids: string[], archive: Archiver) {
-    const sites = await Site.findAll({ where: { uuid: uuids }, attributes: ["name", "id"] });
-    const mediaBySite = groupBy(await Media.for(sites).findAll(), "modelId");
+    const sites = await Site.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    await this.entitiesService.exportMedia(
+      sites,
+      archive,
+      (site, media) =>
+        `Site Establishment/${media.isPublic ? "public" : "private"}/${site.name ?? "Unnamed"}/${media.fileName}`
+    );
 
-    const addAsset = async (siteName: string, media: Media) => {
-      try {
-        const stream = await this.entitiesService.getMediaStream(media);
-        const fileName = `Site Establishment/${media.isPublic ? "public" : "private"}/${siteName}/${media.fileName}`;
-        archive.append(stream, { name: fileName });
-      } catch (err) {
-        // swallow errors with a warning to prevent the archive stream as a whole from failing.
-        const message = err instanceof Error ? err.message : `${err}`;
-        this.logger.warn(`Failed to get asset stream [${message}]`, {
-          siteName,
-          mediaId: media.id,
-          mediaFileName: media.fileName
-        });
-      }
-    };
-
-    for (const [siteId, media] of Object.entries(mediaBySite)) {
-      const name = sites.find(({ id }) => `${id}` === siteId)?.name;
-      await Promise.allSettled(media.map(m => addAsset(name ?? "Unnamed", m)));
-    }
+    const reportProcessor = this.entitiesService.createEntityProcessor("siteReports") as SiteReportProcessor;
+    await reportProcessor.exportMedia(SiteReport.uuidsSubquery(sites.map(({ id }) => id)), archive);
   }
 }

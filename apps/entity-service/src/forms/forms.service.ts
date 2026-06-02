@@ -66,7 +66,7 @@ import {
 } from "@terramatch-microservices/common/export/csv-export.service";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];

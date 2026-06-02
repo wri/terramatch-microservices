@@ -31,7 +31,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Archiver } from "archiver";
-import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];

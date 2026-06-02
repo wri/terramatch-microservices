@@ -21,6 +21,7 @@ import { uniq } from "lodash";
 import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
+import { Literal } from "sequelize/types/utils";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -102,7 +103,7 @@ export abstract class EntityProcessor<
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async exportMedia(uuids: string[], target: Archiver): Promise<void> {
+  async exportMedia(uuids: string[] | Literal, target: Archiver): Promise<void> {
     throw new InternalServerErrorException("Export media not supported on this entity processor");
   }
 

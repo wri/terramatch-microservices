@@ -80,10 +80,16 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  static async queueMediaExport(queue: Queue, entityType: EntityType, entityUuid: string, entityName: string) {
+  static async queueMediaExport(
+    queue: Queue,
+    entityType: EntityType,
+    entityUuid: string,
+    entityName: string,
+    jobName: string
+  ) {
     const totalContent = entityType === "projects" ? await totalForProjectMediaExport(entityUuid) : null;
     const delayedJob = await DelayedJob.create({
-      name: "Entity Media Export",
+      name: jobName,
       createdBy: UserContext.authenticatedUserId,
       totalContent,
       isAcknowledged: totalContent == null

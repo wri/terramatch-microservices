@@ -181,11 +181,14 @@ export class EntitiesController {
 
     await this.policyService.authorize("read", model);
 
+    const entityName = model.name ?? (await this.entitiesService.localizeText("Unnamed"));
+    const jobName = await this.entitiesService.localizeText("{entityName} Asset Zip Generation", { entityName });
     return await EntityServiceDelayedJobsProcessor.queueMediaExport(
       this.exportQueue,
       entity,
       uuid,
-      model.name ?? "Unnamed"
+      entityName,
+      jobName
     );
   }
 

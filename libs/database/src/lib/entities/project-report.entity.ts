@@ -36,6 +36,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
+import { Literal } from "sequelize/lib/utils";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -240,6 +241,10 @@ export class ProjectReport extends Model<ProjectReport> {
 
   static idsSubquery(projectId: number) {
     return Subquery.select(ProjectReport, "id").eq("projectId", projectId).literal;
+  }
+
+  static uuidsSubquery(projectIds: number[] | Literal) {
+    return Subquery.select(ProjectReport, "uuid").in("projectId", projectIds).literal;
   }
 
   static task(taskId: number) {

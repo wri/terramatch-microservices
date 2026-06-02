@@ -36,6 +36,7 @@ import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { Literal } from "sequelize/types/utils";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -568,16 +569,20 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     );
   }
 
-  async exportMedia(uuids: string[], archive: Archiver) {
+  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
     const sites = await Site.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (sites.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Site Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
     await this.entitiesService.exportMedia(
       sites,
       archive,
       (site, media) =>
-        `Site Establishment/${media.isPublic ? "public" : "private"}/${site.name ?? "Unnamed"}/${media.fileName}`
+        `${dirName}/${media.isPublic ? "public" : "private"}/${site.name ?? defaultName}/${media.fileName}`
     );
 
-    const reportProcessor = this.entitiesService.createEntityProcessor("siteReports") as SiteReportProcessor;
-    await reportProcessor.exportMedia(SiteReport.uuidsSubquery(sites.map(({ id }) => id)), archive);
+    const reportProcessor = this.entitiesService.createEntityProcessor("siteReports");
+    await reportProcessor.exportMedia(SiteReport.uuidsSubquery(Site.idsForUuidsSubquery(uuids)), archive);
   }
 }

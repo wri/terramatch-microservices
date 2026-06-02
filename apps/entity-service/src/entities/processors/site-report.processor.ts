@@ -344,10 +344,14 @@ export class SiteReportProcessor extends ReportProcessor<
       attributes: ["dueAt", "id"],
       include: [{ association: "site", attributes: ["name"] }]
     });
+    if (reports.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Site Reports");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
     await this.entitiesService.exportMedia(reports, archive, (report, media) => {
       const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
-      const siteName = report.site?.name ?? "Unnamed";
-      return `Site Reports/${media.isPublic ? "public" : "private"}/${siteName}/${prefix}${media.fileName}`;
+      const siteName = report.site?.name ?? defaultName;
+      return `${dirName}/${media.isPublic ? "public" : "private"}/${siteName}/${prefix}${media.fileName}`;
     });
   }
 

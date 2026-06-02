@@ -31,6 +31,7 @@ import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { Literal } from "sequelize/types/utils";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -346,5 +347,22 @@ export class NurseryProcessor extends EntityProcessor<
           fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
       }
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+    const nurseries = await Nursery.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (nurseries.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Nursery Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    await this.entitiesService.exportMedia(
+      nurseries,
+      archive,
+      (nursery, media) =>
+        `${dirName}/${media.isPublic ? "public" : "private"}/${nursery.name ?? defaultName}/${media.fileName}`
+    );
+
+    const reportProcessor = this.entitiesService.createEntityProcessor("nurseryReports");
+    await reportProcessor.exportMedia(NurseryReport.uuidsSubquery(Nursery.idsForUuidsSubquery(uuids)), archive);
   }
 }

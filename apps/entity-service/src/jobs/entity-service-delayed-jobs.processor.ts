@@ -92,7 +92,10 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
   }
 
   private async processEntityExport({ projectName, projectUuid }: EntityExportJobData) {
-    const fileName = `exports/pd-exports/${timestampFileName(`${projectName} full export`, ".zip")}`;
+    const fileName = `exports/pd-exports/${timestampFileName(
+      `${projectName} ${await this.entitiesService.localizeText("full export")}`,
+      ".zip"
+    )}`;
 
     try {
       await this.fileService.uploadStream(this.bucket, fileName, "application/zip", async stream => {
@@ -115,7 +118,10 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
   }
 
   private async processMediaExport({ entityType, entityUuid, entityName }: MediaExportJobData) {
-    const fileName = `exports/media-exports/${timestampFileName(`${entityName} - assets`, ".zip")}`;
+    const fileName = `exports/media-exports/${timestampFileName(
+      `${entityName} - ${await this.entitiesService.localizeText("assets")}`,
+      ".zip"
+    )}`;
 
     try {
       await this.fileService.uploadStream(this.bucket, fileName, "application/zip", async stream => {

@@ -50,6 +50,7 @@ import {
 } from "@terramatch-microservices/database/constants/audit-status";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
+import { Literal } from "sequelize/types/utils";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -861,6 +862,28 @@ export class ProjectProcessor extends EntityProcessor<
       new PaginatedQueryBuilder(Project, 10, CSV_EXPORT_INCLUDES).where(where),
       { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+    const projects = await Project.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (projects.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Project Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    await this.entitiesService.exportMedia(
+      projects,
+      archive,
+      (project, media) =>
+        `${dirName}/${media.isPublic ? "public" : "private"}/${project.name ?? defaultName}/${media.fileName}`
+    );
+
+    const projectIds = projects.map(({ id }) => id);
+    const reportProcessor = this.entitiesService.createEntityProcessor("projectReports");
+    await reportProcessor.exportMedia(ProjectReport.uuidsSubquery(projectIds), archive);
+    const siteProcessor = this.entitiesService.createEntityProcessor("sites");
+    await siteProcessor.exportMedia(Site.uuidsSubquery(projectIds), archive);
+    const nurseryProcessor = this.entitiesService.createEntityProcessor("nurseries");
+    await nurseryProcessor.exportMedia(Nursery.uuidsSubquery(projectIds), archive);
   }
 
   private async getProjectCreationOrg(application: Application | undefined) {

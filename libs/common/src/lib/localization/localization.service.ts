@@ -143,7 +143,7 @@ export class LocalizationService {
   async localizeText(text: string, locale: ValidLocale, params?: ITranslateParams) {
     // Set the locale for the SDK
     const txLocale = normalizeLocale(locale);
-    await tx.setCurrentLocale(txLocale);
+    if (tx.currentLocale !== txLocale) await tx.setCurrentLocale(txLocale);
 
     // Translate the text
     return t(text, params);

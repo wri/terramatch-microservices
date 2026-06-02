@@ -17,8 +17,9 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
+import { Literal } from "sequelize/types/utils";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -279,6 +280,23 @@ export class NurseryReportProcessor extends ReportProcessor<
       new PaginatedQueryBuilder(NurseryReport, 10, CSV_EXPORT_INCLUDES).where(where),
       fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery reports`)
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver) {
+    const reports = await NurseryReport.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["dueAt", "id"],
+      include: [{ association: "nursery", attributes: ["name"] }]
+    });
+    if (reports.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Nursery Reports");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    await this.entitiesService.exportMedia(reports, archive, (report, media) => {
+      const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+      const nurseryName = report.nursery?.name ?? defaultName;
+      return `${dirName}/${media.isPublic ? "public" : "private"}/${nurseryName}/${prefix}${media.fileName}`;
+    });
   }
 
   protected async exportReports(

@@ -1,7 +1,6 @@
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import {
   FormOptionList,
-  FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
   I18nItem

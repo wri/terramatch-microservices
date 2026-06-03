@@ -29,6 +29,7 @@ POLYGONS_QUERY = """\
 SELECT vp.uuid as project_id, vp.name as project_name, vp.country,
        vp.framework_key, vp.short_name, CAST(vp.cohort AS CHAR) AS cohort,
        vp.polygon_data_submission, vp.ready_for_baseline,
+       vp.total_hectares_restored_goal, vp.trees_grown_goal,
        vs.name as site_name, vs.uuid as site_id,
        sp.poly_name, sp.uuid as poly_uuid, sp.plantstart, sp.practice,
        sp.target_sys, sp.distr, sp.calc_area,

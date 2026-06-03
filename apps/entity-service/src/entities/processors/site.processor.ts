@@ -373,7 +373,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       dto: new SiteLightDto(site, {
         treesPlantedCount,
         totalHectaresRestoredSum,
-        plantingStatus: lastReport?.plantingStatus as PlantingStatus
+        plantingStatus: lastReport?.plantingStatus as PlantingStatus,
+        totalSiteReports: await this.getTotalSiteReports(site.id)
       })
     };
   }
@@ -389,14 +390,17 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       this.getPlantingStatus(sites)
     ]);
 
-    return sites.map(site => ({
-      id: site.uuid,
-      dto: new SiteLightDto(site, {
-        treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
-        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
-        plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null
-      })
-    }));
+    return Promise.all(
+      sites.map(async site => ({
+        id: site.uuid,
+        dto: new SiteLightDto(site, {
+          treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+          totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
+          plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null,
+          totalSiteReports: await this.getTotalSiteReports(site.id)
+        })
+      }))
+    );
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {

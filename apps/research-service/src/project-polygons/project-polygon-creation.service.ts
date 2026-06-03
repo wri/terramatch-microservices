@@ -85,7 +85,7 @@ export class ProjectPolygonCreationService {
     file: Express.Multer.File,
     projectPitchUuid: string,
     userId: number
-  ): Promise<ProjectPolygon> {
+  ): Promise<ProjectPolygon[]> {
     if (PolygonGeometry.sequelize == null) {
       throw new BadRequestException("Database connection not available");
     }
@@ -107,11 +107,8 @@ export class ProjectPolygonCreationService {
 
       await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
 
-      const transformedGeometry =
-        await this.projectPolygonGeometryService.transformFeaturesToSinglePolygon(featureCollection);
-
       const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
-        [transformedGeometry as Geometry],
+        featureCollection.features.map(f => f.geometry as Geometry),
         userId,
         transaction
       );
@@ -120,19 +117,19 @@ export class ProjectPolygonCreationService {
         throw new BadRequestException("Failed to create polygon geometry");
       }
 
-      const projectPolygon = await ProjectPolygon.create(
-        {
-          polyUuid: polygonUuids[0],
+      const projectPolygons = await ProjectPolygon.bulkCreate(
+        polygonUuids.map(uuid => ({
+          polyUuid: uuid,
           entityType: ProjectPitch.LARAVEL_TYPE,
           entityId: projectPitch.id,
           createdBy: userId,
           lastModifiedBy: userId
-        } as ProjectPolygon,
+        })) as ProjectPolygon[],
         { transaction }
       );
 
       await transaction.commit();
-      return projectPolygon;
+      return projectPolygons;
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -140,7 +137,7 @@ export class ProjectPolygonCreationService {
   }
 
   private async deleteExistingProjectPolygon(projectPitchId: number, transaction: Transaction): Promise<void> {
-    const existingProjectPolygon = await ProjectPolygon.findOne({
+    const existingProjectPolygons = await ProjectPolygon.findAll({
       where: {
         entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitchId
@@ -148,11 +145,15 @@ export class ProjectPolygonCreationService {
       transaction
     });
 
-    if (existingProjectPolygon == null) {
+    if (existingProjectPolygons == null) {
       return;
     }
 
-    await this.projectPolygonsService.deleteProjectPolygonAndGeometry(existingProjectPolygon, transaction);
+    await Promise.all(
+      existingProjectPolygons.map(projectPolygon =>
+        this.projectPolygonsService.deleteProjectPolygonAndGeometry(projectPolygon, transaction)
+      )
+    );
   }
 
   private groupGeometriesByProjectPitchId(geometries: { type: string; features: Feature[] }[]): {

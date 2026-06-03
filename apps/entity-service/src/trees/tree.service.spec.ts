@@ -259,7 +259,7 @@ describe("TreeService", () => {
       await ProjectReport.destroy({ where: { taskId: { [Op.in]: tasks.map(({ id }) => id) } } });
       await SiteReport.destroy({ where: { taskId: { [Op.in]: tasks.map(({ id }) => id) } } });
 
-      const project = await ProjectFactory.create();
+      const project = await ProjectFactory.create({ frameworkKey: "hbf" });
       const projectReport = await ProjectReportFactory.create({
         projectId: project.id,
         taskId: tasks[0].id,
@@ -356,6 +356,32 @@ describe("TreeService", () => {
       expect(result).toMatchObject({
         "tree-planted": { Coffee: { amount: task1SiteCoffee } },
         seeds: { Acacia: { amount: task1SiteAcacia } }
+      });
+    });
+
+    it("includes nursery-seedling counts on PPC and TerraFund projects", async () => {
+      const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
+      const ppcReport = await ProjectReportFactory.create({ projectId: ppcProject.id, status: "approved" });
+      const ppcSeedlings = await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).createMany(2, {
+        name: "Mango"
+      });
+      const ppcSeedlingSum = sumBy(ppcSeedlings, "amount");
+      await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).create({ hidden: true });
+
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
+      const nursery = await NurseryFactory.create({ projectId: tfProject.id, status: "approved" });
+      const nurseryReport = await NurseryReportFactory.create({ nurseryId: nursery.id, status: "approved" });
+      const tfSeedlings = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReport).createMany(2, { name: "Oak" });
+      const tfSeedlingSum = sumBy(tfSeedlings, "amount");
+
+      let result = await service.getAssociatedReportCounts("projects", ppcProject.uuid);
+      expect(result["nursery-seedling"]).toMatchObject({
+        Mango: { amount: ppcSeedlingSum }
+      });
+
+      result = await service.getAssociatedReportCounts("projects", tfProject.uuid);
+      expect(result["nursery-seedling"]).toMatchObject({
+        Oak: { amount: tfSeedlingSum }
       });
     });
   });

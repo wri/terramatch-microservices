@@ -129,7 +129,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -190,7 +190,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockRejectedValue(new Error("Geometry creation failed"));
 
       await expect(service.createProjectPolygons(request, 1)).rejects.toThrow("Geometry creation failed");
@@ -331,7 +331,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(existingPolygon);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([existingPolygon]);
       projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingPolygon.uuid);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
@@ -397,7 +397,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([projectPitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [],
         areas: []
@@ -515,7 +515,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch1, pitch2]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValueOnce(pitch1).mockResolvedValueOnce(pitch2);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures
         .mockResolvedValueOnce({
           uuids: [polygonUuid1],
@@ -590,7 +590,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -664,7 +664,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -804,7 +804,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
@@ -816,12 +816,12 @@ describe("ProjectPolygonCreationService", () => {
         createdBy: userId,
         lastModifiedBy: userId
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon]);
 
       const result = await service.uploadProjectPolygonFromFile(file, pitch.uuid, userId);
 
       expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
-      expect(ProjectPolygon.findOne).toHaveBeenCalledWith(
+      expect(ProjectPolygon.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             entityType: ProjectPitch.LARAVEL_TYPE,
@@ -830,14 +830,13 @@ describe("ProjectPolygonCreationService", () => {
           transaction: mockTransaction
         })
       );
-      expect(projectPolygonGeometryService.transformFeaturesToSinglePolygon).toHaveBeenCalledWith(featureCollection);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
         [transformedGeometry],
         userId,
         mockTransaction
       );
-      expect(result.entityId).toBe(pitch.id);
-      expect(result.polyUuid).toBe(polygonUuid);
+      expect(result[0].entityId).toBe(pitch.id);
+      expect(result[0].polyUuid).toBe(polygonUuid);
       expect(mockTransaction.commit).toHaveBeenCalled();
       expect(mockTransaction.rollback).not.toHaveBeenCalled();
     });
@@ -874,7 +873,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(existingProjectPolygon);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([existingProjectPolygon]);
       projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingProjectPolygon.uuid);
       projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
@@ -887,11 +886,11 @@ describe("ProjectPolygonCreationService", () => {
         createdBy: userId,
         lastModifiedBy: userId
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon]);
 
       const result = await service.uploadProjectPolygonFromFile(file, pitch.uuid, userId);
 
-      expect(ProjectPolygon.findOne).toHaveBeenCalledWith(
+      expect(ProjectPolygon.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             entityType: ProjectPitch.LARAVEL_TYPE,
@@ -904,42 +903,16 @@ describe("ProjectPolygonCreationService", () => {
         existingProjectPolygon,
         mockTransaction
       );
-      expect(projectPolygonGeometryService.transformFeaturesToSinglePolygon).toHaveBeenCalledWith(featureCollection);
+
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
         [transformedGeometry],
         userId,
         mockTransaction
       );
-      expect(result.entityId).toBe(pitch.id);
-      expect(result.polyUuid).toBe(polygonUuid);
+      expect(result[0].entityId).toBe(pitch.id);
+      expect(result[0].polyUuid).toBe(polygonUuid);
       expect(mockTransaction.commit).toHaveBeenCalled();
       expect(mockTransaction.rollback).not.toHaveBeenCalled();
-    });
-
-    it("should throw BadRequestException when geometry transformation fails", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const file = createMockFile();
-      const featureCollection = createFeatureCollection();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn()
-      };
-
-      const sequelize = PolygonGeometry.sequelize;
-      if (sequelize == null) throw new Error("Sequelize not available");
-      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
-      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
-      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockRejectedValue(
-        new BadRequestException("Transformation failed")
-      );
-
-      await expect(service.uploadProjectPolygonFromFile(file, projectPitch.uuid, 1)).rejects.toThrow(
-        BadRequestException
-      );
-      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
     it("should throw BadRequestException when no polygon geometry is created", async () => {
@@ -969,7 +942,7 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [],
@@ -983,33 +956,6 @@ describe("ProjectPolygonCreationService", () => {
         "Failed to create polygon geometry"
       );
       expect(mockTransaction.rollback).toHaveBeenCalled();
-    });
-
-    it("should rollback transaction on error", async () => {
-      const projectPitch = await ProjectPitchFactory.build();
-      const file = createMockFile();
-      const featureCollection = createFeatureCollection();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn()
-      };
-
-      const sequelize = PolygonGeometry.sequelize;
-      if (sequelize == null) throw new Error("Sequelize not available");
-      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
-      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findOne").mockResolvedValue(null);
-      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockRejectedValue(
-        new Error("Transformation error")
-      );
-
-      await expect(service.uploadProjectPolygonFromFile(file, projectPitch.uuid, 1)).rejects.toThrow(
-        "Transformation error"
-      );
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(mockTransaction.commit).not.toHaveBeenCalled();
     });
   });
 });

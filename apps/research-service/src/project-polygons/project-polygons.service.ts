@@ -33,6 +33,30 @@ export class ProjectPolygonsService {
     });
   }
 
+  async findManyByProjectPitchUuid(projectPitchUuid: string): Promise<ProjectPolygon[]> {
+    const projectPitch = await ProjectPitch.findOne({
+      where: { uuid: projectPitchUuid },
+      attributes: ["id", "uuid"]
+    });
+
+    if (projectPitch == null) {
+      return [];
+    }
+
+    return await ProjectPolygon.findAll({
+      where: {
+        entityType: ProjectPitch.LARAVEL_TYPE,
+        entityId: projectPitch.id
+      },
+      include: [
+        {
+          model: PolygonGeometry,
+          attributes: ["uuid"]
+        }
+      ]
+    });
+  }
+
   async loadProjectPitchAssociation(projectPolygons: ProjectPolygon[]): Promise<Record<number, string>> {
     if (projectPolygons.length === 0) {
       return {};

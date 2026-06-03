@@ -101,7 +101,7 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({
     nullable: true,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Polygon data submission tracking"
+    description: "Polygon submission status tracking"
   })
   polygonDataSubmission: string | null;
 

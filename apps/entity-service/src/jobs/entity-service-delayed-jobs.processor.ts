@@ -142,7 +142,11 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
       name: jobName,
       createdBy: UserContext.authenticatedUserId,
       totalContent,
-      isAcknowledged: totalContent == null
+      isAcknowledged: totalContent == null,
+      metadata: {
+        entity_type: entityType,
+        entity_name: entityName
+      }
     });
     const data: MediaExportJobData = { delayedJobId: delayedJob.id, entityType, entityUuid, entityName, totalContent };
     await queue.add(MEDIA_EXPORT, data);

@@ -182,7 +182,7 @@ export class EntitiesController {
     await this.policyService.authorize("read", model);
 
     const entityName = model.name ?? (await this.entitiesService.localizeText("Unnamed"));
-    const jobName = await this.entitiesService.localizeText("Generating {entityName} Asset .zip", { entityName });
+    const jobName = await this.entitiesService.localizeText("Generating Asset .zip");
     return await EntityServiceDelayedJobsProcessor.queueMediaExport(
       this.exportQueue,
       entity,

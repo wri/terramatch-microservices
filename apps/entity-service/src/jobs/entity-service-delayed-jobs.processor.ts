@@ -101,7 +101,7 @@ const totalForMediaExport = async (entityType: EntityType, uuid: string) => {
     }
   }
 
-  const total = await Media.count({
+  return await Media.count({
     where: {
       [Op.or]: Object.entries(entityScopes).reduce(
         (acc, [modelType, modelIds]) => [...acc, { modelType, modelId: { [Op.in]: modelIds } }],
@@ -109,8 +109,6 @@ const totalForMediaExport = async (entityType: EntityType, uuid: string) => {
       )
     }
   });
-  // Only report progress if there are more than 100 media being added to the zip
-  return total > 100 ? total : null;
 };
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)

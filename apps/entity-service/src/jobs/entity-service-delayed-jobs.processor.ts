@@ -209,8 +209,8 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     const progressTick = async (progressCount = 1) => {
       if (totalContent == null) return;
 
-      // only update the total every 10 ticks;
-      const shouldUpdate = Math.floor(totalProcessed / 10) !== Math.floor((totalProcessed + progressCount) / 10);
+      // only update the total every 5 ticks;
+      const shouldUpdate = Math.floor(totalProcessed / 5) !== Math.floor((totalProcessed + progressCount) / 5);
       totalProcessed += progressCount;
       if (shouldUpdate) {
         await this.updateJobProgress(job, { processedContent: totalProcessed });

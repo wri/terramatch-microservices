@@ -26,6 +26,7 @@ import { InternalServerErrorException, NotFoundException } from "@nestjs/common"
 import { TestingModule } from "@nestjs/testing";
 import { Op } from "sequelize";
 import { ConfigService } from "@nestjs/config";
+import archiver from "archiver";
 
 describe("NurseryReportProcessor", () => {
   let module: TestingModule;
@@ -649,6 +650,27 @@ describe("NurseryReportProcessor", () => {
         frameworkKey: "ppc",
         "$nursery.project.id$": { [Op.in]: projectIdResult }
       }));
+    });
+  });
+
+  describe("exportMedia", () => {
+    it("returns early if no reports are found", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportMedia(["fake-uuid"], archiver("zip"));
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
+    it("calls the service with the report", async () => {
+      const report = await NurseryReportFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "exportMedia");
+      const archive = archiver("zip");
+      await processor.exportMedia([report.uuid], archive);
+      expect(exportSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ id: report.id })],
+        archive,
+        expect.any(Function),
+        undefined
+      );
     });
   });
 });

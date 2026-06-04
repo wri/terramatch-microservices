@@ -41,9 +41,10 @@ import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
-import { Dictionary } from "lodash";
+import { Dictionary, isNumber } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
+import { Literal } from "sequelize/types/utils";
 
 type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 
@@ -100,6 +101,15 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
 
   static idsSubquery(projectId: number) {
     return Subquery.select(Nursery, "id").eq("projectId", projectId).literal;
+  }
+
+  static uuidsSubquery(projectIds: number | number[] | Literal) {
+    if (isNumber(projectIds)) projectIds = [projectIds];
+    return Subquery.select(Nursery, "uuid").in("projectId", projectIds).literal;
+  }
+
+  static idsForUuidsSubquery(nurseryUuids: string[] | Literal) {
+    return Subquery.select(Nursery, "id").in("uuid", nurseryUuids).literal;
   }
 
   @PrimaryKey

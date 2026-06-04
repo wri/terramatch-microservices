@@ -18,7 +18,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { Dictionary, groupBy, kebabCase, uniq } from "lodash";
+import { chunk, Dictionary, groupBy, kebabCase, uniq } from "lodash";
 import { col, fn, Includeable } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
@@ -70,6 +70,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { Archiver } from "archiver";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -95,6 +96,8 @@ export const POLYGON_STATUSES_FILTERS = [
 ] as const;
 
 export type PolygonStatusFilter = (typeof POLYGON_STATUSES_FILTERS)[number];
+
+export type ProgressTick = (progressCount?: number) => Promise<void>;
 
 const ASSOCIATION_PROCESSORS = {
   trackings: AssociationProcessor.buildSimpleProcessor(TrackingDto, ({ id: trackableId }, trackableType) =>
@@ -352,5 +355,35 @@ export class EntitiesService {
         await processPage(source);
       }
     });
+  }
+
+  async exportMedia<T extends EntityModel>(
+    models: T[],
+    archive: Archiver,
+    generateFileName: (model: T, media: Media) => string,
+    progressTick?: ProgressTick
+  ) {
+    const media = await Media.for(models).findAll();
+    // In the case of a ton of media, we want to avoid trying to stream them all to / from S3
+    // at once, so chunk into smaller sets and process each set before moving on to the next.
+    for (const subset of chunk(media, 5)) {
+      await Promise.allSettled(
+        subset.map(async m => {
+          try {
+            const stream = await this.mediaService.getMediaStream(m);
+            const model = models.find(({ id }) => id === m.modelId) as T;
+            archive.append(stream, { name: generateFileName(model, m) });
+            await progressTick?.();
+          } catch (err) {
+            // swallow errors with a warning to prevent the archive stream as a whole from failing
+            const message = err instanceof Error ? err.message : `${err}`;
+            this.logger.warn(`Failed to get asset stream [${message}]`, {
+              mediaId: m.id,
+              mediaFileName: m.fileName
+            });
+          }
+        })
+      );
+    }
   }
 }

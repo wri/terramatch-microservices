@@ -174,6 +174,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return Subquery.select(SiteReport, "id").in("siteId", siteIds).literal;
   }
 
+  static uuidsSubquery(siteIds: number[] | Literal) {
+    return Subquery.select(SiteReport, "uuid").in("siteId", siteIds).literal;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

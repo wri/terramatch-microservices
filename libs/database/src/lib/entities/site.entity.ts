@@ -47,9 +47,10 @@ import { Subquery } from "../util/subquery.builder";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { StateMachineColumn } from "../util/model-column-state-machine";
 import { MediaConfiguration } from "../constants/media-owners";
-import { Dictionary } from "lodash";
+import { Dictionary, isNumber } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
+import { Literal } from "sequelize/types/utils";
 
 type SiteMedia =
   | "media"
@@ -132,12 +133,17 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     return Subquery.select(Site, "uuid").in("projectId", projectIds).in("status", Site.APPROVED_STATUSES).literal;
   }
 
-  static uuidsSubquery(projectId: number) {
-    return Subquery.select(Site, "uuid").eq("projectId", projectId).literal;
+  static uuidsSubquery(projectIds: number | number[] | Literal) {
+    if (isNumber(projectIds)) projectIds = [projectIds];
+    return Subquery.select(Site, "uuid").in("projectId", projectIds).literal;
   }
 
   static idsSubquery(projectId: number) {
     return Subquery.select(Site, "id").eq("projectId", projectId).literal;
+  }
+
+  static idsForUuidsSubquery(siteUuids: string[] | Literal) {
+    return Subquery.select(Site, "id").in("uuid", siteUuids).literal;
   }
 
   @PrimaryKey

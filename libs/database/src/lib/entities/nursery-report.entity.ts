@@ -104,6 +104,10 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
     return Subquery.select(NurseryReport, "id").in("nurseryId", nurseryIds).literal;
   }
 
+  static uuidsSubquery(nurseryIds: number[] | Literal) {
+    return Subquery.select(NurseryReport, "uuid").in("nurseryId", nurseryIds).literal;
+  }
+
   static task(taskId: number) {
     return chainScope(this, "task", taskId) as typeof NurseryReport;
   }

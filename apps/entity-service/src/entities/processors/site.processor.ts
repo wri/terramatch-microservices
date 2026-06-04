@@ -29,13 +29,15 @@ import { PlantingStatus } from "@terramatch-microservices/database/constants/sta
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { Literal } from "sequelize/types/utils";
+import { ProgressTick } from "../entities.service";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -570,5 +572,23 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site establishment data`)
       }
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const sites = await Site.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (sites.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Site Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    await this.entitiesService.exportMedia(
+      sites,
+      archive,
+      (site, media) =>
+        `${dirName}/${media.isPublic ? "public" : "private"}/${site.name ?? defaultName}/${media.fileName}`,
+      progressTick
+    );
+
+    const reportProcessor = this.entitiesService.createEntityProcessor("siteReports");
+    await reportProcessor.exportMedia(SiteReport.uuidsSubquery(Site.idsForUuidsSubquery(uuids)), archive, progressTick);
   }
 }

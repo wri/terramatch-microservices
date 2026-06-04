@@ -35,7 +35,7 @@ import {
   NotFoundException,
   UnauthorizedException
 } from "@nestjs/common";
-import { ProcessableEntity } from "../entities.service";
+import { ProcessableEntity, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -43,13 +43,14 @@ import { ProjectCreateAttributes } from "../dto/entity-create.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import {
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
   READY_FOR_BASELINE_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants/audit-status";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
+import { Literal } from "sequelize/types/utils";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -861,6 +862,29 @@ export class ProjectProcessor extends EntityProcessor<
       new PaginatedQueryBuilder(Project, 10, CSV_EXPORT_INCLUDES).where(where),
       { attributes: CSV_ATTRIBUTES, target, frameworkKey, ability: target == null ? undefined : "read" }
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const projects = await Project.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (projects.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Project Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    await this.entitiesService.exportMedia(
+      projects,
+      archive,
+      (project, media) =>
+        `${dirName}/${media.isPublic ? "public" : "private"}/${project.name ?? defaultName}/${media.fileName}`,
+      progressTick
+    );
+
+    const projectIds = projects.map(({ id }) => id);
+    const reportProcessor = this.entitiesService.createEntityProcessor("projectReports");
+    await reportProcessor.exportMedia(ProjectReport.uuidsSubquery(projectIds), archive, progressTick);
+    const siteProcessor = this.entitiesService.createEntityProcessor("sites");
+    await siteProcessor.exportMedia(Site.uuidsSubquery(projectIds), archive, progressTick);
+    const nurseryProcessor = this.entitiesService.createEntityProcessor("nurseries");
+    await nurseryProcessor.exportMedia(Nursery.uuidsSubquery(projectIds), archive, progressTick);
   }
 
   private async getProjectCreationOrg(application: Application | undefined) {

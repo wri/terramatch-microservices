@@ -1,10 +1,10 @@
-import { Response } from "express";
-import { Test } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 import {
   CsvExportService,
   FormQuestionExportMapping,
   getAttributes,
-  getFormQuestionsForExport
+  getFormQuestionsForExport,
+  RowWriter
 } from "./csv-export.service";
 import { FileService } from "../file/file.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -23,10 +23,10 @@ import {
   SiteFactory
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
-import { Media } from "@terramatch-microservices/database/entities";
-import { DateTime } from "luxon";
 import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
+import { DateTime } from "luxon";
+import { Media } from "@terramatch-microservices/database/entities";
 
 const mockResponse = () => {
   const response = createResponse({ eventEmitter: EventEmitter });
@@ -41,23 +41,25 @@ const mockResponse = () => {
 
 describe("CsvExportService", () => {
   let service: CsvExportService;
-  let configService: DeepMocked<ConfigService>;
-  let fileService: DeepMocked<FileService>;
-  let mediaService: DeepMocked<MediaService>;
+  let module: TestingModule;
+
+  const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
+  const fileService = (): DeepMocked<FileService> => module.get(FileService);
+  const mediaService = (): DeepMocked<MediaService> => module.get(MediaService);
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
-        { provide: FileService, useValue: (fileService = createMock<FileService>()) },
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
+        { provide: FileService, useValue: createMock<FileService>() },
+        { provide: MediaService, useValue: createMock<MediaService>() },
         {
           provide: ConfigService,
-          useValue: (configService = createMock<ConfigService>({
+          useValue: createMock<ConfigService>({
             get: (key: string) => {
               if (key === "AWS_BUCKET") return "test-bucket";
               return "";
             }
-          }))
+          })
         },
         CsvExportService
       ]
@@ -76,7 +78,7 @@ describe("CsvExportService", () => {
     });
 
     it("throws if no bucket is configured", () => {
-      configService.get.mockReturnValue(undefined);
+      configService().get.mockReturnValue(undefined);
       expect(() => service.bucket).toThrow(InternalServerErrorException);
     });
   });
@@ -84,70 +86,14 @@ describe("CsvExportService", () => {
   describe("exportExists", () => {
     it("calls the file service", async () => {
       await service.exportExists("test.csv");
-      expect(fileService.remoteFileExists).toHaveBeenCalledWith("test-bucket", "exports/test.csv");
+      expect(fileService().remoteFileExists).toHaveBeenCalledWith("test-bucket", "exports/test.csv");
     });
   });
 
   describe("generateExportDto", () => {
     it("calls the file service for a presigned url", async () => {
       await service.generateExportDto("test.csv");
-      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", "exports/test.csv");
-    });
-  });
-
-  describe("getS3StreamWriter", () => {
-    it("gets an upload stream from the file service", () => {
-      service.getS3StreamWriter("test.csv", {});
-      expect(fileService.uploadStream).toHaveBeenCalledWith("test-bucket", "exports/test.csv", "text/csv");
-    });
-  });
-
-  describe("getArchiveWriter", () => {
-    it("gets a stream for an archive file", () => {
-      const append = jest.fn();
-      service.getArchiveStreamWriter("test.csv", { append } as unknown as Archiver, { name: "Name" });
-      expect(append).toHaveBeenCalledWith(expect.any(PassThrough), { name: "test.csv" });
-    });
-  });
-
-  describe("getResponseStreamWriter", () => {
-    it("returns a writable stream for the response", async () => {
-      const { response, streamEnd } = mockResponse();
-      const stream = service.getResponseStreamWriter("test.csv", response, { name: "Name" });
-
-      stream.addRow({ name: "Foo" } as unknown as Model);
-      stream.close();
-
-      const result = await streamEnd;
-      expect(result).toBe("Name\nFoo\n");
-      expect(response.get("Content-Type")).toBe("text/csv");
-      expect(response.get("Content-Disposition")).toBe('attachment; filename="test.csv"');
-      expect(response.get("Access-Control-Expose-Headers")).toBe("Content-Disposition");
-    });
-
-    it("serializes values", async () => {
-      const { response, streamEnd } = mockResponse();
-      const columns = {
-        name: "Name",
-        createdAt: "Created At",
-        cover: "Cover",
-        states: "States",
-        complexData: "Complex Data"
-      };
-
-      const sites = await SiteFactory.createMany(2);
-      const stream = service.getResponseStreamWriter("test.csv", response, columns);
-      mediaService.getUrl.mockReturnValue("url-for-media");
-
-      stream.addRow(sites[0], { cover: new Media(), states: ["OR", "CA"], complexData: { foo: "bar" } });
-      stream.addRow(sites[1], { cover: new Media(), states: ["VT", "NY"], complexData: { foo: "baz" } });
-      stream.close();
-
-      const result = await streamEnd;
-      expect(result).toBe(`Name,Created At,Cover,States,Complex Data
-${sites[0].name},${DateTime.fromJSDate(sites[0].createdAt).toISODate()},url-for-media,OR|CA,"{""foo"":""bar""}"
-${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-media,VT|NY,"{""foo"":""baz""}"
-`);
+      expect(fileService().generatePresignedUrl).toHaveBeenCalledWith("test-bucket", "exports/test.csv");
     });
   });
 
@@ -222,7 +168,7 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
         linkedFieldKey: "site-col-media"
       });
       await MediaFactory.site(site).createMany(2, { collectionName: "media" });
-      mediaService.getUrl.mockReturnValue("url-for-media");
+      mediaService().getUrl.mockReturnValue("url-for-media");
 
       const mappings = await getFormQuestionsForExport(form);
       const result = await service.collectFormCells(mappings, { sites: site }, "terrafund");
@@ -234,22 +180,95 @@ ${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-
   });
 
   describe("writeCsv", () => {
-    it("closes the stream when there's an error", async () => {
+    it("writes to S3 when given no target", async () => {
+      jest.spyOn(service, "writeToStream").mockResolvedValue(undefined);
+      await service.writeCsv("test.csv", null, {}, async () => {
+        /* empty */
+      });
+      expect(fileService().uploadStream).toHaveBeenCalledWith(
+        "test-bucket",
+        "exports/test.csv",
+        "text/csv",
+        expect.any(Function)
+      );
+    });
+
+    it("writes to S3 when given a string target", async () => {
+      jest.spyOn(service, "writeToStream").mockResolvedValue(undefined);
+      await service.writeCsv("test.csv", "other-test-bucket", {}, async () => {
+        /* empty */
+      });
+      expect(fileService().uploadStream).toHaveBeenCalledWith(
+        "other-test-bucket",
+        "test.csv",
+        "text/csv",
+        expect.any(Function)
+      );
+    });
+
+    it("writes to the server response when given a Response target", async () => {
+      const { response, streamEnd } = mockResponse();
+      const writeRows: RowWriter = async addRow => {
+        addRow({ name: "Foo" } as unknown as Model);
+      };
+
+      await service.writeCsv("test.csv", response, { name: "Name" }, writeRows);
+
+      const result = await streamEnd;
+      expect(result).toBe("Name\nFoo\n");
+      expect(response.get("Content-Type")).toBe("text/csv");
+      expect(response.get("Content-Disposition")).toBe('attachment; filename="test.csv"');
+      expect(response.get("Access-Control-Expose-Headers")).toBe("Content-Disposition");
+    });
+
+    it("writes to an archive when given an Archiver target", async () => {
+      jest.spyOn(service, "writeToStream").mockResolvedValue(undefined);
+      const writeRows = async () => {
+        /* empty */
+      };
+      const append = jest.fn();
+      const finalize = jest.fn();
+      const columns = { name: "Name" };
+      await service.writeCsv("test.csv", { append, finalize } as unknown as Archiver, columns, writeRows);
+
+      expect(append).toHaveBeenCalledWith(expect.any(PassThrough), { name: "test.csv" });
+      expect(service.writeToStream).toHaveBeenCalledWith(expect.any(PassThrough), columns, writeRows);
+    });
+  });
+
+  describe("writeToStream", () => {
+    it("rethrows when there's an error", async () => {
       const writeRows = async () => {
         throw new Error("failed stream");
       };
-      const close = jest.fn();
-      jest.spyOn(service, "getArchiveStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
-      await expect(service.writeCsv("test.csv", {} as Response, {}, writeRows)).rejects.toThrow("failed stream");
-      expect(close).toHaveBeenCalled();
+      await expect(service.writeToStream(new PassThrough(), {}, writeRows)).rejects.toThrow("failed stream");
     });
 
-    it("closes the stream on success", async () => {
-      const writeRows = () => Promise.resolve();
-      const close = jest.fn();
-      jest.spyOn(service, "getArchiveStreamWriter").mockReturnValue({ addRow: jest.fn(), close });
-      await service.writeCsv("test.csv", {} as Response, {}, writeRows);
-      expect(close).toHaveBeenCalled();
+    it("serializes values", async () => {
+      const { response, streamEnd } = mockResponse();
+      const columns = {
+        name: "Name",
+        createdAt: "Created At",
+        cover: "Cover",
+        states: "States",
+        complexData: "Complex Data"
+      };
+
+      const sites = await SiteFactory.createMany(2);
+      mediaService().getUrl.mockReturnValue("url-for-media");
+
+      const writeRows: RowWriter = async addRow => {
+        addRow(sites[0], { cover: new Media(), states: ["OR", "CA"], complexData: { foo: "bar" } });
+        addRow(sites[1], { cover: new Media(), states: ["VT", "NY"], complexData: { foo: "baz" } });
+      };
+
+      await service.writeToStream(response, columns, writeRows);
+
+      const result = await streamEnd;
+      expect(result).toBe(`Name,Created At,Cover,States,Complex Data
+${sites[0].name},${DateTime.fromJSDate(sites[0].createdAt).toISODate()},url-for-media,OR|CA,"{""foo"":""bar""}"
+${sites[1].name},${DateTime.fromJSDate(sites[1].createdAt).toISODate()},url-for-media,VT|NY,"{""foo"":""baz""}"
+`);
     });
   });
 });

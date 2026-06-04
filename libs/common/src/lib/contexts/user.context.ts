@@ -10,26 +10,26 @@ export class UserContext {
   }
 
   static use(userId: number, permissions: string[], locale: ValidLocale, next: () => void) {
-    UserContext.contextStore.run(new UserContext(userId, permissions, locale), next);
+    this.contextStore.run(new UserContext(userId, permissions, locale), next);
   }
 
   static get authenticatedUserId() {
-    return UserContext.current?.authenticatedUserId;
+    return this.current?.authenticatedUserId;
   }
 
   static get permissions() {
-    return UserContext.current?.permissions;
+    return this.current?.permissions;
   }
 
   static get policyBuilder() {
-    return UserContext.current?.policyBuilder;
+    return this.current?.policyBuilder;
   }
 
   static get userLocale() {
-    return UserContext.current?.userLocale;
+    return this.current?.userLocale;
   }
 
-  public policyBuilder: PolicyBuilder;
+  public readonly policyBuilder: PolicyBuilder;
 
   constructor(
     readonly authenticatedUserId: number,

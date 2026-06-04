@@ -28,7 +28,7 @@ import { setMockedPermissions } from "@terramatch-microservices/common/util/test
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { SiteReportProcessor } from "./site-report.processor";
-import { Archiver } from "archiver";
+import archiver, { Archiver } from "archiver";
 import { ConfigService } from "@nestjs/config";
 
 describe("SiteProcessor", () => {
@@ -462,6 +462,33 @@ describe("SiteProcessor", () => {
         frameworkKey: "ppc",
         projectId: { [Op.in]: projectIdResult }
       }));
+    });
+  });
+
+  describe("exportMedia", () => {
+    it("returns early if no sites are found", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportMedia(["fake-uuid"], archiver("zip"));
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
+    it("calls the service with the site", async () => {
+      const mockSubProcessor = {
+        exportMedia: jest.fn()
+      } as unknown as SiteReportProcessor;
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const site = await SiteFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "exportMedia");
+      const archive = archiver("zip");
+      await processor.exportMedia([site.uuid], archive);
+      expect(exportSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ id: site.id })],
+        archive,
+        expect.any(Function),
+        undefined
+      );
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(mockSubProcessor.exportMedia).toHaveBeenCalledTimes(1);
     });
   });
 });

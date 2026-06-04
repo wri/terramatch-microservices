@@ -56,8 +56,9 @@ import { mockContextForUser, setMockedPermissions } from "@terramatch-microservi
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
-import { Archiver } from "archiver";
+import archiver, { Archiver } from "archiver";
 import { ProjectReportProcessor } from "./project-report.processor";
+import { SiteReportProcessor } from "./site-report.processor";
 
 describe("ProjectProcessor", () => {
   let module: TestingModule;
@@ -945,6 +946,33 @@ describe("ProjectProcessor", () => {
         frameworkKey: "ppc",
         id: { [Op.in]: projectIdResult }
       }));
+    });
+  });
+
+  describe("exportMedia", () => {
+    it("returns early if no projects are found", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportMedia(["fake-uuid"], archiver("zip"));
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
+    it("calls the service with the project", async () => {
+      const mockSubProcessor = {
+        exportMedia: jest.fn()
+      } as unknown as SiteReportProcessor;
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const project = await ProjectFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "exportMedia");
+      const archive = archiver("zip");
+      await processor.exportMedia([project.uuid], archive);
+      expect(exportSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ id: project.id })],
+        archive,
+        expect.any(Function),
+        undefined
+      );
+      expect(createSpy).toHaveBeenCalledTimes(3);
+      expect(mockSubProcessor.exportMedia).toHaveBeenCalledTimes(3);
     });
   });
 });

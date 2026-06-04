@@ -44,7 +44,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary, isNumber } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
-import { Literal } from "sequelize/lib/utils";
+import { Literal } from "sequelize/types/utils";
 
 type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 

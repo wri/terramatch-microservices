@@ -22,7 +22,6 @@ import { isField, isFile } from "@terramatch-microservices/database/constants/li
 import { FormModelType } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { TMLogger } from "../util/tm-logger";
-import { ServerResponse } from "node:http";
 import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 
@@ -39,6 +38,8 @@ export type FormQuestionExportMapping = {
   config: LinkedFieldSpecification;
   attribute?: ModelAttribute;
 };
+
+const isArchive = (target: Response | Archiver): target is Archiver => "finalize" in target;
 
 export const getFormQuestionsForExport = async (form: Form) => {
   const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: [["order", "ASC"]] });
@@ -131,17 +132,17 @@ export class CsvExportService {
       await this.fileService.uploadStream(target ?? this.bucket, fileName, "text/csv", async stream => {
         await this.writeToStream(stream, columns, writeRows);
       });
-    } else if (target instanceof ServerResponse) {
+    } else if (isArchive(target)) {
+      const passThrough = new PassThrough();
+      target.append(passThrough, { name: fileName });
+      await this.writeToStream(passThrough, columns, writeRows);
+    } else {
       target.set({
         "Content-Type": "text/csv",
         "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
         "Access-Control-Expose-Headers": "Content-Disposition"
       });
       await this.writeToStream(target, columns, writeRows);
-    } else {
-      const passThrough = new PassThrough();
-      target.append(passThrough, { name: fileName });
-      await this.writeToStream(passThrough, columns, writeRows);
     }
   }
 

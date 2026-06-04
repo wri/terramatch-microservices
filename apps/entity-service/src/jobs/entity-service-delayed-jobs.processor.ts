@@ -27,7 +27,7 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { EntityType, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Attributes, ModelStatic, Op, WhereOptions } from "sequelize";
-import { Literal } from "sequelize/lib/utils";
+import { Literal } from "sequelize/types/utils";
 import { Dictionary } from "lodash";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 

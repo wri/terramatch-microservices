@@ -48,6 +48,10 @@ describe("UserServiceExportsProcessor", () => {
     it("throws if the batch find process fails", async () => {
       await OrganisationFactory.create();
       jest.spyOn(Media, "findAll").mockRejectedValue(new Error("Media find failed"));
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, target, columns, rowWriter) => {
+        await rowWriter(addRow);
+      });
       await expect(
         processor.processDelayedJob({
           name: ORGANISATIONS_EXPORT,
@@ -68,8 +72,9 @@ describe("UserServiceExportsProcessor", () => {
       });
 
       const addRow = jest.fn();
-      const close = jest.fn();
-      csvExportService.getS3StreamWriter.mockReturnValue({ addRow, close });
+      csvExportService.writeCsv.mockImplementation(async (fileName, target, columns, rowWriter) => {
+        await rowWriter(addRow);
+      });
       csvExportService.generateExportDto.mockResolvedValue(new FileDownloadDto("test.csv"));
 
       mediaService.getUrl.mockReturnValue("file-url");
@@ -83,8 +88,6 @@ describe("UserServiceExportsProcessor", () => {
       expect(payload.data).toBeDefined();
       expect((payload.data as Resource).type).toBe("fileDownloads");
       expect((payload.data as Resource).id).toBe("organisationsExport");
-
-      expect(close).toHaveBeenCalled();
 
       expect(addRow).toHaveBeenCalledTimes(2);
       expect(addRow).toHaveBeenNthCalledWith(1, expect.objectContaining({ uuid: orgs[0].uuid }), {});

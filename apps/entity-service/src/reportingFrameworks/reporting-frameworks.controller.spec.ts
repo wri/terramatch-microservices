@@ -425,7 +425,7 @@ describe("ReportingFrameworksController", () => {
           type: "reportingFrameworks",
           attributes: {
             name: "TerraFund",
-            accessCode: null,
+            slug: "terrafund",
             projectFormUuid: null,
             projectReportFormUuid: null,
             siteFormUuid: null,
@@ -461,6 +461,7 @@ describe("ReportingFrameworksController", () => {
           type: "reportingFrameworks",
           attributes: {
             name: "TerraFund 3",
+            slug: "terrafund-3",
             projectFormUuid: null,
             projectReportFormUuid: null,
             siteFormUuid: null,
@@ -493,7 +494,7 @@ describe("ReportingFrameworksController", () => {
       const payload = {
         data: {
           type: "reportingFrameworks",
-          attributes: { name: "New Framework" }
+          attributes: { name: "New Framework", slug: "new-framework" }
         }
       };
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));

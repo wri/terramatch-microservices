@@ -26,7 +26,7 @@ import {
   ReportingFrameworkDto,
   UpdateReportingFrameworkBody
 } from "./dto/reporting-framework.dto";
-import { ReportingFrameworksService, reportingFrameworkSlugFromName } from "./reporting-frameworks.service";
+import { ReportingFrameworksService } from "./reporting-frameworks.service";
 import { ReportingFrameworkQueryDto } from "./dto/reporting-framework-query.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 
@@ -69,7 +69,7 @@ export class ReportingFrameworksController {
     const attributes = payload.data.attributes;
     const built = Framework.build({
       name: attributes.name,
-      slug: reportingFrameworkSlugFromName(attributes.name) as FrameworkKey
+      slug: attributes.slug as FrameworkKey
     });
     await this.policyService.authorize("create", built);
     const framework = await this.reportingFrameworksService.create(attributes);

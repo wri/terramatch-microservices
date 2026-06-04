@@ -60,16 +60,6 @@ export class ReportingFrameworkDto {
 const FORM_UUID_API_PROPERTY = { required: false, nullable: true, type: String, format: "uuid" as const };
 export class ReportingFrameworkFormUuidAttributes {
   @IsOptional()
-  @IsString()
-  @ApiProperty({
-    required: false,
-    nullable: true,
-    type: String,
-    description: "Stored in DB only; not returned in API (FE uses slug)"
-  })
-  accessCode?: string | null;
-
-  @IsOptional()
   @IsUUID()
   @ApiProperty(FORM_UUID_API_PROPERTY)
   projectFormUuid?: string | null;
@@ -110,6 +100,10 @@ export class CreateReportingFrameworkAttributes extends ReportingFrameworkFormUu
   @IsString()
   @ApiProperty({ description: "Framework name; used to generate slug" })
   name: string;
+
+  @IsString()
+  @ApiProperty({ type: String })
+  slug: string;
 }
 
 export class UpdateReportingFrameworkAttributes extends ReportingFrameworkFormUuidAttributes {
@@ -117,6 +111,11 @@ export class UpdateReportingFrameworkAttributes extends ReportingFrameworkFormUu
   @IsString()
   @ApiProperty({ required: false, nullable: true, type: String })
   name?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, nullable: true, type: String })
+  slug?: string | null;
 }
 
 export class CreateReportingFrameworkBody extends JsonApiBodyDto(

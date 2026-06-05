@@ -18,3 +18,9 @@ export class AuditStatusDeleteParamsDto extends AuditStatusParamsDto {
   @ApiProperty({ description: "UUID of the audit status to delete" })
   auditUuid: string;
 }
+
+export class AuditStatusUpdateParamsDto extends AuditStatusParamsDto {
+  @IsUUID()
+  @ApiProperty({ description: "UUID of the audit status to update" })
+  auditUuid: string;
+}

@@ -1,4 +1,9 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { EventService } from "@terramatch-microservices/common/events/event.service";
+import {
+  buildSitePolygonPushedViaApiParams,
+  isApiPartnerSource
+} from "@terramatch-microservices/common/analytics/polygon-pushed-via-api";
 import {
   Site,
   SitePolygon,
@@ -126,7 +131,8 @@ export class SitePolygonCreationService {
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
     private readonly voronoiService: VoronoiService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
-    private readonly versioningService: SitePolygonVersioningService
+    private readonly versioningService: SitePolygonVersioningService,
+    private readonly eventService: EventService
   ) {}
 
   async createSitePolygons(
@@ -140,6 +146,8 @@ export class SitePolygonCreationService {
   }> {
     const { createdPolygons, duplicatePolygons, duplicateValidations, polygonInputIndices } =
       await this.storeAndValidateGeometries(request.geometries, userId, source, userFullName);
+
+    await this.trackPolygonPushedViaApiForSitePolygons(createdPolygons, source);
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
     allPolygons.sort((a, b) => {
@@ -881,7 +889,7 @@ export class SitePolygonCreationService {
       newPolygonGeometryUuid != null
     );
 
-    return await this.versioningService.createVersion(
+    const newVersion = await this.versioningService.createVersion(
       basePolygon,
       sitePolygonAttributes,
       newPolygonGeometryUuid,
@@ -890,6 +898,26 @@ export class SitePolygonCreationService {
       userFullName,
       transaction
     );
+
+    if (newPolygonGeometryUuid != null) {
+      await this.trackPolygonPushedViaApiForSitePolygons([newVersion], source);
+    }
+
+    return newVersion;
+  }
+
+  private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[], partnerId: string) {
+    if (!isApiPartnerSource(partnerId)) {
+      return;
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      const params = buildSitePolygonPushedViaApiParams(sitePolygon, partnerId);
+      if (params == null) {
+        continue;
+      }
+      await this.eventService.sendPolygonPushedViaApiAnalytics(partnerId, params);
+    }
   }
 
   private buildDetailedChangeDescription(

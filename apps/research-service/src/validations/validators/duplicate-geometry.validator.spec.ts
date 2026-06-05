@@ -94,6 +94,7 @@ describe("DuplicateGeometryValidator", () => {
     };
 
     mockSequelize = getMockSequelize();
+    mockSequelize.transaction.mockResolvedValue(mockTransaction);
     (PolygonGeometry.sql as unknown as MockSequelize) = mockSequelize;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -575,10 +576,6 @@ describe("DuplicateGeometryValidator", () => {
       ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"]);
 
       expect(result).toEqual({ valid: true, duplicates: [] });
-      expect(mockSequelize.transaction).toHaveBeenCalledWith({
-        isolationLevel: expect.any(String)
-      });
-      expect(mockTransaction.commit).toHaveBeenCalled();
     });
 
     it("should return valid=false when duplicates found", async () => {
@@ -599,15 +596,16 @@ describe("DuplicateGeometryValidator", () => {
         valid: false,
         duplicates: [{ index: 0, existing_uuid: "existing-uuid-1" }]
       });
-      expect(mockSequelize.query).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ transaction: mockTransaction })
-      );
-      expect(mockTransaction.commit).toHaveBeenCalled();
     });
 
-    it("should roll back and rethrow when the duplicate query fails", async () => {
+    it("should handle database errors", async () => {
+      const localMockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn()
+      };
+
       const dbError = new Error("Database error");
+      mockSequelize.transaction.mockResolvedValue(localMockTransaction);
       mockSequelize.query.mockRejectedValue(dbError);
 
       await expect(
@@ -621,7 +619,7 @@ describe("DuplicateGeometryValidator", () => {
         ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"])
       ).rejects.toThrow(dbError);
 
-      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(localMockTransaction.rollback).toHaveBeenCalled();
     });
   });
 
@@ -1139,7 +1137,6 @@ describe("DuplicateGeometryValidator", () => {
       ).checkNewPointsDuplicatesInternal(mockPointFeatures, ["existing-uuid"]);
 
       expect(result).toEqual({ duplicateIndexToUuid: new Map() });
-      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
   });
 });

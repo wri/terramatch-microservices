@@ -513,27 +513,31 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
       WHERE ST_Equals(ng.geom, pg.geom)
     `;
 
-    const transaction = await PointGeometry.sql.transaction({
-      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
-    });
-
     try {
-      const results = (await PointGeometry.sql.query(sql, {
-        replacements: allParams,
-        type: QueryTypes.SELECT,
-        transaction
-      })) as { idx: number; existing_uuid: string }[];
+      const transaction = await PointGeometry.sql.transaction({
+        isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
+      });
 
-      await transaction.commit();
+      try {
+        const results = (await PointGeometry.sql.query(sql, {
+          replacements: allParams,
+          type: QueryTypes.SELECT,
+          transaction
+        })) as { idx: number; existing_uuid: string }[];
 
-      const duplicateMap = new Map<number, string>();
-      for (const row of results) {
-        duplicateMap.set(row.idx, row.existing_uuid);
+        await transaction.commit();
+
+        const duplicateMap = new Map<number, string>();
+        for (const row of results) {
+          duplicateMap.set(row.idx, row.existing_uuid);
+        }
+
+        return { duplicateIndexToUuid: duplicateMap };
+      } catch {
+        await transaction.rollback();
+        return { duplicateIndexToUuid: new Map() };
       }
-
-      return { duplicateIndexToUuid: duplicateMap };
     } catch {
-      await transaction.rollback();
       return { duplicateIndexToUuid: new Map() };
     }
   }

@@ -1,9 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
-import {
-  buildSitePolygonPushedViaApiParams,
-  isApiPartnerSource
-} from "@terramatch-microservices/common/analytics/polygon-pushed-via-api";
+import { buildSitePolygonPushedViaApiParams } from "@terramatch-microservices/common/analytics/polygon-pushed-via-api";
 import {
   Site,
   SitePolygon,
@@ -147,7 +144,7 @@ export class SitePolygonCreationService {
     const { createdPolygons, duplicatePolygons, duplicateValidations, polygonInputIndices } =
       await this.storeAndValidateGeometries(request.geometries, userId, source, userFullName);
 
-    await this.trackPolygonPushedViaApiForSitePolygons(createdPolygons, source);
+    await this.trackPolygonPushedViaApiForSitePolygons(createdPolygons);
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
     allPolygons.sort((a, b) => {
@@ -889,7 +886,7 @@ export class SitePolygonCreationService {
       newPolygonGeometryUuid != null
     );
 
-    const newVersion = await this.versioningService.createVersion(
+    return await this.versioningService.createVersion(
       basePolygon,
       sitePolygonAttributes,
       newPolygonGeometryUuid,
@@ -898,25 +895,15 @@ export class SitePolygonCreationService {
       userFullName,
       transaction
     );
-
-    if (newPolygonGeometryUuid != null) {
-      await this.trackPolygonPushedViaApiForSitePolygons([newVersion], source);
-    }
-
-    return newVersion;
   }
 
-  private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[], partnerId: string) {
-    if (!isApiPartnerSource(partnerId)) {
-      return;
-    }
-
+  private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[]) {
     for (const sitePolygon of sitePolygons) {
-      const params = buildSitePolygonPushedViaApiParams(sitePolygon, partnerId);
+      const params = buildSitePolygonPushedViaApiParams(sitePolygon);
       if (params == null) {
         continue;
       }
-      await this.eventService.sendPolygonPushedViaApiAnalytics(partnerId, params);
+      await this.eventService.sendPolygonPushedViaApiAnalytics(params.partner_id, params);
     }
   }
 

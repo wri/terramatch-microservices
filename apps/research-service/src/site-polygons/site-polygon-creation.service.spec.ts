@@ -214,7 +214,8 @@ describe("SitePolygonCreationService", () => {
         uuid: "site-polygon-uuid-1",
         siteUuid: "site-uuid-1",
         polygonUuid: "polygon-uuid-1",
-        polyName: "Test Polygon"
+        polyName: "Test Polygon",
+        source: "greenhouse"
       } as SitePolygon;
 
       jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([mockSitePolygon]);

@@ -13,9 +13,13 @@ describe("polygon-pushed-via-api", () => {
   });
 
   describe("buildSitePolygonPushedViaApiParams", () => {
-    it("builds GA4 params for a site polygon", () => {
+    it("sets partner_id from site_polygon.source for greenhouse", () => {
       expect(
-        buildSitePolygonPushedViaApiParams({ siteUuid: "site-123", polygonUuid: "polygon-456" }, "greenhouse")
+        buildSitePolygonPushedViaApiParams({
+          siteUuid: "site-123",
+          polygonUuid: "polygon-456",
+          source: "greenhouse"
+        })
       ).toEqual({
         entity_type: "site",
         entity_id: "site-123",
@@ -25,11 +29,36 @@ describe("polygon-pushed-via-api", () => {
       });
     });
 
+    it("sets partner_id from site_polygon.source for research", () => {
+      expect(
+        buildSitePolygonPushedViaApiParams({
+          siteUuid: "site-123",
+          polygonUuid: "polygon-456",
+          source: "research"
+        })?.partner_id
+      ).toBe("research");
+    });
+
+    it("returns null for terramatch source", () => {
+      expect(
+        buildSitePolygonPushedViaApiParams({
+          siteUuid: "site-123",
+          polygonUuid: "polygon-456",
+          source: "terramatch"
+        })
+      ).toBeNull();
+    });
+
     it("returns null when required identifiers are missing", () => {
       expect(
-        buildSitePolygonPushedViaApiParams({ siteUuid: null, polygonUuid: "polygon-456" }, "greenhouse")
+        buildSitePolygonPushedViaApiParams({ siteUuid: null, polygonUuid: "polygon-456", source: "greenhouse" })
       ).toBeNull();
-      expect(buildSitePolygonPushedViaApiParams({ siteUuid: "site-123", polygonUuid: null }, "greenhouse")).toBeNull();
+      expect(
+        buildSitePolygonPushedViaApiParams({ siteUuid: "site-123", polygonUuid: null, source: "greenhouse" })
+      ).toBeNull();
+      expect(
+        buildSitePolygonPushedViaApiParams({ siteUuid: "site-123", polygonUuid: "polygon-456", source: null })
+      ).toBeNull();
     });
   });
 });

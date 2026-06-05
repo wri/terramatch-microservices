@@ -8,15 +8,16 @@ export type PolygonPushedViaApiParams = {
   partner_id: string;
 };
 
-/** Partner systems push polygons via API; TerraMatch UI uses the browser GA4 tag instead. */
+/** Skip terramatch (UI / Postman session). All other sources (e.g. greenhouse, research) fire polygon_pushed_via_api. */
 export const isApiPartnerSource = (source: string): boolean => source !== "terramatch";
 
-export const buildSitePolygonPushedViaApiParams = (
-  sitePolygon: { siteUuid: string | null; polygonUuid: string | null },
-  partnerId: string
-): PolygonPushedViaApiParams | null => {
-  const { siteUuid, polygonUuid } = sitePolygon;
-  if (siteUuid == null || polygonUuid == null) {
+export const buildSitePolygonPushedViaApiParams = (sitePolygon: {
+  siteUuid: string | null;
+  polygonUuid: string | null;
+  source: string | null;
+}): PolygonPushedViaApiParams | null => {
+  const { siteUuid, polygonUuid, source: partnerName } = sitePolygon;
+  if (siteUuid == null || polygonUuid == null || partnerName == null || !isApiPartnerSource(partnerName)) {
     return null;
   }
 
@@ -25,6 +26,6 @@ export const buildSitePolygonPushedViaApiParams = (
     entity_id: siteUuid,
     polygon_id: polygonUuid,
     source: "api",
-    partner_id: partnerId
+    partner_id: partnerName
   };
 };

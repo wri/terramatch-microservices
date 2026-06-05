@@ -293,13 +293,15 @@ export class NurseryReportProcessor extends ReportProcessor<
 
     const dirName = await this.entitiesService.localizeText("Nursery Reports");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
     await this.entitiesService.exportMedia(
       reports,
       archive,
       (report, media) => {
         const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
         const nurseryName = report.nursery?.name ?? defaultName;
-        return `${dirName}/${media.isPublic ? "public" : "private"}/${nurseryName}/${prefix}${media.fileName}`;
+        return `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${nurseryName}/${prefix}${media.fileName}`;
       },
       progressTick
     );

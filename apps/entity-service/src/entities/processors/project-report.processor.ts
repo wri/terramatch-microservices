@@ -339,13 +339,15 @@ export class ProjectReportProcessor extends ReportProcessor<
 
     const dirName = await this.entitiesService.localizeText("Project Reports");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
     await this.entitiesService.exportMedia(
       reports,
       archive,
       (report, media) => {
         const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
         const projectName = report.project?.name ?? defaultName;
-        return `${dirName}/${media.isPublic ? "public" : "private"}/${projectName}/${prefix}${media.fileName}`;
+        return `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${projectName}/${prefix}${media.fileName}`;
       },
       progressTick
     );

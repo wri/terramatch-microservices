@@ -360,11 +360,13 @@ export class NurseryProcessor extends EntityProcessor<
 
     const dirName = await this.entitiesService.localizeText("Nursery Establishment");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
     await this.entitiesService.exportMedia(
       nurseries,
       archive,
       (nursery, media) =>
-        `${dirName}/${media.isPublic ? "public" : "private"}/${nursery.name ?? defaultName}/${media.fileName}`,
+        `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${nursery.name ?? defaultName}/${media.fileName}`,
       progressTick
     );
 

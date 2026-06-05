@@ -580,11 +580,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const dirName = await this.entitiesService.localizeText("Site Establishment");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
     await this.entitiesService.exportMedia(
       sites,
       archive,
       (site, media) =>
-        `${dirName}/${media.isPublic ? "public" : "private"}/${site.name ?? defaultName}/${media.fileName}`,
+        `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${site.name ?? defaultName}/${media.fileName}`,
       progressTick
     );
 

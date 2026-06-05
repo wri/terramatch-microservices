@@ -870,11 +870,13 @@ export class ProjectProcessor extends EntityProcessor<
 
     const dirName = await this.entitiesService.localizeText("Project Establishment");
     const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
     await this.entitiesService.exportMedia(
       projects,
       archive,
       (project, media) =>
-        `${dirName}/${media.isPublic ? "public" : "private"}/${project.name ?? defaultName}/${media.fileName}`,
+        `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${project.name ?? defaultName}/${media.fileName}`,
       progressTick
     );
 

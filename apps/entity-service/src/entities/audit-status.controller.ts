@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
   UnauthorizedException
 } from "@nestjs/common";
@@ -19,7 +20,11 @@ import {
 } from "@terramatch-microservices/common/util";
 import { PolicyService } from "@terramatch-microservices/common";
 import { AuditStatusService } from "./audit-status.service";
-import { AuditStatusParamsDto, AuditStatusDeleteParamsDto } from "./dto/audit-status-params.dto";
+import {
+  AuditStatusParamsDto,
+  AuditStatusDeleteParamsDto,
+  AuditStatusUpdateParamsDto
+} from "./dto/audit-status-params.dto";
 import { AuditStatusIndexQueryDto } from "./dto/audit-status-index-query.dto";
 import { AuditStatusDto, CreateAuditStatusBody } from "./dto/audit-status.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -27,6 +32,8 @@ import { Media } from "@terramatch-microservices/database/entities/media.entity"
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { EntitiesService } from "./entities.service";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import { UpdateAuditStatusBody } from "./dto/audit-status-update.dto";
+import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 
 @Controller("entities/v3/auditStatuses")
 export class AuditStatusController {
@@ -99,6 +106,48 @@ export class AuditStatusController {
     );
 
     const dto = AuditStatusDto.fromAuditStatus(auditStatus, attachmentDtos);
+    const document = buildJsonApi(AuditStatusDto);
+    document.addData(auditStatus.uuid, dto);
+
+    return document;
+  }
+
+  @Put(":entity/:uuid/:auditUuid")
+  @ApiOperation({
+    operationId: "updateAuditStatus",
+    summary: "Update an audit status for an entity"
+  })
+  @JsonApiResponse({ data: AuditStatusDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Entity or audit status not found." })
+  @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
+  async updateAuditStatus(
+    @Param() { entity, uuid, auditUuid }: AuditStatusUpdateParamsDto,
+    @Body() updatePayload: UpdateAuditStatusBody
+  ) {
+    if (updatePayload.data.type !== "auditStatuses") {
+      throw new BadRequestException("Payload type must be 'auditStatuses'");
+    }
+
+    const baseEntity = await this.auditStatusService.resolveEntity(entity, uuid);
+
+    await this.policyService.authorize("read", baseEntity);
+
+    const auditStatus = await AuditStatus.findOne({
+      where: {
+        uuid: auditUuid
+      }
+    });
+
+    if (auditStatus == null) {
+      throw new NotFoundException("Audit status not found");
+    }
+
+    await this.auditStatusService.updateAuditStatus(auditStatus, updatePayload.data.attributes);
+
+    const dto = AuditStatusDto.fromAuditStatus(auditStatus);
     const document = buildJsonApi(AuditStatusDto);
     document.addData(auditStatus.uuid, dto);
 

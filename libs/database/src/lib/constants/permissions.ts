@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   "framework-epa-ghana-pilot": "Framework EPA Ghana Pilot",
   "framework-fundo-flora": "Framework Fundo Flora",
   "framework-fundo-flora-1": "Framework Fundo Flora 1",
+  "framework-wcb": "Framework WCB",
   "custom-forms-manage": "Manage custom forms",
   "users-manage": "Manage users",
   "monitoring-manage": "Manage monitoring",
@@ -40,6 +41,7 @@ export const ROLES: Dictionary<Permission[]> = {
     "framework-epa-ghana-pilot",
     "framework-fundo-flora",
     "framework-fundo-flora-1",
+    "framework-wcb",
     "custom-forms-manage",
     "users-manage",
     "monitoring-manage",
@@ -72,6 +74,7 @@ export const ROLES: Dictionary<Permission[]> = {
     "monitoring-manage",
     "reports-manage"
   ],
+  "admin-wcb": ["framework-wcb", "custom-forms-manage", "users-manage", "monitoring-manage", "reports-manage"],
   "project-developer": ["manage-own"],
   "project-manager": ["projects-manage"],
   "greenhouse-service-account": ["projects-read", "polygons-manage-own", "media-manage"],

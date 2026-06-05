@@ -575,6 +575,10 @@ describe("DuplicateGeometryValidator", () => {
       ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"]);
 
       expect(result).toEqual({ valid: true, duplicates: [] });
+      expect(mockSequelize.transaction).toHaveBeenCalledWith({
+        isolationLevel: expect.any(String)
+      });
+      expect(mockTransaction.commit).toHaveBeenCalled();
     });
 
     it("should return valid=false when duplicates found", async () => {
@@ -595,6 +599,29 @@ describe("DuplicateGeometryValidator", () => {
         valid: false,
         duplicates: [{ index: 0, existing_uuid: "existing-uuid-1" }]
       });
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ transaction: mockTransaction })
+      );
+      expect(mockTransaction.commit).toHaveBeenCalled();
+    });
+
+    it("should roll back and rethrow when the duplicate query fails", async () => {
+      const dbError = new Error("Database error");
+      mockSequelize.query.mockRejectedValue(dbError);
+
+      await expect(
+        (
+          validator as unknown as {
+            checkNewPolygonsDuplicates: (
+              features: Feature[],
+              existingPolygonUuids: string[]
+            ) => Promise<{ valid: boolean; duplicates: MockDuplicateCheckResult[] }>;
+          }
+        ).checkNewPolygonsDuplicates(mockFeatures, ["existing-uuid"])
+      ).rejects.toThrow(dbError);
+
+      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
   });
 
@@ -883,7 +910,7 @@ describe("DuplicateGeometryValidator", () => {
 
       (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockResolvedValue(mockDuplicateResults),
-        transaction: jest.fn()
+        transaction: jest.fn().mockResolvedValue(mockTransaction)
       };
 
       const result = await validator.checkNewPointsDuplicates(mockPointFeatures, "site-uuid");
@@ -920,7 +947,7 @@ describe("DuplicateGeometryValidator", () => {
 
       (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockRejectedValue(new Error("Database error")),
-        transaction: jest.fn()
+        transaction: jest.fn().mockResolvedValue(mockTransaction)
       };
 
       const result = await validator.checkNewPointsDuplicates(mockPointFeatures, "site-uuid");
@@ -1063,7 +1090,7 @@ describe("DuplicateGeometryValidator", () => {
 
       (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockResolvedValue(mockDuplicateResults),
-        transaction: jest.fn()
+        transaction: jest.fn().mockResolvedValue(mockTransaction)
       };
 
       const result = await (
@@ -1099,7 +1126,7 @@ describe("DuplicateGeometryValidator", () => {
     it("should handle database errors gracefully", async () => {
       (PointGeometry.sql as unknown as MockSequelize) = {
         query: jest.fn().mockRejectedValue(new Error("Database error")),
-        transaction: jest.fn()
+        transaction: jest.fn().mockResolvedValue(mockTransaction)
       };
 
       const result = await (
@@ -1112,6 +1139,7 @@ describe("DuplicateGeometryValidator", () => {
       ).checkNewPointsDuplicatesInternal(mockPointFeatures, ["existing-uuid"]);
 
       expect(result).toEqual({ duplicateIndexToUuid: new Map() });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
     });
   });
 });

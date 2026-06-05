@@ -19,6 +19,7 @@ import { Media } from "@terramatch-microservices/database/entities/media.entity"
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { CollectionModelCtor } from "@terramatch-microservices/database/types/util";
 import { CreateAuditStatusBody } from "./dto/audit-status.dto";
+import { UpdateAuditStatusBody } from "./dto/audit-status-update.dto";
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { SitePolygon } from "@terramatch-microservices/database/entities/site-polygon.entity";
 
@@ -258,6 +259,154 @@ describe("AuditStatusController", () => {
       await expect(controller.createAuditStatus({ entity: "projects", uuid: project.uuid }, payload)).rejects.toThrow(
         UnauthorizedException
       );
+    });
+  });
+
+  describe("updateAuditStatus", () => {
+    it("should update audit status and return JSON:API response", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.updateAuditStatus.mockResolvedValue(auditStatus);
+      policyService.authorize.mockResolvedValue();
+      jest.spyOn(AuditStatus, "findOne").mockResolvedValue(auditStatus);
+
+      const payload = {
+        data: {
+          type: "auditStatuses",
+          attributes: {
+            status: "approved",
+            comment: "Updated comment",
+            type: "status"
+          }
+        }
+      };
+
+      const result = serialize(
+        await controller.updateAuditStatus(
+          { entity: "projects", uuid: project.uuid, auditUuid: auditStatus.uuid },
+          payload
+        )
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("projects", project.uuid);
+      expect(AuditStatus.findOne).toHaveBeenCalledWith({ where: { uuid: auditStatus.uuid } });
+      expect(service.updateAuditStatus).toHaveBeenCalledWith(auditStatus, payload.data.attributes);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", mockEntity);
+      expect((result.data as Resource).id).toBe(auditStatus.uuid);
+      expect((result.data as Resource).type).toBe("auditStatuses");
+    });
+
+    it("should throw BadRequestException for invalid payload type", async () => {
+      const payload = {
+        data: {
+          type: "invalidType",
+          attributes: { status: "approved" }
+        }
+      };
+
+      await expect(
+        controller.updateAuditStatus(
+          { entity: "projects", uuid: "uuid", auditUuid: "audit-uuid" },
+          payload as UpdateAuditStatusBody
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw NotFoundException for non-existent entity", async () => {
+      service.resolveEntity.mockRejectedValue(new NotFoundException());
+      const payload = {
+        data: {
+          type: "auditStatuses",
+          attributes: { status: "approved" }
+        }
+      };
+
+      await expect(
+        controller.updateAuditStatus({ entity: "projects", uuid: "non-existent", auditUuid: "audit-uuid" }, payload)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when audit status does not exist", async () => {
+      const project = await ProjectFactory.create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      policyService.authorize.mockResolvedValue();
+      jest.spyOn(AuditStatus, "findOne").mockResolvedValue(null);
+
+      const payload = {
+        data: {
+          type: "auditStatuses",
+          attributes: { status: "approved" }
+        }
+      };
+
+      await expect(
+        controller.updateAuditStatus(
+          { entity: "projects", uuid: project.uuid, auditUuid: "non-existent-audit-uuid" },
+          payload
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw UnauthorizedException when user cannot read entity", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create();
+      const mockEntity = { id: project.id, uuid: project.uuid } as unknown as LaravelModel;
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      jest.spyOn(AuditStatus, "findOne").mockResolvedValue(auditStatus);
+
+      const payload = {
+        data: {
+          type: "auditStatuses",
+          attributes: { status: "approved" }
+        }
+      };
+
+      await expect(
+        controller.updateAuditStatus({ entity: "projects", uuid: project.uuid, auditUuid: auditStatus.uuid }, payload)
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("should update audit status for sitePolygons entity", async () => {
+      const site = await SiteFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const auditStatus = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: sitePolygon.id,
+        status: "approved",
+        comment: "Test comment",
+        type: "status"
+      });
+      const mockEntity = { id: sitePolygon.id, uuid: sitePolygon.uuid } as unknown as LaravelModel;
+
+      service.resolveEntity.mockResolvedValue(mockEntity);
+      service.updateAuditStatus.mockResolvedValue(auditStatus);
+      policyService.authorize.mockResolvedValue();
+      jest.spyOn(AuditStatus, "findOne").mockResolvedValue(auditStatus);
+
+      const payload = {
+        data: {
+          type: "auditStatuses",
+          attributes: {
+            comment: "Updated site polygon comment"
+          }
+        }
+      };
+
+      const result = serialize(
+        await controller.updateAuditStatus(
+          { entity: "sitePolygons", uuid: sitePolygon.uuid, auditUuid: auditStatus.uuid },
+          payload
+        )
+      );
+
+      expect(service.resolveEntity).toHaveBeenCalledWith("sitePolygons", sitePolygon.uuid);
+      expect(service.updateAuditStatus).toHaveBeenCalledWith(auditStatus, payload.data.attributes);
+      expect((result.data as Resource).id).toBe(auditStatus.uuid);
     });
   });
 

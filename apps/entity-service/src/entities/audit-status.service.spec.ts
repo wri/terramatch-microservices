@@ -414,6 +414,92 @@ describe("AuditStatusService", () => {
     });
   });
 
+  describe("updateAuditStatus", () => {
+    it("should update audit status attributes and persist changes", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({
+        status: "draft",
+        comment: "Original comment",
+        type: "status"
+      });
+
+      const result = await service.updateAuditStatus(auditStatus, {
+        status: "approved",
+        comment: "Updated comment",
+        type: "status"
+      });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(result).toBe(auditStatus);
+      expect(reloaded.status).toBe("approved");
+      expect(reloaded.comment).toBe("Updated comment");
+      expect(reloaded.type).toBe("status");
+    });
+
+    it("should update change-request specific fields", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({
+        type: "change-request",
+        status: "needs-more-information",
+        isActive: true,
+        requestRemoved: false
+      });
+
+      await service.updateAuditStatus(auditStatus, {
+        isActive: false,
+        requestRemoved: true
+      });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.isActive).toBe(false);
+      expect(reloaded.requestRemoved).toBe(true);
+      expect(reloaded.status).toBe("needs-more-information");
+    });
+
+    it("should support partial updates without changing unspecified fields", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({
+        status: "approved",
+        comment: "Keep this comment",
+        type: "status"
+      });
+
+      await service.updateAuditStatus(auditStatus, {
+        comment: "Only comment changed"
+      });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.comment).toBe("Only comment changed");
+      expect(reloaded.status).toBe("approved");
+      expect(reloaded.type).toBe("status");
+    });
+
+    it("should update audit status for sitePolygons entity", async () => {
+      const site = await SiteFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const auditStatus = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: sitePolygon.id,
+        status: "draft",
+        comment: "Original",
+        type: "status"
+      } as InferCreationAttributes<AuditStatus>);
+
+      await service.updateAuditStatus(auditStatus, {
+        status: "approved",
+        comment: "Site polygon updated"
+      });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.status).toBe("approved");
+      expect(reloaded.comment).toBe("Site polygon updated");
+    });
+  });
+
   describe("deleteAuditStatus", () => {
     it("should soft delete audit status that belongs to entity", async () => {
       const project = await ProjectFactory.create();

@@ -27,3 +27,4 @@ export { restoreDeletedProjects } from "./2026-05-20-restoreDeletedProjects";
 export { migrateProjectLinkages } from "./2026-05-21-migrateProjectLinkages";
 export { importProjectCohortLandscape } from "./2026-05-28-importProjectCohortLandscape";
 export { fundoFloraFormOptionLabelIds } from "./2026-06-03-fundoFloraFormOptionLabelIds";
+export { trackingImport } from "./2026-06-04-trackingImport";

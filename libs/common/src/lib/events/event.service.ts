@@ -7,6 +7,7 @@ import { StatusUpdateModel } from "@terramatch-microservices/database/types/util
 import { TMLogger } from "../util/tm-logger";
 import { MediaService } from "../media/media.service";
 import { Media, PolygonGeometry, User } from "@terramatch-microservices/database/entities";
+import { POLYGON_PUSHED_VIA_API_EVENT, PolygonPushedViaApiParams } from "../analytics/polygon-pushed-via-api";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -59,6 +60,16 @@ export class EventService {
     await this.analyticsQueue.add("modelStatusUpdate", {
       uuid: modelUuid,
       params: { modelType: modelLaravelType, status }
+    });
+  }
+
+  async sendPolygonPushedViaApiAnalytics(partnerId: string, params: PolygonPushedViaApiParams) {
+    this.logger.log(
+      `Sending polygon pushed via API analytics for polygon ${params.polygon_id} (partner: ${partnerId}) to queue.`
+    );
+    await this.analyticsQueue.add(POLYGON_PUSHED_VIA_API_EVENT, {
+      uuid: partnerId,
+      params
     });
   }
 }

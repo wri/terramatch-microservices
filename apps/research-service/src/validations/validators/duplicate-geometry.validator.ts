@@ -301,11 +301,18 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
       AND ST_Equals(ng.geom, pg.geom)
     `;
 
+    const transaction = await PolygonGeometry.sql.transaction({
+      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
+    });
+
     try {
       const results = (await PolygonGeometry.sql.query(sql, {
         replacements: allParams,
-        type: QueryTypes.SELECT
+        type: QueryTypes.SELECT,
+        transaction
       })) as { idx: number; existing_uuid: string }[];
+
+      await transaction.commit();
 
       const duplicates = results.map(row => ({
         index: row.idx,
@@ -317,8 +324,12 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
         duplicates
       };
     } catch (error) {
-      this.logger.error("Error checking for duplicate geometries:", error);
-      return { valid: true, duplicates: [] };
+      await transaction.rollback();
+      const sqlMessage =
+        (error as { parent?: { sqlMessage?: string } })?.parent?.sqlMessage ??
+        (error instanceof Error ? error.message : "Unknown error");
+      this.logger.error(`Error checking for duplicate geometries: ${sqlMessage}`, error);
+      throw error;
     }
   }
 
@@ -502,11 +513,18 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
       WHERE ST_Equals(ng.geom, pg.geom)
     `;
 
+    const transaction = await PointGeometry.sql.transaction({
+      isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
+    });
+
     try {
       const results = (await PointGeometry.sql.query(sql, {
         replacements: allParams,
-        type: QueryTypes.SELECT
+        type: QueryTypes.SELECT,
+        transaction
       })) as { idx: number; existing_uuid: string }[];
+
+      await transaction.commit();
 
       const duplicateMap = new Map<number, string>();
       for (const row of results) {
@@ -515,6 +533,7 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
 
       return { duplicateIndexToUuid: duplicateMap };
     } catch {
+      await transaction.rollback();
       return { duplicateIndexToUuid: new Map() };
     }
   }

@@ -21,6 +21,7 @@ import { TMLogger } from "../util/tm-logger";
 import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 import { Model } from "sequelize-typescript";
+import md5 from "md5";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
@@ -143,7 +144,19 @@ export class LocalizationService {
   async localizeText(text: string, locale: ValidLocale, params?: ITranslateParams) {
     // Set the locale for the SDK
     const txLocale = normalizeLocale(locale);
+
     if (tx.currentLocale !== txLocale) await tx.setCurrentLocale(txLocale);
+
+    if (!tx.cache.hasTranslations(txLocale)) {
+      await tx.fetchTranslations(locale);
+    }
+
+    const txTranslations = tx.cache.getTranslations(locale);
+    const hash = md5(text);
+    const translation = txTranslations[hash];
+    if (translation != null) {
+      return translation;
+    }
 
     // Translate the text
     return t(text, params);

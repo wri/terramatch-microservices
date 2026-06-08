@@ -160,6 +160,9 @@ export class AuditStatus extends Model<InferAttributes<AuditStatus>, InferCreati
   @Column(STRING)
   declare type: AuditStatusType | null;
 
+  @Column({ type: BOOLEAN, defaultValue: false })
+  declare isRead: CreationOptional<boolean>;
+
   /**
    * @deprecated
    *

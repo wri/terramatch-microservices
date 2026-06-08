@@ -29,7 +29,11 @@ jest.mock("@transifex/native", () => ({
   tx: {
     init: jest.fn(),
     setCurrentLocale: jest.fn(),
-    pushSource: jest.fn()
+    pushSource: jest.fn(),
+    cache: {
+      hasTranslations: jest.fn().mockReturnValue(true),
+      getTranslations: jest.fn().mockReturnValue({})
+    }
   },
   t: jest.fn(),
   normalizeLocale: jest.fn(),

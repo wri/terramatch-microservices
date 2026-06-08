@@ -148,13 +148,13 @@ export class LocalizationService {
     if (tx.currentLocale !== txLocale) await tx.setCurrentLocale(txLocale);
 
     if (!tx.cache.hasTranslations(txLocale)) {
-      await tx.fetchTranslations(locale);
+      await tx.fetchTranslations(txLocale);
     }
 
     // Some of our oldest translations seem to be hashed using an old library algorithm that isn't
     // supported. This is similar to what transifex does under the hood, just using a regular MD5
     // the cache lookup.
-    const txTranslations = tx.cache.getTranslations(locale);
+    const txTranslations = tx.cache.getTranslations(txLocale);
     const hash = md5(text);
     const translation = txTranslations[hash];
     if (translation != null) {

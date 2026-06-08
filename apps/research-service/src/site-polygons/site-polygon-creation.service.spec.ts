@@ -17,7 +17,6 @@ import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-pol
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { FeatureCollection } from "geojson";
-import { EventService } from "@terramatch-microservices/common/events/event.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -35,7 +34,6 @@ describe("SitePolygonCreationService", () => {
   let pointGeometryService: PointGeometryCreationService;
   let voronoiService: VoronoiService;
   let geometryFileProcessingService: GeometryFileProcessingService;
-  let eventService: EventService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -87,12 +85,6 @@ describe("SitePolygonCreationService", () => {
           useValue: {
             parseGeometryFile: jest.fn()
           }
-        },
-        {
-          provide: EventService,
-          useValue: {
-            sendPolygonPushedViaApiAnalytics: jest.fn()
-          }
         }
       ]
     }).compile();
@@ -103,7 +95,6 @@ describe("SitePolygonCreationService", () => {
     pointGeometryService = module.get<PointGeometryCreationService>(PointGeometryCreationService);
     voronoiService = module.get<VoronoiService>(VoronoiService);
     geometryFileProcessingService = module.get<GeometryFileProcessingService>(GeometryFileProcessingService);
-    eventService = module.get<EventService>(EventService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
@@ -177,59 +168,6 @@ describe("SitePolygonCreationService", () => {
       expect(result.data[0].siteUuid).toBe("site-uuid-1");
       expect(result.data[0].polygonUuid).toBe("polygon-uuid-1");
       expect(mockTransaction.commit).toHaveBeenCalled();
-      expect(eventService.sendPolygonPushedViaApiAnalytics).not.toHaveBeenCalled();
-    });
-
-    it("should send GA4 polygon_pushed_via_api analytics for API partner sources", async () => {
-      const mockFeature: Feature = {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            [
-              [0, 0],
-              [0, 1],
-              [1, 1],
-              [1, 0],
-              [0, 0]
-            ]
-          ]
-        },
-        properties: {
-          site_id: "site-uuid-1",
-          poly_name: "Test Polygon"
-        }
-      };
-
-      const request = createMockRequest([mockFeature]);
-
-      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
-
-      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
-        uuids: ["polygon-uuid-1"],
-        areas: [10.5]
-      });
-
-      const mockSitePolygon = {
-        uuid: "site-polygon-uuid-1",
-        siteUuid: "site-uuid-1",
-        polygonUuid: "polygon-uuid-1",
-        polyName: "Test Polygon",
-        source: "greenhouse"
-      } as SitePolygon;
-
-      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([mockSitePolygon]);
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
-
-      await service.createSitePolygons(request, mockUserId, "greenhouse", null);
-
-      expect(eventService.sendPolygonPushedViaApiAnalytics).toHaveBeenCalledWith("greenhouse", {
-        entity_type: "site",
-        entity_id: "site-uuid-1",
-        polygon_id: "polygon-uuid-1",
-        source: "api",
-        partner_id: "greenhouse"
-      });
     });
 
     it("should handle MultiPolygon geometries", async () => {

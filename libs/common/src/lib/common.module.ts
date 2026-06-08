@@ -88,7 +88,6 @@ const IS_REPL = process.env["REPL"] === "true";
     SlackService,
     ReportGenerationService,
     AnalyticsEventService,
-    EventService,
     CsvExportService,
     GreenhouseNotificationService
   ]

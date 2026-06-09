@@ -216,6 +216,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       projectShortName: sitePolygon.site?.project?.shortName,
       projectName: sitePolygon.site?.project?.name ?? null,
       projectCountry: sitePolygon.site?.project?.level0Project ?? null,
+      ppcExternalId: sitePolygon.site?.ppcExternalId ?? null,
       indicators: indicators ?? [],
       siteName: sitePolygon.site?.name ?? undefined,
       geometry: sitePolygon.polygon?.polygon,

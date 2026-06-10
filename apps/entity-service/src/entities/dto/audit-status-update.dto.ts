@@ -33,6 +33,9 @@ export class AuditStatusDto {
   @ApiProperty({ nullable: true, type: Date })
   dateCreated: Date | null;
 
+  @ApiProperty({ type: Boolean })
+  isRead: boolean;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   attachments: MediaDto[];
 
@@ -45,7 +48,8 @@ export class AuditStatusDto {
     comment: string | null,
     type: string | null,
     dateCreated: Date | null,
-    attachments: MediaDto[]
+    attachments: MediaDto[],
+    isRead = false
   ) {
     this.id = id;
     this.uuid = uuid;
@@ -55,6 +59,7 @@ export class AuditStatusDto {
     this.comment = comment;
     this.type = type;
     this.dateCreated = dateCreated;
+    this.isRead = isRead;
     this.attachments = attachments;
   }
 
@@ -74,7 +79,8 @@ export class AuditStatusDto {
       auditStatus.comment,
       auditStatus.type,
       auditStatus.createdAt,
-      attachments
+      attachments,
+      auditStatus.isRead
     );
   }
 
@@ -137,6 +143,11 @@ export class UpdateAuditStatusAttributes {
   @IsOptional()
   @IsBoolean()
   requestRemoved?: boolean | null;
+
+  @ApiProperty({ required: false, type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  isRead?: boolean;
 }
 
 export class UpdateAuditStatusBody extends JsonApiBodyDto(

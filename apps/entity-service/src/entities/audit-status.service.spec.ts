@@ -458,6 +458,17 @@ describe("AuditStatusService", () => {
       expect(reloaded.status).toBe("needs-more-information");
     });
 
+    it("should update the isRead field", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({ isRead: false });
+
+      await service.updateAuditStatus(auditStatus, { isRead: true });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.isRead).toBe(true);
+    });
+
     it("should support partial updates without changing unspecified fields", async () => {
       const project = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(project).create({

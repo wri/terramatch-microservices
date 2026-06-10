@@ -296,7 +296,7 @@ describe("GeoJsonExportService", () => {
           uuid: polygonUuid
         };
 
-        mockPolygonGeometry.getGeoJSONBatch.mockResolvedValue([{ uuid: polygonUuid, geoJson: "" }]);
+        mockPolygonGeometry.getGeoJSON.mockResolvedValue(undefined);
 
         await expect(service.getGeoJson(query)).rejects.toThrow(
           new NotFoundException(`Polygon geometry not found for uuid: ${polygonUuid}`)

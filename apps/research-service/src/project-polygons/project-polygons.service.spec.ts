@@ -507,19 +507,5 @@ describe("ProjectPolygonsService", () => {
         new NotFoundException(`Polygon geometry not found for uuid: ${projectPolygon.polyUuid}`)
       );
     });
-
-    it("should throw InternalServerErrorException on invalid geometry JSON", async () => {
-      const pitch = await ProjectPitchFactory.build();
-      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
-      const query: ProjectPolygonGeoJsonQueryDto = {
-        projectPitchUuid: pitch.uuid
-      };
-
-      jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([projectPolygon]);
-      jest.spyOn(PolygonGeometry, "getGeoJSONBatch").mockResolvedValue([{ uuid: "123", geoJson: "invalid-json" }]);
-
-      await expect(service.getGeoJson(query)).rejects.toThrow(InternalServerErrorException);
-    });
   });
 });

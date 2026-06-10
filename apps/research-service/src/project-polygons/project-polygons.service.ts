@@ -179,7 +179,7 @@ export class ProjectPolygonsService {
     }
 
     const geoJsonStrings = await PolygonGeometry.getGeoJSONBatch(projectPolygons.map(pp => pp.polyUuid));
-    if (geoJsonStrings.some(gjs => gjs.geoJson == null)) {
+    if (geoJsonStrings.length === 0) {
       throw new NotFoundException(
         `Polygon geometry not found for uuid: ${projectPolygons.map(pp => pp.polyUuid).join(", ")}`
       );

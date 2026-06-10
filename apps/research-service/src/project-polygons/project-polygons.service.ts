@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, Logger, NotFoundException } f
 import { PolygonGeometry, ProjectPitch, ProjectPolygon } from "@terramatch-microservices/database/entities";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { Op, Transaction } from "sequelize";
-import { FeatureCollection, Geometry } from "geojson";
+import { Feature, FeatureCollection, Geometry } from "geojson";
 import { ProjectPolygonGeoJsonQueryDto } from "./dto/project-polygon-geojson-query.dto";
 
 @Injectable()
@@ -162,7 +162,7 @@ export class ProjectPolygonsService {
       throw new NotFoundException(`Project pitch not found for uuid: ${query.projectPitchUuid}`);
     }
 
-    const projectPolygon = await ProjectPolygon.findOne({
+    const projectPolygons = await ProjectPolygon.findAll({
       where: {
         entityType: ProjectPitch.LARAVEL_TYPE,
         entityId: projectPitch.id
@@ -170,39 +170,32 @@ export class ProjectPolygonsService {
       attributes: ["polyUuid"]
     });
 
-    if (projectPolygon == null) {
+    if (projectPolygons.length === 0) {
       throw new NotFoundException(`Project polygon not found for project pitch: ${query.projectPitchUuid}`);
     }
 
-    if (projectPolygon.polyUuid == null) {
+    if (projectPolygons.some(pp => pp.polyUuid == null)) {
       throw new NotFoundException(`Polygon geometry UUID not found for project polygon`);
     }
 
-    const geoJsonString = await PolygonGeometry.getGeoJSON(projectPolygon.polyUuid);
-    if (geoJsonString == null) {
-      throw new NotFoundException(`Polygon geometry not found for uuid: ${projectPolygon.polyUuid}`);
-    }
-
-    let geometry: Geometry;
-    try {
-      geometry = JSON.parse(geoJsonString) as Geometry;
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to parse geometry JSON: ${error instanceof Error ? error.message : String(error)}`
+    const geoJsonStrings = await PolygonGeometry.getGeoJSONBatch(projectPolygons.map(pp => pp.polyUuid));
+    if (geoJsonStrings.some(gjs => gjs.geoJson == null)) {
+      throw new NotFoundException(
+        `Polygon geometry not found for uuid: ${projectPolygons.map(pp => pp.polyUuid).join(", ")}`
       );
     }
 
     return {
       type: "FeatureCollection",
-      features: [
-        {
+      features: geoJsonStrings.map(
+        (gjs): Feature<Geometry> => ({
           type: "Feature",
-          geometry,
+          geometry: JSON.parse(gjs.geoJson) as Geometry,
           properties: {
             projectPitchUuid: query.projectPitchUuid
           }
-        }
-      ]
+        })
+      )
     };
   }
 }

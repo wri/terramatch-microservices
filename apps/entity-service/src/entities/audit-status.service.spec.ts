@@ -469,6 +469,36 @@ describe("AuditStatusService", () => {
       expect(reloaded.isRead).toBe(true);
     });
 
+    it("should set isRead to false when the comment is updated", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({
+        comment: "Original comment",
+        isRead: true
+      });
+
+      await service.updateAuditStatus(auditStatus, { comment: "Updated comment" });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.comment).toBe("Updated comment");
+      expect(reloaded.isRead).toBe(false);
+    });
+
+    it("should not change isRead when the comment is unchanged", async () => {
+      const project = await ProjectFactory.create();
+      const auditStatus = await AuditStatusFactory.project(project).create({
+        comment: "Same comment",
+        isRead: true
+      });
+
+      await service.updateAuditStatus(auditStatus, { comment: "Same comment", status: "approved" });
+
+      const reloaded = await auditStatus.reload();
+
+      expect(reloaded.status).toBe("approved");
+      expect(reloaded.isRead).toBe(true);
+    });
+
     it("should support partial updates without changing unspecified fields", async () => {
       const project = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(project).create({

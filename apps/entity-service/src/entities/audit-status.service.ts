@@ -250,7 +250,13 @@ export class AuditStatusService {
   }
 
   async updateAuditStatus(auditStatus: AuditStatus, attributes: UpdateAuditStatusAttributes): Promise<AuditStatus> {
-    await auditStatus.update(attributes as InferAttributes<AuditStatus>);
+    const updateAttributes = { ...attributes };
+
+    if (attributes.comment !== undefined && attributes.comment !== auditStatus.comment) {
+      updateAttributes.isRead = false;
+    }
+
+    await auditStatus.update(updateAttributes as InferAttributes<AuditStatus>);
     return auditStatus;
   }
 

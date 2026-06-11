@@ -16,7 +16,6 @@ import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Op } from "sequelize";
 import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { PolicyService } from "@terramatch-microservices/common";
 import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -28,6 +27,7 @@ import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/fi
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Injectable()
 export class OrganisationsService {
@@ -62,7 +62,7 @@ export class OrganisationsService {
         builder.order([["name", "ASC"]]);
       }
     } else if (!hasFrameworkPermission) {
-      const userId = authenticatedUserId();
+      const userId = UserContext.authenticatedUserId;
       if (userId == null) {
         throw new BadRequestException("User ID is required");
       }

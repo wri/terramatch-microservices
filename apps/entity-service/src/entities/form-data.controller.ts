@@ -11,7 +11,7 @@ import { EntityModel, EntityType } from "@terramatch-microservices/database/cons
 import { AuditStatus, Form } from "@terramatch-microservices/database/entities";
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @Controller("entities/v3/:entity/:uuid/formData")
 export class FormDataController {
@@ -60,7 +60,7 @@ export class FormDataController {
 
     const type =
       model.status === APPROVED || model.status === NEEDS_MORE_INFORMATION ? "change-request-updated" : "updated";
-    await AuditStatus.ensureRecentAudit(model, authenticatedUserId(), type);
+    await AuditStatus.ensureRecentAudit(model, UserContext.authenticatedUserId, type);
 
     return this.addFormData(buildJsonApi(FormDataDto), model, entity, form);
   }

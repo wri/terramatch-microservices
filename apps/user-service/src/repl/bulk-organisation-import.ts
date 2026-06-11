@@ -18,7 +18,7 @@ import {
   assertNotNull
 } from "@terramatch-microservices/common/util/repl/assertions";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 
 const LOGGER = new TMLogger("Bulk Organisation Import");
 

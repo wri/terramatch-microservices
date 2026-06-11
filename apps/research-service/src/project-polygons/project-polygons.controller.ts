@@ -18,12 +18,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import {
-  buildDeletedResponse,
-  buildJsonApi,
-  getDtoType,
-  getStableRequestQuery
-} from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { ProjectPolygonDto } from "./dto/project-polygon.dto";
 import { ProjectPolygonQueryDto } from "./dto/project-polygon-query.dto";
 import { CreateProjectPolygonJsonApiRequestDto } from "./dto/create-project-polygon-request.dto";
@@ -77,30 +72,32 @@ export class ProjectPolygonsController {
 
   @Get()
   @ApiOperation({
-    operationId: "getProjectPolygon",
-    summary: "Get project polygon by project pitch UUID",
-    description: `Get the project polygon for a specific project pitch. Only one polygon per project pitch is supported.`
+    operationId: "getProjectPolygons",
+    summary: "Get project polygons by project pitch UUID",
+    description: `Get all project polygons for a specific project pitch.`
   })
-  @JsonApiResponse(ProjectPolygonDto)
+  @JsonApiResponse([{ data: ProjectPolygonDto, hasMany: true }])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid query parameters." })
-  @ExceptionResponse(NotFoundException, { description: "Project polygon or project pitch not found." })
-  async findOne(@Query() query: ProjectPolygonQueryDto) {
+  async findMany(@Query() query: ProjectPolygonQueryDto) {
     await this.policyService.authorize("read", ProjectPolygon);
 
     if (query.projectPitchUuid == null) {
       throw new BadRequestException("projectPitchUuid query parameter is required");
     }
 
-    const projectPolygon = await this.projectPolygonService.findByProjectPitchUuid(query.projectPitchUuid);
+    const projectPolygons = await this.projectPolygonService.findManyByProjectPitchUuid(query.projectPitchUuid);
 
-    if (projectPolygon == null) {
-      throw new NotFoundException(`Project polygon not found for project pitch: ${query.projectPitchUuid}`);
+    const document = buildJsonApi(ProjectPolygonDto, { forceDataArray: true });
+    document.addIndex({
+      total: projectPolygons.length,
+      requestPath: `/research/v3/projectPolygons?projectPitchUuid=${query.projectPitchUuid}`
+    });
+
+    for (const projectPolygon of projectPolygons) {
+      const dto = await this.projectPolygonService.buildDto(projectPolygon, query.projectPitchUuid);
+      document.addData(projectPolygon.uuid, dto);
     }
-
-    const document = buildJsonApi(ProjectPolygonDto);
-    const dto = await this.projectPolygonService.buildDto(projectPolygon, query.projectPitchUuid);
-    document.addData(getStableRequestQuery(query), dto);
 
     return document;
   }
@@ -186,15 +183,17 @@ export class ProjectPolygonsController {
 
     const projectPitchUuid = payload.data.attributes.projectPitchUuid;
 
-    const createdProjectPolygon = await this.projectPolygonCreationService.uploadProjectPolygonFromFile(
+    const createdProjectPolygons = await this.projectPolygonCreationService.uploadProjectPolygonFromFile(
       file,
       projectPitchUuid,
       userId
     );
 
     const document = buildJsonApi(ProjectPolygonDto);
-    const dto = await this.projectPolygonService.buildDto(createdProjectPolygon, projectPitchUuid);
-    document.addData(createdProjectPolygon.uuid, dto);
+    for (const projectPolygon of createdProjectPolygons) {
+      const dto = await this.projectPolygonService.buildDto(projectPolygon, projectPitchUuid);
+      document.addData(projectPolygon.uuid, dto);
+    }
     return document;
   }
   @Patch(":polyUuid")

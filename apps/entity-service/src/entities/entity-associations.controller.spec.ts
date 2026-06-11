@@ -8,7 +8,7 @@ import { AssociationProcessor } from "./processors/association-processor";
 import { TrackingDto } from "@terramatch-microservices/common/dto/tracking.dto";
 import { ProjectReportFactory, TrackingFactory } from "@terramatch-microservices/database/factories";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { mockRequestContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 class StubProcessor extends AssociationProcessor<Tracking, TrackingDto> {
   DTO = TrackingDto;
@@ -37,7 +37,7 @@ describe("EntityAssociationsController", () => {
       return new StubProcessor(entity, uuid, ProjectReport, entitiesService);
     });
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
   });
 
   afterEach(() => {

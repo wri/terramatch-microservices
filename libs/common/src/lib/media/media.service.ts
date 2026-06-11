@@ -372,8 +372,12 @@ export class MediaService {
     return media;
   }
 
+  async getMediaStream(media: Media) {
+    return await this.fileService.readRemoteFile(this.bucket, `${media.id}/${media.fileName}`);
+  }
+
   async getMediaBuffer(media: Media): Promise<Buffer> {
-    const stream = await this.fileService.readRemoteFile(this.bucket, `${media.id}/${media.fileName}`);
+    const stream = await this.getMediaStream(media);
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));

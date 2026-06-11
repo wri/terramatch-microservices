@@ -9,7 +9,7 @@ import { Task } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
 import { TaskLightDto } from "./dto/task.dto";
-import { mockRequestContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("TasksController", () => {
   let controller: TasksController;
@@ -33,7 +33,7 @@ describe("TasksController", () => {
       return document;
     });
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
   });
 
   afterEach(() => {

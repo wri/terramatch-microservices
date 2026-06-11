@@ -29,13 +29,15 @@ import { PlantingStatus } from "@terramatch-microservices/database/constants/sta
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { SiteReportProcessor } from "./site-report.processor";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { ServerResponse } from "node:http";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { Literal } from "sequelize/types/utils";
+import { ProgressTick } from "../entities.service";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -371,7 +373,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       dto: new SiteLightDto(site, {
         treesPlantedCount,
         totalHectaresRestoredSum,
-        plantingStatus: lastReport?.plantingStatus as PlantingStatus
+        plantingStatus: lastReport?.plantingStatus as PlantingStatus,
+        totalSiteReports: await this.getTotalSiteReports(site.id)
       })
     };
   }
@@ -387,14 +390,17 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       this.getPlantingStatus(sites)
     ]);
 
-    return sites.map(site => ({
-      id: site.uuid,
-      dto: new SiteLightDto(site, {
-        treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
-        totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
-        plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null
-      })
-    }));
+    return Promise.all(
+      sites.map(async site => ({
+        id: site.uuid,
+        dto: new SiteLightDto(site, {
+          treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+          totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
+          plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null,
+          totalSiteReports: await this.getTotalSiteReports(site.id)
+        })
+      }))
+    );
   }
 
   protected async getWorkdayCount(siteId: number, useDemographicsCutoff = false) {
@@ -566,5 +572,25 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site establishment data`)
       }
     );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const sites = await Site.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (sites.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Site Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
+    await this.entitiesService.exportMedia(
+      sites,
+      archive,
+      (site, media) =>
+        `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${site.name ?? defaultName}/${media.fileName}`,
+      progressTick
+    );
+
+    const reportProcessor = this.entitiesService.createEntityProcessor("siteReports");
+    await reportProcessor.exportMedia(SiteReport.uuidsSubquery(Site.idsForUuidsSubquery(uuids)), archive, progressTick);
   }
 }

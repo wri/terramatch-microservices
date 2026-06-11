@@ -14,6 +14,9 @@ import {
   AttributeChangesDto,
   CreateSitePolygonRequestDto
 } from "./dto/create-site-polygon-request.dto";
+import type { SitePolygonBulkAttributeChangesDto } from "./dto/site-polygon-bulk-attribute-update.dto";
+
+const BULK_ATTRIBUTE_UPDATE_CHANGE_REASON = "Bulk attribute update via API" as const;
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
@@ -27,6 +30,7 @@ import {
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import {
   CriteriaId,
+  SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
   ValidationType
@@ -39,6 +43,57 @@ import "multer";
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
 }
+
+const validateAndSortStrictStringArray = (
+  value: unknown,
+  validValues: readonly string[],
+  fieldName: string
+): string[] | null => {
+  if (!Array.isArray(value)) {
+    throw new BadRequestException(`${fieldName} must be an array`);
+  }
+  if (value.length === 0) return null;
+
+  const hasNonString = value.find(item => typeof item !== "string") != null;
+  if (hasNonString) {
+    throw new BadRequestException(`${fieldName} must contain only strings`);
+  }
+
+  const trimmedValues = value.map(item => item.trim()).filter(item => item !== "");
+  if (trimmedValues.length === 0) return null;
+
+  const validValuesSet = new Set(validValues);
+  const invalidValues = trimmedValues.filter(item => !validValuesSet.has(item));
+  if (invalidValues.length > 0) {
+    throw new BadRequestException(`${fieldName} contains invalid value(s): ${invalidValues.join(", ")}`);
+  }
+
+  return validateAndSortStringArray(trimmedValues, validValues);
+};
+
+const validateTargetSystem = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    throw new BadRequestException("targetSys must be a string");
+  }
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") return null;
+  if (!SITE_POLYGON_TARGET_SYSTEMS.includes(trimmedValue as (typeof SITE_POLYGON_TARGET_SYSTEMS)[number])) {
+    throw new BadRequestException(`targetSys contains invalid value: ${trimmedValue}`);
+  }
+  return trimmedValue;
+};
+
+const validatePlantStart = (value: unknown): Date | null => {
+  if (typeof value !== "string") {
+    throw new BadRequestException("plantStart must be a string");
+  }
+  if (value.trim() === "") return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException(`plantStart contains invalid date: ${value}`);
+  }
+  return date;
+};
 
 interface ValidationIncludedData {
   type: "validation";
@@ -702,6 +757,33 @@ export class SitePolygonCreationService {
     }
   }
 
+  async bulkUpdateSitePolygonAttributes(
+    sitePolygonUuids: string[],
+    attributeChanges: SitePolygonBulkAttributeChangesDto,
+    userId: number,
+    userFullName: string | null,
+    source: string,
+    transaction: Transaction
+  ): Promise<SitePolygon[]> {
+    const newVersions: SitePolygon[] = [];
+
+    for (const sitePolygonUuid of sitePolygonUuids) {
+      const newVersion = await this.createSitePolygonVersion(
+        sitePolygonUuid,
+        undefined,
+        attributeChanges,
+        BULK_ATTRIBUTE_UPDATE_CHANGE_REASON,
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+      newVersions.push(newVersion);
+    }
+
+    return newVersions;
+  }
+
   async createSitePolygonVersion(
     baseSitePolygonUuid: string,
     newGeometry: CreateSitePolygonRequestDto[] | undefined,
@@ -750,29 +832,34 @@ export class SitePolygonCreationService {
       }
 
       if (attributeChanges.plantStart !== undefined) {
-        sitePolygonAttributes.plantStart =
-          attributeChanges.plantStart.length > 0 ? new Date(attributeChanges.plantStart) : null;
+        sitePolygonAttributes.plantStart = validatePlantStart(attributeChanges.plantStart);
       }
 
       if (attributeChanges.practice !== undefined) {
         sitePolygonAttributes.practice =
           attributeChanges.practice.length > 0
-            ? validateAndSortStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES)
+            ? validateAndSortStrictStringArray(attributeChanges.practice, VALID_PRACTICE_VALUES, "practice")
             : null;
       }
 
       if (attributeChanges.targetSys !== undefined) {
-        sitePolygonAttributes.targetSys = attributeChanges.targetSys.length > 0 ? attributeChanges.targetSys : null;
+        sitePolygonAttributes.targetSys = validateTargetSystem(attributeChanges.targetSys);
       }
 
       if (attributeChanges.distr !== undefined) {
         sitePolygonAttributes.distr =
           attributeChanges.distr.length > 0
-            ? validateAndSortStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES)
+            ? validateAndSortStrictStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES, "distr")
             : null;
       }
 
       if (attributeChanges.numTrees !== undefined) {
+        if (attributeChanges.numTrees == null) {
+          throw new BadRequestException("numTrees cannot be null");
+        }
+        if (!Number.isInteger(attributeChanges.numTrees) || attributeChanges.numTrees < 0) {
+          throw new BadRequestException("numTrees must be a non-negative integer");
+        }
         sitePolygonAttributes.numTrees = attributeChanges.numTrees;
       }
     }

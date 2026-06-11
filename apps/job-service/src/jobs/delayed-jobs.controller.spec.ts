@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NotFoundException } from "@nestjs/common";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJobFactory } from "@terramatch-microservices/database/factories";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
 
@@ -34,7 +34,7 @@ describe("DelayedJobsController", () => {
   describe("getRunningJobs", () => {
     it("should return a job with null entity_name if metadata is null", async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
       const result = serialize(await controller.getRunningJobs());
 
@@ -47,7 +47,7 @@ describe("DelayedJobsController", () => {
 
     it("should return a job with entity_name if metadata exists", async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const job = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
         metadata: { entity_name: "TestEntity" }
@@ -65,7 +65,7 @@ describe("DelayedJobsController", () => {
 
     it("should return a job with null entity_name if metadata does not have entity_name", async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const job = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId, metadata: {} });
       const result = serialize(await controller.getRunningJobs());
       const data = Array.isArray(result.data) ? result.data : [result.data];
@@ -100,7 +100,7 @@ describe("DelayedJobsController", () => {
   describe("bulkUdpateJobs", () => {
     it("should successfully update jobs with null metadata", async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const job1 = await DelayedJobFactory.succeeded.create({ createdBy: authenticatedUserId });
       const job2 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
@@ -134,7 +134,7 @@ describe("DelayedJobsController", () => {
 
     it("should successfully bulk update jobs to acknowledged with entity_name", async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const job1 = await DelayedJobFactory.succeeded.create({
         createdBy: authenticatedUserId,
         metadata: { entity_name: "TestEntity1" } // Adding entity_name
@@ -182,14 +182,14 @@ describe("DelayedJobsController", () => {
           }
         ]
       };
-      mockRequestContext({ userId: 130999 });
+      mockUserContext({ userId: 130999 });
 
       await expect(controller.bulkUpdateJobs(payload)).rejects.toThrow(NotFoundException);
     });
 
     it('should update jobs with status "pending"', async () => {
       const authenticatedUserId = 130999;
-      mockRequestContext({ userId: authenticatedUserId });
+      mockUserContext({ userId: authenticatedUserId });
       const pendingJob = await DelayedJob.create({
         uuid: uuidv4(),
         createdBy: authenticatedUserId,

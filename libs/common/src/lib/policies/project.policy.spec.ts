@@ -8,7 +8,7 @@ import {
   ProjectUserFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { mockRequestContext, mockRequestForUser } from "../util/testing";
+import { mockUserContext, mockContextForUser } from "../util/testing";
 
 describe("ProjectPolicy", () => {
   let service: PolicyService;
@@ -26,19 +26,19 @@ describe("ProjectPolicy", () => {
   });
 
   it("allows reading all projects with projects-read permissions", async () => {
-    mockRequestContext({ userId: 123, permissions: ["projects-read"] });
+    mockUserContext({ userId: 123, permissions: ["projects-read"] });
     await expectCan(service, "read", new Project());
     await expectCannot(service, "delete", new Project());
   });
 
   it("allows reading all projects with view-dashboard permissions", async () => {
-    mockRequestContext({ userId: 123, permissions: ["view-dashboard"] });
+    mockUserContext({ userId: 123, permissions: ["view-dashboard"] });
     await expectCan(service, "read", new Project());
     await expectCannot(service, "delete", new Project());
   });
 
   it("allows managing projects in your framework", async () => {
-    mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+    mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
     const tf = await ProjectFactory.create({ frameworkKey: "terrafund" });
     await expectAuthority(service, {
@@ -50,7 +50,7 @@ describe("ProjectPolicy", () => {
   it("allows managing own projects", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });
-    mockRequestForUser(user, "manage-own");
+    mockContextForUser(user, "manage-own");
 
     const p1 = await ProjectFactory.create({ status: "started", organisationId: org.id });
     const p2 = await ProjectFactory.create({ status: "started" });
@@ -76,7 +76,7 @@ describe("ProjectPolicy", () => {
 
   it("allows reading and deleting managed projects", async () => {
     const user = await UserFactory.create();
-    mockRequestForUser(user, "projects-manage");
+    mockContextForUser(user, "projects-manage");
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });

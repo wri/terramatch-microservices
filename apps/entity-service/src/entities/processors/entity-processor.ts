@@ -2,7 +2,7 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { Response } from "express";
 import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
-import { EntitiesService, ProcessableEntity } from "../entities.service";
+import { EntitiesService, ProcessableEntity, ProgressTick } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
@@ -21,6 +21,7 @@ import { uniq } from "lodash";
 import { isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
+import { Literal } from "sequelize/types/utils";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -100,6 +101,13 @@ export abstract class EntityProcessor<
 
   abstract export(uuid: string, target: Response | Archiver): Promise<void>;
   abstract exportAll(opts: ExportAllOptions): Promise<void>;
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  /* istanbul ignore next */
+  async exportMedia(uuids: string[] | Literal, target: Archiver, progressTick?: ProgressTick): Promise<void> {
+    throw new InternalServerErrorException("Export media not supported on this entity processor");
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   async getLightDtos(models: ModelType[]): Promise<DtoResult<LightDto>[]> {
     const results: DtoResult<LightDto>[] = [];
@@ -195,10 +203,12 @@ export abstract class EntityProcessor<
    * Creates a new entity with the provided attributes.
    * This method must be implemented by concrete processors.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  /* istanbul ignore next */
   async create(attributes: CreateDto): Promise<ModelType> {
     throw new BadRequestException("Creation not supported for this entity type");
   }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected loadAssociationData(ids: number[]): Promise<Record<number, object>> {
@@ -277,6 +287,7 @@ export abstract class ReportProcessor<
     await super.update(model, update);
   }
 
+  // istanbul ignore next
   protected nothingToReportConditions = (queryValue: boolean) => {
     if (queryValue) {
       return true;

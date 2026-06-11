@@ -17,7 +17,7 @@ import {
   TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ProcessableAssociation } from "../entities.service";
+import { ProcessableAssociation, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Literal } from "sequelize/types/utils";
@@ -31,7 +31,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Archiver } from "archiver";
-import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
@@ -329,6 +329,30 @@ export class ProjectReportProcessor extends ReportProcessor<
     );
   }
 
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const reports = await ProjectReport.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["dueAt", "id"],
+      include: [{ association: "project", attributes: ["name"] }]
+    });
+    if (reports.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Project Reports");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
+    await this.entitiesService.exportMedia(
+      reports,
+      archive,
+      (report, media) => {
+        const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+        const projectName = report.project?.name ?? defaultName;
+        return `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${projectName}/${prefix}${media.fileName}`;
+      },
+      progressTick
+    );
+  }
+
   protected async exportReports(
     frameworkKey: FrameworkKey,
     target: Archiver | Response | undefined,
@@ -399,7 +423,8 @@ export class ProjectReportProcessor extends ReportProcessor<
   protected async getSeedlingsGrown(projectReport: ProjectReport) {
     if (projectReport.frameworkKey == "ppc") {
       return (
-        (await TreeSpecies.visible().collection("tree-planted").projectReports([projectReport.id]).sum("amount")) ?? 0
+        (await TreeSpecies.visible().collection("nursery-seedling").projectReports([projectReport.id]).sum("amount")) ??
+        0
       );
     }
 

@@ -20,10 +20,6 @@ import {
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 
-export function reportingFrameworkSlugFromName(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, "-");
-}
-
 export type FrameworkFormUuids = {
   projectFormUuid?: string | null;
   projectReportFormUuid?: string | null;
@@ -77,11 +73,11 @@ export class ReportingFrameworksService {
    */
   async create(attributes: CreateReportingFrameworkAttributes): Promise<Framework> {
     await this.checkFormUuids(attributes);
-    const slug = reportingFrameworkSlugFromName(attributes.name) as FrameworkKey;
+    const slug = attributes.slug as FrameworkKey;
     const framework = await Framework.create({
       name: attributes.name,
       slug,
-      accessCode: attributes.accessCode ?? slug,
+      accessCode: slug,
       projectFormUuid: attributes.projectFormUuid ?? null,
       projectReportFormUuid: attributes.projectReportFormUuid ?? null,
       siteFormUuid: attributes.siteFormUuid ?? null,
@@ -98,7 +94,10 @@ export class ReportingFrameworksService {
     await this.checkFormUuids(attributes, framework.slug as FrameworkKey);
     const payload: Partial<Attributes<Framework>> = {};
     if (attributes.name != null && attributes.name !== "") payload.name = attributes.name;
-    if (attributes.accessCode !== undefined) payload.accessCode = attributes.accessCode ?? null;
+    if (attributes.slug != null && attributes.slug !== "") {
+      payload.slug = attributes.slug as FrameworkKey;
+      payload.accessCode = attributes.slug;
+    }
     if (attributes.projectFormUuid !== undefined) payload.projectFormUuid = attributes.projectFormUuid ?? null;
     if (attributes.projectReportFormUuid !== undefined)
       payload.projectReportFormUuid = attributes.projectReportFormUuid ?? null;

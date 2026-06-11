@@ -32,15 +32,15 @@ import {
   getStableRequestQuery
 } from "@terramatch-microservices/common/util";
 import { UserUpdateBody } from "./dto/user-update.dto";
-import { OptionalBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { UserCreateBaseBody } from "./dto/user-create.dto";
 import { UserCreationService } from "./user-creation.service";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UsersService } from "./users.service";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { SendLoginDetailsResponseDto } from "../auth/dto/verification-user-response.dto";
 import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -96,7 +96,7 @@ export class UsersController {
   @ExceptionResponse(UnauthorizedException, { description: "Authorization failed" })
   @ExceptionResponse(NotFoundException, { description: "User with that UUID not found" })
   async findOne(@Param("uuid") pathId: string) {
-    const userWhere = pathId === "me" ? { id: authenticatedUserId() } : { uuid: pathId };
+    const userWhere = pathId === "me" ? { id: UserContext.authenticatedUserId } : { uuid: pathId };
     const user = await User.findOne({
       include: ["roles", "organisation", "frameworks"],
       where: userWhere
@@ -150,7 +150,7 @@ export class UsersController {
   }
 
   @Post()
-  @OptionalBearerAuth
+  @AuthOptional
   @ApiOperation({
     operationId: "userCreation",
     description: "Create a new user"
@@ -158,7 +158,7 @@ export class UsersController {
   @JsonApiResponse(USER_RESPONSE_SHAPE)
   @ExceptionResponse(UnauthorizedException, { description: "user creation failed." })
   async create(@Body() payload: UserCreateBaseBody) {
-    const isAuthenticated = authenticatedUserId() != null;
+    const isAuthenticated = UserContext.authenticatedUserId != null;
     if (isAuthenticated) {
       await this.policyService.authorize("create", User);
     }

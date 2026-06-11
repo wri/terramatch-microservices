@@ -8,7 +8,6 @@ import { Job, Queue } from "bullmq";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { InternalServerErrorException } from "@nestjs/common";
 import { DelayedJob, Media, Organisation } from "@terramatch-microservices/database/entities";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -16,6 +15,7 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { Dictionary, startCase } from "lodash";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 export type UserServiceExportJobData = {
   delayedJobId: number;
@@ -75,7 +75,7 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
   static async queueOrganisationExport(queue: Queue, fileName: string) {
     const delayedJob = await DelayedJob.create({
       name: "Organisation CSV Export",
-      createdBy: authenticatedUserId()
+      createdBy: UserContext.authenticatedUserId
     });
     const data: UserServiceExportJobData = { delayedJobId: delayedJob.id, fileName: fileName };
     await queue.add(ORGANISATIONS_EXPORT, data);
@@ -95,29 +95,28 @@ export class UserServiceExportsProcessor extends DelayedJobWorker<UserServiceExp
     }
 
     const { fileName } = job.data;
-    const { addRow, close } = this.csvExportService.getS3StreamWriter(fileName, ORGANISATION_CSV_COLUMNS);
+    const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
     try {
-      const builder = new PaginatedQueryBuilder(Organisation, 10).where({ isTest: false });
-      for await (const page of batchFindAll(builder)) {
-        const pageMedia = await Media.for(page).findAll();
-        for (const org of page) {
-          const additional = pageMedia
-            .filter(media => media.modelId === org.id)
-            .reduce(
-              (acc, media) => ({
-                ...acc,
-                [media.collectionName]: this.mediaService.getUrl(media)
-              }),
-              {}
-            );
-          addRow(org, additional);
+      await this.csvExportService.writeCsv(fileName, null, ORGANISATION_CSV_COLUMNS, async addRow => {
+        for await (const page of batchFindAll(builder)) {
+          const pageMedia = await Media.for(page).findAll();
+          for (const org of page) {
+            const additional = pageMedia
+              .filter(media => media.modelId === org.id)
+              .reduce(
+                (acc, media) => ({
+                  ...acc,
+                  [media.collectionName]: this.mediaService.getUrl(media)
+                }),
+                {}
+              );
+            addRow(org, additional);
+          }
         }
-      }
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
       throw new DelayedJobException(500, `Failed to export organisations to CSV: ${message}`);
-    } finally {
-      close();
     }
 
     return {

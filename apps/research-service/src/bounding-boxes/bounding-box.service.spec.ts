@@ -285,6 +285,27 @@ describe("BoundingBoxService", () => {
     });
   });
 
+  describe("getPolygonsBoundingBox", () => {
+    it("should return a combined bounding box for multiple polygon UUIDs", async () => {
+      const polygonUuids = [fixtures.polygon.uuid, fixtures.polygon2.uuid];
+      (PolygonGeometry.findAll as jest.Mock)
+        .mockResolvedValueOnce([{ get: () => fixtures.polygon.uuid }, { get: () => fixtures.polygon2.uuid }])
+        .mockResolvedValueOnce([fixtures.polygon.envelope, fixtures.polygon2.envelope]);
+
+      const result = await service.getPolygonsBoundingBox(polygonUuids);
+
+      expect(PolygonGeometry.findAll).toHaveBeenNthCalledWith(1, {
+        where: { uuid: { [Op.in]: polygonUuids } },
+        attributes: ["uuid"]
+      });
+      expect(PolygonGeometry.findAll).toHaveBeenNthCalledWith(2, {
+        where: { uuid: { [Op.in]: polygonUuids } },
+        attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
+      });
+      expect(result.bbox).toEqual([-122.4194, 37.7749, -73.9538, 40.8075]);
+    });
+  });
+
   describe("getSiteBoundingBox", () => {
     it("should return a bounding box for a site with multiple polygons", async () => {
       const siteUuid = fixtures.site.uuid;

@@ -13,6 +13,7 @@ import { Attributes, col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
+import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 import { SpeciesDto } from "./dto/species.dto";
 
@@ -322,7 +323,47 @@ export class TreeService {
       planting["seeds"] = countPlants(await Seeding.visible().siteReports(reportIds).findAll());
     }
 
+    if (entity === "projects") {
+      const nurserySeedlings = await this.getProjectNurserySeedlingPlanting(uuid);
+      if (!isEmpty(nurserySeedlings)) {
+        planting["nursery-seedling"] = nurserySeedlings;
+      }
+    }
+
     return planting;
+  }
+
+  private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {
+    const project = await Project.findOne({ where: { uuid: projectUuid }, attributes: ["id", "frameworkKey"] });
+    if (project == null) return {};
+
+    const TS = TreeSpecies.visible().collection("nursery-seedling");
+    const aggregateAttributes = ["name", "taxonId", [fn("SUM", col("amount")), "amount"]] as const;
+
+    if (project.frameworkKey === PPC) {
+      const reportIds = ProjectReport.approvedIdsSubquery(project.id);
+      return countPlants(
+        (await TS.projectReports(reportIds).findAll({
+          raw: true,
+          attributes: [...aggregateAttributes],
+          group: ["taxonId", "name"]
+        })) as TreeSpecies[]
+      );
+    }
+
+    if (FRAMEWORK_KEYS_TF.includes(project.frameworkKey as FrameworkKeyTF)) {
+      const nurseryIds = Nursery.approvedIdsSubquery(project.id);
+      const reportIds = NurseryReport.approvedIdsSubquery(nurseryIds);
+      return countPlants(
+        (await TS.nurseryReports(reportIds).findAll({
+          raw: true,
+          attributes: [...aggregateAttributes],
+          group: ["taxonId", "name"]
+        })) as TreeSpecies[]
+      );
+    }
+
+    return {};
   }
 
   private async getAssociatedReportTreeSpecies(entity: ReportCountEntity, uuid: string) {

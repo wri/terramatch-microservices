@@ -35,9 +35,9 @@ import {
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
 import {
   mockTranslateFieldsWithOriginal,
-  mockRequestContext,
+  mockUserContext,
   serialize,
-  mockRequestForUser
+  mockContextForUser
 } from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
@@ -108,7 +108,7 @@ describe("FormDataService", () => {
     // @ts-expect-error Passing an extra param to the stubbed mock singleton collector
     collector = new LinkedAnswerCollector(mediaService, true);
 
-    mockRequestContext({ userId: 123 });
+    mockUserContext({ userId: 123 });
   });
 
   afterEach(() => {
@@ -128,7 +128,7 @@ describe("FormDataService", () => {
     it("creates an update request if the user cannot update answers", async () => {
       const site = await SiteFactory.create();
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
-      mockRequestContext({ userId: 123 });
+      mockUserContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
 
@@ -194,7 +194,7 @@ describe("FormDataService", () => {
     });
 
     it("does additional report processing", async () => {
-      mockRequestContext({ userId: 123, permissions: ["manage-own"] });
+      mockUserContext({ userId: 123, permissions: ["manage-own"] });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
       const siteReport = await SiteReportFactory.create({ submittedAt: null, nothingToReport: true });
       const form = await EntityFormFactory.siteReport(siteReport).create();
@@ -435,7 +435,7 @@ describe("FormDataService", () => {
       const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       const stage = await StageFactory.create({});
       const user = await UserFactory.create({ locale: "es-MX" });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const submission = await FormSubmissionFactory.create({
         answers: { [conditional.uuid]: true },
         organisationUuid: org.uuid,

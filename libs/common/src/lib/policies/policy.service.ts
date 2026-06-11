@@ -59,10 +59,10 @@ import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
-import { authenticatedUserId, permissions, policyBuilder } from "../guards/auth.guard";
 import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
+import { UserContext } from "../contexts/user.context";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,11 +138,11 @@ export class PolicyService {
   private readonly log = new TMLogger(PolicyService.name);
 
   get userId() {
-    return authenticatedUserId();
+    return UserContext.authenticatedUserId;
   }
 
   get permissions() {
-    const value = permissions();
+    const value = UserContext.permissions;
     if (value == null) throw new UnauthorizedException();
 
     return value;
@@ -169,7 +169,7 @@ export class PolicyService {
   }
 
   private async getAbilityWith(policyClass: PolicyClass) {
-    const builder = policyBuilder();
+    const builder = UserContext.policyBuilder;
     if (builder == null) throw new UnauthorizedException();
 
     return await builder.getAbilityWith(policyClass);

@@ -7,9 +7,10 @@ export const EPA = "epa-ghana-pilot" as const;
 export const FUNDO_FLORA = "fundo-flora" as const;
 export const TERRAFUND_3 = "terrafund-3" as const;
 export const FUNDO_FLORA_1 = "fundo-flora-1" as const;
+export const WCB = "wcb" as const;
 
 export const FRAMEWORK_KEYS_TF = [TERRAFUND, LANDSCAPES, ENTERPRISES, EPA, TERRAFUND_3] as const;
 export type FrameworkKeyTF = (typeof FRAMEWORK_KEYS_TF)[number];
 
-export const FRAMEWORK_KEYS = [...FRAMEWORK_KEYS_TF, PPC, HBF, FUNDO_FLORA, FUNDO_FLORA_1] as const;
+export const FRAMEWORK_KEYS = [...FRAMEWORK_KEYS_TF, PPC, HBF, FUNDO_FLORA, FUNDO_FLORA_1, WCB] as const;
 export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];

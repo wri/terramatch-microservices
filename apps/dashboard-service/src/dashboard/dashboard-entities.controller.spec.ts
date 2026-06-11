@@ -228,7 +228,7 @@ describe("DashboardEntitiesController", () => {
       long: 20.0,
       treesGrownGoal: 5000,
       organisation: { name: "Test Org", type: "NGO" },
-      cohort: ["terrafund"],
+      cohort: "terrafund",
       objectives: "Test objectives",
       landTenureProjectArea: ["test-area"]
     } as Project;

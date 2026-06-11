@@ -132,7 +132,7 @@ export class EntityQueryDto extends IndexQueryDto {
   @ApiProperty({
     required: false,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Filter projects by polygon data submission status"
+    description: "Filter projects by polygon submission status"
   })
   @IsOptional()
   @IsIn(POLYGON_DATA_SUBMISSION_VALUES)

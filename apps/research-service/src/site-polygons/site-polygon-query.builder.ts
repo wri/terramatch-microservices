@@ -1,4 +1,4 @@
-import { IncludeOptions, literal, Op, Sequelize, WhereOptions } from "sequelize";
+import { IncludeOptions, literal, Op, WhereOptions } from "sequelize";
 import {
   Disturbance,
   IndicatorOutputFieldMonitoring,
@@ -48,8 +48,8 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   private siteJoin: IncludeOptions = {
     model: Site,
-    include: [{ association: "project", attributes: ["uuid", "shortName", "name"] }],
-    attributes: ["id", "projectId", "name"],
+    include: [{ association: "project", attributes: ["uuid", "shortName", "name", "level0Project"] }],
+    attributes: ["id", "projectId", "name", "ppcExternalId"],
     required: true
   };
 
@@ -102,9 +102,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     }
 
     if (cohort != null && cohort.length > 0) {
-      const cohortConditions = cohort.map(c => `JSON_CONTAINS(cohort, ${Project.sql.escape(`"${c}"`)})`).join(" OR ");
-
-      const whereConditions: WhereOptions[] = [Sequelize.literal(`(${cohortConditions})`)];
+      const whereConditions: WhereOptions[] = [{ cohort: { [Op.in]: cohort } }];
 
       if (slug != null && landscapeValue != null) {
         whereConditions.push({ landscape: landscapeValue });

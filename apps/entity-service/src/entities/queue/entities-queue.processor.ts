@@ -33,6 +33,7 @@ export class EntitiesQueueProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent("failed")
+  /* istanbul ignore next */
   async onFailed(job: Job, error: Error) {
     this.logger.error("Job failed", error, job);
     await Sentry.flush(2000);

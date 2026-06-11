@@ -17,14 +17,15 @@ import { BadRequestException, InternalServerErrorException, NotFoundException } 
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
-import { ProcessableAssociation } from "../entities.service";
+import { ProcessableAssociation, ProgressTick } from "../entities.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { PAID_OTHER, VOLUNTEER_OTHER } from "@terramatch-microservices/database/constants/demographic-collections";
 import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
-import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/filenames";
+import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
+import { Literal } from "sequelize/types/utils";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -334,6 +335,30 @@ export class SiteReportProcessor extends ReportProcessor<
       target,
       new PaginatedQueryBuilder(SiteReport, 10, CSV_EXPORT_INCLUDES).where(where),
       fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site reports`)
+    );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const reports = await SiteReport.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["dueAt", "id"],
+      include: [{ association: "site", attributes: ["name"] }]
+    });
+    if (reports.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Site Reports");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
+    await this.entitiesService.exportMedia(
+      reports,
+      archive,
+      (report, media) => {
+        const prefix = report.dueAt == null ? "" : `${isoForFilename(report.dueAt, true)} - `;
+        const siteName = report.site?.name ?? defaultName;
+        return `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${siteName}/${prefix}${media.fileName}`;
+      },
+      progressTick
     );
   }
 

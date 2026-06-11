@@ -52,12 +52,13 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { mockRequestForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { mockContextForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
-import { Archiver } from "archiver";
+import archiver, { Archiver } from "archiver";
 import { ProjectReportProcessor } from "./project-report.processor";
+import { SiteReportProcessor } from "./site-report.processor";
 
 describe("ProjectProcessor", () => {
   let module: TestingModule;
@@ -178,22 +179,22 @@ describe("ProjectProcessor", () => {
 
       const project1 = await ProjectFactory.create({
         landscape: "Greater Rift Valley of Kenya",
-        cohort: ["terrafund"],
+        cohort: "terrafund",
         organisationId: orgForProfit.id
       });
       const project2 = await ProjectFactory.create({
         landscape: "Ghana Cocoa Belt",
-        cohort: ["terrafund"],
+        cohort: "terrafund",
         organisationId: orgNonProfit.id
       });
       const project3 = await ProjectFactory.create({
         landscape: "Greater Rift Valley of Kenya",
-        cohort: ["terrafund-landscapes"],
+        cohort: "terrafund-landscapes",
         organisationId: orgOther.id
       });
       const project4 = await ProjectFactory.create({
         landscape: "Lake Kivu & Rusizi River Basin",
-        cohort: ["enterprise"],
+        cohort: "enterprise",
         organisationId: orgForProfit.id
       });
 
@@ -718,7 +719,7 @@ describe("ProjectProcessor", () => {
     it("creates a test project if the org is a test org", async () => {
       const org = await OrganisationFactory.create({ isTest: true });
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(true);
@@ -727,7 +728,7 @@ describe("ProjectProcessor", () => {
     it("creates blank project if there is no application", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       expect(project.isTest).toBe(false);
@@ -738,7 +739,7 @@ describe("ProjectProcessor", () => {
     it("establishes a project user connection", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      mockRequestForUser(user);
+      mockContextForUser(user);
       const form = await EntityFormFactory.project().create();
       const project = await processor.create({ formUuid: form.uuid });
       const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
@@ -945,6 +946,33 @@ describe("ProjectProcessor", () => {
         frameworkKey: "ppc",
         id: { [Op.in]: projectIdResult }
       }));
+    });
+  });
+
+  describe("exportMedia", () => {
+    it("returns early if no projects are found", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportMedia(["fake-uuid"], archiver("zip"));
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
+    it("calls the service with the project", async () => {
+      const mockSubProcessor = {
+        exportMedia: jest.fn()
+      } as unknown as SiteReportProcessor;
+      const createSpy = jest.spyOn(entitiesService(), "createEntityProcessor").mockReturnValue(mockSubProcessor);
+      const project = await ProjectFactory.create();
+      const exportSpy = jest.spyOn(entitiesService(), "exportMedia");
+      const archive = archiver("zip");
+      await processor.exportMedia([project.uuid], archive);
+      expect(exportSpy).toHaveBeenCalledWith(
+        [expect.objectContaining({ id: project.id })],
+        archive,
+        expect.any(Function),
+        undefined
+      );
+      expect(createSpy).toHaveBeenCalledTimes(3);
+      expect(mockSubProcessor.exportMedia).toHaveBeenCalledTimes(3);
     });
   });
 });

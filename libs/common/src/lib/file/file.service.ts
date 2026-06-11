@@ -61,7 +61,12 @@ export class FileService {
     this.logger.log(`Uploaded ${bucket}/${path} to S3`);
   }
 
-  uploadStream(bucket: string, key: string, mimeType: string) {
+  async uploadStream(
+    bucket: string,
+    key: string,
+    mimeType: string,
+    writer: (stream: NodeJS.WritableStream) => void | Promise<void>
+  ) {
     const stream = new PassThrough();
     const upload = new Upload({
       client: this.s3,
@@ -72,9 +77,12 @@ export class FileService {
         ContentType: mimeType
       }
     });
-    // have to call done in order to start the writing process.
-    upload.done().catch(error => this.logger.error(`Error uploading stream to S3: ${error}`));
-    return stream;
+
+    const writerResult = writer(stream);
+    await upload.done();
+
+    // If the writer threw an error, we want that to surface in this method
+    await writerResult;
   }
 
   async copyRemoteFile(bucket: string, fromPath: string, toPath: string, mimeType?: string) {

@@ -15,6 +15,8 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { mockEntityService } from "./processors/entity.processor.spec";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { Archiver } from "archiver";
+import { PassThrough } from "node:stream";
 
 describe("EntitiesService", () => {
   let mediaService: DeepMocked<MediaService>;
@@ -127,12 +129,69 @@ describe("EntitiesService", () => {
     });
   });
 
-  describe("entityFrameworkExport", () => {
+  describe("entityExport", () => {
     it("returns early if the form is missing", async () => {
       await service.entityExport("projects", {}, {} as PaginatedQueryBuilder<Project>, {
         frameworkKey: "foo" as FrameworkKey
       });
-      expect(csvExportService.getS3StreamWriter).not.toHaveBeenCalled();
+      expect(csvExportService.writeCsv).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("exportMedia", () => {
+    it("adds media to the archive", async () => {
+      const append = jest.fn();
+      const archive = { append } as unknown as Archiver;
+
+      const projects = await ProjectFactory.createMany(2);
+      const media = [
+        ...(await MediaFactory.project(projects[0]).createMany(2)),
+        ...(await MediaFactory.project(projects[1]).createMany(3))
+      ];
+
+      const generateFileName = (p: Project, m: Media) => `${p.uuid}-${m.uuid}.pdf`;
+      const progressTick = jest.fn(async () => {
+        /* empty */
+      });
+
+      // @ts-expect-error SdkStream type not available for casting
+      mediaService.getMediaStream.mockResolvedValue(new PassThrough());
+
+      await service.exportMedia(projects, archive, generateFileName, progressTick);
+
+      expect(mediaService.getMediaStream).toHaveBeenCalledTimes(5);
+      expect(append).toHaveBeenCalledTimes(5);
+      expect(progressTick).toHaveBeenCalledTimes(5);
+      for (const m of media) {
+        expect(mediaService.getMediaStream).toHaveBeenCalledWith(expect.objectContaining({ uuid: m.uuid }));
+
+        const project = projects.find(p => p.id === m.modelId) as Project;
+        expect(append).toHaveBeenCalledWith(expect.any(PassThrough), { name: generateFileName(project, m) });
+      }
+    });
+
+    it("does not throw if the process fails", async () => {
+      const append = jest.fn(() => {
+        throw new Error("fail");
+      });
+      const archive = { append } as unknown as Archiver;
+
+      const project = await ProjectFactory.create();
+      await MediaFactory.project(project).createMany(2);
+
+      const generateFileName = (p: Project, m: Media) => `${p.uuid}-${m.uuid}.pdf`;
+      const progressTick = jest.fn(async () => {
+        /* empty */
+      });
+
+      // @ts-expect-error SdkStream type not available for casting
+      mediaService.getMediaStream.mockResolvedValue(new PassThrough());
+
+      await service.exportMedia([project], archive, generateFileName, progressTick);
+
+      expect(mediaService.getMediaStream).toHaveBeenCalledTimes(2);
+      expect(append).toHaveBeenCalledTimes(2);
+      expect(progressTick).not.toHaveBeenCalled();
     });
   });
 });

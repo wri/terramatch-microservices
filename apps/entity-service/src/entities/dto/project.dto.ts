@@ -101,7 +101,7 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({
     nullable: true,
     enum: POLYGON_DATA_SUBMISSION_VALUES,
-    description: "Polygon data submission tracking"
+    description: "Polygon submission status tracking"
   })
   polygonDataSubmission: string | null;
 
@@ -164,8 +164,8 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;
 
-  @ApiProperty({ nullable: true, type: String, isArray: true })
-  cohort: string[] | null;
+  @ApiProperty({ nullable: true, type: String })
+  cohort: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   continent: string | null;

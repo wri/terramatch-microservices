@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { faker } from "@faker-js/faker";
 import {
+  CompleteMultipartUploadCommandOutput,
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
@@ -102,9 +103,11 @@ describe("FileService", () => {
   });
 
   describe("uploadStream", () => {
-    it("should start an upload to s3", () => {
-      jest.spyOn(Upload.prototype, "done").mockRejectedValue("error");
-      service.uploadStream("test-bucket", "test-key", "text/plain");
+    it("should start an upload to s3", async () => {
+      jest.spyOn(Upload.prototype, "done").mockResolvedValue({} as CompleteMultipartUploadCommandOutput);
+      await service.uploadStream("test-bucket", "test-key", "text/plain", () => {
+        /* empty */
+      });
       expect(Upload).toHaveBeenCalledTimes(1);
       expect(Upload).toHaveBeenCalledWith({
         client: expect.anything(),

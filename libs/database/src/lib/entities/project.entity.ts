@@ -152,8 +152,8 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   }
 
   @AllowNull
-  @JsonColumn()
-  declare cohort: string[] | null;
+  @Column(STRING(255))
+  declare cohort: string | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
   declare isTest: CreationOptional<boolean>;

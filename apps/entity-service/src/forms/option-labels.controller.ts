@@ -9,7 +9,7 @@ import { buildJsonApi, DocumentBuilder, getStableRequestQuery } from "@terramatc
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { userLocale } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 export type OptionLabelModel = {
   slug: string;
@@ -31,7 +31,7 @@ export class OptionLabelsController {
   async optionLabelsIndex(@Query("ids") ids: string[]) {
     if (isEmpty(ids)) throw new BadRequestException("Set of ids is required");
 
-    const locale = userLocale();
+    const locale = UserContext.userLocale;
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const listOptions = (await FormOptionListOption.findAll({
@@ -68,7 +68,7 @@ export class OptionLabelsController {
   @ExceptionResponse(NotFoundException, { description: "List for listKey not found" })
   @JsonApiResponse({ data: OptionLabelDto, hasMany: true })
   async findList(@Param("listKey") listKey: string) {
-    const locale = userLocale();
+    const locale = UserContext.userLocale;
     if (locale == null) throw new BadRequestException("Locale is required");
 
     const list = await FormOptionList.findOne({

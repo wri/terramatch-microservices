@@ -26,11 +26,13 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { normalizedFileName } from "@terramatch-microservices/common/util/filenames";
+import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { NurseryReportProcessor } from "./nursery-report.processor";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { Literal } from "sequelize/types/utils";
+import { ProgressTick } from "../entities.service";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -201,7 +203,11 @@ export class NurseryProcessor extends EntityProcessor<
 
     const seedlingsGrownCount = await this.getSeedlingsGrownCount(nurseryId);
     const treesSeedlingsGrownCount = await this.getTreesSeedlingsGrownCount(nurseryId);
-    return { id: nursery.uuid, dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount }) };
+    const nurseryReportsTotal = await NurseryReport.nurseries([nurseryId]).count();
+    return {
+      id: nursery.uuid,
+      dto: new NurseryLightDto(nursery, { seedlingsGrownCount, treesSeedlingsGrownCount, nurseryReportsTotal })
+    };
   }
 
   protected async getTotalOverdueReports(nurseryId: number) {
@@ -345,6 +351,30 @@ export class NurseryProcessor extends EntityProcessor<
         fileName:
           fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
       }
+    );
+  }
+
+  async exportMedia(uuids: string[] | Literal, archive: Archiver, progressTick?: ProgressTick) {
+    const nurseries = await Nursery.findAll({ where: { uuid: { [Op.in]: uuids } }, attributes: ["name", "id"] });
+    if (nurseries.length === 0) return;
+
+    const dirName = await this.entitiesService.localizeText("Nursery Establishment");
+    const defaultName = await this.entitiesService.localizeText("Unnamed");
+    const publicLabel = await this.entitiesService.localizeText("public");
+    const privateLabel = await this.entitiesService.localizeText("private");
+    await this.entitiesService.exportMedia(
+      nurseries,
+      archive,
+      (nursery, media) =>
+        `${dirName}/${media.isPublic ? publicLabel : privateLabel}/${nursery.name ?? defaultName}/${media.fileName}`,
+      progressTick
+    );
+
+    const reportProcessor = this.entitiesService.createEntityProcessor("nurseryReports");
+    await reportProcessor.exportMedia(
+      NurseryReport.uuidsSubquery(Nursery.idsForUuidsSubquery(uuids)),
+      archive,
+      progressTick
     );
   }
 }

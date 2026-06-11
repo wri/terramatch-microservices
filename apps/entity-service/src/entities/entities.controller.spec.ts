@@ -16,13 +16,17 @@ import {
 import { EntityQueryDto } from "./dto/entity-query.dto";
 import { faker } from "@faker-js/faker";
 import { EntityUpdateData } from "./dto/entity-update.dto";
-import { mockRequestContext, serialize } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Response } from "express";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { Resource, ResourceBuilder } from "@terramatch-microservices/common/util";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { getQueueToken } from "@nestjs/bullmq";
-import { ENTITY_SERVICE_EXPORT_QUEUE, PROJECT_EXPORT } from "../jobs/entity-service-exports.processor";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  MEDIA_EXPORT,
+  PROJECT_EXPORT
+} from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
@@ -43,6 +47,7 @@ export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, Pro
   create = jest.fn(() => Promise.resolve(new Project()));
   export = jest.fn(() => Promise.resolve());
   exportAll = jest.fn(() => Promise.resolve());
+  exportMedia = jest.fn(() => Promise.resolve());
 }
 
 describe("EntitiesController", () => {
@@ -77,7 +82,7 @@ describe("EntitiesController", () => {
 
   describe("entityIndex", () => {
     it("should call findMany", async () => {
-      mockRequestContext({ permissions: ["projects-read"] });
+      mockUserContext({ permissions: ["projects-read"] });
       const query = { page: { number: 2 }, sort: { field: "name" }, status: "approved" } as EntityQueryDto;
       await controller.entityIndex({ entity: "projects" }, query);
       expect(processor.findMany).toHaveBeenCalledWith(query);
@@ -112,7 +117,7 @@ describe("EntitiesController", () => {
     });
 
     it("should return a presigned url", async () => {
-      mockRequestContext({ userId: 123, permissions: ["framework-ppc"] });
+      mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
       csvExportService().generateExportDto.mockResolvedValue(new FileDownloadDto("fake-url"));
       const result = serialize(
         (await controller.entityExportAll(
@@ -191,6 +196,47 @@ describe("EntitiesController", () => {
         const response = {} as Response;
         await controller.entityExport({ entity: "sites", uuid: "fake-uuid" }, response);
         expect(processor.export).toHaveBeenCalledWith("fake-uuid", response);
+      });
+    });
+  });
+
+  describe("entityAssetGet", () => {
+    it("throws if the entity type is not supported", async () => {
+      await expect(controller.entityAssetGet({ entity: "projectReports", uuid: "fake-uuid" })).rejects.toThrow(
+        "Unsupported direct asset export entity type: projectReports"
+      );
+    });
+
+    it("throws if the entity is not found", async () => {
+      await expect(controller.entityAssetGet({ entity: "sites", uuid: "fake-uuid" })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("queues the asset export task", async () => {
+      const authSpy = jest.spyOn(policyService(), "authorize").mockResolvedValue();
+      const project = await ProjectFactory.create();
+      const { id, uuid, name } = project;
+      processor.findOne.mockResolvedValue(project);
+      entitiesService().localizeText.mockResolvedValue("Job Title");
+
+      const result = serialize((await controller.entityAssetGet({ entity: "projects", uuid })) as ResourceBuilder);
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ id }));
+      const data = result.data as Resource;
+      expect(data.type).toEqual("delayedJobs");
+      const job = await DelayedJob.findOne({ where: { uuid: data.id } });
+      expect(job).toBeDefined();
+      expect(job?.name).toEqual("Job Title");
+      expect(job?.metadata).toMatchObject({
+        entity_type: "projects",
+        entity_name: name
+      });
+      expect(exportQueue().add).toHaveBeenCalledWith(MEDIA_EXPORT, {
+        delayedJobId: job?.id,
+        entityType: "projects",
+        entityUuid: uuid,
+        entityName: name,
+        totalContent: 0
       });
     });
   });

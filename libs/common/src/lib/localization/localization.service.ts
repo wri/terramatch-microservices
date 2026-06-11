@@ -21,6 +21,7 @@ import { TMLogger } from "../util/tm-logger";
 import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 import { Model } from "sequelize-typescript";
+import md5 from "md5";
 
 // A mapping of I18nItem ID to a translated value, or null if no translation is available.
 export type Translations = Record<number, string | null>;
@@ -143,7 +144,22 @@ export class LocalizationService {
   async localizeText(text: string, locale: ValidLocale, params?: ITranslateParams) {
     // Set the locale for the SDK
     const txLocale = normalizeLocale(locale);
-    await tx.setCurrentLocale(txLocale);
+
+    if (tx.currentLocale !== txLocale) await tx.setCurrentLocale(txLocale);
+
+    if (!tx.cache.hasTranslations(txLocale)) {
+      await tx.fetchTranslations(txLocale);
+    }
+
+    // Some of our oldest translations seem to be hashed using an old library algorithm that isn't
+    // supported. This is similar to what transifex does under the hood, just using a regular MD5
+    // the cache lookup.
+    const txTranslations = tx.cache.getTranslations(txLocale);
+    const hash = md5(text);
+    const translation = txTranslations[hash];
+    if (translation != null) {
+      return tx.stringRenderer.render(translation, txLocale, params ?? {});
+    }
 
     // Translate the text
     return t(text, params);
@@ -156,7 +172,7 @@ export class LocalizationService {
     for (const locale of locales) {
       const dbLocale = locale.split("_").join("-");
       await tx.fetchTranslations(locale, config);
-      const txTranslations = await tx.cache.getTranslations(locale);
+      const txTranslations = tx.cache.getTranslations(locale);
       const keys = Object.keys(txTranslations);
       for (const key of keys) {
         if (txMapHashToTranslations[key] == null) {
@@ -178,7 +194,7 @@ export class LocalizationService {
     const savePromises: Promise<I18nItem | I18nTranslation>[] = [];
     for (const i18nItem of i18nItems) {
       const { hash } = i18nItem;
-      txMapHashToTranslations[hash as string].forEach(async txTranslation => {
+      txMapHashToTranslations[hash as string].forEach(txTranslation => {
         const i18nItemId = i18nItem.id;
         const dbI18nTranslations = i18nTranslationsMap[i18nItemId];
         const i18nTranslation = dbI18nTranslations?.find(

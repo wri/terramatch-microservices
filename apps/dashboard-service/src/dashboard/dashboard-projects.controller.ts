@@ -1,10 +1,10 @@
-import { Get, Query, Controller } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util/json-api-builder";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { DashboardProjectsLightDto } from "./dto/dashboard-projects.dto";
 import { DashboardProjectsService } from "./dashboard-projects.service";
 
@@ -16,7 +16,7 @@ export class DashboardProjectsController {
   ) {}
 
   @Get()
-  @NoBearerAuth
+  @AuthOptional
   @JsonApiResponse(DashboardProjectsLightDto)
   @ApiOperation({ operationId: "getDashboardProjects", summary: "Get dashboard projects" })
   async getDashboardProjects(@Query() query: DashboardQueryDto) {

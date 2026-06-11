@@ -15,7 +15,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { EntityProcessor } from "./entity-processor";
 import { EntityDto } from "../dto/entity.dto";
@@ -26,7 +26,7 @@ import { ProjectUser } from "@terramatch-microservices/database/entities";
 
 export const mockEntityService = async () => {
   const userId = (await UserFactory.create()).id;
-  mockRequestContext({ userId });
+  mockUserContext({ userId });
   return Test.createTestingModule({
     providers: [
       PolicyService,
@@ -47,7 +47,7 @@ export const expectExportAllFiltersOwn = async <T extends EntityModel>(
   const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
   const projectIdResult = { val: {} };
   const subquerySpy = jest.spyOn(ProjectUser, "userProjectsSubquery").mockReturnValue(projectIdResult);
-  mockRequestContext({ userId: 123, permissions: ["manage-own"] });
+  mockUserContext({ userId: 123, permissions: ["manage-own"] });
   await processor.exportAll({ frameworkKey: "ppc" });
   expect(exportSpy).toHaveBeenCalled();
   expect(subquerySpy).toHaveBeenCalled();
@@ -63,7 +63,7 @@ export const expectExportAllFiltersManaged = async <T extends EntityModel>(
   const exportSpy = jest.spyOn(service, "entityExport").mockResolvedValue();
   const projectIdResult = { val: {} };
   const subquerySpy = jest.spyOn(ProjectUser, "projectsManageSubquery").mockReturnValue(projectIdResult);
-  mockRequestContext({ userId: 123, permissions: ["projects-manage"] });
+  mockUserContext({ userId: 123, permissions: ["projects-manage"] });
   await processor.exportAll({ frameworkKey: "ppc" });
   expect(exportSpy).toHaveBeenCalled();
   expect(subquerySpy).toHaveBeenCalled();

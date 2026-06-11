@@ -11,7 +11,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 describe("ActionsController", () => {
   let controller: ActionsController;
@@ -58,7 +58,7 @@ describe("ActionsController", () => {
 
       actionsService.getActions.mockResolvedValue([mockData]);
 
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const result = serialize(await controller.index());
 
@@ -70,7 +70,7 @@ describe("ActionsController", () => {
 
     it("should handle empty results", async () => {
       const user = await UserFactory.create();
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       actionsService.getActions.mockResolvedValue([]);
 
@@ -107,7 +107,7 @@ describe("ActionsController", () => {
 
       actionsService.getActions.mockResolvedValue([mockData]);
 
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const result = serialize(await controller.index());
 
@@ -156,7 +156,7 @@ describe("ActionsController", () => {
 
       actionsService.getActions.mockResolvedValue([mockData]);
 
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
 
       const result = serialize(await controller.index());
 

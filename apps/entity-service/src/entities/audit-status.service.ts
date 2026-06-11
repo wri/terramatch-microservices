@@ -17,12 +17,13 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
-import { Op } from "sequelize";
+import { InferAttributes, Op } from "sequelize";
 import { orderBy, uniqBy } from "lodash";
 import { LaravelModel, laravelType } from "@terramatch-microservices/database/types/util";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { InferCreationAttributes } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
+import { UpdateAuditStatusAttributes } from "./dto/audit-status-update.dto";
 
 interface RawAuditData {
   modernAuditStatuses: AuditStatus[];
@@ -245,6 +246,11 @@ export class AuditStatusService {
       await modelClass.update({ status: attributes.status }, { where: { id: entity.id } });
     }
 
+    return auditStatus;
+  }
+
+  async updateAuditStatus(auditStatus: AuditStatus, attributes: UpdateAuditStatusAttributes): Promise<AuditStatus> {
+    await auditStatus.update(attributes as InferAttributes<AuditStatus>);
     return auditStatus;
   }
 

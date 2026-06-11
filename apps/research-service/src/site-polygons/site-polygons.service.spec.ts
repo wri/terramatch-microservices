@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import crypto from "crypto";
 import { SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {
@@ -21,6 +22,7 @@ import {
   Indicator,
   IndicatorOutputHectares,
   PolygonGeometry,
+  PointGeometry,
   Project,
   Site,
   SitePolygon,
@@ -182,6 +184,24 @@ describe("SitePolygonsService", () => {
     expect(treeCoverLoss?.value).toEqual({ "2015": 0.3, "2020": 0.5 });
   });
 
+  it("should filter tree cover loss fires data by plant start year range", async () => {
+    const plantStart = new Date("2021-06-15");
+    const sitePolygon = await SitePolygonFactory.create({ plantStart });
+    await IndicatorOutputTreeCoverLossFactory.create({
+      sitePolygonId: sitePolygon.id,
+      indicatorSlug: "treeCoverLossFires",
+      value: { "2010": 0.1, "2011": 0.2, "2021": 0.5, "2022": 0.8 }
+    });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const indicators = associations[sitePolygon.id]?.indicators;
+    const treeCoverLossFires = indicators?.find(
+      i => i.indicatorSlug === "treeCoverLossFires"
+    ) as IndicatorTreeCoverLossDto;
+
+    expect(treeCoverLossFires?.value).toEqual({ "2011": 0.2, "2021": 0.5 });
+  });
+
   it("should group tree species by site and report correctly", async () => {
     const sitePolygon = await SitePolygonFactory.create();
     const site = (await sitePolygon.loadSite()) as Site;
@@ -304,8 +324,8 @@ describe("SitePolygonsService", () => {
   it("should only include projects in the cohort given", async () => {
     await SitePolygon.truncate();
     await Project.truncate();
-    const tf = await ProjectFactory.create({ cohort: ["terrafund"] });
-    const ppc = await ProjectFactory.create({ cohort: ["ppc"] });
+    const tf = await ProjectFactory.create({ cohort: "terrafund" });
+    const ppc = await ProjectFactory.create({ cohort: "ppc" });
     const tfSite = await SiteFactory.create({ projectId: tf.id });
     const ppcSite = await SiteFactory.create({ projectId: ppc.id });
     const tfPoly = await SitePolygonFactory.create({ siteUuid: tfSite.uuid });
@@ -358,12 +378,12 @@ describe("SitePolygonsService", () => {
   it("should filter based on landscape and cohort", async () => {
     const landscapes = await LandscapeGeometryFactory.createMany(2);
     const inLandscape1 = await Promise.all([
-      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: ["ppc"] }),
-      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: ["terrafund"] })
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[0].landscape, cohort: "terrafund" })
     ]);
     const inLandscape2 = await Promise.all([
-      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: ["ppc"] }),
-      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: ["terrafund"] })
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "ppc" }),
+      ProjectFactory.create({ landscape: landscapes[1].landscape, cohort: "terrafund" })
     ]);
 
     const landscape1Sites = await Promise.all(inLandscape1.map(({ id }) => SiteFactory.create({ projectId: id })));
@@ -1163,9 +1183,127 @@ describe("SitePolygonsService", () => {
         expect.anything()
       );
     });
+
+    it("should delete point geometry when no other version references it", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const pointUuid = crypto.randomUUID();
+      await PointGeometry.create({
+        uuid: pointUuid,
+        point: { type: "Point", coordinates: [0, 0] },
+        estimatedArea: 0,
+        createdBy: null,
+        lastModifiedBy: null
+      } as never);
+      const primaryUuid = "primary-uuid-point-unique";
+      const pointDestroySpy = jest.spyOn(PointGeometry, "destroy");
+
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      const oldVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        pointUuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      await service.deleteSingleVersion(oldVersion.uuid);
+
+      expect(pointDestroySpy).toHaveBeenCalledWith({
+        where: { uuid: pointUuid },
+        transaction: expect.anything()
+      });
+    });
+
+    it("should keep point geometry when another version references it", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const sharedPolygonGeometry = await PolygonGeometryFactory.create();
+      const sharedPointUuid = crypto.randomUUID();
+      await PointGeometry.create({
+        uuid: sharedPointUuid,
+        point: { type: "Point", coordinates: [0, 0] },
+        estimatedArea: 0,
+        createdBy: null,
+        lastModifiedBy: null
+      } as never);
+      const primaryUuid = "primary-uuid-point-shared";
+      const pointDestroySpy = jest.spyOn(PointGeometry, "destroy");
+
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: sharedPolygonGeometry.uuid,
+        pointUuid: sharedPointUuid,
+        primaryUuid,
+        isActive: true
+      });
+
+      const versionToDelete = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: sharedPolygonGeometry.uuid,
+        pointUuid: sharedPointUuid,
+        primaryUuid,
+        isActive: false
+      });
+
+      await service.deleteSingleVersion(versionToDelete.uuid);
+
+      expect(pointDestroySpy).not.toHaveBeenCalledWith({
+        where: { uuid: sharedPointUuid },
+        transaction: expect.anything()
+      });
+    });
   });
 
   describe("updateBulkStatus", () => {
+    it("should create audit status records with null user fields", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-a" }];
+      const status = "draft";
+      const sitePolygon = { id: 10, uuid: "polygon-a", siteUuid: "site-a" } as SitePolygon;
+      const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
+
+      await service.updateBulkStatus(status, data, undefined, null);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith([
+        expect.objectContaining({
+          auditableType: SitePolygon.LARAVEL_TYPE,
+          auditableId: 10,
+          createdBy: null,
+          firstName: null,
+          lastName: null,
+          comment: null,
+          status,
+          type: "status"
+        })
+      ]);
+    });
+
+    it("should skip audit status bulkCreate when no polygons were returned", async () => {
+      const data = [{ type: "sitePolygons", id: "missing-polygon" }];
+      const status = "approved";
+      const user = { id: 1 } as User;
+      const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([]);
+
+      await service.updateBulkStatus(status, data, null, user);
+
+      expect(bulkCreateSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
     it("should update the status of multiple site polygons", async () => {
       const data = [{ type: "sitePolygons", id: "1234" }];
       const status = "pending-approval";
@@ -1404,6 +1542,47 @@ describe("SitePolygonsService", () => {
       expect(SitePolygon.update).toHaveBeenCalled();
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
+
+    it("should continue when project job enqueue fails for one project", async () => {
+      const data = [
+        { type: "sitePolygons", id: "polygon-1" },
+        { type: "sitePolygons", id: "polygon-2" }
+      ];
+      const status = "approved";
+      const user = { id: 1 } as User;
+      const firstSite = { id: 10, uuid: "site-1", projectId: 100, name: "Site One" } as Site;
+      const secondSite = { id: 11, uuid: "site-2", projectId: 101, name: "Site Two" } as Site;
+      const firstProject = { id: 100, name: "Project One" } as Project;
+      const secondProject = { id: 101, name: "Project Two" } as Project;
+
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([2]);
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([
+          { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon,
+          { id: 2, uuid: "polygon-2", siteUuid: "site-2" } as SitePolygon
+        ]);
+      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+      jest.spyOn(Site, "findAll").mockResolvedValue([firstSite, secondSite]);
+      jest.spyOn(Project, "findByPk").mockImplementation(async projectId => {
+        if (projectId === 100) return firstProject;
+        return secondProject;
+      });
+      jest
+        .spyOn(DelayedJob, "create")
+        .mockResolvedValueOnce({ id: 1 } as DelayedJob)
+        .mockResolvedValueOnce({ id: 2 } as DelayedJob);
+      validationQueue.add
+        .mockImplementationOnce(async () => {
+          throw new Error("queue down");
+        })
+        .mockImplementationOnce(async () => ({ id: "job-2" }) as never);
+
+      await service.updateBulkStatus(status, data, null, user);
+
+      expect(Project.findByPk).toHaveBeenCalledTimes(2);
+      expect(validationQueue.add).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("enqueuePolygonValidation", () => {
@@ -1442,6 +1621,145 @@ describe("SitePolygonsService", () => {
         }),
         expect.objectContaining({ jobId: expect.any(String) })
       );
+    });
+
+    it("filters empty UUIDs and no-ops when no valid values remain", async () => {
+      const delayedJobSpy = jest.spyOn(DelayedJob, "create");
+      validationQueue.add.mockClear();
+
+      await service.enqueuePolygonValidation(["", ""], 7, { triggerType: "upload", siteUuid: "site-1" });
+
+      expect(delayedJobSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("uses provided siteUuid as fallback name when site lookup returns null", async () => {
+      jest.spyOn(Site, "findOne").mockResolvedValue(null);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({
+        id: 77,
+        uuid: "dj-77"
+      } as unknown as DelayedJob);
+
+      await service.enqueuePolygonValidation(["geom-a"], 3, { triggerType: "upload", siteUuid: "missing-site-uuid" });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "missing-site-uuid"
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["geom-a"],
+          delayedJobId: 77
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
+    });
+
+    it("uses site name when siteUuid is provided and site is found", async () => {
+      jest.spyOn(Site, "findOne").mockResolvedValue({ id: 11, name: "Named Site" } as Site);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({ id: 88, uuid: "dj-88" } as unknown as DelayedJob);
+
+      await service.enqueuePolygonValidation(["geom-x"], 4, { triggerType: "upload", siteUuid: "site-11" });
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            entity_name: "Named Site",
+            trigger_type: "upload"
+          })
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({
+          polygonUuids: ["geom-x"],
+          delayedJobId: 88,
+          siteUuid: "site-11"
+        }),
+        expect.objectContaining({ jobId: expect.any(String) })
+      );
+    });
+  });
+
+  describe("triggerProjectValidationJobs", () => {
+    it("returns early when polygons do not contain valid site UUIDs", async () => {
+      const findAllSpy = jest.spyOn(Site, "findAll");
+
+      await service.triggerProjectValidationJobs([{ siteUuid: "" } as SitePolygon], 1);
+
+      expect(findAllSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("returns early when sites have no valid project IDs", async () => {
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ id: 10, projectId: null } as unknown as Site]);
+      const findProjectSpy = jest.spyOn(Project, "findByPk");
+
+      await service.triggerProjectValidationJobs([{ siteUuid: "site-uuid-10" } as SitePolygon], 1);
+
+      expect(findProjectSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("catches errors when project lookup throws and continues without throwing", async () => {
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ id: 12, projectId: 300, name: "Site Twelve" } as Site]);
+      jest.spyOn(Project, "findByPk").mockRejectedValue(new Error("project lookup failed"));
+
+      await expect(service.triggerProjectValidationJobs([{ siteUuid: "site-12" } as SitePolygon], 5)).resolves.toBe(
+        undefined
+      );
+
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("skips validation job creation when project lookup returns null", async () => {
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ id: 15, projectId: 400, name: "Site Fifteen" } as Site]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue(null);
+      const delayedJobSpy = jest.spyOn(DelayedJob, "create");
+
+      await service.triggerProjectValidationJobs([{ siteUuid: "site-15" } as SitePolygon], 6);
+
+      expect(delayedJobSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("creates one project validation job per unique project", async () => {
+      jest
+        .spyOn(Site, "findAll")
+        .mockResolvedValue([
+          { id: 21, projectId: 500, name: "Site Twenty One" } as Site,
+          { id: 22, projectId: 500, name: "Site Twenty Two" } as Site
+        ]);
+      jest.spyOn(Project, "findByPk").mockResolvedValue({ id: 500, name: "Project Five Hundred" } as Project);
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({ id: 123 } as DelayedJob);
+
+      await service.triggerProjectValidationJobs(
+        [{ siteUuid: "site-21" } as SitePolygon, { siteUuid: "site-22" } as SitePolygon],
+        7
+      );
+
+      expect(Project.findByPk).toHaveBeenCalledTimes(1);
+      expect(Project.findByPk).toHaveBeenCalledWith(500, { attributes: ["id", "name"] });
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Project Area Validation Refresh",
+          createdBy: 7,
+          metadata: {
+            entity_id: 500,
+            entity_type: Project.LARAVEL_TYPE,
+            entity_name: "Project Five Hundred"
+          }
+        })
+      );
+      expect(validationQueue.add).toHaveBeenCalledWith("projectValidation", {
+        projectId: 500,
+        validationTypes: ["ESTIMATED_AREA"],
+        delayedJobId: 123
+      });
     });
   });
 });

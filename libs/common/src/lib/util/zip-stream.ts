@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { timestampFileName } from "./filenames";
+import { timestampFileName } from "./fileNames";
 import archiver, { Archiver } from "archiver";
 import { TMLogger } from "./tm-logger";
 

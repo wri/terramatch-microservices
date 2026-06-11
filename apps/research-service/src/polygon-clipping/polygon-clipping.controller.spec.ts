@@ -8,7 +8,7 @@ import { SitePolygon, DelayedJob, Site, User, Project } from "@terramatch-micros
 import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue, Job } from "bullmq";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 describe("PolygonClippingController", () => {
   let controller: PolygonClippingController;
@@ -80,7 +80,7 @@ describe("PolygonClippingController", () => {
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
@@ -88,14 +88,14 @@ describe("PolygonClippingController", () => {
 
     it("should throw BadRequestException when neither siteUuid nor projectUuid is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({})).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when both siteUuid and projectUuid are provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ siteUuid, projectUuid })).rejects.toThrow(BadRequestException);
     });
@@ -106,7 +106,7 @@ describe("PolygonClippingController", () => {
         site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
         polygonIds: []
       });
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
@@ -115,7 +115,7 @@ describe("PolygonClippingController", () => {
     it("should throw NotFoundException when site is not found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForSite.mockRejectedValue(new NotFoundException(`Site not found: ${siteUuid}`));
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ siteUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForSite).toHaveBeenCalledWith(siteUuid);
@@ -130,7 +130,7 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ siteUuid });
 
@@ -154,7 +154,7 @@ describe("PolygonClippingController", () => {
         project: { id: 1, uuid: projectUuid, name: "Test Project" } as Project,
         polygonIds: []
       });
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ projectUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
@@ -165,7 +165,7 @@ describe("PolygonClippingController", () => {
       clippingService.getFixablePolygonsForProject.mockRejectedValue(
         new NotFoundException(`Project not found: ${projectUuid}`)
       );
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createClippedVersions({ projectUuid })).rejects.toThrow(NotFoundException);
       expect(clippingService.getFixablePolygonsForProject).toHaveBeenCalledWith(projectUuid);
@@ -180,7 +180,7 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ projectUuid });
 
@@ -200,20 +200,20 @@ describe("PolygonClippingController", () => {
 
     it("should throw BadRequestException when siteUuid is empty string", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.createClippedVersions({ siteUuid: "" })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when projectUuid is empty string", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.createClippedVersions({ projectUuid: "" })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when siteUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Site, "findOne").mockResolvedValue(null);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.createClippedVersions({ siteUuid: null as unknown as string })).rejects.toThrow(
         BadRequestException
       );
@@ -222,7 +222,7 @@ describe("PolygonClippingController", () => {
     it("should throw BadRequestException when projectUuid is null after isEmpty check", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(Project, "findOne").mockResolvedValue(null);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
       await expect(controller.createClippedVersions({ projectUuid: null as unknown as string })).rejects.toThrow(
         BadRequestException
       );
@@ -237,7 +237,7 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ projectUuid });
 
@@ -264,7 +264,7 @@ describe("PolygonClippingController", () => {
         getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
       } as unknown as User);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ siteUuid });
 
@@ -291,7 +291,7 @@ describe("PolygonClippingController", () => {
         getSourceFromRoles: jest.fn().mockReturnValue(null)
       } as unknown as User);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ siteUuid });
 
@@ -314,7 +314,7 @@ describe("PolygonClippingController", () => {
       });
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ siteUuid });
 
@@ -337,7 +337,7 @@ describe("PolygonClippingController", () => {
         polygonIds: polygonUuids
       });
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createClippedVersions({ siteUuid });
 
@@ -359,7 +359,7 @@ describe("PolygonClippingController", () => {
 
     it("should throw UnauthorizedException when user is not authorized", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(UnauthorizedException);
       expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
@@ -377,7 +377,7 @@ describe("PolygonClippingController", () => {
       };
 
       policyService.authorize.mockResolvedValue(undefined);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createPolygonListClippedVersions(emptyPayload)).rejects.toThrow(BadRequestException);
       expect(clippingService.filterFixablePolygonsFromList).not.toHaveBeenCalled();
@@ -386,7 +386,7 @@ describe("PolygonClippingController", () => {
     it("should throw NotFoundException when no fixable polygons are found", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue([]);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(NotFoundException);
       expect(clippingService.filterFixablePolygonsFromList).toHaveBeenCalledWith(polygonUuids);
@@ -407,7 +407,7 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createPolygonListClippedVersions(payload);
 
@@ -424,7 +424,7 @@ describe("PolygonClippingController", () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue([]);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await expect(controller.createPolygonListClippedVersions(payload)).rejects.toThrow(NotFoundException);
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
@@ -460,7 +460,7 @@ describe("PolygonClippingController", () => {
         } as Site
       ]);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createPolygonListClippedVersions(payloadMultiple);
 
@@ -531,7 +531,7 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await controller.createPolygonListClippedVersions(payloadMultiple);
 
@@ -612,7 +612,7 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await controller.createPolygonListClippedVersions(payloadMultiple);
 
@@ -684,7 +684,7 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await controller.createPolygonListClippedVersions(payloadMultiple);
 
@@ -726,7 +726,7 @@ describe("PolygonClippingController", () => {
         createdBy: 1
       } as unknown as DelayedJob);
       mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       await controller.createPolygonListClippedVersions(payloadMultiple);
 
@@ -759,7 +759,7 @@ describe("PolygonClippingController", () => {
         fullName: null,
         getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
       } as unknown as User);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createPolygonListClippedVersions(payload);
 
@@ -783,7 +783,7 @@ describe("PolygonClippingController", () => {
       clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
       clippingService.clipAndCreateVersions.mockResolvedValue(createdVersions);
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createPolygonListClippedVersions(payload);
 
@@ -811,7 +811,7 @@ describe("PolygonClippingController", () => {
         fullName: "Test User",
         getSourceFromRoles: jest.fn().mockReturnValue(null)
       } as unknown as User);
-      mockRequestContext({ userId: 1 });
+      mockUserContext({ userId: 1 });
 
       const result = await controller.createPolygonListClippedVersions(payload);
 

@@ -30,7 +30,8 @@ import { NurseryFullDto, NurseryLightDto } from "./dto/nursery.dto";
 import {
   CACHED_EXPORT_ENTITY_TYPES,
   ENTITY_MODELS,
-  EntityModel
+  EntityModel,
+  EntityType
 } from "@terramatch-microservices/database/constants/entities";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { NurseryReportFullDto, NurseryReportLightDto } from "./dto/nursery-report.dto";
@@ -46,10 +47,16 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { kebabCase } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto";
-import { ENTITY_SERVICE_EXPORT_QUEUE, EntityServiceExportsProcessor } from "../jobs/entity-service-exports.processor";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  EntityServiceDelayedJobsProcessor
+} from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
-import { Project } from "@terramatch-microservices/database/entities";
+import { Nursery, Project, Site } from "@terramatch-microservices/database/entities";
+
+const ASSET_EXPORT_ENTITIES: EntityType[] = ["projects", "sites", "nurseries"];
+type AssetExportEntity = Project | Site | Nursery;
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -156,6 +163,35 @@ export class EntitiesController {
     return buildJsonApi(processor.FULL_DTO).addData(id, dto);
   }
 
+  @Get(":entity/:uuid/exportAssets")
+  @ApiOperation({
+    operationId: "entityAssetGet",
+    summary: "Get all assets associated with a given entity in a zip file"
+  })
+  @JsonApiResponse([FileDownloadDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityAssetGet<T extends EntityModel>(@Param() { entity, uuid }: SpecificEntityDto) {
+    if (!ASSET_EXPORT_ENTITIES.includes(entity)) {
+      throw new BadRequestException(`Unsupported direct asset export entity type: ${entity})`);
+    }
+
+    const processor = this.entitiesService.createEntityProcessor<T>(entity);
+    const model = (await processor.findOne(uuid)) as AssetExportEntity | null;
+    if (model == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", model);
+
+    const entityName = model.name ?? (await this.entitiesService.localizeText("Unnamed"));
+    const jobName = await this.entitiesService.localizeText("Generating Asset .zip");
+    return await EntityServiceDelayedJobsProcessor.queueMediaExport(
+      this.exportQueue,
+      entity,
+      uuid,
+      entityName,
+      jobName
+    );
+  }
+
   @Get(":entity/:uuid/export")
   @ApiOperation({
     operationId: "entityExport",
@@ -183,7 +219,7 @@ export class EntitiesController {
       if (project.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
       await this.policyService.authorize("read", project);
 
-      return await EntityServiceExportsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
+      return await EntityServiceDelayedJobsProcessor.queueProjectExport(this.exportQueue, uuid, project.name ?? "");
     }
 
     const processor = this.entitiesService.createEntityProcessor<T>(entity);

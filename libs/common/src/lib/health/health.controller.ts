@@ -3,7 +3,7 @@ import { HealthCheck, HealthCheckService, SequelizeHealthIndicator } from "@nest
 import { ApiExcludeController } from "@nestjs/swagger";
 import { User } from "@terramatch-microservices/database/entities";
 import { QueueHealthIndicator } from "./queue-health.indicator";
-import { NoBearerAuth } from "../guards";
+import { AuthOptional } from "../guards";
 
 @Controller("health")
 @ApiExcludeController()
@@ -16,7 +16,7 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
-  @NoBearerAuth
+  @AuthOptional
   async check() {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const sequelize = User.sequelize!;

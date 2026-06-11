@@ -22,7 +22,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { ClippingQueryDto } from "./dto/clipping-query.dto";
 import { isEmpty, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { authenticatedUserId } from "@terramatch-microservices/common/guards/auth.guard";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 @ApiTags("Polygon Clipping")
 @Controller("polygonClipping/v3")
@@ -58,7 +58,7 @@ export class PolygonClippingController {
       throw new BadRequestException("Exactly one of siteUuid or projectUuid must be provided");
     }
 
-    const user = await User.findByPk(authenticatedUserId(), {
+    const user = await User.findByPk(UserContext.authenticatedUserId, {
       attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
@@ -111,7 +111,7 @@ export class PolygonClippingController {
       totalContent: fixablePolygons.length,
       processedContent: 0,
       progressMessage: "Starting clipping...",
-      createdBy: authenticatedUserId(),
+      createdBy: UserContext.authenticatedUserId,
       metadata: {
         entity_id: entityId,
         entity_type: entityType,
@@ -121,7 +121,7 @@ export class PolygonClippingController {
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId: authenticatedUserId(),
+      userId: UserContext.authenticatedUserId,
       userFullName,
       source,
       delayedJobId: delayedJob.id,
@@ -146,7 +146,7 @@ export class PolygonClippingController {
   async createPolygonListClippedVersions(@Body() payload: PolygonListClippingRequestBody) {
     await this.policyService.authorize("update", SitePolygon);
 
-    const user = await User.findByPk(authenticatedUserId(), {
+    const user = await User.findByPk(UserContext.authenticatedUserId, {
       attributes: ["firstName", "lastName"],
       include: [{ association: "roles", attributes: ["name"] }]
     });
@@ -168,7 +168,7 @@ export class PolygonClippingController {
     if (fixablePolygons.length === 1) {
       const createdVersions = await this.clippingService.clipAndCreateVersions(
         fixablePolygons,
-        authenticatedUserId() as number,
+        UserContext.authenticatedUserId as number,
         userFullName,
         source
       );
@@ -255,7 +255,7 @@ export class PolygonClippingController {
       totalContent: fixablePolygons.length,
       processedContent: 0,
       progressMessage: "Starting clipping...",
-      createdBy: authenticatedUserId(),
+      createdBy: UserContext.authenticatedUserId,
       metadata: {
         ...(entityId != null && { entity_id: entityId }),
         ...(entityType != null && { entity_type: entityType }),
@@ -265,7 +265,7 @@ export class PolygonClippingController {
 
     await this.clippingQueue.add("clipAndVersion", {
       polygonUuids: fixablePolygons,
-      userId: authenticatedUserId(),
+      userId: UserContext.authenticatedUserId,
       userFullName,
       source,
       delayedJobId: delayedJob.id,

@@ -4,21 +4,21 @@ import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { CacheService } from "./dto/cache.service";
 import {
-  buildJsonApi,
   buildDelayedJobResponse,
+  buildJsonApi,
   getStableRequestQuery
 } from "@terramatch-microservices/common/util/json-api-builder";
 import { TotalSectionHeaderDto } from "./dto/total-section-header.dto";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
-import { NoBearerAuth } from "@terramatch-microservices/common/guards";
+import { AuthOptional } from "@terramatch-microservices/common/guards";
 
 @Controller("dashboard/v3/totalSectionHeaders")
 export class TotalSectionHeaderController {
   constructor(private readonly cacheService: CacheService) {}
 
   @Get()
-  @NoBearerAuth
+  @AuthOptional
   @JsonApiResponse([TotalSectionHeaderDto, DelayedJobDto])
   @ApiOperation({ operationId: "getTotalSectionHeaders", summary: "Get total section header" })
   async getTotalSectionHeader(@Query() query: DashboardQueryDto) {

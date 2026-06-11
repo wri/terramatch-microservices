@@ -16,7 +16,7 @@ import {
   FundingTypeFactory
 } from "@terramatch-microservices/database/factories";
 import { Organisation, Media, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { mockRequestContext } from "@terramatch-microservices/common/util/testing";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -50,7 +50,7 @@ describe("OrganisationsService", () => {
   describe("findMany", () => {
     it("should return organisations for admin user", async () => {
       await OrganisationFactory.createMany(2);
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
 
       const result = await service.findMany({});
 
@@ -59,7 +59,7 @@ describe("OrganisationsService", () => {
     });
 
     it("should throw error if non-admin user is not authenticated", async () => {
-      mockRequestContext();
+      mockUserContext();
       await expect(service.findMany({})).rejects.toThrow(BadRequestException);
     });
 
@@ -71,7 +71,7 @@ describe("OrganisationsService", () => {
       const project = await ProjectFactory.create({ organisationId: org2.id });
       await user.$add("projects", project);
 
-      mockRequestContext({ userId: user.id });
+      mockUserContext({ userId: user.id });
       const result = await service.findMany({});
 
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
@@ -79,27 +79,27 @@ describe("OrganisationsService", () => {
 
     it("should filter by funding programme UUID", async () => {
       const programmeUuid = faker.string.uuid();
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await service.findMany({ fundingProgrammeUuid: programmeUuid });
     });
 
     it("should filter by search query", async () => {
       await OrganisationFactory.create({ name: "Test Organisation" });
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ search: "Test" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by status", async () => {
       await OrganisationFactory.create({ status: "pending" });
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ status: "pending" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
     it("should filter by type", async () => {
       await OrganisationFactory.create({ type: "non-profit-organization" });
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ type: "non-profit-organization" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
@@ -107,7 +107,7 @@ describe("OrganisationsService", () => {
     it("should filter by hqCountry", async () => {
       const country = faker.location.countryCode("alpha-3");
       await OrganisationFactory.create({ hqCountry: country });
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       const result = await service.findMany({ hqCountry: country });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
@@ -119,34 +119,34 @@ describe("OrganisationsService", () => {
         isTest: false,
         name: "Public Org"
       });
-      mockRequestContext({ userId: 999 });
+      mockUserContext({ userId: 999 });
       const result = await service.findMany({ view: "public" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
       expect(result.organisations.every(o => o.status === "approved" && !o.private && !o.isTest)).toBe(true);
     });
 
     it("should sort by valid field", async () => {
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "name", direction: "ASC" } });
     });
 
     it("should sort by mapped field", async () => {
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "created_at", direction: "ASC" } });
     });
 
     it("should handle descending sort", async () => {
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "-name" } });
     });
 
     it("should throw error for invalid sort field", async () => {
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await expect(service.findMany({ sort: { field: "invalidField" } })).rejects.toThrow(BadRequestException);
     });
 
     it("should allow sorting by id field", async () => {
-      mockRequestContext({ permissions: ["framework-test"] });
+      mockUserContext({ permissions: ["framework-test"] });
       await service.findMany({ sort: { field: "id" } });
     });
   });

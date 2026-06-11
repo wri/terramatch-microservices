@@ -30,21 +30,17 @@ export class UserContextMiddleware implements NestMiddleware {
     return this.jwtService.decode(token) != null;
   }
 
-  private async getJwtUserId(token: string): Promise<number | null> {
+  private async getJwtUserId(token: string) {
     try {
       const { sub } = await this.jwtService.verifyAsync(token);
-      return sub;
+      return (sub ?? null) as number | null;
     } catch {
       return null;
     }
   }
 
-  private async getApiKeyUserId(token: string): Promise<number | null> {
-    try {
-      const { sub } = await this.jwtService.verifyAsync(token);
-      return sub;
-    } catch {
-      return null;
-    }
+  private async getApiKeyUserId(token: string) {
+    const user = await User.findOne({ where: { apiKey: token }, attributes: ["id"] });
+    return user?.id ?? null;
   }
 }

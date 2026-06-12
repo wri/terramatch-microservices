@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { EventService } from "@terramatch-microservices/common/events/event.service";
+import { buildSitePolygonPushedViaApiParams } from "@terramatch-microservices/common/analytics/polygon-pushed-via-api";
 import {
   Site,
   SitePolygon,
@@ -126,7 +128,8 @@ export class SitePolygonCreationService {
     private readonly duplicateGeometryValidator: DuplicateGeometryValidator,
     private readonly voronoiService: VoronoiService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
-    private readonly versioningService: SitePolygonVersioningService
+    private readonly versioningService: SitePolygonVersioningService,
+    private readonly eventService: EventService
   ) {}
 
   async createSitePolygons(
@@ -140,6 +143,8 @@ export class SitePolygonCreationService {
   }> {
     const { createdPolygons, duplicatePolygons, duplicateValidations, polygonInputIndices } =
       await this.storeAndValidateGeometries(request.geometries, userId, source, userFullName);
+
+    await this.trackPolygonPushedViaApiForSitePolygons(createdPolygons);
 
     const allPolygons = [...createdPolygons, ...duplicatePolygons];
     allPolygons.sort((a, b) => {
@@ -890,6 +895,16 @@ export class SitePolygonCreationService {
       userFullName,
       transaction
     );
+  }
+
+  private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[]) {
+    for (const sitePolygon of sitePolygons) {
+      const params = buildSitePolygonPushedViaApiParams(sitePolygon);
+      if (params == null) {
+        continue;
+      }
+      await this.eventService.sendPolygonPushedViaApiAnalytics(params.partner_id, params);
+    }
   }
 
   private buildDetailedChangeDescription(

@@ -10,6 +10,7 @@ import { SitePolygon, CriteriaSite } from "@terramatch-microservices/database/en
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction } from "sequelize";
+import { EventService } from "@terramatch-microservices/common/events/event.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -65,6 +66,12 @@ describe("SitePolygonCreationService - Versioning", () => {
           provide: GeometryFileProcessingService,
           useValue: {
             parseGeometryFile: jest.fn()
+          }
+        },
+        {
+          provide: EventService,
+          useValue: {
+            sendPolygonPushedViaApiAnalytics: jest.fn()
           }
         }
       ]

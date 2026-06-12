@@ -64,7 +64,7 @@ export class EventService {
   }
 
   async sendPolygonPushedViaApiAnalytics(partnerId: string, params: PolygonPushedViaApiParams) {
-    this.logger.log(
+    this.logger.debug(
       `Sending polygon pushed via API analytics for polygon ${params.polygon_id} (partner: ${partnerId}) to queue.`
     );
     await this.analyticsQueue.add(POLYGON_PUSHED_VIA_API_EVENT, {

@@ -352,6 +352,8 @@ describe("TotalJobsCreatedService - filters", () => {
 
       const result = await service.getTotals(filters);
 
+      expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
+
       expect(result.totalBeneficiaries).toBe(40351 + 38859 + 8668);
       expect(result.beneficiaryMen).toBe(40351);
       expect(result.beneficiaryWomen).toBe(38859);

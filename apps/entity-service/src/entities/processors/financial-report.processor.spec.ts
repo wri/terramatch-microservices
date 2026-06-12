@@ -16,17 +16,21 @@ import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
   FundingTypeFactory,
+  MediaFactory,
   OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { TestingModule } from "@nestjs/testing";
+import { MediaService } from "@terramatch-microservices/common/media/media.service";
 
 describe("FinancialReportProcessor", () => {
   let module: TestingModule;
@@ -267,20 +271,37 @@ describe("FinancialReportProcessor", () => {
   });
 
   describe("getFinancialIndicatorsWithMedia", () => {
-    it("should return financial indicators with media", async () => {
+    it("should return financial indicators with documentation media", async () => {
       const organisation = await OrganisationFactory.create();
       const financialReport = await FinancialReportFactory.org(organisation).create();
-      await FinancialIndicatorFactory.report(financialReport).createMany(2);
+      const indicators = await FinancialIndicatorFactory.report(financialReport).createMany(2);
+      const media = await MediaFactory.financialIndicator(indicators[0]).create({ collectionName: "documentation" });
 
-      const mockMedia = { findAll: jest.fn().mockResolvedValue([]) };
-      jest.spyOn(Media, "for").mockReturnValue(mockMedia as unknown as ReturnType<typeof Media.for>);
+      jest.spyOn(Media, "for").mockImplementation((owner: FinancialIndicator) => {
+        const scopedMedia = owner.id === indicators[0].id ? [media] : [];
+        return {
+          findAll: jest.fn().mockResolvedValue(scopedMedia)
+        } as ReturnType<typeof Media.for>;
+      });
 
-      const result = await (
-        processor as unknown as { getFinancialIndicatorsWithMedia: (report: FinancialReport) => Promise<unknown[]> }
-      ).getFinancialIndicatorsWithMedia(financialReport);
+      const mediaService = module.get(MediaService);
+      mediaService.embeddedDocumentationDto.mockImplementation(
+        async (documentationMedia: Media) =>
+          new EmbeddedMediaDto(documentationMedia, { url: "signed-url", thumbUrl: null })
+      );
+
+      const result = (await Promise.all(
+        await (
+          processor as unknown as { getFinancialIndicatorsWithMedia: (report: FinancialReport) => Promise<unknown[]> }
+        ).getFinancialIndicatorsWithMedia(financialReport)
+      )) as FinancialIndicatorDto[];
 
       expect(result).toHaveLength(2);
-      expect(result[0]).toBeInstanceOf(Promise);
+      expect(result.find(indicator => indicator.documentation != null)?.documentation).toEqual([
+        expect.objectContaining({ uuid: media.uuid, url: "signed-url" })
+      ]);
+      expect(result.find(indicator => indicator.documentation == null)).toBeDefined();
+      expect(mediaService.embeddedDocumentationDto).toHaveBeenCalledWith(media);
     });
   });
 

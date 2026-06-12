@@ -133,6 +133,31 @@ describe("MediaService", () => {
     });
   });
 
+  describe("getPresignedDownloadUrl", () => {
+    it("returns a presigned S3 URL", async () => {
+      const media = await MediaFactory.nursery().create();
+      fileService.generatePresignedUrl.mockResolvedValue("https://signed.example/file.pdf");
+
+      await expect(service.getPresignedDownloadUrl(media)).resolves.toBe("https://signed.example/file.pdf");
+      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
+    });
+  });
+
+  describe("embeddedDocumentationDto", () => {
+    it("returns an EmbeddedMediaDto with a presigned download URL", async () => {
+      const media = await MediaFactory.nursery().create();
+      fileService.generatePresignedUrl.mockResolvedValue("https://signed.example/doc.pdf");
+
+      const dto = await service.embeddedDocumentationDto(media);
+
+      expect(dto).toMatchObject({
+        uuid: media.uuid,
+        url: "https://signed.example/doc.pdf"
+      });
+      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
+    });
+  });
+
   describe("createMedia", () => {
     it("should throw when collection config is missing", async () => {
       await expect(service.createMedia(new Project(), "projects", creator.id, "foo", createTestFile())).rejects.toThrow(

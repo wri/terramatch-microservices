@@ -17,14 +17,14 @@ export const buildSitePolygonPushedViaApiParams = (sitePolygon: {
   source: string | null;
 }): PolygonPushedViaApiParams | null => {
   const { siteUuid, polygonUuid, source: partnerName } = sitePolygon;
-  if (partnerName == null || !isApiPartnerSource(partnerName)) {
+  if (siteUuid == null || polygonUuid == null || partnerName == null || !isApiPartnerSource(partnerName)) {
     return null;
   }
 
   return {
     entity_type: "site",
-    entity_id: siteUuid!,
-    polygon_id: polygonUuid!,
+    entity_id: siteUuid,
+    polygon_id: polygonUuid,
     source: "api",
     partner_id: partnerName
   };

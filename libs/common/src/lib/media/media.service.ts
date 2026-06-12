@@ -163,7 +163,7 @@ export class MediaService {
   public getUrl(media: Media, conversion?: string) {
     const endpoint = this.endpoint;
     if (conversion == null) return `${endpoint}${this.filePath(media)}`;
-    return media.generatedConversions[conversion] == null
+    return media.generatedConversions?.[conversion] == null
       ? null
       : `${endpoint}/${this.conversionFilePath(media, conversion)}`;
   }

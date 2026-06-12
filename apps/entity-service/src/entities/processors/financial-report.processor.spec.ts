@@ -277,14 +277,7 @@ describe("FinancialReportProcessor", () => {
       const indicators = await FinancialIndicatorFactory.report(financialReport).createMany(2);
       const media = await MediaFactory.financialIndicator(indicators[0]).create({ collectionName: "documentation" });
 
-      jest.spyOn(Media, "for").mockImplementation((owner: FinancialIndicator) => {
-        const scopedMedia = owner.id === indicators[0].id ? [media] : [];
-        return {
-          findAll: jest.fn().mockResolvedValue(scopedMedia)
-        } as ReturnType<typeof Media.for>;
-      });
-
-      const mediaService = module.get(MediaService);
+      const mediaService = module.get(MediaService) as DeepMocked<MediaService>;
       mediaService.embeddedDocumentationDto.mockImplementation(
         async (documentationMedia: Media) =>
           new EmbeddedMediaDto(documentationMedia, { url: "signed-url", thumbUrl: null })
@@ -301,7 +294,7 @@ describe("FinancialReportProcessor", () => {
         expect.objectContaining({ uuid: media.uuid, url: "signed-url" })
       ]);
       expect(result.find(indicator => indicator.documentation == null)).toBeDefined();
-      expect(mediaService.embeddedDocumentationDto).toHaveBeenCalledWith(media);
+      expect(mediaService.embeddedDocumentationDto).toHaveBeenCalledWith(expect.objectContaining({ uuid: media.uuid }));
     });
   });
 

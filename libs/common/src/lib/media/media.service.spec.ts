@@ -152,7 +152,8 @@ describe("MediaService", () => {
 
       expect(dto).toMatchObject({
         uuid: media.uuid,
-        url: "https://signed.example/doc.pdf"
+        url: "https://signed.example/doc.pdf",
+        thumbUrl: null
       });
       expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
     });

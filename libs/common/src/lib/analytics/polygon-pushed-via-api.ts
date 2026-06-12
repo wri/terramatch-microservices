@@ -4,7 +4,7 @@ export type PolygonPushedViaApiParams = {
   entity_type: string;
   entity_id: string;
   polygon_id: string;
-  source: "api";
+  polygon_source: "api";
   partner_id: string;
 };
 
@@ -14,9 +14,9 @@ export const isApiPartnerSource = (source: string): boolean => source !== "terra
 export const buildSitePolygonPushedViaApiParams = (sitePolygon: {
   siteUuid: string | null;
   polygonUuid: string | null;
-  source: string | null;
+  polygon_source: string | null;
 }): PolygonPushedViaApiParams | null => {
-  const { siteUuid, polygonUuid, source: partnerName } = sitePolygon;
+  const { siteUuid, polygonUuid, polygon_source: partnerName } = sitePolygon;
   if (siteUuid == null || polygonUuid == null || partnerName == null || !isApiPartnerSource(partnerName)) {
     return null;
   }
@@ -25,7 +25,7 @@ export const buildSitePolygonPushedViaApiParams = (sitePolygon: {
     entity_type: "site",
     entity_id: siteUuid,
     polygon_id: polygonUuid,
-    source: "api",
+    polygon_source: "api",
     partner_id: partnerName
   };
 };

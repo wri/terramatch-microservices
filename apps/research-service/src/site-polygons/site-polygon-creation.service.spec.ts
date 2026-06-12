@@ -226,7 +226,7 @@ describe("SitePolygonCreationService", () => {
         entity_type: "site",
         entity_id: "site-uuid-1",
         polygon_id: "polygon-uuid-1",
-        source: "api",
+        polygon_source: "api",
         partner_id: "greenhouse"
       });
     });

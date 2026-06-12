@@ -105,6 +105,15 @@ describe("TotalJobsCreatedService - filters", () => {
       expect(result.volunteerYouth).toBe(0);
       expect(result.volunteerNonYouth).toBe(0);
       expect(result.volunteerAgeOthers).toBe(0);
+
+      expect(result.totalBeneficiaries).toBe(0);
+      expect(result.beneficiaryMen).toBe(0);
+      expect(result.beneficiaryWomen).toBe(0);
+      expect(result.beneficiaryNonBinary).toBe(0);
+      expect(result.beneficiaryOthers).toBe(0);
+      expect(result.beneficiaryYouth).toBe(0);
+      expect(result.beneficiaryNonYouth).toBe(0);
+      expect(result.beneficiaryAgeOthers).toBe(0);
     });
 
     it("should calculate totals correctly with job demographics data", async () => {
@@ -147,6 +156,12 @@ describe("TotalJobsCreatedService - filters", () => {
       jest.spyOn(Tracking, "findAll").mockImplementation((options?: FindOptions) => {
         if ((options?.where as undefined | WhereAttributeHash)?.type === "jobs") {
           return Promise.resolve([fullTimeJobs, partTimeJobs] as unknown as Tracking[]);
+        }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
+          return Promise.resolve([] as unknown as Tracking[]);
+        }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "all-beneficiaries") {
+          return Promise.resolve([] as unknown as Tracking[]);
         }
         return Promise.resolve([] as unknown as Tracking[]);
       });
@@ -223,6 +238,9 @@ describe("TotalJobsCreatedService - filters", () => {
         if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
           return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "all-beneficiaries") {
+          return Promise.resolve([] as unknown as Tracking[]);
+        }
         return Promise.resolve([] as unknown as Tracking[]);
       });
 
@@ -277,6 +295,9 @@ describe("TotalJobsCreatedService - filters", () => {
         if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
           return Promise.resolve([volunteerDemographics] as unknown as Tracking[]);
         }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "all-beneficiaries") {
+          return Promise.resolve([] as unknown as Tracking[]);
+        }
         return Promise.resolve([] as unknown as Tracking[]);
       });
 
@@ -291,6 +312,54 @@ describe("TotalJobsCreatedService - filters", () => {
 
       expect(result.totalVolunteers).toBe(15);
       expect(result.volunteerMen).toBe(15);
+    });
+
+    it("should calculate totals correctly with all-beneficiaries demographics data", async () => {
+      const filters: DashboardQueryDto = {};
+      const mockBuilder = baseMocks();
+
+      const projectReport = { id: 1 } as unknown as ProjectReport;
+      jest
+        .spyOn(ProjectReport, "findAll")
+        .mockImplementation(() => Promise.resolve([projectReport] as unknown as ProjectReport[]));
+
+      const beneficiaryDemographics = {
+        id: 1,
+        collection: "all",
+        entries: [
+          { type: "gender", subtype: "male", amount: 40351 },
+          { type: "gender", subtype: "female", amount: 38859 },
+          { type: "gender", subtype: "non-binary", amount: 0 },
+          { type: "age", subtype: "youth", amount: 39340 },
+          { type: "age", subtype: "non-youth", amount: 30386 },
+          { type: "gender", subtype: "prefer-not-to-say", amount: 8668 },
+          { type: "age", subtype: "senior", amount: 18152 }
+        ]
+      } as unknown as Tracking;
+
+      jest.spyOn(Tracking, "findAll").mockImplementation((options?: FindOptions) => {
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "jobs") {
+          return Promise.resolve([] as unknown as Tracking[]);
+        }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "volunteers") {
+          return Promise.resolve([] as unknown as Tracking[]);
+        }
+        if ((options?.where as undefined | WhereAttributeHash)?.type === "all-beneficiaries") {
+          return Promise.resolve([beneficiaryDemographics] as unknown as Tracking[]);
+        }
+        return Promise.resolve([] as unknown as Tracking[]);
+      });
+
+      const result = await service.getTotals(filters);
+
+      expect(result.totalBeneficiaries).toBe(40351 + 38859 + 8668);
+      expect(result.beneficiaryMen).toBe(40351);
+      expect(result.beneficiaryWomen).toBe(38859);
+      expect(result.beneficiaryNonBinary).toBe(0);
+      expect(result.beneficiaryOthers).toBe(8668);
+      expect(result.beneficiaryYouth).toBe(39340);
+      expect(result.beneficiaryNonYouth).toBe(30386);
+      expect(result.beneficiaryAgeOthers).toBe(18152);
     });
 
     it("should apply filters correctly", async () => {

@@ -102,4 +102,28 @@ export class TotalJobsCreatedDto {
 
   @ApiProperty()
   volunteerAgeOthers: number;
+
+  @ApiProperty()
+  totalBeneficiaries: number;
+
+  @ApiProperty()
+  beneficiaryMen: number;
+
+  @ApiProperty()
+  beneficiaryWomen: number;
+
+  @ApiProperty()
+  beneficiaryNonBinary: number;
+
+  @ApiProperty()
+  beneficiaryOthers: number;
+
+  @ApiProperty()
+  beneficiaryYouth: number;
+
+  @ApiProperty()
+  beneficiaryNonYouth: number;
+
+  @ApiProperty()
+  beneficiaryAgeOthers: number;
 }

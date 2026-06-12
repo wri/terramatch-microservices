@@ -194,13 +194,7 @@ export class OrganisationsService {
           const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];
           const mediaDtos =
             indicatorMedia.length > 0
-              ? indicatorMedia.map(
-                  media =>
-                    new EmbeddedMediaDto(media, {
-                      url: this.mediaService.getUrl(media),
-                      thumbUrl: this.mediaService.getUrl(media, "thumbnail")
-                    })
-                )
+              ? await Promise.all(indicatorMedia.map(media => this.mediaService.embeddedDocumentationDto(media)))
               : null;
 
           const indicatorDto = new FinancialIndicatorDto(indicator, {

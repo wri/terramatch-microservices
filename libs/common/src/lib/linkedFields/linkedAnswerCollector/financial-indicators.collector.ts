@@ -5,7 +5,6 @@ import { Dictionary, isEmpty, isString } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes, Op } from "sequelize";
 import { MediaService } from "../../media/media.service";
-import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { FormModel } from "@terramatch-microservices/database/constants/entities";
 
 export function financialIndicatorsCollector(
@@ -55,26 +54,25 @@ export function financialIndicatorsCollector(
         financialIndicators.length === 0 || forExport
           ? []
           : await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
-      const createMediaDto = (media: Media) =>
-        new EmbeddedMediaDto(media, {
-          url: mediaService.getUrl(media),
-          thumbUrl: mediaService.getUrl(media, "thumbnail")
-        });
+      const createMediaDto = (media: Media) => mediaService.embeddedDocumentationDto(media);
 
       answers[Object.values(questions)[0]] = forExport
         ? financialIndicators.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`)
-        : financialIndicators.map(financialIndicator => {
-            const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
-            return new EmbeddedFinancialIndicatorDto(financialIndicator, {
-              startMonth:
-                financialIndicator.financialReport?.finStartMonth ??
-                financialIndicator.organisation?.finStartMonth ??
-                null,
-              currency:
-                financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
-              documentation: documentationMedia.map(createMediaDto)
-            });
-          });
+        : await Promise.all(
+            financialIndicators.map(async financialIndicator => {
+              const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
+              return new EmbeddedFinancialIndicatorDto(financialIndicator, {
+                startMonth:
+                  financialIndicator.financialReport?.finStartMonth ??
+                  financialIndicator.organisation?.finStartMonth ??
+                  null,
+                currency:
+                  financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
+                documentation:
+                  documentationMedia.length === 0 ? [] : await Promise.all(documentationMedia.map(createMediaDto))
+              });
+            })
+          );
     },
 
     async syncRelation(formModel, _, answer) {

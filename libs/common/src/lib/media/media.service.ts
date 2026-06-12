@@ -31,6 +31,7 @@ import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Readable } from "stream";
 import path from "path";
+import { EmbeddedMediaDto } from "../dto/media.dto";
 import { FileService } from "../file/file.service";
 
 export type MediaAttributes = {
@@ -370,6 +371,17 @@ export class MediaService {
     });
     if (media == null) throw new NotFoundException();
     return media;
+  }
+
+  getPresignedDownloadUrl(media: Media) {
+    return this.fileService.generatePresignedUrl(this.bucket, `${media.id}/${media.fileName}`);
+  }
+
+  async embeddedDocumentationDto(media: Media) {
+    return new EmbeddedMediaDto(media, {
+      url: await this.getPresignedDownloadUrl(media),
+      thumbUrl: this.getUrl(media, "thumbnail")
+    });
   }
 
   async getMediaStream(media: Media) {

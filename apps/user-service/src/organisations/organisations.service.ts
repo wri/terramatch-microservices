@@ -21,7 +21,7 @@ import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
-import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";

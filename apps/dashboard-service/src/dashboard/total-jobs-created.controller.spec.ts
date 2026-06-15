@@ -40,7 +40,15 @@ const getTotalsResult = (): TotalJobsCreatedDto => {
     volunteerOthers: 7,
     volunteerYouth: 45,
     volunteerNonYouth: 30,
-    volunteerAgeOthers: 5
+    volunteerAgeOthers: 5,
+    totalBeneficiaries: 87878,
+    beneficiaryMen: 40351,
+    beneficiaryWomen: 38859,
+    beneficiaryNonBinary: 0,
+    beneficiaryOthers: 8668,
+    beneficiaryYouth: 39340,
+    beneficiaryNonYouth: 30386,
+    beneficiaryAgeOthers: 18152
   };
 };
 

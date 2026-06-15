@@ -5,7 +5,6 @@ import { Dictionary, isEmpty, isString } from "lodash";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
 import { CreationAttributes, Op } from "sequelize";
 import { MediaService } from "../../media/media.service";
-import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { FormModel } from "@terramatch-microservices/database/constants/entities";
 
 export function financialIndicatorsCollector(
@@ -55,11 +54,7 @@ export function financialIndicatorsCollector(
         financialIndicators.length === 0 || forExport
           ? []
           : await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
-      const createMediaDto = (media: Media) =>
-        new EmbeddedMediaDto(media, {
-          url: mediaService.getUrl(media),
-          thumbUrl: mediaService.getUrl(media, "thumbnail")
-        });
+      const createMediaDto = (media: Media) => mediaService.embeddedMediaDto(media);
 
       answers[Object.values(questions)[0]] = forExport
         ? financialIndicators.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`)
@@ -72,7 +67,7 @@ export function financialIndicatorsCollector(
                 null,
               currency:
                 financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
-              documentation: documentationMedia.map(createMediaDto)
+              documentation: documentationMedia.length === 0 ? [] : documentationMedia.map(createMediaDto)
             });
           });
     },

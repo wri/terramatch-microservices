@@ -21,7 +21,7 @@ import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
-import { EmbeddedMediaDto, MediaDto } from "@terramatch-microservices/common/dto/media.dto";
+import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
 import { FinancialReportLightDto } from "@terramatch-microservices/common/dto/financial-report.dto";
 import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.dto";
@@ -193,15 +193,7 @@ export class OrganisationsService {
         for (const indicator of financialIndicators) {
           const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];
           const mediaDtos =
-            indicatorMedia.length > 0
-              ? indicatorMedia.map(
-                  media =>
-                    new EmbeddedMediaDto(media, {
-                      url: this.mediaService.getUrl(media),
-                      thumbUrl: this.mediaService.getUrl(media, "thumbnail")
-                    })
-                )
-              : null;
+            indicatorMedia.length > 0 ? indicatorMedia.map(media => this.mediaService.embeddedMediaDto(media)) : null;
 
           const indicatorDto = new FinancialIndicatorDto(indicator, {
             entityType: "financialIndicators" as const,

@@ -105,6 +105,15 @@ describe("EntitiesService", () => {
       expect(service.fullUrl(media)).toEqual("https://example.com//foo.jpg");
       expect(service.thumbnailUrl(media)).toEqual("https://example.com/thumbnail/foo.jpg");
     });
+
+    it("delegates embeddedMediaDto to MediaService", () => {
+      const media = { fileName: "foo.pdf" } as Media;
+      const dto = { url: "https://example.com/foo.pdf" };
+      mediaService.embeddedMediaDto.mockReturnValue(dto as ReturnType<EntitiesService["embeddedMediaDto"]>);
+
+      expect(service.embeddedMediaDto(media)).toBe(dto);
+      expect(mediaService.embeddedMediaDto).toHaveBeenCalledWith(media);
+    });
   });
 
   describe("mapMediaCollection", () => {

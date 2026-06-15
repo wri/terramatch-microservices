@@ -31,6 +31,7 @@ import sharp from "sharp";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { Readable } from "stream";
 import path from "path";
+import { EmbeddedMediaDto } from "../dto/media.dto";
 import { FileService } from "../file/file.service";
 
 export type MediaAttributes = {
@@ -162,7 +163,7 @@ export class MediaService {
   public getUrl(media: Media, conversion?: string) {
     const endpoint = this.endpoint;
     if (conversion == null) return `${endpoint}${this.filePath(media)}`;
-    return media.generatedConversions[conversion] == null
+    return media.generatedConversions?.[conversion] == null
       ? null
       : `${endpoint}/${this.conversionFilePath(media, conversion)}`;
   }
@@ -370,6 +371,13 @@ export class MediaService {
     });
     if (media == null) throw new NotFoundException();
     return media;
+  }
+
+  embeddedMediaDto(media: Media) {
+    return new EmbeddedMediaDto(media, {
+      url: this.getUrl(media),
+      thumbUrl: this.getUrl(media, "thumbnail")
+    });
   }
 
   async getMediaStream(media: Media) {

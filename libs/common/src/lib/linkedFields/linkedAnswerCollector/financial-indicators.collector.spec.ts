@@ -72,8 +72,8 @@ describe("FinancialIndicatorCollector", () => {
           MediaFactory.financialIndicator(indicator).create({ collectionName: "documentation" })
         )
       );
-      harness.mediaService.embeddedDocumentationDto.mockImplementation(
-        async (documentationMedia: Media) => new EmbeddedMediaDto(documentationMedia, { url: "", thumbUrl: "" })
+      harness.mediaService.embeddedMediaDto.mockImplementation(
+        (documentationMedia: Media) => new EmbeddedMediaDto(documentationMedia, { url: "", thumbUrl: "" })
       );
       await harness.expectAnswers(
         { financialReports: report },

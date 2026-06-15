@@ -54,25 +54,22 @@ export function financialIndicatorsCollector(
         financialIndicators.length === 0 || forExport
           ? []
           : await Media.for(financialIndicators).findAll({ where: { collectionName: "documentation" } });
-      const createMediaDto = (media: Media) => mediaService.embeddedDocumentationDto(media);
+      const createMediaDto = (media: Media) => mediaService.embeddedMediaDto(media);
 
       answers[Object.values(questions)[0]] = forExport
         ? financialIndicators.map(({ collection, amount, year }) => `${collection}:${amount}(${year})`)
-        : await Promise.all(
-            financialIndicators.map(async financialIndicator => {
-              const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
-              return new EmbeddedFinancialIndicatorDto(financialIndicator, {
-                startMonth:
-                  financialIndicator.financialReport?.finStartMonth ??
-                  financialIndicator.organisation?.finStartMonth ??
-                  null,
-                currency:
-                  financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
-                documentation:
-                  documentationMedia.length === 0 ? [] : await Promise.all(documentationMedia.map(createMediaDto))
-              });
-            })
-          );
+        : financialIndicators.map(financialIndicator => {
+            const documentationMedia = medias.filter(({ modelId }) => modelId === financialIndicator.id);
+            return new EmbeddedFinancialIndicatorDto(financialIndicator, {
+              startMonth:
+                financialIndicator.financialReport?.finStartMonth ??
+                financialIndicator.organisation?.finStartMonth ??
+                null,
+              currency:
+                financialIndicator.financialReport?.currency ?? financialIndicator.organisation?.currency ?? null,
+              documentation: documentationMedia.length === 0 ? [] : documentationMedia.map(createMediaDto)
+            });
+          });
     },
 
     async syncRelation(formModel, _, answer) {

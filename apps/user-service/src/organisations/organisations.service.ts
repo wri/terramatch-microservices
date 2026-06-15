@@ -193,9 +193,7 @@ export class OrganisationsService {
         for (const indicator of financialIndicators) {
           const indicatorMedia = mediaByIndicatorId[indicator.id] ?? [];
           const mediaDtos =
-            indicatorMedia.length > 0
-              ? await Promise.all(indicatorMedia.map(media => this.mediaService.embeddedDocumentationDto(media)))
-              : null;
+            indicatorMedia.length > 0 ? indicatorMedia.map(media => this.mediaService.embeddedMediaDto(media)) : null;
 
           const indicatorDto = new FinancialIndicatorDto(indicator, {
             entityType: "financialIndicators" as const,

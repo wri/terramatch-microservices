@@ -106,15 +106,13 @@ describe("EntitiesService", () => {
       expect(service.thumbnailUrl(media)).toEqual("https://example.com/thumbnail/foo.jpg");
     });
 
-    it("delegates embeddedDocumentationDto to MediaService", async () => {
+    it("delegates embeddedMediaDto to MediaService", () => {
       const media = { fileName: "foo.pdf" } as Media;
-      const dto = { url: "signed-url" };
-      mediaService.embeddedDocumentationDto.mockResolvedValue(
-        dto as Awaited<ReturnType<EntitiesService["embeddedDocumentationDto"]>>
-      );
+      const dto = { url: "https://example.com/foo.pdf" };
+      mediaService.embeddedMediaDto.mockReturnValue(dto as ReturnType<EntitiesService["embeddedMediaDto"]>);
 
-      await expect(service.embeddedDocumentationDto(media)).resolves.toBe(dto);
-      expect(mediaService.embeddedDocumentationDto).toHaveBeenCalledWith(media);
+      expect(service.embeddedMediaDto(media)).toBe(dto);
+      expect(mediaService.embeddedMediaDto).toHaveBeenCalledWith(media);
     });
   });
 

@@ -373,13 +373,9 @@ export class MediaService {
     return media;
   }
 
-  getPresignedDownloadUrl(media: Media) {
-    return this.fileService.generatePresignedUrl(this.bucket, `${media.id}/${media.fileName}`);
-  }
-
-  async embeddedDocumentationDto(media: Media) {
+  embeddedMediaDto(media: Media) {
     return new EmbeddedMediaDto(media, {
-      url: await this.getPresignedDownloadUrl(media),
+      url: this.getUrl(media),
       thumbUrl: this.getUrl(media, "thumbnail")
     });
   }

@@ -278,23 +278,26 @@ describe("FinancialReportProcessor", () => {
       const media = await MediaFactory.financialIndicator(indicators[0]).create({ collectionName: "documentation" });
 
       const mediaService = module.get(MediaService) as DeepMocked<MediaService>;
-      mediaService.embeddedDocumentationDto.mockImplementation(
-        async (documentationMedia: Media) =>
-          new EmbeddedMediaDto(documentationMedia, { url: "signed-url", thumbUrl: null })
+      mediaService.embeddedMediaDto.mockImplementation(
+        (documentationMedia: Media) =>
+          new EmbeddedMediaDto(documentationMedia, {
+            url: `https://example.com/${documentationMedia.fileName}`,
+            thumbUrl: null
+          })
       );
 
-      const result = (await Promise.all(
-        await (
-          processor as unknown as { getFinancialIndicatorsWithMedia: (report: FinancialReport) => Promise<unknown[]> }
-        ).getFinancialIndicatorsWithMedia(financialReport)
-      )) as FinancialIndicatorDto[];
+      const result = await (
+        processor as unknown as {
+          getFinancialIndicatorsWithMedia: (report: FinancialReport) => Promise<FinancialIndicatorDto[]>;
+        }
+      ).getFinancialIndicatorsWithMedia(financialReport);
 
       expect(result).toHaveLength(2);
       expect(result.find(indicator => indicator.documentation != null)?.documentation).toEqual([
-        expect.objectContaining({ uuid: media.uuid, url: "signed-url" })
+        expect.objectContaining({ uuid: media.uuid, url: `https://example.com/${media.fileName}` })
       ]);
       expect(result.find(indicator => indicator.documentation == null)).toBeDefined();
-      expect(mediaService.embeddedDocumentationDto).toHaveBeenCalledWith(expect.objectContaining({ uuid: media.uuid }));
+      expect(mediaService.embeddedMediaDto).toHaveBeenCalledWith(expect.objectContaining({ uuid: media.uuid }));
     });
   });
 

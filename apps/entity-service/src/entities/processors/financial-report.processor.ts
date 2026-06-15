@@ -145,8 +145,7 @@ export class FinancialReportProcessor extends ReportProcessor<
 
   async getFullDto(financialReport: FinancialReport) {
     const fundingTypes = await this.getFundingTypes(financialReport);
-    const financialIndicators = await this.getFinancialIndicatorsWithMedia(financialReport);
-    const financialIndicatorsWithMedia = await Promise.all(financialIndicators);
+    const financialIndicatorsWithMedia = await this.getFinancialIndicatorsWithMedia(financialReport);
 
     const dto = new FinancialReportFullDto(financialReport, {
       ...(await this.getFeedback(financialReport)),
@@ -213,17 +212,19 @@ export class FinancialReportProcessor extends ReportProcessor<
   protected async getFinancialIndicatorsWithMedia(financialReport: FinancialReport) {
     const financialIndicators = await FinancialIndicator.financialReport(financialReport.id).findAll();
 
-    return financialIndicators.map(async fi => {
-      const mediaCollection = await Media.for(fi).findAll({ where: { collectionName: "documentation" } });
+    return Promise.all(
+      financialIndicators.map(async fi => {
+        const mediaCollection = await Media.for(fi).findAll({ where: { collectionName: "documentation" } });
 
-      return new FinancialIndicatorDto(fi, {
-        entityType: "financialIndicators" as const,
-        entityUuid: fi.uuid,
-        documentation:
-          mediaCollection.length === 0
-            ? null
-            : await Promise.all(mediaCollection.map(media => this.entitiesService.embeddedDocumentationDto(media)))
-      });
-    });
+        return new FinancialIndicatorDto(fi, {
+          entityType: "financialIndicators" as const,
+          entityUuid: fi.uuid,
+          documentation:
+            mediaCollection.length === 0
+              ? null
+              : mediaCollection.map(media => this.entitiesService.embeddedMediaDto(media))
+        });
+      })
+    );
   }
 }

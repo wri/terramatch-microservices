@@ -133,29 +133,17 @@ describe("MediaService", () => {
     });
   });
 
-  describe("getPresignedDownloadUrl", () => {
-    it("returns a presigned S3 URL", async () => {
+  describe("embeddedMediaDto", () => {
+    it("returns an EmbeddedMediaDto with direct S3 URLs", async () => {
       const media = await MediaFactory.nursery().create();
-      fileService.generatePresignedUrl.mockResolvedValue("https://signed.example/file.pdf");
 
-      await expect(service.getPresignedDownloadUrl(media)).resolves.toBe("https://signed.example/file.pdf");
-      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
-    });
-  });
-
-  describe("embeddedDocumentationDto", () => {
-    it("returns an EmbeddedMediaDto with a presigned download URL", async () => {
-      const media = await MediaFactory.nursery().create();
-      fileService.generatePresignedUrl.mockResolvedValue("https://signed.example/doc.pdf");
-
-      const dto = await service.embeddedDocumentationDto(media);
+      const dto = service.embeddedMediaDto(media);
 
       expect(dto).toMatchObject({
         uuid: media.uuid,
-        url: "https://signed.example/doc.pdf",
+        url: `https://aws.endpoint/test-bucket/${media.id}/${media.fileName}`,
         thumbUrl: null
       });
-      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", `${media.id}/${media.fileName}`);
     });
   });
 

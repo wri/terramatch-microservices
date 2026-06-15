@@ -287,8 +287,8 @@ export class EntitiesService {
     });
   }
 
-  embeddedDocumentationDto(media: Media) {
-    return this.mediaService.embeddedDocumentationDto(media);
+  embeddedMediaDto(media: Media) {
+    return this.mediaService.embeddedMediaDto(media);
   }
 
   mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType, entityUuid: string) {

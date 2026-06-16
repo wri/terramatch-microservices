@@ -7,6 +7,7 @@ import { SitePolygon } from "@terramatch-microservices/database/entities/site-po
 import { EntityType, ENTITY_MODELS, isReport } from "@terramatch-microservices/database/constants/entities";
 import {
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+  POLYGON_VALIDATION_AUDIT_TYPE,
   READY_FOR_BASELINE_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants/audit-status";
 import {
@@ -17,7 +18,7 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { AuditStatusDto } from "./dto/audit-status.dto";
 import { EntitiesService } from "./entities.service";
-import { InferAttributes, Op } from "sequelize";
+import { InferAttributes, Op, WhereOptions } from "sequelize";
 import { orderBy, uniqBy } from "lodash";
 import { LaravelModel, laravelType } from "@terramatch-microservices/database/types/util";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
@@ -60,10 +61,17 @@ export class AuditStatusService {
       return { modernAuditStatuses: [], legacyAudits: [] };
     }
 
-    const typeWhere = typeFilter != null && typeFilter.length > 0 ? { type: { [Op.in]: typeFilter } } : undefined;
+    let typeWhere: WhereOptions<AuditStatus>;
+    if (typeFilter != null && typeFilter.length > 0) {
+      typeWhere = { type: { [Op.in]: typeFilter } };
+    } else {
+      typeWhere = {
+        type: { [Op.ne]: POLYGON_VALIDATION_AUDIT_TYPE }
+      };
+    }
 
     const modernAuditStatuses = await AuditStatus.for(entities).findAll({
-      ...(typeWhere != null ? { where: typeWhere } : {}),
+      where: typeWhere,
       order: [
         ["updatedAt", "DESC"],
         ["createdAt", "DESC"]

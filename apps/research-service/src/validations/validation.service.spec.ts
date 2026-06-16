@@ -7,11 +7,17 @@ import {
   PolygonGeometry,
   SitePolygon,
   Site,
-  Project
+  Project,
+  AuditStatus,
+  User
 } from "@terramatch-microservices/database/entities";
-import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
+import {
+  CRITERIA_ID_TO_VALIDATION_TYPE,
+  POLYGON_VALIDATION_AUDIT_TYPE
+} from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 import * as GeoJsonStructure from "./utils/geojson-structure-validator";
+import { mockUserContext } from "@terramatch-microservices/common/util/testing";
 
 interface MockSelfIntersectionValidator {
   validatePolygon: jest.MockedFunction<(polygonUuid: string) => Promise<{ valid: boolean; extraInfo: object | null }>>;
@@ -27,39 +33,50 @@ interface MockSpikesValidator {
   >;
 }
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  PolygonGeometry: {
-    findOne: jest.fn(),
-    sequelize: {
-      query: jest.fn()
-    }
-  },
-  CriteriaSite: jest.fn().mockImplementation(() => ({
-    save: jest.fn(),
-    destroy: jest.fn()
-  })),
-  CriteriaSiteHistoric: jest.fn().mockImplementation(() => ({
-    save: jest.fn()
-  })),
-  SitePolygon: {
-    findAndCountAll: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    save: jest.fn(),
-    sum: jest.fn(),
-    update: jest.fn()
-  },
-  Site: {
-    findAll: jest.fn(),
-    uuidsSubquery: jest.fn(),
-    findOne: jest.fn()
-  },
-  Project: {
-    findByPk: jest.fn()
-  }
-}));
+jest.mock("@terramatch-microservices/database/entities", () => {
+  const original = jest.requireActual("@terramatch-microservices/database/entities");
 
-// Mock the static methods
+  return {
+    ...original,
+    PolygonGeometry: {
+      findOne: jest.fn(),
+      sequelize: {
+        query: jest.fn()
+      }
+    },
+    CriteriaSite: jest.fn().mockImplementation(() => ({
+      save: jest.fn(),
+      destroy: jest.fn()
+    })),
+    CriteriaSiteHistoric: jest.fn().mockImplementation(() => ({
+      save: jest.fn()
+    })),
+    SitePolygon: {
+      findAndCountAll: jest.fn(),
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      save: jest.fn(),
+      sum: jest.fn(),
+      update: jest.fn(),
+      LARAVEL_TYPE: "App\\Models\\V2\\Sites\\SitePolygon"
+    },
+    Site: {
+      findAll: jest.fn(),
+      uuidsSubquery: jest.fn(),
+      findOne: jest.fn()
+    },
+    Project: {
+      findByPk: jest.fn()
+    },
+    AuditStatus: {
+      bulkCreate: jest.fn()
+    },
+    User: {
+      findByPk: jest.fn()
+    }
+  };
+});
+
 (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findAll = jest.fn();
 (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findOne = jest.fn();
 (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).create = jest.fn();
@@ -416,6 +433,13 @@ describe("ValidationService", () => {
   });
 
   describe("validatePolygonsBatch", () => {
+    beforeEach(() => {
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+      (AuditStatus.bulkCreate as jest.Mock).mockResolvedValue(undefined);
+      (User.findByPk as jest.Mock).mockResolvedValue(null);
+      mockUserContext({ userId: undefined });
+    });
+
     it("should use batch validation when available", async () => {
       mockSelfIntersectionValidator.validatePolygons.mockResolvedValue([
         { polygonUuid: "uuid-1", valid: true, extraInfo: null },
@@ -466,6 +490,48 @@ describe("ValidationService", () => {
 
       expect(CriteriaSite.findAll).not.toHaveBeenCalled();
       expect(CriteriaSite.bulkCreate).not.toHaveBeenCalled();
+      expect(AuditStatus.bulkCreate).not.toHaveBeenCalled();
+    });
+
+    it("creates polygon-validation audit statuses for validated site polygons", async () => {
+      mockSelfIntersectionValidator.validatePolygons.mockResolvedValue([
+        { polygonUuid: "uuid-1", valid: true, extraInfo: null }
+      ]);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([]);
+      (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).bulkCreate = jest.fn().mockResolvedValue(undefined);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([{ id: 42, validationStatus: "passed" }]);
+      (User.findByPk as jest.Mock).mockResolvedValue({
+        emailAddress: "user@example.com",
+        firstName: "Jane",
+        lastName: "Doe"
+      });
+      mockUserContext({ userId: 7 });
+
+      await service.validatePolygonsBatch(["uuid-1"], ["SELF_INTERSECTION"]);
+
+      expect(User.findByPk).toHaveBeenCalledWith(7, {
+        attributes: ["emailAddress", "firstName", "lastName"]
+      });
+      expect(SitePolygon.findAll).toHaveBeenCalledWith({
+        where: {
+          polygonUuid: { [Op.in]: ["uuid-1"] },
+          isActive: true
+        },
+        attributes: ["id", "validationStatus"]
+      });
+      expect(AuditStatus.bulkCreate).toHaveBeenCalledWith([
+        {
+          auditableType: SitePolygon.LARAVEL_TYPE,
+          auditableId: 42,
+          createdBy: "user@example.com",
+          firstName: "Jane",
+          lastName: "Doe",
+          comment: "SELF_INTERSECTION",
+          status: "passed",
+          type: POLYGON_VALIDATION_AUDIT_TYPE,
+          isActive: null
+        }
+      ]);
     });
   });
 

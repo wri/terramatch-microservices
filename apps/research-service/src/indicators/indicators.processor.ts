@@ -9,12 +9,17 @@ import { IndicatorsService } from "./indicators.service";
 import { Job } from "bullmq";
 import { IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
+  IndicatorExecutionOutcome,
+  IndicatorExecutionTriggerSource,
+  IndicatorAuditService
+} from "./indicator-audit.service";
+import {
   DelayedJob,
   IndicatorOutputHectares,
   IndicatorOutputTreeCoverLoss,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { CreationAttributes } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { ModelCtor } from "sequelize-typescript";
 
 const SLUG_MAPPINGS = {
@@ -31,6 +36,7 @@ export interface IndicatorsJobData {
   polygonUuids: string[];
   forceRecalculation?: boolean;
   updateExisting?: boolean;
+  triggerSource?: IndicatorExecutionTriggerSource;
 }
 
 type IndicatorJobSummary = {
@@ -60,12 +66,22 @@ type PolygonOutcome = "skipped" | "dataFound" | "noData" | "failed";
 export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
   protected readonly logger = new TMLogger(IndicatorsProcessor.name);
 
-  constructor(private readonly indicatorService: IndicatorsService) {
+  constructor(
+    private readonly indicatorService: IndicatorsService,
+    private readonly indicatorAuditService: IndicatorAuditService
+  ) {
     super();
   }
 
   async processDelayedJob(job: Job<IndicatorsJobData>) {
-    const { delayedJobId, polygonUuids, slug, forceRecalculation = false, updateExisting = false } = job.data;
+    const {
+      delayedJobId,
+      polygonUuids,
+      slug,
+      forceRecalculation = false,
+      updateExisting = false,
+      triggerSource
+    } = job.data;
     this.logger.debug(
       `polygonUuids ${polygonUuids.join(
         ","
@@ -77,6 +93,15 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     }
 
     const summary = this.createSummary(slug);
+    const delayedJob = await DelayedJob.findByPk(delayedJobId, { attributes: ["id", "createdBy"] });
+    const jobTriggerSource =
+      triggerSource ??
+      (delayedJob?.createdBy == null ? "system" : ("automated-job" as IndicatorExecutionTriggerSource));
+    const jobContext = this.indicatorAuditService.createContext(
+      jobTriggerSource,
+      delayedJob?.createdBy ?? null,
+      delayedJobId
+    );
 
     await this.updateIndicatorsJobProgress(job, summary, 0, polygonUuids.length, {
       progressMessage: `Starting indicators analysis of ${polygonUuids.length} polygons...`
@@ -85,10 +110,10 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     // Use batches when forceRecalculation is true (always process, no existence checks)
     // Otherwise, process one by one with existence checks based on updateExisting
     if (forceRecalculation) {
-      return await this.processBatched(job, slug, polygonUuids, summary);
+      return await this.processBatched(job, slug, polygonUuids, summary, jobContext);
     }
 
-    return await this.processOneByOne(job, slug, polygonUuids, updateExisting, summary);
+    return await this.processOneByOne(job, slug, polygonUuids, updateExisting, summary, jobContext);
   }
 
   /**
@@ -99,7 +124,8 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     job: Job<IndicatorsJobData>,
     slug: IndicatorSlug,
     polygonUuids: string[],
-    summary: IndicatorJobSummary
+    summary: IndicatorJobSummary,
+    jobContext: ReturnType<IndicatorAuditService["createContext"]>
   ): Promise<DelayedJobResult> {
     const BATCH_SIZE = 50;
     const batches: string[][] = [];
@@ -118,7 +144,7 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       this.logger.debug(`Processing batch ${batchIndex + 1} of ${batches.length}: ${batch.length} polygons`);
 
       for (const polygonUuid of batch) {
-        const { result } = await this.processSinglePolygonForSave(slug, polygonUuid, summary);
+        const { result } = await this.processSinglePolygonForSave(slug, polygonUuid, summary, jobContext);
 
         if (result != null) {
           results.push(result);
@@ -145,13 +171,14 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     slug: IndicatorSlug,
     polygonUuids: string[],
     updateExisting: boolean,
-    summary: IndicatorJobSummary
+    summary: IndicatorJobSummary,
+    jobContext: ReturnType<IndicatorAuditService["createContext"]>
   ): Promise<DelayedJobResult> {
     let processed = 0;
     const results: IndicatorResultRow[] = [];
 
     for (const polygonUuid of polygonUuids) {
-      const { result } = await this.processSinglePolygonForSave(slug, polygonUuid, summary, updateExisting);
+      const { result } = await this.processSinglePolygonForSave(slug, polygonUuid, summary, jobContext, updateExisting);
 
       if (result != null) {
         results.push(result);
@@ -172,23 +199,32 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
     slug: IndicatorSlug,
     polygonUuid: string,
     summary: IndicatorJobSummary,
+    jobContext: ReturnType<IndicatorAuditService["createContext"]>,
     updateExisting = true
   ): Promise<{ outcome: PolygonOutcome; result?: IndicatorResultRow }> {
+    const polygonContext = this.indicatorAuditService.createContext(
+      jobContext.triggerSource,
+      jobContext.triggeredBy,
+      jobContext.delayedJobId
+    );
+
     if (!updateExisting) {
       const exists = await this.checkIfExists(slug, polygonUuid);
       if (exists) {
         this.logger.debug(`Skipping polygon ${polygonUuid} - record already exists and updateExisting=false`);
         summary.totalPolygons++;
+        await this.recordPolygonExecution(slug, polygonUuid, polygonContext, "skipped");
         return { outcome: "skipped" };
       }
     }
 
     try {
-      const result = await this.indicatorService.processPolygon(slug, polygonUuid);
+      const result = await this.indicatorService.processPolygon(slug, polygonUuid, polygonContext);
       if (result == null) {
         summary.noData++;
         summary.noDataPolygonUuids.push(polygonUuid);
         summary.totalPolygons++;
+        await this.recordPolygonExecution(slug, polygonUuid, polygonContext, "no-data");
         return { outcome: "noData" };
       }
 
@@ -196,11 +232,13 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
         summary.noData++;
         summary.noDataPolygonUuids.push(polygonUuid);
         summary.totalPolygons++;
+        await this.recordPolygonExecution(slug, polygonUuid, polygonContext, "no-data", result);
         return { outcome: "noData", result };
       }
 
       summary.dataFound++;
       summary.totalPolygons++;
+      await this.recordPolygonExecution(slug, polygonUuid, polygonContext, "success", result);
       return { outcome: "dataFound", result };
     } catch (error) {
       summary.failed++;
@@ -212,8 +250,46 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
         `Error processing polygon ${polygonUuid} for slug ${slug}: ${error instanceof Error ? error.message : String(error)}`,
         error
       );
+      await this.recordPolygonExecution(
+        slug,
+        polygonUuid,
+        polygonContext,
+        "failed",
+        null,
+        error instanceof Error ? error.message : String(error)
+      );
       return { outcome: "failed" };
     }
+  }
+
+  private async recordPolygonExecution(
+    slug: IndicatorSlug,
+    polygonUuid: string,
+    context: ReturnType<IndicatorAuditService["createContext"]>,
+    outcome: IndicatorExecutionOutcome,
+    result?: IndicatorResultRow | null,
+    errorMessage?: string | null
+  ) {
+    const sitePolygonId = result?.sitePolygonId ?? (await this.resolveSitePolygonId(polygonUuid));
+    if (sitePolygonId == null) return;
+
+    await this.indicatorAuditService.recordFromContext(context, {
+      indicatorSlug: slug,
+      sitePolygonId,
+      polygonUuid,
+      outcome,
+      yearOfAnalysis: result?.yearOfAnalysis ?? null,
+      errorMessage: errorMessage ?? null,
+      resultValue: result?.value != null ? (result.value as object) : null
+    });
+  }
+
+  private async resolveSitePolygonId(polygonUuid: string): Promise<number | null> {
+    const sitePolygon = await SitePolygon.findOne({
+      where: { polygonUuid: { [Op.eq]: polygonUuid }, isActive: true, status: "approved" },
+      attributes: ["id"]
+    });
+    return sitePolygon?.id ?? null;
   }
 
   private async finalizeJobOutcome(

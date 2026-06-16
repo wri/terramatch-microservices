@@ -1,5 +1,5 @@
 import { CalculateIndicator } from "../calculate-indicator.interface";
-import { DataApiService } from "@terramatch-microservices/data-api";
+import { DataApiService, IndicatorExecutionContext } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { INDICATORS, TreeCoverLossData, TreeCoverLossFiresResult } from "@terramatch-microservices/database/constants";
@@ -17,13 +17,15 @@ export class TreeCoverLossFiresCalculator implements CalculateIndicator {
   async calculate(
     polygonUuid: string,
     geometry: Polygon,
-    dataApiService: DataApiService
+    dataApiService: DataApiService,
+    executionContext?: IndicatorExecutionContext
   ): Promise<IndicatorOutputTreeCoverLoss> {
     this.logger.debug(`Calculating tree cover loss fires for polygon ${polygonUuid}`);
     const results: TreeCoverLossFiresResult[] = await dataApiService.getIndicatorsDataset(
       this.INDICATOR,
       this.SQL,
-      geometry
+      geometry,
+      executionContext
     );
 
     const sitePolygon = await SitePolygon.findOne({

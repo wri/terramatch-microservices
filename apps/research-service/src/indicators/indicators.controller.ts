@@ -3,7 +3,7 @@ import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { IndicatorHectaresDto, IndicatorTreeCoverLossDto } from "../site-polygons/dto/indicators.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { DelayedJob, SitePolygon } from "@terramatch-microservices/database/entities";
 import { JsonApiResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { buildDelayedJobResponse } from "@terramatch-microservices/common/util";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
@@ -44,14 +44,18 @@ export class IndicatorsController {
       progressMessage: "Starting indicator calculation...",
       createdBy: UserContext.authenticatedUserId,
       metadata: {
-        entity_name: `${polygonUuids.length} polygons`
+        entity_name: `${polygonUuids.length} polygons`,
+        entity_type: SitePolygon.LARAVEL_TYPE,
+        indicator_slug: slug,
+        trigger_source: "user-api"
       }
     } as DelayedJob);
 
     await this.sitePolygonsQueue.add("indicatorCalculation", {
       slug,
       ...payload.data.attributes,
-      delayedJobId: delayedJob.id
+      delayedJobId: delayedJob.id,
+      triggerSource: "user-api"
     });
 
     return buildDelayedJobResponse(delayedJob);

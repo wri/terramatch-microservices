@@ -1,6 +1,6 @@
 import { Polygon } from "geojson";
 import { CalculateIndicator } from "../calculate-indicator.interface";
-import { DataApiService } from "@terramatch-microservices/data-api";
+import { DataApiService, IndicatorExecutionContext } from "@terramatch-microservices/data-api";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { INDICATORS, TreeCoverLossData, TreeCoverLossResult } from "@terramatch-microservices/database/constants";
 import { NotFoundException } from "@nestjs/common";
@@ -16,7 +16,8 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
   async calculate(
     polygonUuid: string,
     geometry: Polygon,
-    dataApiService: DataApiService
+    dataApiService: DataApiService,
+    executionContext?: IndicatorExecutionContext
   ): Promise<IndicatorOutputTreeCoverLoss> {
     this.logger.debug(`Calculating tree cover loss for polygon ${polygonUuid}`);
 
@@ -36,7 +37,8 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
     const results: TreeCoverLossResult[] = await dataApiService.getIndicatorsDataset(
       this.INDICATOR,
       this.SQL,
-      geometry
+      geometry,
+      executionContext
     );
 
     const treeCoverLossValue: TreeCoverLossData = results.reduce((acc, result) => {

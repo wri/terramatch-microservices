@@ -4,6 +4,7 @@ import Redis from "ioredis";
 import { InjectRedis } from "@nestjs-modules/ioredis";
 import { ConfigService } from "@nestjs/config";
 import { Polygon } from "geojson";
+import { IndicatorExecutionContext, truncateForLog } from "./indicator-execution-context";
 
 const KEY_NAMESPACE = "data-api:";
 
@@ -85,7 +86,12 @@ export class DataApiService {
     );
   }
 
-  async getIndicatorsDataset(indicatorDataset: string, sql: string, geometry: Polygon) {
+  async getIndicatorsDataset(
+    indicatorDataset: string,
+    sql: string,
+    geometry: Polygon,
+    executionContext?: IndicatorExecutionContext
+  ) {
     const url = `${DATA_API_DATASET}/${indicatorDataset}/latest/query`;
 
     const appFrontend = this.configService.get("APP_FRONT_END");
@@ -93,6 +99,9 @@ export class DataApiService {
     if (appFrontend == null || dataApiKey == null) {
       throw new InternalServerErrorException("APP_FRONT_END and DATA_API_KEY are required");
     }
+
+    const requestSummary = { dataset: indicatorDataset, sql };
+    const startedAt = Date.now();
 
     this.logger.debug(`body: ${JSON.stringify({ sql, geometry })}`);
     const response = await fetch(url, {
@@ -105,12 +114,30 @@ export class DataApiService {
       }
     });
 
-    this.logger.debug(`Response: ${JSON.stringify(response)}`);
+    const durationMs = Date.now() - startedAt;
+    let responseBody: unknown = null;
+    try {
+      responseBody = await response.json();
+    } catch {
+      responseBody = null;
+    }
+
+    executionContext?.recordRequest({
+      url,
+      method: "POST",
+      statusCode: response.status,
+      statusText: response.statusText,
+      durationMs,
+      requestSummary,
+      responseBody: truncateForLog(responseBody)
+    });
+
+    this.logger.debug(`Response: status=${response.status} durationMs=${durationMs}`);
     if (response.status !== 200) {
       throw new InternalServerErrorException(response.statusText);
     }
 
-    const json = (await response.json()) as { data: never };
+    const json = responseBody as { data: never };
 
     return json.data;
   }

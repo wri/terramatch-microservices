@@ -26,6 +26,7 @@ import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.process
 import { GeometryUploadComparisonService } from "./site-polygons/geometry-upload-comparison.service";
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
+import { IndicatorAuditService } from "./indicators/indicator-audit.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
@@ -75,6 +76,7 @@ const IS_REPL = process.env["REPL"] === "true";
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
     IndicatorsService,
+    IndicatorAuditService,
     SitePolygonsService,
     SitePolygonCreationService,
     SitePolygonVersioningService,

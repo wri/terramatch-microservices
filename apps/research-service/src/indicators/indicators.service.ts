@@ -9,7 +9,7 @@ import {
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { DataApiService } from "@terramatch-microservices/data-api";
+import { DataApiService, IndicatorExecutionContext } from "@terramatch-microservices/data-api";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { CalculateIndicator } from "./calculate-indicator.interface";
 import { TreeCoverLossCalculator } from "./calculators/tree-cover-loss.calculator";
@@ -85,7 +85,8 @@ export class IndicatorsService {
 
   async processPolygon(
     slug: IndicatorSlug,
-    polygonUuid: string
+    polygonUuid: string,
+    executionContext?: IndicatorExecutionContext
   ): Promise<CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>> {
     const calculator = CALCULATE_INDICATORS[slug];
     if (calculator == null) {
@@ -97,7 +98,7 @@ export class IndicatorsService {
       throw new NotFoundException(`Polygon with UUID ${polygonUuid} not found`);
     }
 
-    const results = await calculator.calculate(polygonUuid, geoJson, this.dataApiService);
+    const results = await calculator.calculate(polygonUuid, geoJson, this.dataApiService, executionContext);
     return results as CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>;
   }
 

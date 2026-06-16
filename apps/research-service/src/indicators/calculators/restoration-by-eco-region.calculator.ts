@@ -1,6 +1,6 @@
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { CalculateIndicator } from "../calculate-indicator.interface";
-import { DataApiService } from "@terramatch-microservices/data-api";
+import { DataApiService, IndicatorExecutionContext } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { IndicatorOutputHectares, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
@@ -18,7 +18,8 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
   async calculate(
     polygonUuid: string,
     geometry: Polygon,
-    dataApiService: DataApiService
+    dataApiService: DataApiService,
+    executionContext?: IndicatorExecutionContext
   ): Promise<IndicatorOutputHectares> {
     this.logger.debug(`Calculating restoration by eco region for polygon ${polygonUuid}`);
     const sitePolygon = await SitePolygon.findOne({
@@ -35,7 +36,12 @@ export class RestorationByEcoRegionCalculator implements CalculateIndicator {
     if (sitePolygon == null) {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);
     }
-    const results: EcoRegionResult[] = await dataApiService.getIndicatorsDataset(this.INDICATOR, this.SQL, geometry);
+    const results: EcoRegionResult[] = await dataApiService.getIndicatorsDataset(
+      this.INDICATOR,
+      this.SQL,
+      geometry,
+      executionContext
+    );
 
     const area = await this.calculateArea(sitePolygon, geometry);
 

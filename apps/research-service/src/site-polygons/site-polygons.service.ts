@@ -42,6 +42,7 @@ import {
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
+import { IndicatorAuditService } from "../indicators/indicator-audit.service";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -55,7 +56,8 @@ export class SitePolygonsService {
 
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
-    @InjectQueue("validation") private readonly validationQueue: Queue
+    @InjectQueue("validation") private readonly validationQueue: Queue,
+    private readonly indicatorAuditService: IndicatorAuditService
   ) {}
 
   async buildQuery(page: CursorPage | NumberPage) {
@@ -70,6 +72,7 @@ export class SitePolygonsService {
   }
 
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
+    const startedAt = Date.now();
     const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } =
       (await SitePolygon.findOne({
@@ -86,16 +89,50 @@ export class SitePolygonsService {
       throw new BadRequestException(`Model not found for indicator: ${indicatorSlug}`);
     }
 
-    const model =
-      (await IndicatorClass.findOne({
-        where: { sitePolygonId, indicatorSlug, yearOfAnalysis }
-      })) ?? new IndicatorClass();
-    if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
-
     const DtoPrototype = INDICATOR_DTOS[indicatorSlug];
     const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
-    Object.assign(model, pick(indicator, fields));
-    await model.save({ transaction });
+
+    try {
+      const model =
+        (await IndicatorClass.findOne({
+          where: { sitePolygonId, indicatorSlug, yearOfAnalysis }
+        })) ?? new IndicatorClass();
+      if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
+
+      Object.assign(model, pick(indicator, fields));
+      await model.save({ transaction });
+
+      await this.indicatorAuditService.record(
+        {
+          indicatorSlug,
+          sitePolygonId,
+          outcome: "success",
+          triggerSource: "manual-edit",
+          triggeredBy: this.indicatorAuditService.resolveTriggeredBy(),
+          durationMs: Date.now() - startedAt,
+          resultValue: pick(indicator, fields) as object,
+          indicatorOutputId: model.id,
+          yearOfAnalysis
+        },
+        transaction
+      );
+    } catch (error) {
+      await this.indicatorAuditService.record(
+        {
+          indicatorSlug,
+          sitePolygonId,
+          outcome: "failed",
+          triggerSource: "manual-edit",
+          triggeredBy: this.indicatorAuditService.resolveTriggeredBy(),
+          durationMs: Date.now() - startedAt,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          resultValue: pick(indicator, fields) as object,
+          yearOfAnalysis
+        },
+        transaction
+      );
+      throw error;
+    }
   }
 
   async transaction<TReturn>(callback: (transaction: Transaction) => Promise<TReturn>) {

@@ -1,4 +1,5 @@
 import { CalculateIndicator } from "../calculate-indicator.interface";
+import { DataApiService, IndicatorExecutionContext } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { IndicatorOutputHectares, PolygonGeometry, SitePolygon } from "@terramatch-microservices/database/entities";
@@ -13,7 +14,12 @@ export class RestorationByTypeCalculator implements CalculateIndicator {
   ) {}
   private logger = new TMLogger(RestorationByTypeCalculator.name);
 
-  async calculate(polygonUuid: string, geometry: Polygon): Promise<IndicatorOutputHectares> {
+  async calculate(
+    polygonUuid: string,
+    geometry: Polygon,
+    _dataApiService: DataApiService,
+    _executionContext?: IndicatorExecutionContext
+  ): Promise<IndicatorOutputHectares> {
     this.logger.debug(`Calculating restoration by ${this.type} for polygon ${polygonUuid}`);
     this.logger.debug(`Geometry: ${JSON.stringify(geometry)}`);
 

@@ -41,6 +41,8 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 
+import { IndicatorAuditService } from "../indicators/indicator-audit.service";
+
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
   let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
@@ -55,6 +57,11 @@ describe("SitePolygonsService", () => {
       add: jest.fn().mockResolvedValue(undefined)
     };
 
+    const mockIndicatorAuditService = {
+      record: jest.fn().mockResolvedValue({}),
+      resolveTriggeredBy: jest.fn().mockReturnValue(1)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SitePolygonsService,
@@ -65,6 +72,10 @@ describe("SitePolygonsService", () => {
         {
           provide: getQueueToken("validation"),
           useValue: mockValidationQueue
+        },
+        {
+          provide: IndicatorAuditService,
+          useValue: mockIndicatorAuditService
         }
       ]
     }).compile();

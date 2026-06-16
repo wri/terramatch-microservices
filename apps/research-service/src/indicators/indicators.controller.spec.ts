@@ -80,7 +80,8 @@ describe("IndicatorsController", () => {
       expect(mockQueue.add).toHaveBeenCalledWith("indicatorCalculation", {
         slug,
         ...request.data.attributes,
-        delayedJobId: 1
+        delayedJobId: 1,
+        triggerSource: "user-api"
       });
       expect(result.data).toBeDefined();
     });

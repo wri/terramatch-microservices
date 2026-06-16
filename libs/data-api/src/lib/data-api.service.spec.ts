@@ -137,6 +137,7 @@ describe("DataApiService", () => {
     fetchMock.mockResolvedValue({
       status: 200,
       ok: true,
+      statusText: "OK",
       json: () => Promise.resolve({ data: { foo: "mocked data" } })
     } as Response);
     const result = await service.getIndicatorsDataset("indicators", "SELECT * FROM indicators", {
@@ -152,6 +153,48 @@ describe("DataApiService", () => {
       ]
     });
     expect(result).toEqual({ foo: "mocked data" });
+  });
+
+  it("should record HTTP details on the execution context", async () => {
+    fetchMock.mockResolvedValue({
+      status: 200,
+      ok: true,
+      statusText: "OK",
+      json: () => Promise.resolve({ data: [{ year: 2020, area__ha: 1.5 }] })
+    } as Response);
+
+    const { IndicatorExecutionContext } = await import("./indicator-execution-context");
+    const context = new IndicatorExecutionContext("user-api", 42, 7);
+
+    await service.getIndicatorsDataset(
+      "umd_tree_cover_loss",
+      "SELECT year FROM results",
+      {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0]
+          ]
+        ]
+      },
+      context
+    );
+
+    expect(context.externalRequests).toHaveLength(1);
+    expect(context.externalRequests[0]).toMatchObject({
+      method: "POST",
+      statusCode: 200,
+      statusText: "OK",
+      requestSummary: {
+        dataset: "umd_tree_cover_loss",
+        sql: "SELECT year FROM results"
+      }
+    });
+    expect(context.externalRequests[0]?.responseBody).toEqual({ data: [{ year: 2020, area__ha: 1.5 }] });
   });
 
   it("should throw an error if the indicators dataset is not found", async () => {

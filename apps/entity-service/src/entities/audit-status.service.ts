@@ -7,7 +7,8 @@ import { SitePolygon } from "@terramatch-microservices/database/entities/site-po
 import { EntityType, ENTITY_MODELS, isReport } from "@terramatch-microservices/database/constants/entities";
 import {
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
-  READY_FOR_BASELINE_AUDIT_TYPE
+  READY_FOR_BASELINE_AUDIT_TYPE,
+  INDICATOR_EXECUTION_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants/audit-status";
 import {
   ENTITY_STATUSES,
@@ -60,7 +61,14 @@ export class AuditStatusService {
       return { modernAuditStatuses: [], legacyAudits: [] };
     }
 
-    const typeWhere = typeFilter != null && typeFilter.length > 0 ? { type: { [Op.in]: typeFilter } } : undefined;
+    let typeWhere;
+    if (typeFilter != null && typeFilter.length > 0) {
+      typeWhere = { type: { [Op.in]: typeFilter } };
+    } else {
+      typeWhere = {
+        type: { [Op.ne]: INDICATOR_EXECUTION_AUDIT_TYPE }
+      };
+    }
 
     const modernAuditStatuses = await AuditStatus.for(entities).findAll({
       ...(typeWhere != null ? { where: typeWhere } : {}),

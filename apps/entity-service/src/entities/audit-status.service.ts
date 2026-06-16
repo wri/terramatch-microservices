@@ -61,7 +61,7 @@ export class AuditStatusService {
       return { modernAuditStatuses: [], legacyAudits: [] };
     }
 
-    let typeWhere: WhereOptions<AuditStatus> | null = null;
+    let typeWhere: WhereOptions<AuditStatus>;
     if (typeFilter != null && typeFilter.length > 0) {
       typeWhere = { type: { [Op.in]: typeFilter } };
     } else {
@@ -71,7 +71,7 @@ export class AuditStatusService {
     }
 
     const modernAuditStatuses = await AuditStatus.for(entities).findAll({
-      ...(typeWhere != null ? { where: typeWhere } : {}),
+      where: typeWhere,
       order: [
         ["updatedAt", "DESC"],
         ["createdAt", "DESC"]

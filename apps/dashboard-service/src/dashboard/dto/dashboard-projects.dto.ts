@@ -66,6 +66,9 @@ export class DashboardProjectsFullDto extends DashboardProjectsLightDto {
   @ApiProperty({ nullable: true, type: String })
   objectives: string | null;
 
+  @ApiProperty({ nullable: true, type: String, description: "Long-form project summary for dashboard display" })
+  projectSummary: string | null;
+
   @ApiProperty({ nullable: true, type: String, isArray: true })
   landTenureProjectArea: string[] | null;
 }

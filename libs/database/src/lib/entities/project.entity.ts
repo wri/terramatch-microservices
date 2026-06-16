@@ -238,6 +238,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
 
   @AllowNull
   @Column(TEXT)
+  declare projectSummary: string | null;
+
+  @AllowNull
+  @Column(TEXT)
   declare environmentalGoals: string | null;
 
   @AllowNull

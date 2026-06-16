@@ -65,7 +65,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "plantingEndDate",
   "budget",
   "objectives",
-  "projectSummary",
   "projPartnerInfo",
   "sitingStrategy",
   "sitingStrategyDescription",

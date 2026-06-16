@@ -33,52 +33,7 @@ interface MockSpikesValidator {
   >;
 }
 
-jest.mock("@terramatch-microservices/database/entities", () => ({
-  PolygonGeometry: {
-    findOne: jest.fn(),
-    sequelize: {
-      query: jest.fn()
-    }
-  },
-  CriteriaSite: jest.fn().mockImplementation(() => ({
-    save: jest.fn(),
-    destroy: jest.fn()
-  })),
-  CriteriaSiteHistoric: jest.fn().mockImplementation(() => ({
-    save: jest.fn()
-  })),
-  SitePolygon: {
-    findAndCountAll: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    save: jest.fn(),
-    sum: jest.fn(),
-    update: jest.fn(),
-    LARAVEL_TYPE: "App\\Models\\V2\\Sites\\SitePolygon"
-  },
-  Site: {
-    findAll: jest.fn(),
-    uuidsSubquery: jest.fn(),
-    findOne: jest.fn()
-  },
-  Project: {
-    findByPk: jest.fn()
-  },
-  AuditStatus: {
-    bulkCreate: jest.fn()
-  },
-  User: {
-    findByPk: jest.fn()
-  }
-}));
-
-// Mock the static methods
-(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findAll = jest.fn();
-(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).findOne = jest.fn();
-(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).create = jest.fn();
-(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).bulkCreate = jest.fn();
-(CriteriaSite as jest.MockedClass<typeof CriteriaSite>).destroy = jest.fn();
-(CriteriaSiteHistoric as jest.MockedClass<typeof CriteriaSiteHistoric>).bulkCreate = jest.fn();
+jest.mock("@terramatch-microservices/database/entities");
 
 describe("ValidationService", () => {
   let service: ValidationService;
@@ -107,6 +62,55 @@ describe("ValidationService", () => {
   ];
 
   beforeEach(async () => {
+    jest.spyOn(PolygonGeometry, "findOne").mockImplementation(jest.fn());
+    Object.defineProperty(PolygonGeometry, "sequelize", {
+      value: { query: jest.fn() },
+      writable: true,
+      configurable: true
+    });
+
+    (CriteriaSite as jest.MockedClass<typeof CriteriaSite>).mockImplementation(
+      () =>
+        ({
+          save: jest.fn(),
+          destroy: jest.fn()
+        }) as unknown as CriteriaSite
+    );
+    jest.spyOn(CriteriaSite, "findAll").mockImplementation(jest.fn());
+    jest.spyOn(CriteriaSite, "findOne").mockImplementation(jest.fn());
+    jest.spyOn(CriteriaSite, "create").mockImplementation(jest.fn());
+    jest.spyOn(CriteriaSite, "bulkCreate").mockImplementation(jest.fn());
+    jest.spyOn(CriteriaSite, "destroy").mockImplementation(jest.fn());
+
+    (CriteriaSiteHistoric as jest.MockedClass<typeof CriteriaSiteHistoric>).mockImplementation(
+      () =>
+        ({
+          save: jest.fn()
+        }) as unknown as CriteriaSiteHistoric
+    );
+    jest.spyOn(CriteriaSiteHistoric, "bulkCreate").mockImplementation(jest.fn());
+
+    jest.spyOn(SitePolygon, "findAndCountAll").mockImplementation(jest.fn());
+    jest.spyOn(SitePolygon, "findAll").mockImplementation(jest.fn());
+    jest.spyOn(SitePolygon, "findOne").mockImplementation(jest.fn());
+    jest.spyOn(SitePolygon, "sum").mockImplementation(jest.fn());
+    jest.spyOn(SitePolygon, "update").mockImplementation(jest.fn());
+    Object.defineProperty(SitePolygon, "LARAVEL_TYPE", {
+      value: "App\\Models\\V2\\Sites\\SitePolygon",
+      writable: true,
+      configurable: true
+    });
+
+    jest.spyOn(Site, "findAll").mockImplementation(jest.fn());
+    jest.spyOn(Site, "uuidsSubquery").mockImplementation(jest.fn());
+    jest.spyOn(Site, "findOne").mockImplementation(jest.fn());
+
+    jest.spyOn(Project, "findByPk").mockImplementation(jest.fn());
+
+    jest.spyOn(AuditStatus, "bulkCreate").mockImplementation(jest.fn());
+
+    jest.spyOn(User, "findByPk").mockImplementation(jest.fn());
+
     jest.clearAllMocks();
 
     (PolygonGeometry.sequelize?.query as jest.Mock)?.mockResolvedValue([{ is_simple: true }]);

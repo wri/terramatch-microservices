@@ -26,5 +26,6 @@ export { renameSitePolygonStatuses } from "./2026-05-18-renameSitePolygonStatuse
 export { restoreDeletedProjects } from "./2026-05-20-restoreDeletedProjects";
 export { migrateProjectLinkages } from "./2026-05-21-migrateProjectLinkages";
 export { importProjectCohortLandscape } from "./2026-05-28-importProjectCohortLandscape";
+export { importProjectSummary } from "./2026-06-16-importProjectSummary";
 export { fundoFloraFormOptionLabelIds } from "./2026-06-03-fundoFloraFormOptionLabelIds";
 export { trackingImport } from "./2026-06-04-trackingImport";

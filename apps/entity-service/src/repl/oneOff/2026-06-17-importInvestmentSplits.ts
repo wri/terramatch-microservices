@@ -68,24 +68,22 @@ export const importInvestmentSplits = withoutSqlLogs(async (opts: ImportInvestme
       continue;
     }
 
-    if (investmentSplit.uuid !== row.uuid) {
-      counts.errors.push(`InvestmentSplit id=${row.id}: uuid mismatch (db=${investmentSplit.uuid}, csv=${row.uuid})`);
-      counts.skipped++;
-      continue;
-    }
-
     const nextAmount = row.amount;
-    const alreadyApplied = Number(investmentSplit.amount) === nextAmount;
+    const amountMatches = Number(investmentSplit.amount) === nextAmount;
 
-    if (alreadyApplied) {
-      console.log(`InvestmentSplit ${investmentSplit.id} (${row.uuid}): already has target amount — skipping`);
+    if (investmentSplit.uuid !== row.uuid) {
+      console.log(
+        `InvestmentSplit ${investmentSplit.id}: uuid differs (db=${investmentSplit.uuid}, import=${row.uuid}) — updating amount only`
+      );
+    }
+
+    if (amountMatches) {
+      console.log(`InvestmentSplit ${investmentSplit.id}: already has target amount — skipping`);
       counts.skipped++;
       continue;
     }
 
-    console.log(
-      `InvestmentSplit ${investmentSplit.id} (${row.uuid}): updating amount ${investmentSplit.amount} -> ${nextAmount}`
-    );
+    console.log(`InvestmentSplit ${investmentSplit.id}: updating amount ${investmentSplit.amount} -> ${nextAmount}`);
 
     if (!dryRun) {
       await investmentSplit.update({

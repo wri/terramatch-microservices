@@ -47,6 +47,25 @@ const loadRows = async (csvPath?: string): Promise<InvestmentSplitRow[]> => {
   return rows;
 };
 
+/**
+ * Imports amount values for investment_splits from TM-3528.
+ *
+ * Records are matched by id. Only amount is updated; uuid differences are logged but not treated as errors.
+ *
+ * Embedded data (id, uuid, amount):
+ * - 238, 1da83998-713e-46f1-a1db-4809a6a11255, 279559.36
+ * - 259, 3a193a5c-0d48-4828-a99a-ecca2514cb8d, 260000
+ * - 293, a6c13582-1d2a-4479-b779-7730c1eddaa1, 210000
+ * - 283, e5b5086e-f31e-4f5b-839b-2f5990c1c982, 310000
+ * - 241, ee1950bf-02c3-409e-bd7e-97521b933453, 73954.13
+ * - 264, f7dcd86a-05ce-424a-b02b-6d46ef90298b, 150000
+ *
+ * Usage:
+ * - dry run (embedded data):
+ *   tm-v3-cli repl entity-service <env> --script "await oneOff.importInvestmentSplits({ dryRun: true })"
+ * - execute:
+ *   tm-v3-cli repl entity-service <env> --script "await oneOff.importInvestmentSplits({ dryRun: false })"
+ */
 export const importInvestmentSplits = withoutSqlLogs(async (opts: ImportInvestmentSplitsOptions = {}) => {
   const dryRun = opts.dryRun ?? true;
   const rows = await loadRows(opts.csvPath);
@@ -68,24 +87,22 @@ export const importInvestmentSplits = withoutSqlLogs(async (opts: ImportInvestme
       continue;
     }
 
-    if (investmentSplit.uuid !== row.uuid) {
-      counts.errors.push(`InvestmentSplit id=${row.id}: uuid mismatch (db=${investmentSplit.uuid}, csv=${row.uuid})`);
-      counts.skipped++;
-      continue;
-    }
-
     const nextAmount = row.amount;
-    const alreadyApplied = Number(investmentSplit.amount) === nextAmount;
+    const amountMatches = Number(investmentSplit.amount) === nextAmount;
 
-    if (alreadyApplied) {
-      console.log(`InvestmentSplit ${investmentSplit.id} (${row.uuid}): already has target amount — skipping`);
+    if (investmentSplit.uuid !== row.uuid) {
+      console.log(
+        `InvestmentSplit ${investmentSplit.id}: uuid differs (db=${investmentSplit.uuid}, import=${row.uuid}) — updating amount only`
+      );
+    }
+
+    if (amountMatches) {
+      console.log(`InvestmentSplit ${investmentSplit.id}: already has target amount — skipping`);
       counts.skipped++;
       continue;
     }
 
-    console.log(
-      `InvestmentSplit ${investmentSplit.id} (${row.uuid}): updating amount ${investmentSplit.amount} -> ${nextAmount}`
-    );
+    console.log(`InvestmentSplit ${investmentSplit.id}: updating amount ${investmentSplit.amount} -> ${nextAmount}`);
 
     if (!dryRun) {
       await investmentSplit.update({

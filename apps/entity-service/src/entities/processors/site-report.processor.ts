@@ -257,12 +257,15 @@ export class SiteReportProcessor extends ReportProcessor<
     const totalInvasiveTreesCount =
       (await TreeSpecies.visible().collection("invasive").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
+    const projectReportUuid =
+      (await ProjectReport.findOne({ where: { taskId: siteReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
 
     const dto = new SiteReportFullDto(siteReport, {
       ...(await this.getFeedback(siteReport)),
       ...(await this.getDemographicDescriptions(siteReport)),
       reportTitle,
       projectReportTitle,
+      projectReportUuid,
       totalTreesPlantedCount,
       totalTreesRegeneratingSpeciesCount,
       totalSeedsPlantedCount,
@@ -284,7 +287,12 @@ export class SiteReportProcessor extends ReportProcessor<
 
   async getLightDto(siteReport: SiteReport) {
     const reportTitle = await this.getReportTitle(siteReport);
-    return { id: siteReport.uuid, dto: new SiteReportLightDto(siteReport, { reportTitle }) };
+    const projectReportUuid =
+      (await ProjectReport.findOne({ where: { taskId: siteReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
+    return {
+      id: siteReport.uuid,
+      dto: new SiteReportLightDto(siteReport, { reportTitle, projectReportUuid: projectReportUuid })
+    };
   }
 
   async export(uuid: string, target: Response | Archiver) {

@@ -168,7 +168,7 @@ export class AuditStatusService {
     if (typeFilter != null && typeFilter.length > 0) {
       return uniqBy(dtos, dto => dto.uuid);
     }
-    return uniqBy(dtos, dto => dto.comment ?? "__NULL_COMMENT_KEY__");
+    return uniqBy(dtos, dto => `${dto.type ?? "__NULL_TYPE__"}::${dto.comment ?? "__NULL_COMMENT_KEY__"}`);
   }
 
   private shouldSyncModelStatusFromAudit(

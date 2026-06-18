@@ -202,13 +202,15 @@ describe("AuditStatusService", () => {
       expect(result[1].id).toBe(older.id);
     });
 
-    it("should deduplicate by comment (match V2 behavior)", async () => {
+    it("should deduplicate by comment and type (match V2 behavior)", async () => {
       const project = await ProjectFactory.create();
       await AuditStatusFactory.project(project).create({
+        type: "status",
         comment: "Same comment",
         dateCreated: DateTime.now().minus({ days: 5 }).toJSDate()
       });
       await AuditStatusFactory.project(project).create({
+        type: "status",
         comment: "Same comment",
         dateCreated: DateTime.now().minus({ days: 10 }).toJSDate()
       });
@@ -218,16 +220,20 @@ describe("AuditStatusService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].comment).toBe("Same comment");
+      expect(result[0].type).toBe("status");
     });
 
-    it("should handle null comments in deduplication", async () => {
+    it("should not deduplicate records that share a comment but have different types", async () => {
       const project = await ProjectFactory.create();
-      await AuditStatusFactory.project(project).createMany(2, { comment: null });
+      const comment = "Same comment";
+      await AuditStatusFactory.project(project).create({ type: "status", comment });
+      await AuditStatusFactory.project(project).create({ type: "change-request", comment });
 
       const entity = await service.resolveEntity("projects", project.uuid);
       const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
-      expect(result).toHaveLength(1);
+      expect(result).toHaveLength(2);
+      expect(result.map(dto => dto.type).sort()).toEqual(["change-request", "status"]);
     });
 
     it("should lookup user data for legacy audits", async () => {

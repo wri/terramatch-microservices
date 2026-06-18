@@ -129,6 +129,25 @@ describe("UsersService", () => {
       });
     });
 
+    it("should require matching role include when primaryRole is provided", async () => {
+      const builder = createBuilderMock();
+      jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);
+
+      await service.findMany({ page: 1, primaryRole: "admin-super" } as UserQueryDto);
+
+      expect(PaginatedQueryBuilder.forNumberPage).toHaveBeenCalledWith(
+        User,
+        1,
+        expect.arrayContaining([
+          expect.objectContaining({
+            association: "roles",
+            required: true,
+            where: { name: "admin-super" }
+          })
+        ])
+      );
+    });
+
     it("should sort by direct fields", async () => {
       const builder = createBuilderMock();
       jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);

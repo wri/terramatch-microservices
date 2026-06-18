@@ -80,7 +80,8 @@ export class UsersService {
       },
       {
         association: "roles",
-        attributes: ["name"]
+        attributes: ["name"],
+        ...(query.primaryRole != null ? { required: true, where: { name: query.primaryRole } } : {})
       },
       {
         association: "frameworks",

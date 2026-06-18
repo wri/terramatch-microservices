@@ -1,4 +1,4 @@
-import { IsOptional } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { IndexQueryDto } from "@terramatch-microservices/common/dto/index-query.dto";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
@@ -12,4 +12,9 @@ export class UserQueryDto extends IndexQueryDto {
   @IsOptional()
   @TransformBooleanString()
   isVerified?: boolean;
+
+  @ApiProperty({ required: false, description: "Filter users by primary role name" })
+  @IsOptional()
+  @IsString()
+  primaryRole?: string;
 }

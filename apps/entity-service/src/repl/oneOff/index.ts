@@ -28,5 +28,6 @@ export { migrateProjectLinkages } from "./2026-05-21-migrateProjectLinkages";
 export { importProjectCohortLandscape } from "./2026-05-28-importProjectCohortLandscape";
 export { importProjectSummary } from "./2026-06-16-importProjectSummary";
 export { importInvestmentSplits } from "./2026-06-17-importInvestmentSplits";
+export { reassignVokenelSites } from "./2026-06-17-reassignVokenelSites";
 export { fundoFloraFormOptionLabelIds } from "./2026-06-03-fundoFloraFormOptionLabelIds";
 export { trackingImport } from "./2026-06-04-trackingImport";

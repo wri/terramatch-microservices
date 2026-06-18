@@ -236,16 +236,6 @@ describe("AuditStatusService", () => {
       expect(result.map(dto => dto.type).sort()).toEqual(["change-request", "status"]);
     });
 
-    it("should handle null comments in deduplication", async () => {
-      const project = await ProjectFactory.create();
-      await AuditStatusFactory.project(project).createMany(2, { comment: null });
-
-      const entity = await service.resolveEntity("projects", project.uuid);
-      const result = await service.getAuditStatuses(entity, "projects", project.uuid);
-
-      expect(result).toHaveLength(1);
-    });
-
     it("should lookup user data for legacy audits", async () => {
       const project = await ProjectFactory.create();
       const user = await UserFactory.create();

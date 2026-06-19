@@ -307,6 +307,17 @@ export class ProjectProcessor extends EntityProcessor<
         type: POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
         isActive: null
       });
+    } else if (handoffComment != null) {
+      auditRows.push({
+        auditableType: Project.LARAVEL_TYPE,
+        auditableId: project.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: handoffComment,
+        type: "comment",
+        isActive: null
+      });
     }
     if (baselineChanged) {
       auditRows.push({

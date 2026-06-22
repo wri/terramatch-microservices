@@ -131,6 +131,9 @@ export class SrpReportFullDto extends SrpReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   createdByLastName: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  reportTitle: string | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 }

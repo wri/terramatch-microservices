@@ -76,7 +76,8 @@ export class SrpReportProcessor extends ReportProcessor<
           attributes: ["id", "uuid", "name", "country", "status"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         },
-        { association: "task", attributes: ["uuid"] }
+        { association: "task", attributes: ["uuid"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -154,6 +155,7 @@ export class SrpReportProcessor extends ReportProcessor<
 
   async getFullDto(srpReport: SrpReport) {
     const mediaCollection = await Media.for(srpReport).findAll();
+    const reportTitle = await this.getReportTitle(srpReport);
     const dto = new SrpReportFullDto(srpReport, {
       ...(await this.getFeedback(srpReport)),
       ...(this.entitiesService.mapMediaCollection(
@@ -161,7 +163,8 @@ export class SrpReportProcessor extends ReportProcessor<
         SrpReport.MEDIA,
         "srpReports",
         srpReport.uuid
-      ) as SrpReportMedia)
+      ) as SrpReportMedia),
+      reportTitle
     });
 
     await this.entitiesService.removeHiddenValues(srpReport, dto);
@@ -208,5 +211,69 @@ export class SrpReportProcessor extends ReportProcessor<
       fileName,
       ability: "export"
     });
+  }
+
+  protected async getReportTitle(srpReport: SrpReport) {
+    return await this.getReportTitleBase(
+      srpReport.dueAt,
+      srpReport.title ?? (await this.entitiesService.localizeText("SRP Report")),
+      srpReport.frameworkKey ?? undefined
+    );
+  }
+
+  protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {
+    if (dueAt == null) return title ?? "";
+
+    const locale = this.entitiesService.userLocale;
+
+    const getRangeTitle = async () => {
+      const adjustedDate = new Date(dueAt);
+      adjustedDate.setMonth(adjustedDate.getMonth() - 1);
+      const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
+
+      adjustedDate.setMonth(adjustedDate.getMonth() - 5);
+      const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
+
+      return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
+        title,
+        startDate,
+        endDate
+      });
+    };
+
+    if (frameworkKey === "ppc") {
+      const cutoffOneMonth = new Date("2023-04-07T23:59:59.999Z");
+      const cutoffThreeMonths = new Date("2023-07-01T00:00:00.000Z");
+
+      if (dueAt <= cutoffOneMonth) {
+        const prevMonth = new Date(dueAt);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const month = prevMonth.toLocaleString(locale, { month: "long" });
+        const year = prevMonth.getFullYear();
+        return await this.entitiesService.localizeText(`{title} for {month} {year}`, {
+          title,
+          month,
+          year
+        });
+      } else if (dueAt >= cutoffThreeMonths) {
+        const endMonth = new Date(dueAt);
+        endMonth.setMonth(endMonth.getMonth() - 1);
+        const startMonth = new Date(dueAt);
+        startMonth.setMonth(startMonth.getMonth() - 3);
+        const startMonthName = startMonth.toLocaleString(locale, { month: "long" });
+        const endMonthName = endMonth.toLocaleString(locale, { month: "long" });
+        const year = endMonth.getFullYear();
+        return await this.entitiesService.localizeText(`{title} for {startMonth}-{endMonth} {year}`, {
+          title,
+          startMonth: startMonthName,
+          endMonth: endMonthName,
+          year
+        });
+      } else {
+        return await getRangeTitle();
+      }
+    } else {
+      return await getRangeTitle();
+    }
   }
 }

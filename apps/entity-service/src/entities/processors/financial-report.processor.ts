@@ -73,7 +73,8 @@ export class FinancialReportProcessor extends ReportProcessor<
         {
           association: "financialIndicators",
           attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
-        }
+        },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }

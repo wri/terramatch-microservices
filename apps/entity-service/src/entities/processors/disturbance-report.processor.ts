@@ -184,7 +184,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           association: "project",
           attributes: ["id", "uuid", "name", "country"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
-        }
+        },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }

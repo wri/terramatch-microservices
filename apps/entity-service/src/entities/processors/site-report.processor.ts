@@ -424,62 +424,6 @@ export class SiteReportProcessor extends ReportProcessor<
     });
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string, frameworkKey?: FrameworkKey) {
-    if (dueAt == null) return title ?? "";
-
-    const locale = this.entitiesService.userLocale;
-
-    const getRangeTitle = async () => {
-      const adjustedDate = new Date(dueAt);
-      adjustedDate.setMonth(adjustedDate.getMonth() - 1);
-      const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
-
-      adjustedDate.setMonth(adjustedDate.getMonth() - 5);
-      const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
-
-      return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
-        title,
-        startDate,
-        endDate
-      });
-    };
-
-    if (frameworkKey === "ppc") {
-      const cutoffOneMonth = new Date("2023-04-07T23:59:59.999Z");
-      const cutoffThreeMonths = new Date("2023-07-01T00:00:00.000Z");
-
-      if (dueAt <= cutoffOneMonth) {
-        const prevMonth = new Date(dueAt);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const month = prevMonth.toLocaleString(locale, { month: "long" });
-        const year = prevMonth.getFullYear();
-        return await this.entitiesService.localizeText(`{title} for {month} {year}`, {
-          title,
-          month,
-          year
-        });
-      } else if (dueAt >= cutoffThreeMonths) {
-        const endMonth = new Date(dueAt);
-        endMonth.setMonth(endMonth.getMonth() - 1);
-        const startMonth = new Date(dueAt);
-        startMonth.setMonth(startMonth.getMonth() - 3);
-        const startMonthName = startMonth.toLocaleString(locale, { month: "long" });
-        const endMonthName = endMonth.toLocaleString(locale, { month: "long" });
-        const year = endMonth.getFullYear();
-        return await this.entitiesService.localizeText(`{title} for {startMonth}-{endMonth} {year}`, {
-          title,
-          startMonth: startMonthName,
-          endMonth: endMonthName,
-          year
-        });
-      } else {
-        return await getRangeTitle();
-      }
-    } else {
-      return await getRangeTitle();
-    }
-  }
-
   protected async getReportTitle(siteReport: SiteReport) {
     return await this.getReportTitleBase(
       siteReport.dueAt,

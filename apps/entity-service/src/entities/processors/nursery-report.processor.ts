@@ -333,24 +333,6 @@ export class NurseryReportProcessor extends ReportProcessor<
     });
   }
 
-  protected async getReportTitleBase(dueAt: Date | null, title: string) {
-    if (dueAt == null) return title ?? "";
-
-    const adjustedDate = new Date(dueAt);
-    adjustedDate.setMonth(adjustedDate.getMonth() - 1);
-    const locale = this.entitiesService.userLocale;
-    const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
-
-    adjustedDate.setMonth(adjustedDate.getMonth() - 5);
-    const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
-
-    return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
-      title,
-      startDate,
-      endDate
-    });
-  }
-
   protected async getReportTitle(nurseryReport: NurseryReport) {
     return await this.getReportTitleBase(
       nurseryReport.dueAt,

@@ -135,6 +135,9 @@ export class SrpReport extends Model<SrpReport> {
   @Column(INTEGER)
   declare year: number;
 
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  declare createdByUser: User | null;
+
   @BelongsTo(() => Project)
   declare project: Project | null;
 
@@ -160,6 +163,14 @@ export class SrpReport extends Model<SrpReport> {
 
   get taskUuid() {
     return this.task?.uuid;
+  }
+
+  get createdByFirstName() {
+    return this.createdByUser?.firstName;
+  }
+
+  get createdByLastName() {
+    return this.createdByUser?.lastName;
   }
 
   get isCompletable() {

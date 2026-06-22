@@ -139,6 +139,9 @@ export class DisturbanceReport extends Model<
   @BelongsTo(() => Project)
   declare project: Project | null;
 
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  declare createdByUser: User | null;
+
   get projectName() {
     return this.project?.name ?? undefined;
   }
@@ -153,6 +156,14 @@ export class DisturbanceReport extends Model<
 
   get organisationUuid() {
     return this.project?.organisationUuid ?? undefined;
+  }
+
+  get createdByFirstName() {
+    return this.createdByUser?.firstName;
+  }
+
+  get createdByLastName() {
+    return this.createdByUser?.lastName;
   }
 
   get isCompletable(): NonAttribute<boolean> {

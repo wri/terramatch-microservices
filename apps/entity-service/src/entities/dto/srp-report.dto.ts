@@ -125,6 +125,12 @@ export class SrpReportFullDto extends SrpReportLightDto {
   @ApiProperty({ type: Number })
   totalUniqueRestorationPartners: number;
 
+  @ApiProperty({ nullable: true, type: String })
+  createdByFirstName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  createdByLastName: string | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 }

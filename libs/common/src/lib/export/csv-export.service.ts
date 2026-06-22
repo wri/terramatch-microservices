@@ -3,7 +3,7 @@ import { stringify } from "csv-stringify";
 import { FileService } from "../file/file.service";
 import { ConfigService } from "@nestjs/config";
 import { FileDownloadDto } from "../dto/file-download.dto";
-import { Dictionary, groupBy, isString, pick } from "lodash";
+import { Dictionary, groupBy, isString } from "lodash";
 import { Model } from "sequelize";
 import { DateTime } from "luxon";
 import { Response } from "express";
@@ -26,7 +26,7 @@ import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 
 export type StreamWriter = {
-  addRow: (model: Model, additional?: Dictionary<unknown>) => void;
+  addRow: (...sources: (Model | Dictionary<unknown>)[]) => void;
   close: () => void;
 };
 
@@ -151,9 +151,23 @@ export class CsvExportService {
     stringifier.pipe(destination);
 
     const keys = Object.keys(columns);
-    const addRow = (model: Model, additional?: Dictionary<unknown>) => {
-      const row = Object.entries({ ...pick(model, keys), ...additional }).reduce(
-        (acc, [key, value]) => ({ ...acc, [key]: this.serializeCell(value) }),
+    const addRow = (...sources: (Model | Dictionary<unknown>)[]) => {
+      // Use sources in reverse order so sources later in the list override values from earlier ones.
+      const reverseSources = sources.toReversed();
+      const getValue = (key: string) => {
+        for (const source of reverseSources) {
+          if (source instanceof Model) {
+            if (source.get(key) != null) return source.get(key);
+          } else if (source[key] != null) return source[key];
+        }
+
+        return undefined;
+      };
+      const row = keys.reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: this.serializeCell(getValue(key))
+        }),
         {}
       );
       stringifier.write(row);

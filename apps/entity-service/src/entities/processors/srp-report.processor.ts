@@ -76,7 +76,8 @@ export class SrpReportProcessor extends ReportProcessor<
           attributes: ["id", "uuid", "name", "country", "status"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
         },
-        { association: "task", attributes: ["uuid"] }
+        { association: "task", attributes: ["uuid"] },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -154,6 +155,7 @@ export class SrpReportProcessor extends ReportProcessor<
 
   async getFullDto(srpReport: SrpReport) {
     const mediaCollection = await Media.for(srpReport).findAll();
+    const reportTitle = await this.getReportTitle(srpReport);
     const dto = new SrpReportFullDto(srpReport, {
       ...(await this.getFeedback(srpReport)),
       ...(this.entitiesService.mapMediaCollection(
@@ -161,7 +163,8 @@ export class SrpReportProcessor extends ReportProcessor<
         SrpReport.MEDIA,
         "srpReports",
         srpReport.uuid
-      ) as SrpReportMedia)
+      ) as SrpReportMedia),
+      reportTitle
     });
 
     await this.entitiesService.removeHiddenValues(srpReport, dto);
@@ -208,5 +211,13 @@ export class SrpReportProcessor extends ReportProcessor<
       fileName,
       ability: "export"
     });
+  }
+
+  protected async getReportTitle(srpReport: SrpReport) {
+    return await this.getReportTitleBase(
+      srpReport.dueAt,
+      srpReport.title ?? (await this.entitiesService.localizeText("SRP Report")),
+      srpReport.frameworkKey ?? undefined
+    );
   }
 }

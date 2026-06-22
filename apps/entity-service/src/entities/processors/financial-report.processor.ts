@@ -73,7 +73,8 @@ export class FinancialReportProcessor extends ReportProcessor<
         {
           association: "financialIndicators",
           attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
-        }
+        },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -146,11 +147,12 @@ export class FinancialReportProcessor extends ReportProcessor<
   async getFullDto(financialReport: FinancialReport) {
     const fundingTypes = await this.getFundingTypes(financialReport);
     const financialIndicatorsWithMedia = await this.getFinancialIndicatorsWithMedia(financialReport);
-
+    const reportTitle = await this.getReportTitle(financialReport);
     const dto = new FinancialReportFullDto(financialReport, {
       ...(await this.getFeedback(financialReport)),
       fundingTypes,
-      financialCollection: financialIndicatorsWithMedia
+      financialCollection: financialIndicatorsWithMedia,
+      reportTitle
     });
 
     await this.entitiesService.removeHiddenValues(financialReport, dto);
@@ -225,6 +227,14 @@ export class FinancialReportProcessor extends ReportProcessor<
               : mediaCollection.map(media => this.entitiesService.embeddedMediaDto(media))
         });
       })
+    );
+  }
+
+  protected async getReportTitle(financialReport: FinancialReport) {
+    return await this.getReportTitleBase(
+      financialReport.dueAt,
+      financialReport.title ?? (await this.entitiesService.localizeText("Financial Report")),
+      financialReport.frameworkKey ?? undefined
     );
   }
 }

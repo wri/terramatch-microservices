@@ -164,7 +164,9 @@ export class SrpReportProcessor extends ReportProcessor<
     const mediaCollection = await Media.for(srpReport).findAll();
     const reportTitle = await this.getReportTitle(srpReport);
     const projectReportUuid =
-      (await ProjectReport.findOne({ where: { taskId: srpReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
+      srpReport.taskId == null
+        ? null
+        : ((await ProjectReport.findOne({ where: { taskId: srpReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null);
     const dto = new SrpReportFullDto(srpReport, {
       ...(await this.getFeedback(srpReport)),
       projectReportUuid,

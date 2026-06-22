@@ -120,6 +120,9 @@ export class FinancialReport extends Model<FinancialReport> {
   @BelongsTo(() => Organisation)
   declare organisation: Organisation | null;
 
+  @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
+  declare createdByUser: User | null;
+
   @HasMany(() => FinancialIndicator, {
     foreignKey: "financialReportId",
     constraints: false
@@ -140,6 +143,14 @@ export class FinancialReport extends Model<FinancialReport> {
 
   get organisationStatus() {
     return this.organisation?.status;
+  }
+
+  get createdByFirstName() {
+    return this.createdByUser?.firstName;
+  }
+
+  get createdByLastName() {
+    return this.createdByUser?.lastName;
   }
 
   get isCompletable() {

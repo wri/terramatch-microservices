@@ -54,6 +54,12 @@ export class FinancialReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  createdByFirstName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  createdByLastName: string | null;
+
   @ApiProperty()
   createdAt: Date;
 

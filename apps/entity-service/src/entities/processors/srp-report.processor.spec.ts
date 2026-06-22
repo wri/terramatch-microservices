@@ -187,8 +187,11 @@ describe("SrpReportProcessor", () => {
       const project = await ProjectFactory.create();
       const { uuid } = await SrpReportFactory.create({ projectId: project.id });
       const srpReport = await processor.findOne(uuid);
+      if (srpReport == null) {
+        throw new Error("SrpReport not found");
+      }
 
-      const result = await processor.getFullDto(srpReport!);
+      const result = await processor.getFullDto(srpReport);
 
       expect(result.id).toBe(uuid);
       expect(result.dto).toBeDefined();

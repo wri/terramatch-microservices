@@ -5,6 +5,7 @@ import { bulkWorkdayImport } from "./repl/bulk-workday-import";
 import { uploadRecordsForInvestments } from "./repl/upload-records-for-investments";
 import { uploadRecordsForSites } from "./repl/upload-records-site-table";
 import { seedLocalizationKeys } from "./repl/localization-keys-seeder";
+import { updateRequestDataFix } from "./repl/update-request-data-fix";
 
 // See comment in oneOff/index.ts for details on how to add new one-off scripts
 bootstrapRepl("Entity Service", AppModule, {
@@ -12,5 +13,6 @@ bootstrapRepl("Entity Service", AppModule, {
   bulkWorkdayImport,
   uploadRecordsForInvestments,
   uploadRecordsForSites,
-  seedLocalizationKeys
+  seedLocalizationKeys,
+  updateRequestDataFix
 });

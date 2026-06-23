@@ -25,8 +25,9 @@ import { TMLogger } from "../util/tm-logger";
 import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 
+export type AddRow = (...sources: (Model | Dictionary<unknown>)[]) => void;
 export type StreamWriter = {
-  addRow: (...sources: (Model | Dictionary<unknown>)[]) => void;
+  addRow: AddRow;
   close: () => void;
 };
 

@@ -122,9 +122,9 @@ describe("SitePolygonVersioningService", () => {
         })
       } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-version-uuid" } as SitePolygon);
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
-      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
 
       const result = await service.createVersion(
         basePolygon,
@@ -137,13 +137,15 @@ describe("SitePolygonVersioningService", () => {
       );
 
       expect(result.uuid).toBe("new-version-uuid");
-      expect(SitePolygon.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          primaryUuid: basePrimaryUuid,
-          polyName: "Updated Name",
-          polygonUuid: "new-geometry-uuid",
-          isActive: true
-        }),
+      expect(SitePolygon.bulkCreate).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            primaryUuid: basePrimaryUuid,
+            polyName: "Updated Name",
+            polygonUuid: "new-geometry-uuid",
+            isActive: true
+          })
+        ],
         { transaction: mockTransaction }
       );
     });
@@ -156,9 +158,9 @@ describe("SitePolygonVersioningService", () => {
         get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: basePrimaryUuid })
       } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as SitePolygon);
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-uuid" } as SitePolygon]);
       const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
-      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
 
       await service.createVersion(basePolygon, {}, null, 1, "Test", null, mockTransaction);
 
@@ -166,7 +168,7 @@ describe("SitePolygonVersioningService", () => {
         { isActive: false },
         expect.objectContaining({
           where: expect.objectContaining({
-            primaryUuid: basePrimaryUuid
+            primaryUuid: { [Op.in]: [basePrimaryUuid] }
           }),
           transaction: mockTransaction
         })
@@ -180,20 +182,89 @@ describe("SitePolygonVersioningService", () => {
         get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
       } as unknown as SitePolygon;
 
-      jest.spyOn(SitePolygon, "create").mockResolvedValue({ uuid: "new-uuid" } as SitePolygon);
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-uuid" } as SitePolygon]);
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
-      const trackChangeSpy = jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
+      const trackChangeSpy = jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
 
       await service.createVersion(basePolygon, {}, null, 123, "Geometry updated", "Test User", mockTransaction);
 
       expect(trackChangeSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sitePolygonUuid: "primary-uuid",
-          change: "Geometry updated",
-          updatedById: 123,
-          type: "update"
-        }),
+        [
+          expect.objectContaining({
+            sitePolygonUuid: "primary-uuid",
+            change: "Geometry updated",
+            updatedById: 123,
+            type: "update"
+          })
+        ],
         { transaction: mockTransaction }
+      );
+    });
+  });
+
+  describe("createVersions", () => {
+    it("should bulk create versions and keep only the last new version active per group", async () => {
+      const sharedPrimaryUuid = "shared-primary-uuid";
+      const basePolygonOne = {
+        uuid: "base-uuid-1",
+        primaryUuid: sharedPrimaryUuid,
+        polyName: "Polygon 1",
+        get: jest.fn().mockReturnValue({
+          uuid: "base-uuid-1",
+          primaryUuid: sharedPrimaryUuid,
+          polyName: "Polygon 1"
+        })
+      } as unknown as SitePolygon;
+      const basePolygonTwo = {
+        uuid: "base-uuid-2",
+        primaryUuid: sharedPrimaryUuid,
+        polyName: "Polygon 2",
+        get: jest.fn().mockReturnValue({
+          uuid: "base-uuid-2",
+          primaryUuid: sharedPrimaryUuid,
+          polyName: "Polygon 2"
+        })
+      } as unknown as SitePolygon;
+
+      const bulkCreateSpy = jest
+        .spyOn(SitePolygon, "bulkCreate")
+        .mockImplementation(async records => records as SitePolygon[]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+      const result = await service.createVersions(
+        [
+          {
+            basePolygon: basePolygonOne,
+            attributeChanges: { numTrees: 10, status: "draft" },
+            newPolygonGeometryUuid: null,
+            userId: 1,
+            changeReason: "First update",
+            userFullName: "User One"
+          },
+          {
+            basePolygon: basePolygonTwo,
+            attributeChanges: { numTrees: 20, status: "draft" },
+            newPolygonGeometryUuid: null,
+            userId: 1,
+            changeReason: "Second update",
+            userFullName: "User One"
+          }
+        ],
+        mockTransaction
+      );
+
+      expect(result).toHaveLength(2);
+      expect(bulkCreateSpy).toHaveBeenCalledTimes(1);
+      expect(updateSpy).toHaveBeenCalledWith(
+        { isActive: false },
+        expect.objectContaining({
+          where: expect.objectContaining({
+            primaryUuid: { [Op.in]: [sharedPrimaryUuid] },
+            uuid: { [Op.notIn]: [result[1].uuid] }
+          }),
+          transaction: mockTransaction
+        })
       );
     });
   });
@@ -343,14 +414,14 @@ describe("SitePolygonVersioningService", () => {
 
   describe("validateVersioningEligibility", () => {
     it("should throw NotFoundException when polygon does not exist", async () => {
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(null);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValueOnce([]);
 
       await expect(service.validateVersioningEligibility("non-existent-uuid")).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException when primaryUuid is null", async () => {
       const polygon = { uuid: "test-uuid", primaryUuid: null } as unknown as SitePolygon;
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(polygon);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValueOnce([polygon]);
 
       await expect(service.validateVersioningEligibility("test-uuid")).rejects.toThrow(BadRequestException);
     });
@@ -362,20 +433,42 @@ describe("SitePolygonVersioningService", () => {
         primaryUuid: "primary-uuid",
         isActive: true
       } as unknown as SitePolygon;
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValueOnce(polygon).mockResolvedValueOnce(activePolygon);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValueOnce([polygon]).mockResolvedValueOnce([activePolygon]);
 
       const result = await service.validateVersioningEligibility("test-uuid");
 
       expect(result).toBe(activePolygon);
-      expect(SitePolygon.findOne).toHaveBeenCalledTimes(2);
+      expect(SitePolygon.findAll).toHaveBeenCalledTimes(2);
     });
 
     it("should throw NotFoundException when no active version found", async () => {
       const polygon = { uuid: "test-uuid", primaryUuid: "primary-uuid" } as unknown as SitePolygon;
-      jest.spyOn(SitePolygon, "findOne").mockResolvedValueOnce(polygon).mockResolvedValueOnce(null);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValueOnce([polygon]).mockResolvedValueOnce([]);
 
       await expect(service.validateVersioningEligibility("test-uuid")).rejects.toThrow(NotFoundException);
-      expect(SitePolygon.findOne).toHaveBeenCalledTimes(2);
+      expect(SitePolygon.findAll).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("validateBulkVersioningEligibility", () => {
+    it("should resolve active polygons for each requested uuid", async () => {
+      const polygonOne = { uuid: "request-uuid-1", primaryUuid: "primary-uuid-1" } as SitePolygon;
+      const polygonTwo = { uuid: "request-uuid-2", primaryUuid: "primary-uuid-2" } as SitePolygon;
+      const activePolygonOne = { uuid: "active-uuid-1", primaryUuid: "primary-uuid-1", isActive: true } as SitePolygon;
+      const activePolygonTwo = { uuid: "active-uuid-2", primaryUuid: "primary-uuid-2", isActive: true } as SitePolygon;
+
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValueOnce([polygonOne, polygonTwo])
+        .mockResolvedValueOnce([activePolygonOne, activePolygonTwo]);
+
+      const result = await service.validateBulkVersioningEligibility(
+        ["request-uuid-1", "request-uuid-2"],
+        mockTransaction
+      );
+
+      expect(result.get("request-uuid-1")).toBe(activePolygonOne);
+      expect(result.get("request-uuid-2")).toBe(activePolygonTwo);
     });
   });
 });

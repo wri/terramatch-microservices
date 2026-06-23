@@ -3,22 +3,29 @@ import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-micros
 import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 
+export interface VersionCreateEntry {
+  basePolygon: SitePolygon;
+  attributeChanges: Partial<SitePolygon>;
+  newPolygonGeometryUuid: string | null;
+  userId: number;
+  changeReason: string;
+  userFullName: string | null;
+}
+
 @Injectable()
 export class SitePolygonVersioningService {
   private readonly logger = new Logger(SitePolygonVersioningService.name);
 
-  async createVersion(
+  buildVersionData(
     basePolygon: SitePolygon,
     attributeChanges: Partial<SitePolygon>,
     newPolygonGeometryUuid: string | null,
     userId: number,
-    changeReason: string,
     userFullName: string | null,
-    transaction: Transaction
-  ): Promise<SitePolygon> {
+    newVersionUuid: string
+  ): Partial<SitePolygon> {
     const versionName = this.generateVersionName(attributeChanges.polyName ?? basePolygon.polyName, userFullName);
 
-    const newVersionUuid = uuidv4();
     const newVersionData: Partial<SitePolygon> = {
       ...basePolygon.get({ plain: true }),
       ...attributeChanges,
@@ -39,23 +46,102 @@ export class SitePolygonVersioningService {
     delete versionDataToCreate.id;
     delete versionDataToCreate.deletedAt;
 
-    const newVersion = await SitePolygon.create(newVersionData as SitePolygon, { transaction });
+    return versionDataToCreate as Partial<SitePolygon>;
+  }
 
-    await this.deactivateOtherVersions(basePolygon.primaryUuid, newVersionUuid, transaction);
+  async createVersions(entries: VersionCreateEntry[], transaction: Transaction): Promise<SitePolygon[]> {
+    if (entries.length === 0) {
+      return [];
+    }
 
-    await this.trackChange(
-      basePolygon.primaryUuid,
-      versionName,
-      changeReason,
-      userId,
-      "update",
-      undefined,
-      undefined,
-      transaction
+    const versionRecords: Partial<SitePolygon>[] = [];
+    const polygonUpdateRecords: Partial<PolygonUpdates>[] = [];
+    const lastNewVersionPerPrimary = new Map<string, string>();
+
+    for (const entry of entries) {
+      const newVersionUuid = uuidv4();
+      const primaryUuid = entry.basePolygon.primaryUuid;
+      if (primaryUuid == null) {
+        throw new BadRequestException(
+          `Site polygon ${entry.basePolygon.uuid} has no primaryUuid set. Cannot create version.`
+        );
+      }
+
+      lastNewVersionPerPrimary.set(primaryUuid, newVersionUuid);
+
+      const versionData = this.buildVersionData(
+        entry.basePolygon,
+        entry.attributeChanges,
+        entry.newPolygonGeometryUuid,
+        entry.userId,
+        entry.userFullName,
+        newVersionUuid
+      );
+      versionRecords.push(versionData);
+
+      polygonUpdateRecords.push({
+        sitePolygonUuid: primaryUuid,
+        versionName: versionData.versionName ?? "Unknown",
+        change: entry.changeReason,
+        updatedById: entry.userId,
+        comment: null,
+        type: "update",
+        oldStatus: null,
+        newStatus: null
+      });
+    }
+
+    const newVersions = await SitePolygon.bulkCreate(versionRecords as SitePolygon[], { transaction });
+
+    const keepActiveUuids = [...lastNewVersionPerPrimary.values()];
+    const primaryUuids = [...lastNewVersionPerPrimary.keys()];
+
+    await SitePolygon.update(
+      { isActive: false },
+      {
+        where: {
+          primaryUuid: { [Op.in]: primaryUuids },
+          uuid: { [Op.notIn]: keepActiveUuids }
+        },
+        transaction
+      }
     );
 
-    this.logger.log(
-      `Created new version ${newVersionUuid} from active base ${basePolygon.uuid} (group: ${basePolygon.primaryUuid})`
+    await PolygonUpdates.bulkCreate(polygonUpdateRecords as PolygonUpdates[], { transaction });
+
+    if (entries.length === 1) {
+      const entry = entries[0];
+      this.logger.log(
+        `Created new version ${newVersions[0].uuid} from active base ${entry.basePolygon.uuid} (group: ${entry.basePolygon.primaryUuid})`
+      );
+    } else {
+      this.logger.log(`Created ${newVersions.length} new site polygon version(s)`);
+    }
+
+    return newVersions;
+  }
+
+  async createVersion(
+    basePolygon: SitePolygon,
+    attributeChanges: Partial<SitePolygon>,
+    newPolygonGeometryUuid: string | null,
+    userId: number,
+    changeReason: string,
+    userFullName: string | null,
+    transaction: Transaction
+  ): Promise<SitePolygon> {
+    const [newVersion] = await this.createVersions(
+      [
+        {
+          basePolygon,
+          attributeChanges,
+          newPolygonGeometryUuid,
+          userId,
+          changeReason,
+          userFullName
+        }
+      ],
+      transaction
     );
 
     return newVersion;
@@ -177,33 +263,75 @@ export class SitePolygonVersioningService {
     return changesDescription.length > 0 ? changesDescription : "No attribute changes";
   }
 
-  async validateVersioningEligibility(sitePolygonUuid: string): Promise<SitePolygon> {
-    const referencePolygon = await SitePolygon.findOne({
-      where: { uuid: sitePolygonUuid }
-    });
-
-    if (referencePolygon == null) {
+  async validateVersioningEligibility(sitePolygonUuid: string, transaction?: Transaction): Promise<SitePolygon> {
+    const activeByRequestUuid = await this.validateBulkVersioningEligibility([sitePolygonUuid], transaction);
+    const activePolygon = activeByRequestUuid.get(sitePolygonUuid);
+    if (activePolygon == null) {
       throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
     }
 
-    if (referencePolygon.primaryUuid == null) {
-      throw new BadRequestException(`Site polygon ${sitePolygonUuid} has no primaryUuid set. Cannot create version.`);
-    }
+    return activePolygon;
+  }
 
-    const activePolygon = await SitePolygon.findOne({
-      where: {
-        primaryUuid: referencePolygon.primaryUuid,
-        isActive: true
-      }
+  async validateBulkVersioningEligibility(
+    sitePolygonUuids: string[],
+    transaction?: Transaction
+  ): Promise<Map<string, SitePolygon>> {
+    const referencePolygons = await SitePolygon.findAll({
+      where: { uuid: { [Op.in]: sitePolygonUuids } },
+      transaction
     });
 
-    if (activePolygon == null) {
-      throw new NotFoundException(
-        `No active version found for polygon group ${referencePolygon.primaryUuid}. ` +
-          `The reference polygon ${sitePolygonUuid} may have been deactivated.`
-      );
+    const referenceByUuid = new Map(referencePolygons.map(polygon => [polygon.uuid, polygon]));
+
+    for (const sitePolygonUuid of sitePolygonUuids) {
+      const referencePolygon = referenceByUuid.get(sitePolygonUuid);
+
+      if (referencePolygon == null) {
+        throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+      }
+
+      if (referencePolygon.primaryUuid == null) {
+        throw new BadRequestException(`Site polygon ${sitePolygonUuid} has no primaryUuid set. Cannot create version.`);
+      }
     }
 
-    return activePolygon;
+    const primaryUuids = [...new Set(referencePolygons.map(polygon => polygon.primaryUuid as string))];
+
+    const activePolygons = await SitePolygon.findAll({
+      where: {
+        primaryUuid: { [Op.in]: primaryUuids },
+        isActive: true
+      },
+      transaction
+    });
+
+    const activeByPrimaryUuid = new Map(activePolygons.map(polygon => [polygon.primaryUuid, polygon]));
+    const activeByRequestUuid = new Map<string, SitePolygon>();
+
+    for (const sitePolygonUuid of sitePolygonUuids) {
+      const referencePolygon = referenceByUuid.get(sitePolygonUuid);
+      if (referencePolygon == null) {
+        throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+      }
+
+      const primaryUuid = referencePolygon.primaryUuid;
+      if (primaryUuid == null) {
+        throw new BadRequestException(`Site polygon ${sitePolygonUuid} has no primaryUuid set. Cannot create version.`);
+      }
+
+      const activePolygon = activeByPrimaryUuid.get(primaryUuid);
+
+      if (activePolygon == null) {
+        throw new NotFoundException(
+          `No active version found for polygon group ${primaryUuid}. ` +
+            `The reference polygon ${sitePolygonUuid} may have been deactivated.`
+        );
+      }
+
+      activeByRequestUuid.set(sitePolygonUuid, activePolygon);
+    }
+
+    return activeByRequestUuid;
   }
 }

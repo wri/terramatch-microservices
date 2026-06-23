@@ -793,7 +793,11 @@ export class SitePolygonCreationService {
     }
 
     const versionEntries = sitePolygonUuids.map(sitePolygonUuid => {
-      const basePolygon = activeByRequestUuid.get(sitePolygonUuid)!;
+      const basePolygon = activeByRequestUuid.get(sitePolygonUuid);
+      if (basePolygon == null) {
+        throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+      }
+
       const changeDescription = this.buildDetailedChangeDescription(basePolygon, parsedAttributeChanges, false);
 
       return {

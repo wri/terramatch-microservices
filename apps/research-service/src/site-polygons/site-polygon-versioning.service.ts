@@ -265,7 +265,12 @@ export class SitePolygonVersioningService {
 
   async validateVersioningEligibility(sitePolygonUuid: string, transaction?: Transaction): Promise<SitePolygon> {
     const activeByRequestUuid = await this.validateBulkVersioningEligibility([sitePolygonUuid], transaction);
-    return activeByRequestUuid.get(sitePolygonUuid)!;
+    const activePolygon = activeByRequestUuid.get(sitePolygonUuid);
+    if (activePolygon == null) {
+      throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+    }
+
+    return activePolygon;
   }
 
   async validateBulkVersioningEligibility(
@@ -305,12 +310,21 @@ export class SitePolygonVersioningService {
     const activeByRequestUuid = new Map<string, SitePolygon>();
 
     for (const sitePolygonUuid of sitePolygonUuids) {
-      const referencePolygon = referenceByUuid.get(sitePolygonUuid)!;
-      const activePolygon = activeByPrimaryUuid.get(referencePolygon.primaryUuid!);
+      const referencePolygon = referenceByUuid.get(sitePolygonUuid);
+      if (referencePolygon == null) {
+        throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+      }
+
+      const primaryUuid = referencePolygon.primaryUuid;
+      if (primaryUuid == null) {
+        throw new BadRequestException(`Site polygon ${sitePolygonUuid} has no primaryUuid set. Cannot create version.`);
+      }
+
+      const activePolygon = activeByPrimaryUuid.get(primaryUuid);
 
       if (activePolygon == null) {
         throw new NotFoundException(
-          `No active version found for polygon group ${referencePolygon.primaryUuid}. ` +
+          `No active version found for polygon group ${primaryUuid}. ` +
             `The reference polygon ${sitePolygonUuid} may have been deactivated.`
         );
       }

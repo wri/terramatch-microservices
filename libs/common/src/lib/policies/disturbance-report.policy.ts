@@ -9,9 +9,19 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
     }
 
     if (this.frameworks.length > 0) {
-      this.builder.can(["export"], DisturbanceReport);
       this.builder.can(
-        ["read", "delete", "update", "approve", "create", "deleteFiles", "uploadFiles", "updateFiles", "updateAnswers"],
+        [
+          "read",
+          "delete",
+          "update",
+          "approve",
+          "create",
+          "deleteFiles",
+          "uploadFiles",
+          "updateFiles",
+          "updateAnswers",
+          "export"
+        ],
         DisturbanceReport,
         {
           frameworkKey: { $in: this.frameworks }
@@ -31,7 +41,7 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
         ];
         if (projectIds.length > 0) {
           this.builder.can(
-            ["read", "update", "create", "deleteFiles", "uploadFiles", "updateFiles"],
+            ["read", "update", "create", "deleteFiles", "uploadFiles", "updateFiles", "export"],
             DisturbanceReport,
             {
               projectId: { $in: projectIds }
@@ -67,7 +77,8 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
               "deleteFiles",
               "uploadFiles",
               "updateFiles",
-              "updateAnswers"
+              "updateAnswers",
+              "export"
             ],
             DisturbanceReport,
             {

@@ -10,13 +10,14 @@ import {
   ProjectFactory,
   ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
-import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { DisturbanceReportProcessor } from "./disturbance-report.processor";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { Response } from "express";
 
 describe("DisturbanceReportProcessor", () => {
   let processor: DisturbanceReportProcessor;
@@ -315,8 +316,36 @@ describe("DisturbanceReportProcessor", () => {
   });
 
   describe("export", () => {
-    it("throws", async () => {
-      await expect(processor.export()).rejects.toThrow("Individual export of disturbance report is not supported");
+    it("throws if the report is not found", async () => {
+      await expect(processor.export("fake-uuid", {} as Response)).rejects.toThrow(NotFoundException);
+    });
+
+    it("calls writeCsv with report data", async () => {
+      const disturbanceReport = await DisturbanceReportFactory.create();
+      const intensity = await DisturbanceReportEntryFactory.report(disturbanceReport).create({
+        name: "intensity",
+        value: "low",
+        inputType: "select"
+      });
+      const media = await MediaFactory.disturbanceReport(disturbanceReport).create({ collectionName: "media" });
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      mediaService.getUrl.mockReturnValue("media-url");
+      setMockedPermissions("framework-ppc");
+
+      await processor.export(disturbanceReport.uuid, {} as Response);
+
+      expect(addRow).toHaveBeenCalledTimes(1);
+      expect(addRow).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid: disturbanceReport.uuid }),
+        expect.objectContaining({
+          intensity: [intensity.value],
+          mediaFiles: [`media-url (${media.name})`]
+        })
+      );
     });
   });
 
@@ -374,8 +403,8 @@ describe("DisturbanceReportProcessor", () => {
         1,
         expect.objectContaining({ uuid: disturbanceReport[0].uuid }),
         expect.objectContaining({
-          "disturbance-start-date": [disturbanceStartDate.value],
-          "disturbance-end-date": [disturbanceEndDate.value],
+          disturbanceStartDate: [disturbanceStartDate.value],
+          disturbanceEndDate: [disturbanceEndDate.value],
           intensity: [intensity.value]
         })
       );
@@ -383,10 +412,10 @@ describe("DisturbanceReportProcessor", () => {
         2,
         expect.objectContaining({ uuid: disturbanceReport[1].uuid }),
         expect.objectContaining({
-          media: [`media-url (${media[0].name})`, `media-url (${media[1].name})`],
-          "site-affected": ["Alderaan; Tatooine"],
-          "polygon-affected": ["Poly1; Poly2; Poly3"],
-          "nursery-affected": ["Nursery1; Nursery2"]
+          mediaFiles: [`media-url (${media[0].name})`, `media-url (${media[1].name})`],
+          siteAffected: ["Alderaan; Tatooine"],
+          polygonAffected: ["Poly1; Poly2; Poly3"],
+          nurseryAffected: ["Nursery1; Nursery2"]
         })
       );
     });

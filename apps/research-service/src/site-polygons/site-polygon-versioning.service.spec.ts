@@ -228,7 +228,7 @@ describe("SitePolygonVersioningService", () => {
 
       const bulkCreateSpy = jest
         .spyOn(SitePolygon, "bulkCreate")
-        .mockImplementation(async records => records as SitePolygon[]);
+        .mockImplementation(async records => records as unknown as SitePolygon[]);
       const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
       jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
 

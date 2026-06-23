@@ -53,10 +53,28 @@ import {
 } from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
-import { Nursery, Project, Site } from "@terramatch-microservices/database/entities";
+import {
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  Site,
+  SiteReport
+} from "@terramatch-microservices/database/entities";
 
-const ASSET_EXPORT_ENTITIES: EntityType[] = ["projects", "sites", "nurseries"];
-type AssetExportEntity = Project | Site | Nursery;
+const ASSET_EXPORT_ENTITIES: EntityType[] = [
+  "projects",
+  "sites",
+  "nurseries",
+  "projectReports",
+  "siteReports",
+  "nurseryReports"
+];
+type AssetExportEntity = Project | Site | Nursery | ProjectReport | SiteReport | NurseryReport;
+
+const getAssetExportEntityName = (model: AssetExportEntity, fallbackName: string) => {
+  return ("name" in model ? model.name : model.title) ?? fallbackName;
+};
 
 @Controller("entities/v3")
 @ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
@@ -181,7 +199,7 @@ export class EntitiesController {
 
     await this.policyService.authorize("read", model);
 
-    const entityName = model.name ?? (await this.entitiesService.localizeText("Unnamed"));
+    const entityName = getAssetExportEntityName(model, await this.entitiesService.localizeText("Unnamed"));
     const jobName = await this.entitiesService.localizeText("Generating Asset .zip");
     return await EntityServiceDelayedJobsProcessor.queueMediaExport(
       this.exportQueue,

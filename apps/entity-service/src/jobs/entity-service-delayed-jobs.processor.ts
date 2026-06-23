@@ -92,6 +92,12 @@ const totalForMediaExport = async (entityType: EntityType, uuid: string) => {
     entityScopes[Site.LARAVEL_TYPE] = Subquery.select(Site, "id").eq("uuid", uuid).literal;
   } else if (entityType === "nurseries") {
     entityScopes[Nursery.LARAVEL_TYPE] = Subquery.select(Nursery, "id").eq("uuid", uuid).literal;
+  } else if (entityType === "projectReports") {
+    entityScopes[ProjectReport.LARAVEL_TYPE] = Subquery.select(ProjectReport, "id").eq("uuid", uuid).literal;
+  } else if (entityType === "siteReports") {
+    entityScopes[SiteReport.LARAVEL_TYPE] = Subquery.select(SiteReport, "id").eq("uuid", uuid).literal;
+  } else if (entityType === "nurseryReports") {
+    entityScopes[NurseryReport.LARAVEL_TYPE] = Subquery.select(NurseryReport, "id").eq("uuid", uuid).literal;
   }
 
   for (const dep of REPORT_DEPENDENCIES) {

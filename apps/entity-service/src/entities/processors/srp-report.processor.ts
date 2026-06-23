@@ -1,11 +1,4 @@
-import {
-  Media,
-  Project,
-  ProjectReport,
-  ProjectUser,
-  Site,
-  SrpReport
-} from "@terramatch-microservices/database/entities";
+import { Media, Project, ProjectUser, Site, SrpReport } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
@@ -163,13 +156,8 @@ export class SrpReportProcessor extends ReportProcessor<
   async getFullDto(srpReport: SrpReport) {
     const mediaCollection = await Media.for(srpReport).findAll();
     const reportTitle = await this.getReportTitle(srpReport);
-    const projectReportUuid =
-      srpReport.taskId == null
-        ? null
-        : ((await ProjectReport.findOne({ where: { taskId: srpReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null);
     const dto = new SrpReportFullDto(srpReport, {
       ...(await this.getFeedback(srpReport)),
-      projectReportUuid,
       ...(this.entitiesService.mapMediaCollection(
         mediaCollection,
         SrpReport.MEDIA,

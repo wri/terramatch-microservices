@@ -185,15 +185,11 @@ describe("SrpReportProcessor", () => {
   describe("getFullDto", () => {
     it("should return full DTO with entries and extracted fields", async () => {
       const project = await ProjectFactory.create();
-      const { uuid } = await SrpReportFactory.create({ projectId: project.id });
-      const srpReport = await processor.findOne(uuid);
-      if (srpReport == null) {
-        throw new Error("SrpReport not found");
-      }
+      const srpReport = await SrpReportFactory.create({ projectId: project.id });
 
       const result = await processor.getFullDto(srpReport);
 
-      expect(result.id).toBe(uuid);
+      expect(result.id).toBe(srpReport.uuid);
       expect(result.dto).toBeDefined();
     });
   });

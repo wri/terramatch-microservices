@@ -6,7 +6,7 @@ import { EntityProcessor } from "./processors/entity-processor";
 import { ProjectFullDto, ProjectLightDto } from "./dto/project.dto";
 import { DelayedJob, Project } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
-import { ProjectFactory } from "@terramatch-microservices/database/factories";
+import { ProjectFactory, ProjectReportFactory } from "@terramatch-microservices/database/factories";
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -202,8 +202,8 @@ describe("EntitiesController", () => {
 
   describe("entityAssetGet", () => {
     it("throws if the entity type is not supported", async () => {
-      await expect(controller.entityAssetGet({ entity: "projectReports", uuid: "fake-uuid" })).rejects.toThrow(
-        "Unsupported direct asset export entity type: projectReports"
+      await expect(controller.entityAssetGet({ entity: "financialReports", uuid: "fake-uuid" })).rejects.toThrow(
+        "Unsupported direct asset export entity type: financialReports"
       );
     });
 
@@ -236,6 +236,34 @@ describe("EntitiesController", () => {
         entityType: "projects",
         entityUuid: uuid,
         entityName: name,
+        totalContent: 0
+      });
+    });
+
+    it("queues the asset export task for reports", async () => {
+      const authSpy = jest.spyOn(policyService(), "authorize").mockResolvedValue();
+      const report = await ProjectReportFactory.create({ title: "Report Assets" });
+      const { id, uuid, title } = report;
+      processor.findOne.mockResolvedValue(report as never);
+      entitiesService().localizeText.mockResolvedValue("Job Title");
+
+      const result = serialize(
+        (await controller.entityAssetGet({ entity: "projectReports", uuid })) as ResourceBuilder
+      );
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ id }));
+      const data = result.data as Resource;
+      expect(data.type).toEqual("delayedJobs");
+      const job = await DelayedJob.findOne({ where: { uuid: data.id } });
+      expect(job).toBeDefined();
+      expect(job?.metadata).toMatchObject({
+        entity_type: "projectReports",
+        entity_name: title
+      });
+      expect(exportQueue().add).toHaveBeenCalledWith(MEDIA_EXPORT, {
+        delayedJobId: job?.id,
+        entityType: "projectReports",
+        entityUuid: uuid,
+        entityName: title,
         totalContent: 0
       });
     });

@@ -321,7 +321,7 @@ describe("DisturbanceReportProcessor", () => {
     });
 
     it("calls writeCsv with report data", async () => {
-      const disturbanceReport = await DisturbanceReportFactory.create();
+      const disturbanceReport = await DisturbanceReportFactory.create({ frameworkKey: "ppc" });
       const intensity = await DisturbanceReportEntryFactory.report(disturbanceReport).create({
         name: "intensity",
         value: "low",
@@ -352,7 +352,10 @@ describe("DisturbanceReportProcessor", () => {
   describe("exportAll", () => {
     it("writes all reports to the CSV", async () => {
       await DisturbanceReport.truncate();
-      const disturbanceReport = [await DisturbanceReportFactory.create(), await DisturbanceReportFactory.create()];
+      const disturbanceReport = [
+        await DisturbanceReportFactory.create({ frameworkKey: "ppc" }),
+        await DisturbanceReportFactory.create({ frameworkKey: "ppc" })
+      ];
 
       const intensity = await DisturbanceReportEntryFactory.report(disturbanceReport[0]).create({
         name: "intensity",

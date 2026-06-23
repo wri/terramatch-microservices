@@ -114,6 +114,7 @@ const processUpdateRequest = async (
         linkedFieldTitle: undefined,
         unmigratedValue: value
       });
+      if (cleanUnmigratedData) delete content[questionUuid];
       continue;
     }
 
@@ -126,6 +127,7 @@ const processUpdateRequest = async (
         linkedFieldTitle: undefined,
         unmigratedValue: value
       });
+      if (cleanUnmigratedData) delete content[questionUuid];
       continue;
     }
 
@@ -133,7 +135,7 @@ const processUpdateRequest = async (
     if (linkedFieldKey === "table-input") continue;
     // We no longer collect boundary geojson anywhere, this can be removed
     if (linkedFieldKey === "site-boundary-geojson") {
-      // TODO: remove from content
+      if (cleanUnmigratedData) delete content[questionUuid];
       continue;
     }
 
@@ -146,10 +148,10 @@ const processUpdateRequest = async (
         linkedFieldTitle: getLinkedFieldConfig(linkedFieldKey)?.field.label,
         unmigratedValue: value
       });
+      if (cleanUnmigratedData) delete content[questionUuid];
       continue;
     }
 
-    // TODO: do data migration / cleaning
     content[currentQuestion.uuid] = content[questionUuid];
     delete content[questionUuid];
   }

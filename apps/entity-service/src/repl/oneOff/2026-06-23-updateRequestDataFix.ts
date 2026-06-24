@@ -29,8 +29,8 @@ const REPORT_COLUMNS = {
   linkToAdmin: "Link to Admin",
   linkedFieldKey: "Linked Field Key",
   linkedFieldTitle: "Question Title",
-  unmigratedValue: "Unmigrated Value",
-  reason: "Reason Migration Not Possible"
+  reason: "Reason Migration Not Possible",
+  unmigratedValue: "Unmigrated Value"
 } as const;
 
 type ReportRow = Record<keyof typeof REPORT_COLUMNS, unknown>;

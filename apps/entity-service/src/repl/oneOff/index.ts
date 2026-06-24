@@ -31,3 +31,4 @@ export { importInvestmentSplits } from "./2026-06-17-importInvestmentSplits";
 export { reassignVokenelSites } from "./2026-06-17-reassignVokenelSites";
 export { fundoFloraFormOptionLabelIds } from "./2026-06-03-fundoFloraFormOptionLabelIds";
 export { trackingImport } from "./2026-06-04-trackingImport";
+export { updateRequestDataFix } from "./2026-06-23-updateRequestDataFix";

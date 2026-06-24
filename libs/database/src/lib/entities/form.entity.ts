@@ -93,7 +93,7 @@ export class Form extends Model<Form> {
 
   static uuidFor(entity: EntityModel) {
     const select = Subquery.select(Form, "uuid");
-    if (entity instanceof FinancialReport) {
+    if (entity instanceof FinancialReport && entity.frameworkKey == null) {
       if (entity.organisation?.type == null) {
         throw new InternalServerErrorException("Cannot determine form for financial report without organisation type.");
       }

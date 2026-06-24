@@ -160,11 +160,6 @@ const IGNORED_LINKED_FIELD_KEYS = [
 
 class UnmigratableDataError extends Error {}
 
-/**
- * Script to find update request data that points to deleted or no longer in use questions, and
- * looks for the correct question UUID to use in its place. May be run periodically. Produces a
- * report that lists the data that was _not_ able to be migrated.
- */
 export const updateRequestDataFix = withoutSqlLogs(async () => {
   const reportFilename = timestampFileName("Update Request Data Fix Report");
   const reportDownloadUrl = await writeCsv(reportFilename, REPORT_COLUMNS, async addRow => {

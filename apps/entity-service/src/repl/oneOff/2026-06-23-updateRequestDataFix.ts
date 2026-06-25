@@ -1,5 +1,5 @@
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
-import { Dictionary, isObject } from "lodash";
+import { Dictionary, isObject, isString } from "lodash";
 import { writeCsv } from "@terramatch-microservices/common/util/repl/csv";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Op } from "sequelize";
@@ -104,13 +104,16 @@ const TRACKING_LINKED_FIELD_KEYS = [
   "pro-rep-workdays-paid",
   "pro-rep-workdays-volunteer",
   "pro-total-hectares-restored-goal",
-  "pro-trees-grown-goal"
+  "pro-trees-grown-goal",
+  "site-rep-workdays-paid",
+  "site-rep-workdays-volunteer"
 ];
 
 // These have been moved to other reports and should just be ignored (or removed if cleaning unmigrated data)
 const IGNORED_LINKED_FIELD_KEYS = [
   "table-input",
   "site-boundary-geojson",
+  "nur-rep-seedlings-young-trees",
   "pro-beneficiaries",
   "pro-community-incentives",
   "pro-environmental-goals",
@@ -155,7 +158,11 @@ const IGNORED_LINKED_FIELD_KEYS = [
   "pro-restoration_strategy",
   "pro-socioeconomic-goals",
   "site-landscape-community-contribution",
-  "site-rel-disturbances"
+  "site-rel-disturbances",
+  "site-rep-rel-disturbances",
+  "site-rep-technical-narrative",
+  "site-rep-num-trees-regenerating",
+  "pro-rep-beneficiaries-income-desc"
 ];
 
 class UnmigratableDataError extends Error {}
@@ -227,6 +234,7 @@ const processUpdateRequest = async (updateRequest: UpdateRequest): Promise<Repor
     // The question exists in the current form, pass over this entry
     if (questions.find(question => question.uuid === questionUuid) != null) continue;
 
+    const reportValue = isObject(value) ? JSON.stringify(value) : isString(value) ? `"${value}"` : value;
     foundContentToMigrate = true;
     let linkedFieldKey: string;
     try {
@@ -239,12 +247,10 @@ const processUpdateRequest = async (updateRequest: UpdateRequest): Promise<Repor
         reason: e.message,
         linkedFieldKey: undefined,
         linkedFieldTitle: undefined,
-        unmigratedValue: `"${isObject(value) ? JSON.stringify(value) : value}"`
+        unmigratedValue: reportValue
       });
       continue;
     }
-
-    if (IGNORED_LINKED_FIELD_KEYS.includes(linkedFieldKey)) continue;
 
     if (TRACKING_LINKED_FIELD_KEYS.includes(linkedFieldKey)) {
       migrateTrackingData = true;
@@ -254,8 +260,10 @@ const processUpdateRequest = async (updateRequest: UpdateRequest): Promise<Repor
     try {
       const migrationResult = migrateData(linkedFieldKey, value, questions);
       // only send the value if another hasn't been provided for this question.
-      if (content[migrationResult.questionUuid] == null) content[migrationResult.questionUuid] = migrationResult.value;
-      delete content[questionUuid];
+      if (migrationResult != null && content[migrationResult.questionUuid] == null) {
+        content[migrationResult.questionUuid] = migrationResult.value;
+        delete content[questionUuid];
+      }
     } catch (e) {
       if (!(e instanceof UnmigratableDataError)) throw e;
 
@@ -264,7 +272,7 @@ const processUpdateRequest = async (updateRequest: UpdateRequest): Promise<Repor
         reason: e.message,
         linkedFieldKey,
         linkedFieldTitle: getLinkedFieldConfig(linkedFieldKey)?.field.label,
-        unmigratedValue: `"${isObject(value) ? JSON.stringify(value) : value}"`
+        unmigratedValue: reportValue
       });
     }
   }
@@ -333,5 +341,7 @@ const migrateData = (linkedFieldKey: string, value: unknown, questions: FormQues
     return { questionUuid: targetQuestion.uuid, value: newValue };
   }
 
-  throw new UnmigratableDataError("No question found in the form for this linked field key");
+  if (!IGNORED_LINKED_FIELD_KEYS.includes(linkedFieldKey)) {
+    throw new UnmigratableDataError("No question found in the form for this linked field key");
+  }
 };

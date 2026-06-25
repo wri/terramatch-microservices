@@ -19,17 +19,17 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
     model => ({ organisationId: model.uuid })
   );
 
-  let questionUuid: string;
+  let questionName: string;
 
   return {
-    addField(_, modelType, addQuestionUuid) {
+    addField(_, modelType, addQuestionName) {
       if (modelType !== "organisations") {
         throw new InternalServerErrorException("ownership stake is only supported on org");
       }
-      if (questionUuid != null) {
+      if (questionName != null) {
         logger.warn("Duplicate field for ownership stake on orgs");
       }
-      questionUuid = addQuestionUuid;
+      questionName = addQuestionName;
     },
 
     async collect(answers, models, { forExport }) {
@@ -38,7 +38,7 @@ export function ownershipStakeCollector(logger: LoggerService): RelationResource
       }
 
       const stakes = await OwnershipStake.organisation(models.organisations.uuid).findAll();
-      answers[questionUuid] = forExport
+      answers[questionName] = forExport
         ? stakes.map(attributeExporter(["firstName", "lastName", "title", "gender", "percentOwnership", "yearOfBirth"]))
         : stakes.map(stake => new EmbeddedOwnershipStakeDto(stake));
     },

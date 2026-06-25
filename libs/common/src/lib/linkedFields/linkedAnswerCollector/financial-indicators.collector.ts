@@ -24,11 +24,11 @@ export function financialIndicatorsCollector(
   };
 
   return {
-    addField(_, modelType, questionUuid) {
+    addField(_, modelType, questionName) {
       if (questions[modelType] != null) {
         logger.warn(`Duplicate field for financialIndicators on ${modelType}`);
       }
-      questions[modelType] = questionUuid;
+      questions[modelType] = questionName;
     },
 
     async collect(answers, models, { forExport }) {

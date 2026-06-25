@@ -34,7 +34,7 @@ export type StreamWriter = {
 export type RowWriter = (addRow: StreamWriter["addRow"]) => Promise<void>;
 
 export type FormQuestionExportMapping = {
-  questionUuid: string;
+  questionName: string;
   heading: string;
   config: LinkedFieldSpecification;
   attribute?: ModelAttribute;
@@ -84,7 +84,7 @@ const addQuestionToMapping = (mappings: FormQuestionExportMapping[], question: F
   if (config == null) return;
 
   mappings.push({
-    questionUuid: question.uuid,
+    questionName: question.formName,
     heading: getExportHeading(config),
     attribute: getModelAttribute(config),
     config
@@ -194,9 +194,9 @@ export class CsvExportService {
       if (mapping.config == null) continue;
 
       const { model, field } = mapping.config;
-      if (isField(field)) collector.fields.addField(field, model, mapping.questionUuid);
-      else if (isFile(field)) collector.files.addField(field, model, mapping.questionUuid);
-      else collector[field.resource].addField(field, model, mapping.questionUuid);
+      if (isField(field)) collector.fields.addField(field, model, mapping.questionName);
+      else if (isFile(field)) collector.files.addField(field, model, mapping.questionName);
+      else collector[field.resource].addField(field, model, mapping.questionName);
     }
 
     const answers: Dictionary<unknown> = {};
@@ -206,7 +206,7 @@ export class CsvExportService {
     // so we have to pass the question UUID into the collector and then re-map to our headings after
     // data collection.
     return Object.entries(answers).reduce((acc, [questionUuid, value]) => {
-      const { heading } = mappings.find(mapping => questionUuid === mapping.questionUuid) ?? {};
+      const { heading } = mappings.find(mapping => questionUuid === mapping.questionName) ?? {};
       return heading == null ? acc : { ...acc, [heading]: value };
     }, {});
   }

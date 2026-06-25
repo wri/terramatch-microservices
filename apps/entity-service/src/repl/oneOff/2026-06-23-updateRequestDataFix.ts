@@ -260,8 +260,8 @@ const processUpdateRequest = async (updateRequest: UpdateRequest): Promise<Repor
     try {
       const migrationResult = migrateData(linkedFieldKey, value, questions);
       // only send the value if another hasn't been provided for this question.
-      if (migrationResult != null && content[migrationResult.questionUuid] == null) {
-        content[migrationResult.questionUuid] = migrationResult.value;
+      if (migrationResult != null && content[migrationResult.name] == null) {
+        content[migrationResult.name] = migrationResult.value;
         delete content[questionUuid];
       }
     } catch (e) {
@@ -330,7 +330,7 @@ const findLinkedFieldKey = async (questionUuid: string) => {
 const migrateData = (linkedFieldKey: string, value: unknown, questions: FormQuestion[]) => {
   const currentQuestion = questions.find(question => question.linkedFieldKey === linkedFieldKey);
   if (currentQuestion != null) {
-    return { questionUuid: currentQuestion.uuid, value };
+    return { name: currentQuestion.formName, value };
   }
 
   for (const migration of DATA_MIGRATIONS[linkedFieldKey] ?? []) {
@@ -338,7 +338,7 @@ const migrateData = (linkedFieldKey: string, value: unknown, questions: FormQues
     if (targetQuestion == null) continue;
 
     const newValue = migration.mungeData == null ? value : migration.mungeData(value);
-    return { questionUuid: targetQuestion.uuid, value: newValue };
+    return { name: targetQuestion.formName, value: newValue };
   }
 
   if (!IGNORED_LINKED_FIELD_KEYS.includes(linkedFieldKey)) {

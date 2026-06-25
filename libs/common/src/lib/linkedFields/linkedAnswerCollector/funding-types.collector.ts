@@ -26,11 +26,11 @@ export function fundingTypesCollector(logger: LoggerService): RelationResourceCo
   };
 
   return {
-    addField(_, modelType, questionUuid) {
+    addField(_, modelType, questionName) {
       if (questions[modelType] != null) {
         logger.warn(`Duplicate field for fundingTypes on ${modelType}`);
       }
-      questions[modelType] = questionUuid;
+      questions[modelType] = questionName;
     },
 
     async collect(answers, models, { forExport }) {

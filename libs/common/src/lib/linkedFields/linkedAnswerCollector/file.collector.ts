@@ -14,10 +14,10 @@ export function fileCollector(logger: LoggerService, mediaService: MediaService)
   const questions: Dictionary<string> = {};
 
   return {
-    addField(field, modelType, questionUuid) {
+    addField(field, modelType, questionName) {
       const key = `${modelType}:${field.collection}`;
       if (questions[key] != null) logger.warn(`Duplicate file field [${modelType}, ${field.collection}]`);
-      questions[key] = questionUuid;
+      questions[key] = questionName;
     },
 
     async collect(answers, models, { forExport }) {

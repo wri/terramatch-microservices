@@ -174,7 +174,7 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
     const syncRelation = options.syncRelation ?? polymorphicSync(modelClass, dtoClass, options);
 
     return {
-      addField(field, modelType, questionUuid) {
+      addField(field, modelType, questionName) {
         if (hasCollection && field.collection == null) {
           throw new InternalServerErrorException(`Collection not found for ${modelType}`);
         }
@@ -184,7 +184,7 @@ export const polymorphicCollector = <M extends PolymorphicModel & UuidModel>(
           logger.warn(`Duplicate collection for field ${key}`);
         }
 
-        questions[key] = questionUuid;
+        questions[key] = questionName;
       },
 
       async collect(answers, models, { forExport }) {

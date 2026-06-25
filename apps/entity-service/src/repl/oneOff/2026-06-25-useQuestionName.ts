@@ -1,4 +1,4 @@
-import { FormQuestion } from "@terramatch-microservices/database/entities";
+import { FormQuestion, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { col, Op, where } from "sequelize";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { camelCase, groupBy } from "lodash";
@@ -7,6 +7,7 @@ import ProgressBar from "progress";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/constants/entities";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 export const useQuestionName = withoutSqlLogs(async () => {
   // Find questions that are not in a deleted section or form and have a name that matches a UUID regex while
@@ -87,5 +88,33 @@ const fixEntities = async (formQuestions: FormQuestion[]) => {
     }
   }
 
-  // TODO: update update requests
+  const builder = new PaginatedQueryBuilder(UpdateRequest, 10).where({
+    status: { [Op.ne]: APPROVED },
+    updateRequestableType: entityModel.LARAVEL_TYPE
+  });
+  const total = await builder.paginationTotal();
+  const bar = new ProgressBar(
+    `Processing ${total} ${formType} update requests for form ${uuid} - ${formTitle}: [:bar] :percent :etas`,
+    {
+      width: 40,
+      total
+    }
+  );
+  for await (const page of batchFindAll(builder)) {
+    for (const updateRequest of page) {
+      let needsUpdate = false;
+      const content = { ...(updateRequest.content ?? {}) };
+      for (const { name, uuid } of formQuestions) {
+        if (uuid in content) {
+          needsUpdate = true;
+          content[name as string] = content[uuid];
+          delete content[uuid];
+        }
+      }
+      if (needsUpdate) {
+        await updateRequest.update({ content });
+      }
+      bar.tick();
+    }
+  }
 };

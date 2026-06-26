@@ -89,12 +89,9 @@ export class ValidationController {
   @Post("polygonValidations")
   @ApiOperation({
     operationId: "createPolygonValidations",
-    summary: "Validate multiple polygons for various criteria"
+    summary: "Start asynchronous validation for multiple polygons"
   })
-  @JsonApiResponse(ValidationDto)
-  @ExceptionResponse(NotFoundException, {
-    description: "One or more polygons not found"
-  })
+  @JsonApiResponse([ValidationSummaryDto, DelayedJobDto])
   @ExceptionResponse(BadRequestException, {
     description: "Invalid validation request"
   })
@@ -103,19 +100,25 @@ export class ValidationController {
 
     const validationTypes =
       request.validationTypes == null || request.validationTypes.length === 0
-        ? [...VALIDATION_TYPES]
+        ? VALIDATION_TYPES
         : request.validationTypes;
 
-    await this.validationService.validatePolygonsBatch(request.polygonUuids, validationTypes);
+    const delayedJob = await DelayedJob.create({
+      isAcknowledged: false,
+      name: "Polygon Validation",
+      totalContent: request.polygonUuids.length,
+      processedContent: 0,
+      progressMessage: "Starting validation...",
+      createdBy: UserContext.authenticatedUserId
+    });
 
-    const document = buildJsonApi(ValidationDto);
+    await this.validationQueue.add("polygonValidation", {
+      polygonUuids: request.polygonUuids,
+      validationTypes,
+      delayedJobId: delayedJob.id
+    });
 
-    for (const polygonUuid of request.polygonUuids) {
-      const validation = await this.validationService.getPolygonValidation(polygonUuid);
-      document.addData(polygonUuid, validation);
-    }
-
-    return document;
+    return buildDelayedJobResponse(delayedJob);
   }
 
   @Post("sites/:siteUuid/validation")

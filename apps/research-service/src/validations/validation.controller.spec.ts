@@ -203,7 +203,7 @@ describe("ValidationController", () => {
   });
 
   describe("createPolygonValidations", () => {
-    it("should create polygon validations and return proper JSON API format", async () => {
+    it("should create a polygon validation job", async () => {
       const request: ValidationRequestBody = {
         data: {
           type: "validations",
@@ -213,348 +213,16 @@ describe("ValidationController", () => {
           }
         }
       };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 4,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
-            valid: true,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: null
-          },
-          {
-            criteriaId: 8,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[8],
-            valid: false,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: { spikes: [], spikeCount: 0 }
-          }
-        ]
-      });
-
-      const polygon2Validation = new ValidationDto();
-      populateDto(polygon2Validation, {
-        polygonUuid: "polygon-2",
-        criteriaList: [
-          {
-            criteriaId: 4,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
-            valid: true,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: null
-          }
-        ]
-      });
-
-      mockValidationService.getPolygonValidation
-        .mockResolvedValueOnce(polygon1Validation)
-        .mockResolvedValueOnce(polygon2Validation);
-
+      mockUserContext({ userId: 1 });
       const result = serialize(await controller.createPolygonValidations(request));
 
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(
-        ["polygon-1", "polygon-2"],
-        ["SELF_INTERSECTION", "SPIKES"]
-      );
-      expect(mockValidationService.getPolygonValidation).toHaveBeenCalledTimes(2);
-      expect(mockValidationService.getPolygonValidation).toHaveBeenCalledWith("polygon-1");
-      expect(mockValidationService.getPolygonValidation).toHaveBeenCalledWith("polygon-2");
-      expect(result.data).toBeDefined();
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(result.data).toHaveLength(2);
-
-      const dataArray = result.data as unknown as Array<{
-        id: string;
-        attributes: { polygonUuid: string; criteriaList: unknown[] };
-      }>;
-      const polygon1Data = dataArray.find(item => item.id === "polygon-1");
-      const polygon2Data = dataArray.find(item => item.id === "polygon-2");
-
-      expect(polygon1Data).toBeDefined();
-      if (polygon1Data != null) {
-        expect(polygon1Data.attributes.polygonUuid).toBe("polygon-1");
-        expect(polygon1Data.attributes.criteriaList).toHaveLength(2);
-      }
-
-      expect(polygon2Data).toBeDefined();
-      if (polygon2Data != null) {
-        expect(polygon2Data.attributes.polygonUuid).toBe("polygon-2");
-        expect(polygon2Data.attributes.criteriaList).toHaveLength(1);
-      }
-    });
-
-    it("should handle single polygon validation", async () => {
-      const request: ValidationRequestBody = {
-        data: {
-          type: "validations",
-          attributes: {
-            polygonUuids: ["polygon-1"],
-            validationTypes: ["SELF_INTERSECTION"]
-          }
-        }
-      };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 4,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[4],
-            valid: true,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: null
-          }
-        ]
+      expect(mockValidationService.validatePolygonsBatch).not.toHaveBeenCalled();
+      expect(mockQueue.add).toHaveBeenCalledWith("polygonValidation", {
+        polygonUuids: ["polygon-1", "polygon-2"],
+        validationTypes: ["SELF_INTERSECTION", "SPIKES"],
+        delayedJobId: 1
       });
-
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
-      const result = serialize(await controller.createPolygonValidations(request));
-
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], ["SELF_INTERSECTION"]);
       expect(result.data).toBeDefined();
-      if (Array.isArray(result.data)) {
-        expect(result.data).toHaveLength(1);
-        const dataArray = result.data as Array<{ id: string }>;
-        expect(dataArray[0].id).toBe("polygon-1");
-      } else {
-        const singleData = result.data as { id: string };
-        expect(singleData.id).toBe("polygon-1");
-      }
-    });
-
-    it("should create polygon validations with DATA_COMPLETENESS validation type", async () => {
-      const request: ValidationRequestBody = {
-        data: {
-          type: "validations",
-          attributes: {
-            polygonUuids: ["polygon-1"],
-            validationTypes: ["DATA_COMPLETENESS"]
-          }
-        }
-      };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 14,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[14],
-            valid: false,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: {
-              validationErrors: [
-                { field: "polyName", error: "Field is required", exists: false },
-                { field: "practice", error: "Field is required", exists: false }
-              ],
-              missingFields: ["polyName", "practice"]
-            }
-          }
-        ]
-      });
-
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
-      const result = serialize(await controller.createPolygonValidations(request));
-
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], ["DATA_COMPLETENESS"]);
-      expect(result.data).toBeDefined();
-
-      if (Array.isArray(result.data)) {
-        expect(result.data).toHaveLength(1);
-        const dataArray = result.data as unknown as Array<{
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        }>;
-        const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
-        expect(polygonData.attributes.criteriaList).toHaveLength(1);
-      } else {
-        const singleData = result.data as unknown as {
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        };
-        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
-        expect(singleData.attributes.criteriaList).toHaveLength(1);
-      }
-    });
-
-    it("should create polygon validations with PLANT_START_DATE validation type", async () => {
-      const request: ValidationRequestBody = {
-        data: {
-          type: "validations",
-          attributes: {
-            polygonUuids: ["polygon-1"],
-            validationTypes: ["PLANT_START_DATE"]
-          }
-        }
-      };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 15,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[15],
-            valid: false,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: {
-              errorType: "DATE_TOO_EARLY",
-              polygonUuid: "polygon-1",
-              polygonName: "Test Polygon",
-              siteName: "Test Site",
-              providedValue: "2017-12-31",
-              minDate: "2018-01-01"
-            }
-          }
-        ]
-      });
-
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
-      const result = serialize(await controller.createPolygonValidations(request));
-
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], ["PLANT_START_DATE"]);
-      expect(result.data).toBeDefined();
-
-      if (Array.isArray(result.data)) {
-        expect(result.data).toHaveLength(1);
-        const dataArray = result.data as unknown as Array<{
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        }>;
-        const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
-        expect(polygonData.attributes.criteriaList).toHaveLength(1);
-      } else {
-        const singleData = result.data as unknown as {
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        };
-        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
-        expect(singleData.attributes.criteriaList).toHaveLength(1);
-      }
-    });
-
-    it("should create polygon validations with POLYGON_SIZE validation type", async () => {
-      const request: ValidationRequestBody = {
-        data: {
-          type: "validations",
-          attributes: {
-            polygonUuids: ["polygon-1"],
-            validationTypes: ["POLYGON_SIZE"]
-          }
-        }
-      };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 6,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[6],
-            valid: false,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: {
-              area_hectares: 1500
-            }
-          }
-        ]
-      });
-
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
-      const result = serialize(await controller.createPolygonValidations(request));
-
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], ["POLYGON_SIZE"]);
-      expect(result.data).toBeDefined();
-
-      if (Array.isArray(result.data)) {
-        expect(result.data).toHaveLength(1);
-        const dataArray = result.data as unknown as Array<{
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        }>;
-        const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
-        expect(polygonData.attributes.criteriaList).toHaveLength(1);
-      } else {
-        const singleData = result.data as unknown as {
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        };
-        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
-        expect(singleData.attributes.criteriaList).toHaveLength(1);
-      }
-    });
-
-    it("should create polygon validations with ESTIMATED_AREA validation type", async () => {
-      const request: ValidationRequestBody = {
-        data: {
-          type: "validations",
-          attributes: {
-            polygonUuids: ["polygon-1"],
-            validationTypes: ["ESTIMATED_AREA"]
-          }
-        }
-      };
-
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: [
-          {
-            criteriaId: 12,
-            validationType: CRITERIA_ID_TO_VALIDATION_TYPE[12],
-            valid: true,
-            createdAt: new Date("2025-01-08T22:15:15.000Z"),
-            extraInfo: {
-              sumAreaSite: 800,
-              sumAreaProject: 4000,
-              percentageSite: 80,
-              percentageProject: 80,
-              totalAreaSite: 1000,
-              totalAreaProject: 5000,
-              lowerBoundSite: 750,
-              upperBoundSite: 1250,
-              lowerBoundProject: 3750,
-              upperBoundProject: 6250
-            }
-          }
-        ]
-      });
-
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
-      const result = serialize(await controller.createPolygonValidations(request));
-
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], ["ESTIMATED_AREA"]);
-      expect(result.data).toBeDefined();
-
-      if (Array.isArray(result.data)) {
-        expect(result.data).toHaveLength(1);
-        const dataArray = result.data as unknown as Array<{
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        }>;
-        const polygonData = dataArray[0];
-        expect(polygonData.attributes.polygonUuid).toBe("polygon-1");
-        expect(polygonData.attributes.criteriaList).toHaveLength(1);
-      } else {
-        const singleData = result.data as unknown as {
-          id: string;
-          attributes: { polygonUuid: string; criteriaList: unknown[] };
-        };
-        expect(singleData.attributes.polygonUuid).toBe("polygon-1");
-        expect(singleData.attributes.criteriaList).toHaveLength(1);
-      }
     });
 
     it("uses all validation types when validationTypes is empty", async () => {
@@ -567,16 +235,13 @@ describe("ValidationController", () => {
           }
         }
       };
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: []
-      });
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
+      mockUserContext({ userId: 1 });
       await controller.createPolygonValidations(request);
 
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], [...VALIDATION_TYPES]);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({ validationTypes: VALIDATION_TYPES, polygonUuids: ["polygon-1"] })
+      );
     });
 
     it("uses all validation types when validationTypes is null", async () => {
@@ -589,16 +254,13 @@ describe("ValidationController", () => {
           }
         }
       };
-      const polygon1Validation = new ValidationDto();
-      populateDto(polygon1Validation, {
-        polygonUuid: "polygon-1",
-        criteriaList: []
-      });
-      mockValidationService.getPolygonValidation.mockResolvedValueOnce(polygon1Validation);
-
+      mockUserContext({ userId: 1 });
       await controller.createPolygonValidations(request);
 
-      expect(mockValidationService.validatePolygonsBatch).toHaveBeenCalledWith(["polygon-1"], [...VALIDATION_TYPES]);
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "polygonValidation",
+        expect.objectContaining({ validationTypes: VALIDATION_TYPES, polygonUuids: ["polygon-1"] })
+      );
     });
   });
 

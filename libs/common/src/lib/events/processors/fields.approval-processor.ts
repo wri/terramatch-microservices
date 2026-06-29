@@ -25,7 +25,7 @@ export const FieldsApprovalProcessor: EntityApprovalProcessor = {
         const field = getLinkedFieldConfig(question.linkedFieldKey)?.field;
         if (field == null || !isField(field)) return;
 
-        await collector.syncField(entity, question, field, { [question.uuid]: null });
+        await collector.syncField(entity, question, field, { [question.formName]: null });
       })
     );
 

@@ -770,23 +770,47 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction
   ): Promise<SitePolygon[]> {
-    const newVersions: SitePolygon[] = [];
+    const activeByRequestUuid = await this.versioningService.validateBulkVersioningEligibility(
+      sitePolygonUuids,
+      transaction
+    );
 
-    for (const sitePolygonUuid of sitePolygonUuids) {
-      const newVersion = await this.createSitePolygonVersion(
-        sitePolygonUuid,
-        undefined,
-        attributeChanges,
-        BULK_ATTRIBUTE_UPDATE_CHANGE_REASON,
-        userId,
-        userFullName,
-        source,
+    const parsedAttributeChanges = this.applyAttributeChanges(attributeChanges);
+
+    const polygonUuidsToClear = [
+      ...new Set(
+        [...activeByRequestUuid.values()]
+          .map(polygon => polygon.polygonUuid)
+          .filter((uuid): uuid is string => uuid != null && uuid !== "")
+      )
+    ];
+
+    if (polygonUuidsToClear.length > 0) {
+      await CriteriaSite.destroy({
+        where: { polygonId: { [Op.in]: polygonUuidsToClear } },
         transaction
-      );
-      newVersions.push(newVersion);
+      });
     }
 
-    return newVersions;
+    const versionEntries = sitePolygonUuids.map(sitePolygonUuid => {
+      const basePolygon = activeByRequestUuid.get(sitePolygonUuid);
+      if (basePolygon == null) {
+        throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
+      }
+
+      const changeDescription = this.buildDetailedChangeDescription(basePolygon, parsedAttributeChanges, false);
+
+      return {
+        basePolygon,
+        attributeChanges: parsedAttributeChanges,
+        newPolygonGeometryUuid: null,
+        userId,
+        changeReason: `${BULK_ATTRIBUTE_UPDATE_CHANGE_REASON} - ${changeDescription}`,
+        userFullName
+      };
+    });
+
+    return this.versioningService.createVersions(versionEntries, transaction);
   }
 
   async createSitePolygonVersion(
@@ -799,10 +823,10 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction
   ): Promise<SitePolygon> {
-    const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid);
+    const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid, transaction);
 
     let newPolygonGeometryUuid: string | null = null;
-    const sitePolygonAttributes: Partial<SitePolygon> = {};
+    const sitePolygonAttributes = this.applyAttributeChanges(attributeChanges);
 
     if (newGeometry != null && newGeometry.length > 0) {
       const features = newGeometry.flatMap(g => g.features);
@@ -831,8 +855,45 @@ export class SitePolygonCreationService {
       await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
     }
 
+    const polygonUuidToClear = newPolygonGeometryUuid ?? basePolygon.polygonUuid;
+
+    if (polygonUuidToClear != null) {
+      await CriteriaSite.destroy({
+        where: { polygonId: polygonUuidToClear },
+        transaction
+      });
+    }
+
+    const changeDescription = this.buildDetailedChangeDescription(
+      basePolygon,
+      sitePolygonAttributes,
+      newPolygonGeometryUuid != null
+    );
+
+    const [newVersion] = await this.versioningService.createVersions(
+      [
+        {
+          basePolygon,
+          attributeChanges: sitePolygonAttributes,
+          newPolygonGeometryUuid,
+          userId,
+          changeReason: `${changeReason} - ${changeDescription}`,
+          userFullName
+        }
+      ],
+      transaction
+    );
+
+    return newVersion;
+  }
+
+  private applyAttributeChanges(
+    attributeChanges: AttributeChangesDto | SitePolygonBulkAttributeChangesDto | undefined
+  ): Partial<SitePolygon> {
+    const sitePolygonAttributes: Partial<SitePolygon> = {};
+
     if (attributeChanges != null) {
-      if (attributeChanges.polyName !== undefined) {
+      if ("polyName" in attributeChanges && attributeChanges.polyName !== undefined) {
         sitePolygonAttributes.polyName = attributeChanges.polyName.length > 0 ? attributeChanges.polyName : null;
       }
 
@@ -868,33 +929,11 @@ export class SitePolygonCreationService {
         sitePolygonAttributes.numTrees = attributeChanges.numTrees;
       }
     }
+
     sitePolygonAttributes.validationStatus = null;
     sitePolygonAttributes.status = "draft";
 
-    const polygonUuidToClear = newPolygonGeometryUuid ?? basePolygon.polygonUuid;
-
-    if (polygonUuidToClear != null) {
-      await CriteriaSite.destroy({
-        where: { polygonId: polygonUuidToClear },
-        transaction
-      });
-    }
-
-    const changeDescription = this.buildDetailedChangeDescription(
-      basePolygon,
-      sitePolygonAttributes,
-      newPolygonGeometryUuid != null
-    );
-
-    return await this.versioningService.createVersion(
-      basePolygon,
-      sitePolygonAttributes,
-      newPolygonGeometryUuid,
-      userId,
-      `${changeReason} - ${changeDescription}`,
-      userFullName,
-      transaction
-    );
+    return sitePolygonAttributes;
   }
 
   private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[]) {

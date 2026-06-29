@@ -122,17 +122,17 @@ describe("CsvExportService", () => {
 
       const mappings = await getFormQuestionsForExport(form);
       expect(mappings).toEqual([
-        { heading: "hectaresGoal", questionUuid: questions[3].uuid, attribute: undefined, config: expect.anything() },
+        { heading: "hectaresGoal", questionName: questions[3].uuid, attribute: undefined, config: expect.anything() },
         {
           heading: "fullTimeCltJobsAggregate",
-          questionUuid: questions[1].uuid,
+          questionName: questions[1].uuid,
           attribute: undefined,
           config: expect.anything()
         },
-        { heading: "media", questionUuid: questions[2].uuid, attribute: undefined, config: expect.anything() },
+        { heading: "media", questionName: questions[2].uuid, attribute: undefined, config: expect.anything() },
         {
           heading: "landUseTypes",
-          questionUuid: questions[0].uuid,
+          questionName: questions[0].uuid,
           attribute: { attribute: "landUseTypes", model: "projects" },
           config: expect.anything()
         }

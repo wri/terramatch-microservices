@@ -86,11 +86,11 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
   const virtualQuestions: Dictionary<{ props: VirtualLinkedFieldProps; modelType: FormModelType }> = {};
 
   return {
-    addField(field, modelType, questionUuid) {
+    addField(field, modelType, questionName) {
       if (isPropertyField(field)) {
-        propertyQuestions[questionUuid] = { modelType, property: field.property, inputType: field.inputType };
+        propertyQuestions[questionName] = { modelType, property: field.property, inputType: field.inputType };
       } else {
-        virtualQuestions[questionUuid] = { props: field.virtual, modelType };
+        virtualQuestions[questionName] = { props: field.virtual, modelType };
       }
     },
 
@@ -175,7 +175,7 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
     },
 
     async syncField(model: FormModel, question: FormQuestion, field: LinkedField, answers: Dictionary<unknown>) {
-      const answer = answers[question.uuid];
+      const answer = answers[question.formName];
       if (isPropertyField(field)) {
         const property = String(field.property);
         if (property === "plantingStatus") {

@@ -291,7 +291,7 @@ export class FormDataService {
     for (const question of questions) {
       const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
       if (config == null) {
-        answersModel.answers[question.uuid] = answers[question.uuid];
+        answersModel.answers[question.formName] = answers[question.formName];
         continue;
       }
 
@@ -305,7 +305,7 @@ export class FormDataService {
         await collector[config.field.resource].syncRelation(
           model,
           config.field,
-          answers[question.uuid] as object[] | null | undefined,
+          answers[question.formName] as object[] | null | undefined,
           question.isHidden(answers, questions)
         );
       }
@@ -349,7 +349,7 @@ export class FormDataService {
       if (question.isHidden(answers, questions)) continue;
 
       questionCount++;
-      if (answers[question.uuid] != null) answeredCount++;
+      if (answers[question.formName] != null) answeredCount++;
     }
 
     return questionCount == 0 ? 100 : Math.round((answeredCount / questionCount) * 100);

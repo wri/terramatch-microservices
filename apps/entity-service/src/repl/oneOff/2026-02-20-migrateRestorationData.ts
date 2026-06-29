@@ -321,7 +321,7 @@ const processUpdateRequestMapping = async <M extends EntityModel>(model: M, mapp
     if (trackingQuestion == null) continue;
 
     // Assume that if the content member already exists, it's valid.
-    if (updateRequest.content[trackingQuestion.uuid] != null) continue;
+    if (updateRequest.content[trackingQuestion.formName] != null) continue;
 
     const entries: CreationAttributes<TrackingEntry>[] = [];
     for (const entry of mapping.entries) {
@@ -374,7 +374,7 @@ const processUpdateRequestMapping = async <M extends EntityModel>(model: M, mapp
     await updateRequest.update({
       content: {
         ...updateRequest.content,
-        [trackingQuestion.uuid]: JSON.parse(JSON.stringify([new EmbeddedTrackingDto(tracking)]))
+        [trackingQuestion.formName]: JSON.parse(JSON.stringify([new EmbeddedTrackingDto(tracking)]))
       }
     });
   }

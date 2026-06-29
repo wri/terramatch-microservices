@@ -48,6 +48,10 @@ export class FinancialReport extends Model<FinancialReport> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   declare uuid: string;
 
+  linkToTerramatch(frontendUrl: string) {
+    return `${frontendUrl}/admin#/financialReport/${this.uuid}/show`;
+  }
+
   @StateMachineColumn(ReportStatusStates)
   declare status: ReportStatus;
 

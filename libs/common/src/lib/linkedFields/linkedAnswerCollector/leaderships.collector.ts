@@ -27,7 +27,7 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
   const questions: Dictionary<string> = {};
 
   return {
-    addField(field, modelType, questionUuid) {
+    addField(field, modelType, questionName) {
       if (modelType !== "organisations") {
         throw new InternalServerErrorException("leaderships is only supported on org");
       }
@@ -38,7 +38,7 @@ export function leadershipsCollector(logger: LoggerService): RelationResourceCol
       if (questions[field.collection] != null) {
         logger.warn(`Duplicate field for leaderships in ${field.collection} on orgs`);
       }
-      questions[field.collection] = questionUuid;
+      questions[field.collection] = questionName;
     },
 
     async collect(answers, models, { forExport }) {

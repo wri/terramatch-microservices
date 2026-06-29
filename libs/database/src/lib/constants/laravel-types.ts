@@ -11,10 +11,10 @@ import {
   SiteReport,
   SrpReport
 } from "../entities";
-import { DemographicAssociationType } from "../types/tracking";
 import { Dictionary } from "lodash";
 import { ModelCtor } from "sequelize-typescript";
 import { LaravelModel, UuidModel } from "../types/util";
+import { FormModelType } from "./entities";
 
 export const LARAVEL_MODELS: Dictionary<ModelCtor<UuidModel & LaravelModel>> = {
   [DisturbanceReport.LARAVEL_TYPE]: DisturbanceReport,
@@ -30,10 +30,15 @@ export const LARAVEL_MODELS: Dictionary<ModelCtor<UuidModel & LaravelModel>> = {
   [SrpReport.LARAVEL_TYPE]: SrpReport
 };
 
-export const LARAVEL_MODEL_TYPES: Record<string, DemographicAssociationType> = {
+export const LARAVEL_MODEL_TYPES: Record<string, FormModelType> = {
+  [FinancialReport.LARAVEL_TYPE]: "financialReports",
+  [Nursery.LARAVEL_TYPE]: "nurseries",
+  [NurseryReport.LARAVEL_TYPE]: "nurseryReports",
   [Organisation.LARAVEL_TYPE]: "organisations",
   [Project.LARAVEL_TYPE]: "projects",
   [ProjectPitch.LARAVEL_TYPE]: "projectPitches",
   [ProjectReport.LARAVEL_TYPE]: "projectReports",
-  [SiteReport.LARAVEL_TYPE]: "siteReports"
+  [Site.LARAVEL_TYPE]: "sites",
+  [SiteReport.LARAVEL_TYPE]: "siteReports",
+  [SrpReport.LARAVEL_TYPE]: "srpReports"
 } as const;

@@ -279,6 +279,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @Column({ type: UUID, defaultValue: UUIDV4 })
   declare uuid: string;
 
+  linkToTerramatch(frontendUrl: string) {
+    return `${frontendUrl}/admin#/projectReport/${this.uuid}/show`;
+  }
+
   @AllowNull
   @Column(STRING)
   declare frameworkKey: FrameworkKey | null;

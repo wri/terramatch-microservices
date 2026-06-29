@@ -9,7 +9,7 @@ import { GeometryFileProcessingService } from "./geometry-file-processing.servic
 import { SitePolygon, CriteriaSite } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
-import { Transaction } from "sequelize";
+import { Transaction, Op } from "sequelize";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 
 const mockTransaction = {
@@ -59,7 +59,9 @@ describe("SitePolygonCreationService - Versioning", () => {
           provide: SitePolygonVersioningService,
           useValue: {
             validateVersioningEligibility: jest.fn(),
-            createVersion: jest.fn()
+            validateBulkVersioningEligibility: jest.fn(),
+            createVersion: jest.fn(),
+            createVersions: jest.fn()
           }
         },
         {
@@ -157,12 +159,14 @@ describe("SitePolygonCreationService - Versioning", () => {
         uuids: [newGeometryUuid],
         areas: [2.5]
       });
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: newVersionUuid,
-        primaryUuid: "primary-uuid",
-        polygonUuid: newGeometryUuid,
-        status: "draft"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: newVersionUuid,
+          primaryUuid: "primary-uuid",
+          polygonUuid: newGeometryUuid,
+          status: "draft"
+        } as SitePolygon
+      ]);
 
       const result = await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -176,17 +180,22 @@ describe("SitePolygonCreationService - Versioning", () => {
       );
 
       expect(result.uuid).toBe(newVersionUuid);
-      expect(versioningService.createVersion).toHaveBeenCalledWith(
-        basePolygon,
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon,
+            newPolygonGeometryUuid: newGeometryUuid,
+            userId,
+            userFullName
+          })
+        ],
+        mockTransaction
+      );
+      expect((versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges).toEqual(
         expect.objectContaining({
           calcArea: 2.5,
           status: "draft"
-        }),
-        newGeometryUuid,
-        userId,
-        expect.stringContaining(changeReason),
-        userFullName,
-        mockTransaction
+        })
       );
       expect(polygonGeometryService.bulkUpdateSitePolygonCentroids).toHaveBeenCalledWith(
         [newGeometryUuid],
@@ -211,14 +220,16 @@ describe("SitePolygonCreationService - Versioning", () => {
       const newVersionUuid = "new-version-uuid";
 
       jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: newVersionUuid,
-        primaryUuid: "primary-uuid",
-        polygonUuid: "existing-geometry-uuid",
-        polyName: "Updated Name",
-        numTrees: 150,
-        status: "draft"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: newVersionUuid,
+          primaryUuid: "primary-uuid",
+          polygonUuid: "existing-geometry-uuid",
+          polyName: "Updated Name",
+          numTrees: 150,
+          status: "draft"
+        } as SitePolygon
+      ]);
 
       const result = await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -232,18 +243,23 @@ describe("SitePolygonCreationService - Versioning", () => {
       );
 
       expect(result.uuid).toBe(newVersionUuid);
-      expect(versioningService.createVersion).toHaveBeenCalledWith(
-        basePolygon,
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon,
+            newPolygonGeometryUuid: null,
+            userId,
+            userFullName
+          })
+        ],
+        mockTransaction
+      );
+      expect((versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges).toEqual(
         expect.objectContaining({
           polyName: "Updated Name",
           numTrees: 150,
           status: "draft"
-        }),
-        null, // No new geometry UUID
-        userId,
-        expect.any(String),
-        userFullName,
-        mockTransaction
+        })
       );
       expect(polygonGeometryService.createGeometriesFromFeatures).not.toHaveBeenCalled();
     });
@@ -291,12 +307,14 @@ describe("SitePolygonCreationService - Versioning", () => {
         uuids: ["new-geometry-uuid"],
         areas: [3.0]
       });
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: "new-version-uuid",
-        primaryUuid: "primary-uuid",
-        polyName: "Updated Name",
-        status: "draft"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: "new-version-uuid",
+          primaryUuid: "primary-uuid",
+          polyName: "Updated Name",
+          status: "draft"
+        } as SitePolygon
+      ]);
 
       const result = await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -310,18 +328,23 @@ describe("SitePolygonCreationService - Versioning", () => {
       );
 
       expect(result).toBeDefined();
-      expect(versioningService.createVersion).toHaveBeenCalledWith(
-        basePolygon,
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon,
+            newPolygonGeometryUuid: "new-geometry-uuid",
+            userId,
+            userFullName
+          })
+        ],
+        mockTransaction
+      );
+      expect((versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges).toEqual(
         expect.objectContaining({
           polyName: "Updated Name",
           calcArea: 3.0,
           status: "draft"
-        }),
-        "new-geometry-uuid",
-        userId,
-        expect.any(String),
-        userFullName,
-        mockTransaction
+        })
       );
     });
 
@@ -390,9 +413,11 @@ describe("SitePolygonCreationService - Versioning", () => {
       };
 
       jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: "new-version-uuid"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: "new-version-uuid"
+        } as SitePolygon
+      ]);
 
       await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -405,8 +430,8 @@ describe("SitePolygonCreationService - Versioning", () => {
         mockTransaction
       );
 
-      const createVersionCall = (versioningService.createVersion as jest.Mock).mock.calls[0];
-      const appliedAttributes = createVersionCall[1];
+      const createVersionsCall = (versioningService.createVersions as jest.Mock).mock.calls[0];
+      const appliedAttributes = createVersionsCall[0][0].attributeChanges;
 
       expect(appliedAttributes.polyName).toBeNull();
       expect(appliedAttributes.plantStart).toBeNull();
@@ -433,9 +458,11 @@ describe("SitePolygonCreationService - Versioning", () => {
       };
 
       jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: "new-version-uuid"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: "new-version-uuid"
+        } as SitePolygon
+      ]);
 
       await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -448,8 +475,8 @@ describe("SitePolygonCreationService - Versioning", () => {
         mockTransaction
       );
 
-      const createVersionCall = (versioningService.createVersion as jest.Mock).mock.calls[0];
-      const appliedAttributes = createVersionCall[1];
+      const createVersionsCall = (versioningService.createVersions as jest.Mock).mock.calls[0];
+      const appliedAttributes = createVersionsCall[0][0].attributeChanges;
 
       expect(appliedAttributes.polyName).toBe("Updated Name");
       expect(appliedAttributes).not.toHaveProperty("plantStart");
@@ -467,10 +494,12 @@ describe("SitePolygonCreationService - Versioning", () => {
       } as SitePolygon;
 
       jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
-      jest.spyOn(versioningService, "createVersion").mockResolvedValue({
-        uuid: "new-version-uuid",
-        status: "draft"
-      } as SitePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([
+        {
+          uuid: "new-version-uuid",
+          status: "draft"
+        } as SitePolygon
+      ]);
 
       await service.createSitePolygonVersion(
         baseSitePolygonUuid,
@@ -483,10 +512,77 @@ describe("SitePolygonCreationService - Versioning", () => {
         mockTransaction
       );
 
-      const createVersionCall = (versioningService.createVersion as jest.Mock).mock.calls[0];
-      const appliedAttributes = createVersionCall[1];
+      const createVersionsCall = (versioningService.createVersions as jest.Mock).mock.calls[0];
+      const appliedAttributes = createVersionsCall[0][0].attributeChanges;
 
       expect(appliedAttributes.status).toBe("draft");
+    });
+  });
+
+  describe("bulkUpdateSitePolygonAttributes", () => {
+    const userId = 123;
+    const userFullName = "Test User";
+    const source = "terramatch";
+
+    it("should bulk validate, clear criteria once, and create all versions in one call", async () => {
+      const requestUuids = ["request-uuid-1", "request-uuid-2"];
+      const basePolygonOne = {
+        uuid: "active-uuid-1",
+        primaryUuid: "primary-uuid-1",
+        polygonUuid: "geometry-uuid-1",
+        numTrees: 10
+      } as SitePolygon;
+      const basePolygonTwo = {
+        uuid: "active-uuid-2",
+        primaryUuid: "primary-uuid-2",
+        polygonUuid: "geometry-uuid-2",
+        numTrees: 20
+      } as SitePolygon;
+      const activeByRequestUuid = new Map<string, SitePolygon>([
+        ["request-uuid-1", basePolygonOne],
+        ["request-uuid-2", basePolygonTwo]
+      ]);
+
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(activeByRequestUuid);
+      const destroySpy = jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(2);
+      jest
+        .spyOn(versioningService, "createVersions")
+        .mockResolvedValue([
+          { uuid: "new-version-uuid-1" } as SitePolygon,
+          { uuid: "new-version-uuid-2" } as SitePolygon
+        ]);
+
+      const result = await service.bulkUpdateSitePolygonAttributes(
+        requestUuids,
+        { numTrees: 99 },
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+
+      expect(versioningService.validateBulkVersioningEligibility).toHaveBeenCalledWith(requestUuids, mockTransaction);
+      expect(destroySpy).toHaveBeenCalledWith({
+        where: { polygonId: { [Op.in]: ["geometry-uuid-1", "geometry-uuid-2"] } },
+        transaction: mockTransaction
+      });
+      expect(versioningService.createVersions).toHaveBeenCalledTimes(1);
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon: basePolygonOne,
+            userId,
+            userFullName
+          }),
+          expect.objectContaining({
+            basePolygon: basePolygonTwo,
+            userId,
+            userFullName
+          })
+        ],
+        mockTransaction
+      );
+      expect(result).toHaveLength(2);
     });
   });
 

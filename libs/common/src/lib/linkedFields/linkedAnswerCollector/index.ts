@@ -40,7 +40,7 @@ export interface ResourceCollector<TField extends LinkedField | LinkedFile | Lin
   /**
    * Gather information about which fields / models this collector will need to pull data from
    */
-  addField(field: TField, modelType: FormModelType, questionUuid: string): void;
+  addField(field: TField, modelType: FormModelType, questionName: string): void;
 
   /**
    * Execute as few queries as possible to satisfy all current answer data for this form.
@@ -141,12 +141,12 @@ export class LinkedAnswerCollector {
     for (const question of questions) {
       const config = question.linkedFieldKey == null ? undefined : getLinkedFieldConfig(question.linkedFieldKey);
       if (config == null) {
-        answers[question.uuid] = nonLinkedAnswers?.[question.uuid];
+        answers[question.formName] = nonLinkedAnswers?.[question.formName];
       } else {
-        if (isField(config.field)) this.fields.addField(config.field, config.model, question.uuid);
-        else if (isFile(config.field)) this.files.addField(config.field, config.model, question.uuid);
+        if (isField(config.field)) this.fields.addField(config.field, config.model, question.formName);
+        else if (isFile(config.field)) this.files.addField(config.field, config.model, question.formName);
         else if (isRelation(config.field)) {
-          this[config.field.resource].addField(config.field, config.model, question.uuid);
+          this[config.field.resource].addField(config.field, config.model, question.formName);
         }
       }
     }

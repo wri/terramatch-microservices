@@ -856,18 +856,6 @@ describe("ProjectPolygonCreationService", () => {
       });
       const file = createMockFile();
       const featureCollection = createFeatureCollection();
-      const transformedGeometry: Polygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [0, 0],
-            [0, 1],
-            [1, 1],
-            [1, 0],
-            [0, 0]
-          ]
-        ]
-      };
       const polygonUuid = crypto.randomUUID();
 
       const mockTransaction = {

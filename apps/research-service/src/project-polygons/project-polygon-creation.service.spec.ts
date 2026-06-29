@@ -14,7 +14,6 @@ describe("ProjectPolygonCreationService", () => {
   let service: ProjectPolygonCreationService;
   let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
   let geometryFileProcessingService: jest.Mocked<GeometryFileProcessingService>;
-  let projectPolygonGeometryService: jest.Mocked<ProjectPolygonGeometryService>;
   let projectPolygonsService: jest.Mocked<ProjectPolygonsService>;
 
   beforeEach(async () => {
@@ -24,10 +23,6 @@ describe("ProjectPolygonCreationService", () => {
 
     const mockGeometryFileProcessingService = {
       parseGeometryFile: jest.fn()
-    };
-
-    const mockProjectPolygonGeometryService = {
-      transformFeaturesToSinglePolygon: jest.fn()
     };
 
     const mockProjectPolygonsService = {
@@ -47,7 +42,7 @@ describe("ProjectPolygonCreationService", () => {
         },
         {
           provide: ProjectPolygonGeometryService,
-          useValue: mockProjectPolygonGeometryService
+          useValue: { transformFeaturesToSinglePolygon: jest.fn() }
         },
         {
           provide: ProjectPolygonsService,
@@ -59,7 +54,6 @@ describe("ProjectPolygonCreationService", () => {
     service = module.get<ProjectPolygonCreationService>(ProjectPolygonCreationService);
     polygonGeometryService = module.get(PolygonGeometryCreationService);
     geometryFileProcessingService = module.get(GeometryFileProcessingService);
-    projectPolygonGeometryService = module.get(ProjectPolygonGeometryService);
     projectPolygonsService = module.get(ProjectPolygonsService);
   });
 
@@ -787,18 +781,6 @@ describe("ProjectPolygonCreationService", () => {
       const pitch = await ProjectPitchFactory.build();
       const file = createMockFile();
       const featureCollection = createFeatureCollection();
-      const transformedGeometry: Polygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [0, 0],
-            [0, 1],
-            [1, 1],
-            [1, 0],
-            [0, 0]
-          ]
-        ]
-      };
       const polygonUuid = crypto.randomUUID();
 
       const mockTransaction = {
@@ -811,8 +793,6 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
-      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -828,19 +808,20 @@ describe("ProjectPolygonCreationService", () => {
       const result = await service.uploadProjectPolygonFromFile(file, pitch.uuid, userId);
 
       expect(geometryFileProcessingService.parseGeometryFile).toHaveBeenCalledWith(file);
-      expect(ProjectPolygon.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            entityType: ProjectPitch.LARAVEL_TYPE,
-            entityId: pitch.id
-          },
-          transaction: mockTransaction
-        })
-      );
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
-        [transformedGeometry],
+        [featureCollection.features[0].geometry],
         userId,
         mockTransaction
+      );
+      expect(ProjectPolygon.bulkCreate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            polyUuid: polygonUuid,
+            entityType: ProjectPitch.LARAVEL_TYPE,
+            entityId: pitch.id
+          })
+        ]),
+        { transaction: mockTransaction }
       );
       expect(result[0].entityId).toBe(pitch.id);
       expect(result[0].polyUuid).toBe(polygonUuid);
@@ -851,9 +832,6 @@ describe("ProjectPolygonCreationService", () => {
     it("should append uploaded polygons without deleting existing ones", async () => {
       const userId = 1;
       const pitch = await ProjectPitchFactory.build();
-      const existingProjectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
-        polyUuid: crypto.randomUUID()
-      });
       const file = createMockFile();
       const featureCollection = createFeatureCollection();
       const polygonUuid = crypto.randomUUID();
@@ -868,7 +846,6 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
-      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([existingProjectPolygon]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -899,18 +876,6 @@ describe("ProjectPolygonCreationService", () => {
       const projectPitch = await ProjectPitchFactory.build();
       const file = createMockFile();
       const featureCollection = createFeatureCollection();
-      const transformedGeometry: Polygon = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [0, 0],
-            [0, 1],
-            [1, 1],
-            [1, 0],
-            [0, 0]
-          ]
-        ]
-      };
 
       const mockTransaction = {
         commit: jest.fn(),
@@ -922,8 +887,6 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(projectPitch);
-      jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
-      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [],
         areas: []

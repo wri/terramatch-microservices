@@ -3,7 +3,7 @@ import { stringify } from "csv-stringify";
 import { FileService } from "../file/file.service";
 import { ConfigService } from "@nestjs/config";
 import { FileDownloadDto } from "../dto/file-download.dto";
-import { Dictionary, groupBy, isString, pick } from "lodash";
+import { Dictionary, groupBy, isString } from "lodash";
 import { Model } from "sequelize";
 import { DateTime } from "luxon";
 import { Response } from "express";
@@ -25,15 +25,16 @@ import { TMLogger } from "../util/tm-logger";
 import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 
+export type AddRow = (...sources: (Model | Dictionary<unknown>)[]) => void;
 export type StreamWriter = {
-  addRow: (model: Model, additional?: Dictionary<unknown>) => void;
+  addRow: AddRow;
   close: () => void;
 };
 
 export type RowWriter = (addRow: StreamWriter["addRow"]) => Promise<void>;
 
 export type FormQuestionExportMapping = {
-  questionUuid: string;
+  questionName: string;
   heading: string;
   config: LinkedFieldSpecification;
   attribute?: ModelAttribute;
@@ -83,7 +84,7 @@ const addQuestionToMapping = (mappings: FormQuestionExportMapping[], question: F
   if (config == null) return;
 
   mappings.push({
-    questionUuid: question.uuid,
+    questionName: question.formName,
     heading: getExportHeading(config),
     attribute: getModelAttribute(config),
     config
@@ -151,9 +152,23 @@ export class CsvExportService {
     stringifier.pipe(destination);
 
     const keys = Object.keys(columns);
-    const addRow = (model: Model, additional?: Dictionary<unknown>) => {
-      const row = Object.entries({ ...pick(model, keys), ...additional }).reduce(
-        (acc, [key, value]) => ({ ...acc, [key]: this.serializeCell(value) }),
+    const addRow = (...sources: (Model | Dictionary<unknown>)[]) => {
+      // Use sources in reverse order so sources later in the list override values from earlier ones.
+      const reverseSources = sources.toReversed();
+      const getValue = (key: string) => {
+        for (const source of reverseSources) {
+          if (source instanceof Model) {
+            if (source.get(key) != null) return source.get(key);
+          } else if (source[key] != null) return source[key];
+        }
+
+        return undefined;
+      };
+      const row = keys.reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: this.serializeCell(getValue(key))
+        }),
         {}
       );
       stringifier.write(row);
@@ -179,9 +194,9 @@ export class CsvExportService {
       if (mapping.config == null) continue;
 
       const { model, field } = mapping.config;
-      if (isField(field)) collector.fields.addField(field, model, mapping.questionUuid);
-      else if (isFile(field)) collector.files.addField(field, model, mapping.questionUuid);
-      else collector[field.resource].addField(field, model, mapping.questionUuid);
+      if (isField(field)) collector.fields.addField(field, model, mapping.questionName);
+      else if (isFile(field)) collector.files.addField(field, model, mapping.questionName);
+      else collector[field.resource].addField(field, model, mapping.questionName);
     }
 
     const answers: Dictionary<unknown> = {};
@@ -191,7 +206,7 @@ export class CsvExportService {
     // so we have to pass the question UUID into the collector and then re-map to our headings after
     // data collection.
     return Object.entries(answers).reduce((acc, [questionUuid, value]) => {
-      const { heading } = mappings.find(mapping => questionUuid === mapping.questionUuid) ?? {};
+      const { heading } = mappings.find(mapping => questionUuid === mapping.questionName) ?? {};
       return heading == null ? acc : { ...acc, [heading]: value };
     }, {});
   }

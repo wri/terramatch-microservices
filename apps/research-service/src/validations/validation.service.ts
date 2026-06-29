@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
+  AuditStatus,
   CriteriaSite,
   CriteriaSiteHistoric,
   PolygonGeometry,
   SitePolygon,
   Site,
-  Project
+  Project,
+  User
 } from "@terramatch-microservices/database/entities";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { ValidationDto } from "./dto/validation.dto";
 import { ValidationCriteriaDto } from "./dto/validation-criteria.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -29,9 +32,11 @@ import {
   VALIDATION_CRITERIA_IDS,
   CriteriaId,
   EXCLUDED_VALIDATION_CRITERIA,
-  CRITERIA_ID_TO_VALIDATION_TYPE
+  CRITERIA_ID_TO_VALIDATION_TYPE,
+  POLYGON_VALIDATION_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
+import { CreationAttributes } from "sequelize";
 import { validateFeatureCollectionStructure } from "./utils/geojson-structure-validator";
 
 const DATA_COMPLETENESS_CRITERIA_ID = VALIDATION_CRITERIA_IDS.DATA_COMPLETENESS;
@@ -284,6 +289,48 @@ export class ValidationService {
     }
 
     await this.saveValidationResultsBatch(validationResults);
+    if (validationResults.length > 0) {
+      await this.createValidationAuditStatuses(polygonUuids, validationTypes);
+    }
+  }
+
+  private async createValidationAuditStatuses(
+    polygonUuids: string[],
+    validationTypes: ValidationType[]
+  ): Promise<void> {
+    if (polygonUuids.length === 0) {
+      return;
+    }
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: { [Op.in]: polygonUuids },
+        isActive: true
+      },
+      attributes: ["id", "validationStatus"]
+    });
+
+    if (sitePolygons.length === 0) {
+      return;
+    }
+
+    const userId = UserContext.authenticatedUserId;
+    const user =
+      userId == null ? null : await User.findByPk(userId, { attributes: ["emailAddress", "firstName", "lastName"] });
+
+    const auditRecords = sitePolygons.map(sitePolygon => ({
+      auditableType: SitePolygon.LARAVEL_TYPE,
+      auditableId: sitePolygon.id,
+      createdBy: user?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
+      lastName: user?.lastName ?? null,
+      comment: validationTypes.join(", "),
+      status: sitePolygon.validationStatus,
+      type: POLYGON_VALIDATION_AUDIT_TYPE,
+      isActive: null
+    }));
+
+    await AuditStatus.bulkCreate(auditRecords as CreationAttributes<AuditStatus>[]);
   }
 
   async saveValidationResultsBatch(results: ValidationResult[]): Promise<void> {

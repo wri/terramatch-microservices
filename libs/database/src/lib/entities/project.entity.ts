@@ -140,6 +140,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column({ type: UUID, defaultValue: UUIDV4 })
   declare uuid: CreationOptional<string>;
 
+  linkToTerramatch(frontendUrl: string) {
+    return `${frontendUrl}/admin#/project/${this.uuid}/show`;
+  }
+
   @AllowNull
   @Column(STRING)
   declare frameworkKey: FrameworkKey | null;
@@ -235,6 +239,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(TEXT)
   declare objectives: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare projectSummary: string | null;
 
   @AllowNull
   @Column(TEXT)

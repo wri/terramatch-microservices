@@ -12,9 +12,11 @@ import {
   OrganisationFactory
 } from "@terramatch-microservices/database/factories";
 import { EmbeddedFinancialIndicatorDto } from "../../dto/financial-indicator.dto";
+import { EmbeddedMediaDto } from "../../dto/media.dto";
 import { orderBy } from "lodash";
 import { faker } from "@faker-js/faker";
 import { CollectorTestHarness, getRelation } from "../../util/testing";
+import { Media } from "@terramatch-microservices/database/entities";
 
 describe("FinancialIndicatorCollector", () => {
   let harness: CollectorTestHarness;
@@ -69,6 +71,9 @@ describe("FinancialIndicatorCollector", () => {
         indicators.map(indicator =>
           MediaFactory.financialIndicator(indicator).create({ collectionName: "documentation" })
         )
+      );
+      harness.mediaService.embeddedMediaDto.mockImplementation(
+        (documentationMedia: Media) => new EmbeddedMediaDto(documentationMedia, { url: "", thumbUrl: "" })
       );
       await harness.expectAnswers(
         { financialReports: report },

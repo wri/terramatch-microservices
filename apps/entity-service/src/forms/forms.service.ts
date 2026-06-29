@@ -307,7 +307,7 @@ export class FormsService {
       const options = optionsByQuestionId[question.id];
       const tableHeaders = tableHeadersByQuestionId[question.id];
       return new FormQuestionDto(question, {
-        name: question.uuid,
+        name: question.formName,
         model: config?.model ?? null,
         collection,
         ...this.localizationService.translateFields(translations, question, ["label", "description", "placeholder"]),

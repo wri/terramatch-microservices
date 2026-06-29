@@ -172,13 +172,13 @@ export const trackingsCollector = function (logger: LoggerService): RelationReso
   const dtoAttributes = ["trackableType", ...intersection(apiAttributes(EmbeddedTrackingDto), modelAttributes)];
 
   return {
-    addField(field, modelType, questionUuid) {
+    addField(field, modelType, questionName) {
       const key = makeKey(field, modelType);
       if (questions[key] != null) {
         logger.warn(`Duplicate collection for field ${key}`);
       }
 
-      questions[key] = questionUuid;
+      questions[key] = questionName;
     },
 
     async collect(answers, models, { forExport, frameworkKey }) {

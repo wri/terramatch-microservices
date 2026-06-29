@@ -37,7 +37,8 @@ import {
   INDICATOR_SLUGS,
   PolygonStatus,
   POLYGON_PENDING_APPROVAL,
-  VALIDATION_TYPES
+  VALIDATION_TYPES,
+  AuditStatusType
 } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -677,16 +678,22 @@ export class SitePolygonsService {
     comment: string | null | undefined,
     user: User | null
   ): Array<Partial<AuditStatus>> {
-    return sitePolygons.map(sitePolygon => ({
-      auditableType: SitePolygon.LARAVEL_TYPE,
-      auditableId: sitePolygon.id,
-      createdBy: user?.emailAddress ?? null,
-      firstName: user?.firstName ?? null,
-      lastName: user?.lastName ?? null,
-      comment: comment ?? null,
-      status: status as PolygonStatus,
-      type: "status",
-      isActive: null
-    }));
+    const auditStatusTypes = ["status", "comment"];
+    return auditStatusTypes.flatMap(type => {
+      if (type === "comment" && comment === null) {
+        return [];
+      }
+      return sitePolygons.map(sitePolygon => ({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: sitePolygon.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: comment ?? null,
+        status: status as PolygonStatus,
+        type: type as AuditStatusType,
+        isActive: null
+      }));
+    });
   }
 }

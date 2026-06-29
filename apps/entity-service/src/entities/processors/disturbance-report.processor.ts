@@ -7,7 +7,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CreationAttributes, Includeable, Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
@@ -18,11 +18,13 @@ import {
 import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
-import { Dictionary, flatten, kebabCase } from "lodash";
+import { Dictionary, flatten } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { Archiver } from "archiver";
+import { Response } from "express";
 
 const REPORT_ENTRIES = [
   {
@@ -121,10 +123,33 @@ const CSV_COLUMNS: Dictionary<string> = {
   intensity: "Intensity",
   siteAffected: "Site Affected",
   polygonAffected: "Polygon Affected",
+  nurseryAffected: "Nursery Affected",
   mediaFiles: "Media Files",
   createdAt: "Created At",
   updatedAt: "Updated At",
   submittedAt: "Submitted At"
+};
+
+const CSV_EXPORT_INCLUDES = [
+  {
+    association: "project",
+    attributes: ["uuid", "name"]
+  }
+];
+
+const ENTRY_EXPORT_COLUMN_MAP: Record<string, keyof typeof CSV_COLUMNS> = {
+  "disturbance-type": "disturbanceType",
+  "disturbance-subtype": "disturbanceSubtype",
+  intensity: "intensity",
+  extent: "extent",
+  "people-affected": "peopleAffected",
+  "monetary-damage": "monetaryDamage",
+  "property-affected": "propertyAffected",
+  "disturbance-start-date": "disturbanceStartDate",
+  "disturbance-end-date": "disturbanceEndDate",
+  "site-affected": "siteAffected",
+  "polygon-affected": "polygonAffected",
+  "nursery-affected": "nurseryAffected"
 };
 
 const decodeValue = (value: string | null) => {
@@ -184,7 +209,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           association: "project",
           attributes: ["id", "uuid", "name", "country"],
           include: [{ association: "organisation", attributes: ["uuid", "name"] }]
-        }
+        },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -342,8 +368,21 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     };
   }
 
-  async export() {
-    throw new InternalServerErrorException("Individual export of disturbance report is not supported");
+  async export(uuid: string, target: Response | Archiver) {
+    const report = await DisturbanceReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
+    if (report == null) throw new NotFoundException();
+
+    await this.entitiesService.authorize("export", report);
+
+    const entries = await DisturbanceReportEntry.findAll({
+      where: { disturbanceReportId: report.id }
+    });
+    const media = await Media.for(report).collection("media").findAll();
+
+    const fileName = timestampFileName(`${report.projectName ?? "Project"} - Disturbance Report`);
+    await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
+      addRow(report, this.buildExportAdditionalData(report, entries, media));
+    });
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
@@ -364,20 +403,25 @@ export class DisturbanceReportProcessor extends ReportProcessor<
         const media = await Media.for(page).collection("media").findAll();
 
         for (const report of page) {
-          const rowEntries = entries.filter(entry => entry.disturbanceReportId === report.id);
-          const rowMedia = media.filter(media => media.modelId === report.id);
-          addRow(report, {
-            ...REPORT_ENTRIES.reduce(
-              (acc, { name }) => ({
-                ...acc,
-                [kebabCase(name)]: formatEntriesForExport(rowEntries, name)
-              }),
-              {} as Dictionary<unknown>
-            ),
-            media: rowMedia.map(media => `${this.entitiesService.fullUrl(media)} (${media.name})`)
-          });
+          addRow(report, this.buildExportAdditionalData(report, entries, media));
         }
       }
     });
+  }
+
+  private buildExportAdditionalData(report: DisturbanceReport, entries: DisturbanceReportEntry[], media: Media[]) {
+    const rowEntries = entries.filter(entry => entry.disturbanceReportId === report.id);
+    const rowMedia = media.filter(({ modelId }) => modelId === report.id);
+
+    return {
+      ...REPORT_ENTRIES.reduce(
+        (acc, { name }) => ({
+          ...acc,
+          [ENTRY_EXPORT_COLUMN_MAP[name]]: formatEntriesForExport(rowEntries, name)
+        }),
+        {} as Dictionary<unknown>
+      ),
+      mediaFiles: rowMedia.map(m => `${this.entitiesService.fullUrl(m)} (${m.name})`)
+    };
   }
 }

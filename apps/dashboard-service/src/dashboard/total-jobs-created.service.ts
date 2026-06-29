@@ -53,6 +53,20 @@ export class TotalJobsCreatedService {
 
     const allVolunteers = this.getEntries(volunteerDemographics);
 
+    const beneficiaryDemographics = await Tracking.findAll({
+      attributes: ["id", "collection"],
+      where: {
+        trackableId: { [Op.in]: projectReports.map(r => r.id) },
+        trackableType: ProjectReport.LARAVEL_TYPE,
+        hidden: false,
+        domain: "demographics",
+        type: Tracking.ALL_BENEFICIARIES_TYPE
+      },
+      include: [{ association: "entries" }]
+    });
+
+    const allBeneficiaries = this.getEntries(beneficiaryDemographics);
+
     const knownGenderSubtypes = ["male", "female", "non-binary"];
     const knownAgeSubtypes = ["youth", "non-youth"];
 
@@ -96,7 +110,16 @@ export class TotalJobsCreatedService {
       volunteerOthers: this.getSum(this.getOthers(allVolunteers, "gender", knownGenderSubtypes)),
       volunteerYouth: this.getSum(this.getType(allVolunteers, "age", "youth")),
       volunteerNonYouth: this.getSum(this.getType(allVolunteers, "age", "non-youth")),
-      volunteerAgeOthers: this.getSum(this.getOthers(allVolunteers, "age", knownAgeSubtypes))
+      volunteerAgeOthers: this.getSum(this.getOthers(allVolunteers, "age", knownAgeSubtypes)),
+
+      totalBeneficiaries: this.getSum(this.getType(allBeneficiaries, "gender")),
+      beneficiaryMen: this.getSum(this.getType(allBeneficiaries, "gender", "male")),
+      beneficiaryWomen: this.getSum(this.getType(allBeneficiaries, "gender", "female")),
+      beneficiaryNonBinary: this.getSum(this.getType(allBeneficiaries, "gender", "non-binary")),
+      beneficiaryOthers: this.getSum(this.getOthers(allBeneficiaries, "gender", knownGenderSubtypes)),
+      beneficiaryYouth: this.getSum(this.getType(allBeneficiaries, "age", "youth")),
+      beneficiaryNonYouth: this.getSum(this.getType(allBeneficiaries, "age", "non-youth")),
+      beneficiaryAgeOthers: this.getSum(this.getOthers(allBeneficiaries, "age", knownAgeSubtypes))
     };
   }
 

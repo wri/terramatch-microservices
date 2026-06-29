@@ -133,6 +133,20 @@ describe("MediaService", () => {
     });
   });
 
+  describe("embeddedMediaDto", () => {
+    it("returns an EmbeddedMediaDto with direct S3 URLs", async () => {
+      const media = await MediaFactory.nursery().create();
+
+      const dto = service.embeddedMediaDto(media);
+
+      expect(dto).toMatchObject({
+        uuid: media.uuid,
+        url: `https://aws.endpoint/test-bucket/${media.id}/${media.fileName}`,
+        thumbUrl: null
+      });
+    });
+  });
+
   describe("createMedia", () => {
     it("should throw when collection config is missing", async () => {
       await expect(service.createMedia(new Project(), "projects", creator.id, "foo", createTestFile())).rejects.toThrow(

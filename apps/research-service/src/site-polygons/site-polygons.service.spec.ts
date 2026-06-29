@@ -1272,7 +1272,7 @@ describe("SitePolygonsService", () => {
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
 
-      await service.updateBulkStatus(status, data, undefined, null);
+      await service.updateBulkStatus(status, data, null, null);
 
       expect(bulkCreateSpy).toHaveBeenCalledWith([
         expect.objectContaining({

@@ -8,6 +8,8 @@ import { tm3300ProjectPolygonHandoff } from "./202605061200-tm-3300-project-poly
 import { removeUnusedColumns } from "./202605071434-remove-unused-columns";
 import { dropUnusedTables } from "./202605130922-drop-unused-tables";
 import { convertProjectCohortToSingleSelect } from "./202605291200-convert-project-cohort-to-single-select";
+import { addAuditStatusReadColumn } from "./202606071200-add-audit-status-read-column";
+import { addProjectSummaryColumn } from "./202606161200-add-project-summary-column";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -17,5 +19,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   tm3300ProjectPolygonHandoff,
   removeUnusedColumns,
   dropUnusedTables,
-  convertProjectCohortToSingleSelect
+  convertProjectCohortToSingleSelect,
+  addAuditStatusReadColumn,
+  addProjectSummaryColumn
 ];

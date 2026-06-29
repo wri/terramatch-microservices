@@ -10,7 +10,6 @@ import {
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
 import { flatten, pick, sortBy, sumBy, uniqBy } from "lodash";
-import { faker } from "@faker-js/faker";
 import {
   NurseryFactory,
   NurseryReportFactory,
@@ -75,7 +74,7 @@ describe("TreeService", () => {
 
     it("should return 10 entries maximum", async () => {
       for (let ii = 0; ii < 12; ii++) {
-        await TreeSpeciesResearchFactory.create({ scientificName: `Tree${faker.word.words()}` });
+        await TreeSpeciesResearchFactory.create({ scientificName: `Tree species ${ii}` });
       }
 
       const result = await service.searchScientificNames("tree");

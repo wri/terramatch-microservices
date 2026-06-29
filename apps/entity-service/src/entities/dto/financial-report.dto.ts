@@ -108,6 +108,15 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation status" })
   organisationStatus: OrganisationStatus | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  reportTitle: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  createdByFirstName: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  createdByLastName: string | null;
+
   @ApiProperty({ nullable: true, type: FundingTypeDto, isArray: true })
   fundingTypes: FundingTypeDto[] | null;
 }

@@ -45,6 +45,7 @@ import { Archiver } from "archiver";
 import { Response } from "express";
 import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import {
+  AuditStatusType,
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
   READY_FOR_BASELINE_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants/audit-status";
@@ -286,7 +287,7 @@ export class ProjectProcessor extends EntityProcessor<
 
     await super.update(project, update);
 
-    if (!submissionChanged && !baselineChanged) {
+    if (!submissionChanged && !baselineChanged && handoffComment == null) {
       return;
     }
 
@@ -295,6 +296,9 @@ export class ProjectProcessor extends EntityProcessor<
       userId != null ? await User.findByPk(userId, { attributes: ["emailAddress", "firstName", "lastName"] }) : null;
 
     const auditRows: Array<Partial<AuditStatus>> = [];
+
+    let commentHasBeenSaved = false;
+
     if (submissionChanged) {
       auditRows.push({
         auditableType: Project.LARAVEL_TYPE,
@@ -307,6 +311,7 @@ export class ProjectProcessor extends EntityProcessor<
         type: POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
         isActive: null
       });
+      commentHasBeenSaved = true;
     }
     if (baselineChanged) {
       auditRows.push({
@@ -318,6 +323,38 @@ export class ProjectProcessor extends EntityProcessor<
         comment: handoffComment,
         status: project.readyForBaseline === true ? "yes" : "no",
         type: READY_FOR_BASELINE_AUDIT_TYPE,
+        isActive: null
+      });
+      commentHasBeenSaved = true;
+    }
+
+    if (!commentHasBeenSaved && handoffComment != null) {
+      const latestPolygonValidation = await AuditStatus.findOne({
+        where: {
+          auditableType: Project.LARAVEL_TYPE,
+          auditableId: project.id,
+          type: {
+            [Op.in]: [POLYGON_DATA_SUBMISSION_AUDIT_TYPE, READY_FOR_BASELINE_AUDIT_TYPE]
+          }
+        },
+        order: [["updatedAt", "DESC"]],
+        attributes: ["status", "type"]
+      });
+      let status = "no";
+      let type = READY_FOR_BASELINE_AUDIT_TYPE;
+      if (latestPolygonValidation != null) {
+        status = latestPolygonValidation.status ?? "no";
+        type = latestPolygonValidation.type as AuditStatusType;
+      }
+      auditRows.push({
+        auditableType: Project.LARAVEL_TYPE,
+        auditableId: project.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: handoffComment,
+        type: type as AuditStatusType,
+        status,
         isActive: null
       });
     }

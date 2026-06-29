@@ -10,10 +10,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FinancialReportFullDto, FinancialReportLightDto } from "../dto/financial-report.dto";
 import { FundingTypeDto } from "@terramatch-microservices/common/dto/funding-type.dto";
-import {
-  FinancialIndicatorDto,
-  FinancialIndicatorMedia
-} from "@terramatch-microservices/common/dto/financial-indicator.dto";
+import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
 import { Op } from "sequelize";
 import { ReportUpdateAttributes } from "../dto/entity-update.dto";
 import { Dictionary } from "lodash";
@@ -76,7 +73,8 @@ export class FinancialReportProcessor extends ReportProcessor<
         {
           association: "financialIndicators",
           attributes: ["id", "uuid", "collection", "description", "amount", "exchangeRate", "year"]
-        }
+        },
+        { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ]
     });
   }
@@ -148,13 +146,13 @@ export class FinancialReportProcessor extends ReportProcessor<
 
   async getFullDto(financialReport: FinancialReport) {
     const fundingTypes = await this.getFundingTypes(financialReport);
-    const financialIndicators = await this.getFinancialIndicatorsWithMedia(financialReport);
-    const financialIndicatorsWithMedia = await Promise.all(financialIndicators);
-
+    const financialIndicatorsWithMedia = await this.getFinancialIndicatorsWithMedia(financialReport);
+    const reportTitle = await this.getReportTitle(financialReport);
     const dto = new FinancialReportFullDto(financialReport, {
       ...(await this.getFeedback(financialReport)),
       fundingTypes,
-      financialCollection: financialIndicatorsWithMedia
+      financialCollection: financialIndicatorsWithMedia,
+      reportTitle
     });
 
     await this.entitiesService.removeHiddenValues(financialReport, dto);
@@ -216,19 +214,27 @@ export class FinancialReportProcessor extends ReportProcessor<
   protected async getFinancialIndicatorsWithMedia(financialReport: FinancialReport) {
     const financialIndicators = await FinancialIndicator.financialReport(financialReport.id).findAll();
 
-    return financialIndicators.map(async fi => {
-      const mediaCollection = await Media.for(fi).findAll();
+    return Promise.all(
+      financialIndicators.map(async fi => {
+        const mediaCollection = await Media.for(fi).findAll({ where: { collectionName: "documentation" } });
 
-      return new FinancialIndicatorDto(fi, {
-        entityType: "financialIndicators" as const,
-        entityUuid: fi.uuid,
-        ...(this.entitiesService.mapMediaCollection(
-          mediaCollection,
-          FinancialIndicator.MEDIA,
-          "nurseryReports",
-          fi.uuid
-        ) as FinancialIndicatorMedia)
-      });
-    });
+        return new FinancialIndicatorDto(fi, {
+          entityType: "financialIndicators" as const,
+          entityUuid: fi.uuid,
+          documentation:
+            mediaCollection.length === 0
+              ? null
+              : mediaCollection.map(media => this.entitiesService.embeddedMediaDto(media))
+        });
+      })
+    );
+  }
+
+  protected async getReportTitle(financialReport: FinancialReport) {
+    return await this.getReportTitleBase(
+      financialReport.dueAt,
+      financialReport.title ?? (await this.entitiesService.localizeText("Financial Report")),
+      financialReport.frameworkKey ?? undefined
+    );
   }
 }

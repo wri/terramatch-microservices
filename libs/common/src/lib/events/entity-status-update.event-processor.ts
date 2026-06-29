@@ -189,8 +189,8 @@ export class EntityStatusUpdate extends EventProcessor {
         const modelAnswers = await collector.getAnswers({}, fieldQuestions, { [entityType]: baseModel });
         const labels = fieldQuestions
           .map(question => {
-            const updateRequestValue = updateRequest.content?.[question.uuid];
-            const baseValue = modelAnswers[question.uuid];
+            const updateRequestValue = updateRequest.content?.[question.formName];
+            const baseValue = modelAnswers[question.formName];
             if (isEqual(updateRequestValue, baseValue)) return undefined;
 
             // We've already filtered the questions to only those with Field configs, so this cast is safe.

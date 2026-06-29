@@ -35,6 +35,13 @@ export class NurseryReportLightDto extends EntityDto {
   })
   nurseryUuid: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated project report uuid"
+  })
+  projectReportUuid: string | null;
+
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
 

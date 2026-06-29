@@ -7,17 +7,17 @@ import { Op } from "sequelize";
 import { attributeExporter } from "./utils";
 
 export function disturbanceReportEntriesCollector(logger: LoggerService): RelationResourceCollector {
-  let questionUuid: string;
+  let questionName: string;
 
   return {
-    addField(_, modelType, addQuestionUuid) {
+    addField(_, modelType, addQuestionName) {
       if (modelType !== "disturbanceReports") {
         throw new InternalServerErrorException("disturbanceReportEntries is only supported on disturbanceReports");
       }
-      if (questionUuid != null) {
+      if (questionName != null) {
         logger.warn("Duplicate field for disturbanceReportEntries on disturbanceReports");
       }
-      questionUuid = addQuestionUuid;
+      questionName = addQuestionName;
     },
 
     async collect(answers, models, { forExport }) {
@@ -27,7 +27,7 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
       }
 
       const entries = await DisturbanceReportEntry.report(models.disturbanceReports.id).findAll();
-      answers[questionUuid] = forExport
+      answers[questionName] = forExport
         ? entries.map(attributeExporter(["name", "title", "subtitle", "value"]))
         : entries.map(entry => new EmbeddedDisturbanceReportEntryDto(entry));
     },

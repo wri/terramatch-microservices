@@ -22,6 +22,7 @@ export const writeCsv = async (fileName: string, columns: Dictionary<string>, wr
 
   if (IS_AWS) {
     await csvService.writeCsv(fileName, REPL_BUCKET, columns, writeRows);
+    return await getService(FileService).generatePresignedUrl(REPL_BUCKET, fileName);
   } else {
     await csvService.writeToStream(fs.createWriteStream(fileName), columns, writeRows);
   }

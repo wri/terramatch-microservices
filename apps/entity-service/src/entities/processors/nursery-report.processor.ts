@@ -211,12 +211,14 @@ export class NurseryReportProcessor extends ReportProcessor<
     const mediaCollection = await Media.for(nurseryReport).findAll();
     const reportTitle = await this.getReportTitle(nurseryReport);
     const projectReportTitle = await this.getProjectReportTitle(nurseryReport);
-
+    const projectReportUuid =
+      (await ProjectReport.findOne({ where: { taskId: nurseryReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
     const dto = new NurseryReportFullDto(nurseryReport, {
       ...(await this.getFeedback(nurseryReport)),
 
       reportTitle,
       projectReportTitle,
+      projectReportUuid,
       ...(this.entitiesService.mapMediaCollection(
         mediaCollection,
         NurseryReport.MEDIA,
@@ -232,7 +234,12 @@ export class NurseryReportProcessor extends ReportProcessor<
 
   async getLightDto(nurseryReport: NurseryReport) {
     const reportTitle = await this.getReportTitle(nurseryReport);
-    return { id: nurseryReport.uuid, dto: new NurseryReportLightDto(nurseryReport, { reportTitle }) };
+    const projectReportUuid =
+      (await ProjectReport.findOne({ where: { taskId: nurseryReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
+    return {
+      id: nurseryReport.uuid,
+      dto: new NurseryReportLightDto(nurseryReport, { reportTitle, projectReportUuid })
+    };
   }
 
   async export(uuid: string, target: Response | Archiver) {
@@ -323,24 +330,6 @@ export class NurseryReportProcessor extends ReportProcessor<
       frameworkKey,
       ability: target instanceof ServerResponse ? "read" : undefined,
       fileName
-    });
-  }
-
-  protected async getReportTitleBase(dueAt: Date | null, title: string) {
-    if (dueAt == null) return title ?? "";
-
-    const adjustedDate = new Date(dueAt);
-    adjustedDate.setMonth(adjustedDate.getMonth() - 1);
-    const locale = this.entitiesService.userLocale;
-    const endDate = adjustedDate.toLocaleString(locale, { month: "long", year: "numeric" });
-
-    adjustedDate.setMonth(adjustedDate.getMonth() - 5);
-    const startDate = adjustedDate.toLocaleString(locale, { month: "long" });
-
-    return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
-      title,
-      startDate,
-      endDate
     });
   }
 

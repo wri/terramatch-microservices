@@ -90,10 +90,10 @@ codeTickets=$(echo -e "$beTickets\n$feTickets" | sort | uniq)
 # In each of these comparisons, include the second list twice so that tickets that are in second
 # list but not in the first are left out of that comparison.
 echo -e "\nIn Jira but missing committed code:"
-echo -e "$jiraTickets\n$codeTickets\n$codeTickets" | sort | uniq -u
+echo -e "$jiraTickets\n$codeTickets\n$codeTickets" | sort | uniq -u | sed 's/.*/https:\/\/gfw.atlassian.net\/browse\/&/'
 
 echo -e "\nIn BE code, but missing in Jira:"
-echo -e "$beTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u
+echo -e "$beTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u | sed 's/.*/https:\/\/gfw.atlassian.net\/browse\/&/'
 
 echo -e "\nIn FE code, but missing in Jira:"
-echo -e "$feTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u
+echo -e "$feTickets\n$jiraTickets\n$jiraTickets" | sort | uniq -u | sed 's/.*/https:\/\/gfw.atlassian.net\/browse\/&/'

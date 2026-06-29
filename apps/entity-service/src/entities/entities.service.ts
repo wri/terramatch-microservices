@@ -287,6 +287,10 @@ export class EntitiesService {
     });
   }
 
+  embeddedMediaDto(media: Media) {
+    return this.mediaService.embeddedMediaDto(media);
+  }
+
   mapMediaCollection(media: Media[], collection: MediaCollection, entityType: EntityType, entityUuid: string) {
     const grouped = groupBy(media, "collectionName");
     return Object.entries(collection).reduce(

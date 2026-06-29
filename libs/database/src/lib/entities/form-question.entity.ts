@@ -81,6 +81,10 @@ export class FormQuestion extends Model<FormQuestion> {
   @Column(STRING)
   declare name: string | null;
 
+  get formName(): string {
+    return this.name ?? this.uuid;
+  }
+
   @Column(TEXT)
   declare label: string;
 

@@ -140,7 +140,7 @@ describe("ProjectPolygonCreationService", () => {
         createdBy: userId,
         lastModifiedBy: userId
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon]);
 
       const result = await service.createProjectPolygons(request, userId);
 
@@ -289,7 +289,7 @@ describe("ProjectPolygonCreationService", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
 
-    it("should delete existing project polygon and create new one", async () => {
+    it("should append new project polygons without deleting existing ones", async () => {
       const userId = 1;
       const pitch = await ProjectPitchFactory.build();
       const existingPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
@@ -332,7 +332,6 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(ProjectPitch, "findAll").mockResolvedValue([pitch]);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([existingPolygon]);
-      projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingPolygon.uuid);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -343,14 +342,11 @@ describe("ProjectPolygonCreationService", () => {
         createdBy: userId,
         lastModifiedBy: userId
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon]);
 
       const result = await service.createProjectPolygons(request, userId);
 
-      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).toHaveBeenCalledWith(
-        existingPolygon,
-        mockTransaction
-      );
+      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).not.toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0].entityId).toBe(pitch.id);
       expect(result[0].polyUuid).toBe(polygonUuid);
@@ -533,9 +529,9 @@ describe("ProjectPolygonCreationService", () => {
         polyUuid: polygonUuid2
       });
       jest
-        .spyOn(ProjectPolygon, "create")
-        .mockResolvedValueOnce(mockProjectPolygon1)
-        .mockResolvedValueOnce(mockProjectPolygon2);
+        .spyOn(ProjectPolygon, "bulkCreate")
+        .mockResolvedValueOnce([mockProjectPolygon1])
+        .mockResolvedValueOnce([mockProjectPolygon2]);
 
       const result = await service.createProjectPolygons(request, userId);
 
@@ -599,7 +595,7 @@ describe("ProjectPolygonCreationService", () => {
       const mockProjectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
         polyUuid: polygonUuid
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon]);
 
       const result = await service.createProjectPolygons(request, userId);
 
@@ -607,10 +603,11 @@ describe("ProjectPolygonCreationService", () => {
       expect(mockTransaction.commit).toHaveBeenCalled();
     });
 
-    it("should group multiple features for the same project pitch", async () => {
+    it("should create one project polygon record per geometry for the same project pitch", async () => {
       const userId = 1;
       const pitch = await ProjectPitchFactory.build();
-      const polygonUuid = crypto.randomUUID();
+      const polygonUuid1 = crypto.randomUUID();
+      const polygonUuid2 = crypto.randomUUID();
 
       const request: CreateProjectPolygonBatchRequestDto = {
         geometries: [
@@ -666,18 +663,21 @@ describe("ProjectPolygonCreationService", () => {
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([]);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
-        uuids: [polygonUuid],
-        areas: [100]
+        uuids: [polygonUuid1, polygonUuid2],
+        areas: [100, 150]
       });
 
-      const mockProjectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
-        polyUuid: polygonUuid
+      const mockProjectPolygon1 = await ProjectPolygonFactory.forPitch(pitch).build({
+        polyUuid: polygonUuid1
       });
-      jest.spyOn(ProjectPolygon, "create").mockResolvedValue(mockProjectPolygon);
+      const mockProjectPolygon2 = await ProjectPolygonFactory.forPitch(pitch).build({
+        polyUuid: polygonUuid2
+      });
+      jest.spyOn(ProjectPolygon, "bulkCreate").mockResolvedValue([mockProjectPolygon1, mockProjectPolygon2]);
 
       const result = await service.createProjectPolygons(request, userId);
 
-      expect(result).toHaveLength(1);
+      expect(result).toHaveLength(2);
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({ type: "Polygon" }),
@@ -685,6 +685,13 @@ describe("ProjectPolygonCreationService", () => {
         ]),
         userId,
         mockTransaction
+      );
+      expect(ProjectPolygon.bulkCreate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ polyUuid: polygonUuid1, entityId: pitch.id }),
+          expect.objectContaining({ polyUuid: polygonUuid2, entityId: pitch.id })
+        ]),
+        { transaction: mockTransaction }
       );
       expect(mockTransaction.commit).toHaveBeenCalled();
     });
@@ -841,7 +848,7 @@ describe("ProjectPolygonCreationService", () => {
       expect(mockTransaction.rollback).not.toHaveBeenCalled();
     });
 
-    it("should delete existing project polygon before creating new one", async () => {
+    it("should append uploaded polygons without deleting existing ones", async () => {
       const userId = 1;
       const pitch = await ProjectPitchFactory.build();
       const existingProjectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
@@ -874,8 +881,6 @@ describe("ProjectPolygonCreationService", () => {
       geometryFileProcessingService.parseGeometryFile.mockResolvedValue(featureCollection);
       jest.spyOn(ProjectPitch, "findOne").mockResolvedValue(pitch);
       jest.spyOn(ProjectPolygon, "findAll").mockResolvedValue([existingProjectPolygon]);
-      projectPolygonsService.deleteProjectPolygonAndGeometry.mockResolvedValue(existingProjectPolygon.uuid);
-      projectPolygonGeometryService.transformFeaturesToSinglePolygon.mockResolvedValue(transformedGeometry);
       polygonGeometryService.createGeometriesFromFeatures.mockResolvedValue({
         uuids: [polygonUuid],
         areas: [100]
@@ -890,22 +895,9 @@ describe("ProjectPolygonCreationService", () => {
 
       const result = await service.uploadProjectPolygonFromFile(file, pitch.uuid, userId);
 
-      expect(ProjectPolygon.findAll).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            entityType: ProjectPitch.LARAVEL_TYPE,
-            entityId: pitch.id
-          },
-          transaction: mockTransaction
-        })
-      );
-      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).toHaveBeenCalledWith(
-        existingProjectPolygon,
-        mockTransaction
-      );
-
+      expect(projectPolygonsService.deleteProjectPolygonAndGeometry).not.toHaveBeenCalled();
       expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalledWith(
-        [transformedGeometry],
+        [featureCollection.features[0].geometry],
         userId,
         mockTransaction
       );

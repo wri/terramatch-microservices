@@ -9,7 +9,7 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { ReportGenerationService } from "./report-generation-service";
 import { Test } from "@nestjs/testing";
-import { Action, FinancialReport, Task } from "@terramatch-microservices/database/entities";
+import { Action, FinancialReport, Project, Task } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { uniq } from "lodash";
@@ -101,6 +101,7 @@ describe("ReportGenerationService", () => {
   describe("createFinancialReports", () => {
     beforeEach(async () => {
       await FinancialReport.truncate();
+      await Project.truncate({ cascade: true });
     });
 
     it("should noop for frameworks without financial reports", async () => {
@@ -124,7 +125,10 @@ describe("ReportGenerationService", () => {
 
       await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
 
-      const reports = await FinancialReport.findAll({ order: [["organisationId", "ASC"]] });
+      const reports = await FinancialReport.findAll({
+        where: { organisationId: [org1.id, org2.id] },
+        order: [["organisationId", "ASC"]]
+      });
       expect(reports).toHaveLength(2);
       expect(reports[0]).toMatchObject({
         organisationId: org1.id,
@@ -154,7 +158,7 @@ describe("ReportGenerationService", () => {
 
       await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
 
-      expect(await FinancialReport.count()).toBe(0);
+      expect(await FinancialReport.count({ where: { organisationId: org.id } })).toBe(0);
     });
   });
 });

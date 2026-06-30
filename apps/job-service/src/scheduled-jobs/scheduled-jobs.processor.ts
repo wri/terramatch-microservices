@@ -15,6 +15,7 @@ import {
 import { TerrafundReportReminderEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "@terramatch-microservices/common/email/terrafund-site-and-nursery-reminder.email";
 import * as Sentry from "@sentry/nestjs";
+import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
@@ -71,6 +72,8 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const where = { frameworkKey, status: { [Op.ne]: "started" } };
     const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
+    await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
+
     const failed: PromiseSettledResult<void>[] = [];
     for (let ii = 0; ii < count; ii += 100) {
       const projects = await Project.findAll({ where, limit: 100, offset: ii, attributes: ["id"] });

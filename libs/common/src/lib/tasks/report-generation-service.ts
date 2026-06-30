@@ -2,8 +2,10 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { TMLogger } from "../util/tm-logger";
 import {
   Action,
+  FinancialReport,
   Nursery,
   NurseryReport,
+  Organisation,
   Project,
   ProjectReport,
   Site,
@@ -11,8 +13,11 @@ import {
   SrpReport,
   Task
 } from "@terramatch-microservices/database/entities";
+import { FINANCIAL_REPORT_FRAMEWORKS, FrameworkKey } from "@terramatch-microservices/database/constants";
 import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
+import { Op } from "sequelize";
+import { uniq } from "lodash";
 
 @Injectable()
 export class ReportGenerationService {
@@ -128,5 +133,62 @@ export class ReportGenerationService {
       projectId: project.id,
       organisationId: project.organisationId
     } as Action);
+  }
+
+  /**
+   * Creates annual financial reports for each organisation with projects in the given framework.
+   * Only runs for January annual report generation (aligned with project/site/nursery reports).
+   */
+  async createFinancialReports(frameworkKey: FrameworkKey, dueAt: Date) {
+    if (!(FINANCIAL_REPORT_FRAMEWORKS as readonly FrameworkKey[]).includes(frameworkKey)) {
+      return;
+    }
+
+    const dueDateTime = DateTime.fromJSDate(dueAt, { zone: "utc" });
+    if (dueDateTime.month !== 1) {
+      return;
+    }
+
+    const yearOfReport = dueDateTime.year;
+    const financialDueAt = DateTime.utc(yearOfReport, 7, 30).toJSDate();
+
+    const organisationIds = uniq(
+      (
+        await Project.findAll({
+          where: { frameworkKey, status: { [Op.ne]: "started" }, organisationId: { [Op.ne]: null } },
+          attributes: ["organisationId"]
+        })
+      )
+        .map(({ organisationId }) => organisationId)
+        .filter((id): id is number => id != null)
+    );
+
+    for (const organisationId of organisationIds) {
+      if (
+        (await FinancialReport.count({
+          where: { organisationId, yearOfReport }
+        })) > 0
+      ) {
+        this.logger.warn(
+          `Financial report already exists for organisation ${organisationId} year ${yearOfReport}, skipping`
+        );
+        continue;
+      }
+
+      const organisation = await Organisation.findByPk(organisationId, {
+        attributes: ["finStartMonth", "currency"]
+      });
+
+      await FinancialReport.create({
+        organisationId,
+        title: `Financial Report ${yearOfReport}`,
+        yearOfReport,
+        status: DUE,
+        frameworkKey,
+        dueAt: financialDueAt,
+        finStartMonth: organisation?.finStartMonth ?? null,
+        currency: organisation?.currency ?? null
+      } as FinancialReport);
+    }
   }
 }

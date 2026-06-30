@@ -12,5 +12,8 @@ export const WCB = "wcb" as const;
 export const FRAMEWORK_KEYS_TF = [TERRAFUND, LANDSCAPES, ENTERPRISES, EPA, TERRAFUND_3] as const;
 export type FrameworkKeyTF = (typeof FRAMEWORK_KEYS_TF)[number];
 
+export const FINANCIAL_REPORT_FRAMEWORKS = [LANDSCAPES, ENTERPRISES] as const;
+export type FinancialReportFramework = (typeof FINANCIAL_REPORT_FRAMEWORKS)[number];
+
 export const FRAMEWORK_KEYS = [...FRAMEWORK_KEYS_TF, PPC, HBF, FUNDO_FLORA, FUNDO_FLORA_1, WCB] as const;
 export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];

@@ -24,6 +24,7 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { Form, FormSubmission } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
+import { FormPullTranslationQueryDto } from "./dto/form-pull-translation-query.dto";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
@@ -129,10 +130,10 @@ export class FormsController {
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })
-  async pullFormTranslation(@Param("uuid") uuid: string) {
+  async pullFormTranslation(@Param("uuid") uuid: string, @Query() query: FormPullTranslationQueryDto) {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("update", form);
-    const i18nItemIds = await this.localizationService.pullTranslations({ filterTags: form.uuid });
+    const i18nItemIds = await this.localizationService.pullTranslations(query.forceAll, { filterTags: form.uuid });
     return this.localizationService.addTranslationDto(
       buildJsonApi<FormTranslationDto>(FormTranslationDto),
       uuid,

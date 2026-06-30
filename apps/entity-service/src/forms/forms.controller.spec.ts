@@ -149,9 +149,9 @@ describe("FormsController", () => {
 
       await controller.pullFormTranslation("fake-uuid", { forceAll: false });
       expect(localizationService().pullTranslations).toHaveBeenCalledWith(
+        false,
         expect.objectContaining({
-          filterTags: form.uuid,
-          forceAll: false
+          filterTags: form.uuid
         })
       );
     });

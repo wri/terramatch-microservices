@@ -51,10 +51,12 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
       required: false
     };
     (options.include as Include[]).push(entryInclude);
+
+    // If allowed to do the default behavior of wrapping in a subquery, the where clause
+    // construction may be incorrect
+    options.subQuery = false;
+
     if (updatedSince != null) {
-      // If allowed to do the default behavior of wrapping in a subquery, the entry.updated_at field
-      // is not accessible to the where clause.
-      options.subQuery = false;
       options.where = {
         [Op.or]: [
           options.where as WhereOptions<DisturbanceReport>,

@@ -294,6 +294,7 @@ export type Include = {
   attributes?: string[];
   where?: WhereOptions;
   paranoid?: boolean;
+  required?: boolean;
 };
 
 type AirtableValue = null | undefined | string | number | boolean | Date | string[];

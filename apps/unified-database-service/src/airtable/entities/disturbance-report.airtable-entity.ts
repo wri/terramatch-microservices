@@ -45,7 +45,11 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
   protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
     const options = super.getUpdatePageFindOptions(page, updatedSince);
 
-    const entryInclude: Include = { association: "entries", attributes: ["name", "value", "deletedAt"] };
+    const entryInclude: Include = {
+      association: "entries",
+      attributes: ["name", "value", "deletedAt"],
+      required: false
+    };
     (options.include as Include[]).push(entryInclude);
     if (updatedSince != null) {
       // If allowed to do the default behavior of wrapping in a subquery, the entry.updated_at field

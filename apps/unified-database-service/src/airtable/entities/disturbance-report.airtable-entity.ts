@@ -45,7 +45,8 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
   protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
     const options = super.getUpdatePageFindOptions(page, updatedSince);
 
-    (options.include as Include[]).push({ association: "entries", attributes: ["name", "value"] });
+    const entryInclude: Include = { association: "entries", attributes: ["name", "value", "deletedAt"] };
+    (options.include as Include[]).push(entryInclude);
     if (updatedSince != null) {
       // If allowed to do the default behavior of wrapping in a subquery, the entry.updated_at field
       // is not accessible to the where clause.
@@ -55,9 +56,16 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
           options.where as WhereOptions<DisturbanceReport>,
           {
             "$entries.updated_at$": { [Op.gte]: updatedSince }
+          },
+          {
+            "$entries.deleted_at$": { [Op.gte]: updatedSince }
           }
         ]
       };
+      // we have to make sure to join against entries that were deleted since the timestamp so that
+      // those reports count as updated as well.
+      entryInclude.paranoid = false;
+      entryInclude.where = { [Op.or]: [{ deletedAt: null }, { deletedAt: { [Op.gte]: updatedSince } }] };
     }
 
     return options;
@@ -69,7 +77,9 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
 
     return reports.reduce(
       (associations, { id, projectId, entries }) => {
-        const { disturbanceData, affectedPolygonUuids } = getEntryData(entries ?? []);
+        const { disturbanceData, affectedPolygonUuids } = getEntryData(
+          (entries ?? []).filter(({ deletedAt }) => deletedAt == null)
+        );
         return {
           ...associations,
           [id]: {

@@ -438,6 +438,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
+    scope: { speciesable_type: SiteReport.LARAVEL_TYPE }
+  })
+  declare treeSpecies: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "tree-planted" }
   })
   declare treesPlanted: TreeSpecies[] | null;

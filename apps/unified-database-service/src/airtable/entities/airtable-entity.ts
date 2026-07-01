@@ -1,6 +1,6 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, Op } from "sequelize";
+import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -292,6 +292,8 @@ export type Include = {
   model?: ModelType<any, any>;
   association?: string;
   attributes?: string[];
+  where?: WhereOptions;
+  paranoid?: boolean;
 };
 
 type AirtableValue = null | undefined | string | number | boolean | Date | string[];

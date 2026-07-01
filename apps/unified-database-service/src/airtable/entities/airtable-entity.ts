@@ -1,6 +1,6 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, Op } from "sequelize";
+import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -53,7 +53,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   async updateBase(base: Airtable.Base, { startPage, updatedSince }: UpdateBaseOptions = {}) {
     // Get any find options that might have been provided by a subclass to issue this query
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
+    const { offset, limit, attributes, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
     const count = await this.MODEL.count(countOptions);
     if (count === 0) {
       this.logger.log(`No updates to process, skipping: ${JSON.stringify({ table: this.TABLE_NAME, updatedSince })}`);
@@ -307,6 +307,9 @@ export type Include = {
   model?: ModelType<any, any>;
   association?: string;
   attributes?: string[];
+  where?: WhereOptions;
+  paranoid?: boolean;
+  required?: boolean;
 };
 
 type AirtableValue = null | undefined | string | number | boolean | Date | string[];

@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -34,6 +35,7 @@ import { Project } from "./project.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
+import { DisturbanceReportEntry } from "./disturbance-report-entry.entity";
 
 type DisturbanceReportMedia = "media";
 
@@ -141,6 +143,9 @@ export class DisturbanceReport extends Model<
 
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   declare createdByUser: User | null;
+
+  @HasMany(() => DisturbanceReportEntry)
+  declare entries: DisturbanceReportEntry[] | null;
 
   get projectName() {
     return this.project?.name ?? undefined;

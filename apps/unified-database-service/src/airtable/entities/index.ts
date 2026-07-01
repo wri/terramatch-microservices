@@ -1,5 +1,6 @@
 export * from "./application.airtable-entity";
 export * from "./disturbance.airtable-entity";
+export * from "./disturbance-report.airtable-entity";
 export * from "./financial-indicator.airtable-entity";
 export * from "./financial-report.airtable-entity";
 export * from "./funding-programme.airtable-entity";

@@ -6,7 +6,7 @@ import {
   commonEntityColumns,
   PolymorphicUuidAssociation
 } from "./airtable-entity";
-import { Disturbance, Site, SiteReport } from "@terramatch-microservices/database/entities";
+import { Disturbance, DisturbanceReport, Site, SiteReport } from "@terramatch-microservices/database/entities";
 
 const LARAVEL_TYPE_MAPPING: Record<string, PolymorphicUuidAssociation<DisturbanceAssociations>> = {
   [Site.LARAVEL_TYPE]: {
@@ -16,12 +16,17 @@ const LARAVEL_TYPE_MAPPING: Record<string, PolymorphicUuidAssociation<Disturbanc
   [SiteReport.LARAVEL_TYPE]: {
     association: "siteReportUuid",
     model: SiteReport
+  },
+  [DisturbanceReport.LARAVEL_TYPE]: {
+    association: "disturbanceReportUuid",
+    model: DisturbanceReport
   }
 };
 
 type DisturbanceAssociations = {
   siteUuid?: string;
   siteReportUuid?: string;
+  disturbanceReportUuid?: string;
 };
 
 const COLUMNS: ColumnMapping<Disturbance, DisturbanceAssociations>[] = [
@@ -37,7 +42,8 @@ const COLUMNS: ColumnMapping<Disturbance, DisturbanceAssociations>[] = [
   "actionDescription",
   "propertyAffected",
   associatedValueColumn("siteUuid", ["disturbanceableId", "disturbanceableType"]),
-  associatedValueColumn("siteReportUuid", ["disturbanceableId", "disturbanceableType"])
+  associatedValueColumn("siteReportUuid", ["disturbanceableId", "disturbanceableType"]),
+  associatedValueColumn("disturbanceReportUuid", ["disturbanceableId", "disturbanceableType"])
 ];
 
 export class DisturbanceEntity extends AirtableEntity<Disturbance, DisturbanceAssociations> {

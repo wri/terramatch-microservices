@@ -42,6 +42,7 @@ export class SitePolygonEntity extends AirtableEntity<SitePolygon, SitePolygonAs
   readonly TABLE_NAME = "Site Polygons";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = SitePolygon;
+  readonly FILTER_FLAGS = [{ attribute: "isActive", hideCondition: false }];
 
   protected async loadAssociations(sitePolygons: SitePolygon[]) {
     const disturbanceIds = uniq(sitePolygons.map(({ disturbanceId }) => disturbanceId)).filter(isNotNull);

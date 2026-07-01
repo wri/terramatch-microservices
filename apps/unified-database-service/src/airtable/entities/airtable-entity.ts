@@ -15,13 +15,25 @@ type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
 // Limit in Airtable
 const LONG_TEXT_MAX_LENGTH = 100000;
 
+type FilterFlag = {
+  attribute: string;
+  // The condition that should hide a given row in this table.
+  hideCondition: boolean;
+};
+
+const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
+  flags.map(flag => ({
+    attribute: isString(flag) ? flag : flag.attribute,
+    hideCondition: isString(flag) ? true : flag.hideCondition
+  }));
+
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
   readonly IDENTITY_COLUMN: string = "uuid";
   readonly SUPPORTS_UPDATED_SINCE: boolean = true;
-  readonly FILTER_FLAGS: string[] = [];
+  readonly FILTER_FLAGS: (string | FilterFlag)[] = [];
 
   protected readonly logger = new TMLogger(AirtableEntity.name);
 
@@ -77,8 +89,8 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
       where["updatedAt"] = { [Op.gte]: updatedSince };
     }
     if (!isEmpty(this.FILTER_FLAGS)) {
-      for (const flag of this.FILTER_FLAGS) {
-        where[flag] = false;
+      for (const { attribute, hideCondition } of getFilterFlags(this.FILTER_FLAGS)) {
+        where[attribute] = !hideCondition;
       }
     }
 
@@ -104,7 +116,10 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
         // include records that have been hidden since the timestamp as well
         [Op.and]: {
           updatedAt: { ...deletedAtCondition },
-          [Op.or]: this.FILTER_FLAGS.reduce((flags, flag) => ({ ...flags, [flag]: true }), {})
+          [Op.or]: getFilterFlags(this.FILTER_FLAGS).reduce(
+            (flags, { attribute, hideCondition }) => ({ ...flags, [attribute]: hideCondition }),
+            {}
+          )
         }
       };
     }

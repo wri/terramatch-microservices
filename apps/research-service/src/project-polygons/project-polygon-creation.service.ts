@@ -43,8 +43,6 @@ export class ProjectPolygonCreationService {
           throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
         }
 
-        await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
-
         const geometries = features.map(f => f.geometry as Geometry);
 
         const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
@@ -57,20 +55,18 @@ export class ProjectPolygonCreationService {
           throw new BadRequestException("No valid geometries were created");
         }
 
-        const polygonUuid = polygonUuids[0];
-
-        const projectPolygon = await ProjectPolygon.create(
-          {
-            polyUuid: polygonUuid,
+        const projectPolygons = await ProjectPolygon.bulkCreate(
+          polygonUuids.map(uuid => ({
+            polyUuid: uuid,
             entityType: ProjectPitch.LARAVEL_TYPE,
             entityId: projectPitch.id,
             createdBy: userId,
             lastModifiedBy: userId
-          } as ProjectPolygon,
+          })) as ProjectPolygon[],
           { transaction }
         );
 
-        createdProjectPolygons.push(projectPolygon);
+        createdProjectPolygons.push(...projectPolygons);
       }
 
       await transaction.commit();
@@ -104,8 +100,6 @@ export class ProjectPolygonCreationService {
       if (projectPitch == null) {
         throw new NotFoundException(`Project pitch not found: ${projectPitchUuid}`);
       }
-
-      await this.deleteExistingProjectPolygon(projectPitch.id, transaction);
 
       const { uuids: polygonUuids } = await this.polygonGeometryService.createGeometriesFromFeatures(
         featureCollection.features.map(f => f.geometry as Geometry),

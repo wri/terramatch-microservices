@@ -29,7 +29,8 @@ import {
   SrpReportEntity,
   StrataEntity,
   TreeSpeciesEntity,
-  UserEntity
+  UserEntity,
+  DisturbanceReportEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
@@ -39,6 +40,7 @@ import { DataApiService } from "@terramatch-microservices/data-api";
 export const AIRTABLE_ENTITIES = {
   applications: ApplicationEntity,
   disturbances: DisturbanceEntity,
+  disturbanceReports: DisturbanceReportEntity,
   financialIndicators: FinancialIndicatorEntity,
   financialReports: FinancialReportEntity,
   fundingProgrammes: FundingProgrammeEntity,

@@ -58,33 +58,39 @@ const DISTURBANCE_MAPPING = {
 
 type AffectedPolygon = { polyUuid?: string };
 
+export const getEntryData = (entries: DisturbanceReportEntry[]) => {
+  const disturbanceData: Dictionary<unknown> = {};
+  const affectedPolygonUuids = entries.reduce((uuids, entry) => {
+    const mapping = DISTURBANCE_MAPPING[entry.name as keyof typeof DISTURBANCE_MAPPING];
+    if (mapping != null) {
+      disturbanceData[mapping.column] = mapping.mapper(entry.value);
+    }
+
+    if (entry.name !== "polygon-affected" || entry.value == null) return uuids;
+
+    const polygons = mapJson(entry.value) as AffectedPolygon[][] | null;
+    if (polygons == null || polygons.length === 0) return uuids;
+
+    const newUuids = polygons.flatMap(group => group.map(p => p.polyUuid)).filter(isNotNull);
+    return [...uuids, ...newUuids];
+  }, [] as string[]);
+
+  return { disturbanceData, affectedPolygonUuids };
+};
+
 export const DisturbanceReportEntryApprovalProcessor: EntityApprovalProcessor = {
   async processEntityApproval(entity) {
     if (!(entity instanceof DisturbanceReport)) return;
 
     const entries = await DisturbanceReportEntry.report(entity.id).findAll();
-    const disturbanceData: CreationAttributes<Disturbance> = {
+    const { disturbanceData, affectedPolygonUuids } = getEntryData(entries);
+    const entityData: CreationAttributes<Disturbance> = {
       disturbanceableType: laravelType(entity),
       disturbanceableId: entity.id,
       description: entity.description,
-      actionDescription: entity.actionDescription
+      actionDescription: entity.actionDescription,
+      ...disturbanceData
     };
-
-    // Look for entries that contain affected polygon UUIDs
-    const affectedPolygonUuids = entries.reduce((uuids, entry) => {
-      const mapping = DISTURBANCE_MAPPING[entry.name as keyof typeof DISTURBANCE_MAPPING];
-      if (mapping != null) {
-        (disturbanceData as Dictionary<unknown>)[mapping.column] = mapping.mapper(entry.value);
-      }
-
-      if (entry.name !== "polygon-affected" || entry.value == null) return uuids;
-
-      const polygons = mapJson(entry.value) as AffectedPolygon[][] | null;
-      if (polygons == null || polygons.length === 0) return uuids;
-
-      const newUuids = polygons.flatMap(group => group.map(p => p.polyUuid)).filter(isNotNull);
-      return [...uuids, ...newUuids];
-    }, [] as string[]);
 
     if (affectedPolygonUuids.length === 0) {
       // If there are no affected polygons, we don't create the disturbance.
@@ -93,9 +99,9 @@ export const DisturbanceReportEntryApprovalProcessor: EntityApprovalProcessor = 
 
     let disturbance = await Disturbance.for(entity).findOne();
     if (disturbance == null) {
-      disturbance = await Disturbance.create(disturbanceData);
+      disturbance = await Disturbance.create(entityData);
     } else {
-      await disturbance.update(disturbanceData);
+      await disturbance.update(entityData);
     }
 
     // Remove disturbance id from all polygons that were previously assigned to this disturbance

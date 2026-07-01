@@ -73,5 +73,5 @@ export class DisturbanceReportEntry extends Model<
   declare value: string | null;
 
   @BelongsTo(() => DisturbanceReport)
-  declare disturbanceReport: CreationOptional<DisturbanceReport>;
+  declare disturbanceReport: DisturbanceReport | null;
 }

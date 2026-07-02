@@ -11,6 +11,7 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { ColumnMapping, FilterFlag, PolymorphicUuidAssociation, UpdateAssociation } from "../util/types";
 import { airtableColumnName } from "../util/columns";
 import { selectAttributes, selectIncludes } from "../util/db";
+import { BaseId } from "../airtable.processor";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -27,6 +28,7 @@ const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
   }));
 
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
+  readonly BASE_ID: BaseId = "defaultBase";
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;

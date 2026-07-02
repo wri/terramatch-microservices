@@ -76,6 +76,7 @@ const COLUMNS: ColumnMapping<TreeSpecies, TreeSpeciesAssociations>[] = [
 ];
 
 export class TreeSpeciesEntity extends AirtableEntity<TreeSpecies, TreeSpeciesAssociations> {
+  readonly BASE_ID = "treeSpeciesBase";
   readonly TABLE_NAME = "Tree Species";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = TreeSpecies;

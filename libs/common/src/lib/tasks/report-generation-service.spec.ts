@@ -1,8 +1,15 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { NurseryFactory, ProjectFactory, SiteFactory, TaskFactory } from "@terramatch-microservices/database/factories";
+import {
+  FinancialReportFactory,
+  NurseryFactory,
+  OrganisationFactory,
+  ProjectFactory,
+  SiteFactory,
+  TaskFactory
+} from "@terramatch-microservices/database/factories";
 import { ReportGenerationService } from "./report-generation-service";
 import { Test } from "@nestjs/testing";
-import { Action, Task } from "@terramatch-microservices/database/entities";
+import { Action, FinancialReport, Project, Task } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { uniq } from "lodash";
@@ -88,6 +95,70 @@ describe("ReportGenerationService", () => {
         projectId,
         organisationId
       });
+    });
+  });
+
+  describe("createFinancialReports", () => {
+    beforeEach(async () => {
+      await FinancialReport.truncate();
+      await Project.truncate({ cascade: true });
+    });
+
+    it("should noop for frameworks without financial reports", async () => {
+      const createSpy = jest.spyOn(FinancialReport, "create");
+      await service.createFinancialReports("ppc", DateTime.utc(2027, 1, 31).toJSDate());
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should noop for non-January report periods", async () => {
+      const createSpy = jest.spyOn(FinancialReport, "create");
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 7, 30).toJSDate());
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should create a financial report per organisation with due_at on July 30", async () => {
+      const org1 = await OrganisationFactory.create({ finStartMonth: 4, currency: "USD" });
+      const org2 = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org1.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
+
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+
+      const reports = await FinancialReport.findAll({
+        where: { organisationId: [org1.id, org2.id] },
+        order: [["organisationId", "ASC"]]
+      });
+      expect(reports).toHaveLength(2);
+      expect(reports[0]).toMatchObject({
+        organisationId: org1.id,
+        yearOfReport: 2027,
+        frameworkKey: "enterprises",
+        status: "due",
+        finStartMonth: 4,
+        currency: "USD"
+      });
+      expect(reports[0]?.dueAt).toEqual(DateTime.utc(2027, 7, 30).toJSDate());
+      expect(reports[1]?.organisationId).toBe(org2.id);
+    });
+
+    it("should skip organisations that already have a report for the year", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-landscapes", status: "approved" });
+      await FinancialReportFactory.org(org).create({ yearOfReport: 2027 });
+
+      await service.createFinancialReports("terrafund-landscapes", DateTime.utc(2027, 1, 31).toJSDate());
+
+      expect(await FinancialReport.count({ where: { organisationId: org.id, yearOfReport: 2027 } })).toBe(1);
+    });
+
+    it("should not create reports for projects in started status", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "started" });
+
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+
+      expect(await FinancialReport.count({ where: { organisationId: org.id } })).toBe(0);
     });
   });
 });

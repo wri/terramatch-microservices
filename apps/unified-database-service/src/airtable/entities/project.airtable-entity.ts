@@ -7,16 +7,11 @@ import {
   SitePolygon,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  ColumnMapping,
-  commonEntityColumns,
-  treeAmountRollup,
-  treeDescriptionRollup
-} from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { filter, flatten, groupBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 const loadApprovedSites = async (projectIds: number[]) =>
   groupBy(

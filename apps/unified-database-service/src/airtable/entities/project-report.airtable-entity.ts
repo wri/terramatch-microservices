@@ -1,13 +1,8 @@
 import { NurseryReport, Project, ProjectReport, TreeSpecies } from "@terramatch-microservices/database/entities";
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  ColumnMapping,
-  commonEntityColumns,
-  treeAmountRollup,
-  treeDescriptionRollup
-} from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { filter, groupBy, uniq } from "lodash";
+import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 type ProjectReportAssociations = {
   projectUuid?: string;

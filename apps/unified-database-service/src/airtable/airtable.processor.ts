@@ -85,6 +85,14 @@ export type UpdateAllData = {
   updatedSince: Date;
 };
 
+// These are the Airtable base IDs that we use. They are defined in the ENV.
+const BASES = {
+  defaultBase: "AIRTABLE_BASE_ID",
+  treeSpeciesBase: "AIRTABLE_TREE_SPECIES_BASE_ID"
+} as const;
+
+export type BaseId = keyof typeof BASES;
+
 /**
  * Processes jobs in the airtable queue. Note that if we see problems with this crashing or
  * consuming too many resources, we have the option to run this in a forked process, although
@@ -93,7 +101,6 @@ export type UpdateAllData = {
 @Processor("airtable")
 export class AirtableProcessor extends WorkerHost {
   private readonly logger = new TMLogger(AirtableProcessor.name);
-  private readonly base: Airtable.Base;
 
   constructor(
     private readonly config: ConfigService,
@@ -101,15 +108,22 @@ export class AirtableProcessor extends WorkerHost {
     private readonly dataApi: DataApiService
   ) {
     super();
+  }
 
+  private base(baseId: BaseId) {
     const apiKey = this.config.get<string>("AIRTABLE_API_KEY");
-    const baseId = this.config.get<string>("AIRTABLE_BASE_ID");
-    if (apiKey == null || baseId == null) {
+    if (apiKey == null) {
       /* istanbul ignore next */
-      throw new InternalServerErrorException("Airtable API key and base ID must be set");
+      throw new InternalServerErrorException("Airtable API key must be set");
     }
 
-    this.base = new Airtable({ apiKey }).base(baseId);
+    const airtableBaseId = this.config.get<string>(BASES[baseId]);
+    if (airtableBaseId == null) {
+      /* istanbul ignore next */
+      throw new InternalServerErrorException(`${BASES[baseId]} must be set`);
+    }
+
+    return new Airtable({ apiKey }).base(airtableBaseId);
   }
 
   async process(job: Job) {
@@ -147,7 +161,7 @@ export class AirtableProcessor extends WorkerHost {
     }
 
     const entity = new entityClass(this.dataApi);
-    await entity.updateBase(this.base, { startPage, updatedSince });
+    await entity.updateBase(this.base(entity.BASE_ID), { startPage, updatedSince });
 
     this.logger.log(`Completed entity update: ${JSON.stringify({ entityType, updatedSince })}`);
     await this.sendSlackUpdate(`Completed updating table "${entity.TABLE_NAME}" [updatedSince: ${updatedSince}]`);
@@ -162,7 +176,7 @@ export class AirtableProcessor extends WorkerHost {
     }
 
     const entity = new entityClass(this.dataApi);
-    await entity.deleteStaleRecords(this.base, deletedSince);
+    await entity.deleteStaleRecords(this.base(entity.BASE_ID), deletedSince);
 
     this.logger.log(`Completed entity delete: ${JSON.stringify({ entityType, deletedSince })}`);
     await this.sendSlackUpdate(

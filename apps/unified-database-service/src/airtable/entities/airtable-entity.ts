@@ -1,13 +1,17 @@
-import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, ModelStatic, Op, WhereOptions } from "sequelize";
+import { Model, ModelCtor } from "sequelize-typescript";
+import { groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
+import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Dictionary } from "factory-girl-ts";
-import { TreeSpecies } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+
+import { ColumnMapping, FilterFlag, PolymorphicUuidAssociation, UpdateAssociation } from "../util/types";
+import { airtableColumnName } from "../util/columns";
+import { selectAttributes, selectIncludes } from "../util/db";
+import { BaseId } from "../airtable.processor";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -17,25 +21,14 @@ type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
 // Limit in Airtable
 const LONG_TEXT_MAX_LENGTH = 100000;
 
-type FilterFlag = {
-  attribute: string;
-  // The condition that should hide a given row in this table.
-  hideCondition: boolean;
-};
-
 const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
   flags.map(flag => ({
     attribute: isString(flag) ? flag : flag.attribute,
     hideCondition: isString(flag) ? true : flag.hideCondition
   }));
 
-export type UpdateAssociation<M extends Model, JoinModel extends Model> = {
-  model: ModelStatic<JoinModel>;
-  on: [keyof Attributes<M>, keyof Attributes<JoinModel>];
-  scope?: Partial<{ [key in keyof Attributes<JoinModel>]: string }>;
-};
-
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
+  readonly BASE_ID: BaseId = "defaultBase";
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
@@ -210,7 +203,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     }
 
     try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // @ts-expect-error the types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await base(this.TABLE_NAME).update(airtableRecords, {
         performUpsert: { fieldsToMergeOn: [this.IDENTITY_COLUMN] },
@@ -355,129 +348,3 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     );
   }
 }
-
-export type Include = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  model?: ModelType<any, any>;
-  association?: string;
-  attributes?: string[];
-};
-
-type AirtableValue = null | undefined | string | number | boolean | Date | string[];
-
-/**
- * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), or a more descriptive object
- */
-export type ColumnMapping<T extends Model, A = Record<string, never>> =
-  | keyof Attributes<T>
-  | {
-      airtableColumn: string;
-      // Include if this mapping should include a particular DB column in the DB query
-      dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
-      // Include if this mapping should eager load an association on the DB query
-      include?: Include[];
-      valueMap: (entity: T, associations: A) => Promise<AirtableValue>;
-    };
-
-export type PolymorphicUuidAssociation<AssociationType> = {
-  model: ModelCtor;
-  association: keyof AssociationType;
-};
-
-// used in the test suite
-export const airtableColumnName = <T extends Model>(mapping: ColumnMapping<T, never>) =>
-  isObject(mapping) ? mapping.airtableColumn : (mapping as string);
-
-const selectAttributes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
-  uniq([
-    "id",
-    ...flatten(
-      columns.map(mapping => (isObject(mapping) ? mapping.dbColumn : mapping)).filter(dbColumn => dbColumn != null)
-    )
-  ]);
-
-/**
- * Merges Includes to arrive at a cohesive set of IncludeOptions for a Sequelize find query.
- */
-const mergeInclude = (includes: Include[], include: Include) => {
-  const existing = includes.find(
-    ({ model, association }) =>
-      (model != null && model === include.model) || (association != null && association === include.association)
-  );
-  if (existing == null) {
-    // Use clone deep here so that if this include gets modified in the future, it doesn't mutate the
-    // original definition.
-    includes.push(cloneDeep(include));
-  } else {
-    if (existing.attributes != null) {
-      // If either the current include or the new mapping is missing an attributes array, we want
-      // to make sure the final include is missing it as well so that all columns are pulled.
-      if (include.attributes == null) {
-        delete include.attributes;
-      } else {
-        // We don't need cloneDeep here because attributes is a simple string array.
-        existing.attributes = uniq([...existing.attributes, ...include.attributes]);
-      }
-    }
-  }
-
-  return includes;
-};
-
-const selectIncludes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
-  columns.reduce((includes, mapping) => {
-    if (!isObject(mapping)) return includes;
-    if (mapping.include == null) return includes;
-
-    return mapping.include.reduce(mergeInclude, includes);
-  }, [] as Include[]);
-
-export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType?: string) =>
-  [
-    "uuid",
-    "createdAt",
-    "updatedAt",
-    ...(adminSiteType == null
-      ? []
-      : [
-          {
-            airtableColumn: "linkToTerramatch",
-            dbColumn: "uuid",
-            valueMap: (record: UuidModel) => `https://www.terramatch.org/admin#/${adminSiteType}/${record.uuid}/show`
-          }
-        ])
-  ] as ColumnMapping<T, A>[];
-
-export const associatedValueColumn = <T extends Model, A>(
-  valueName: keyof A,
-  dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[]
-): ColumnMapping<T, A> => ({
-  airtableColumn: valueName as string,
-  dbColumn,
-  valueMap: async (_, associations: A) => associations?.[valueName] as AirtableValue
-});
-
-export const percentageColumn = <T extends Model, A = Record<string, never>>(
-  dbColumn: keyof Attributes<T>
-): ColumnMapping<T, A> => ({
-  airtableColumn: dbColumn as string,
-  dbColumn,
-  valueMap: async model => ((model[dbColumn] as number | null) ?? 0) / 100
-});
-
-const filterTrees = (trees: TreeSpecies[] | null | undefined, collection: string) =>
-  (trees ?? []).filter(tree => tree.collection === collection);
-
-export const treeAmountRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
-  filterTrees(trees, collection).reduce(
-    (sum, tree) => (tree.amount == null ? sum : (sum ?? 0) + tree.amount),
-    null as number | null
-  );
-
-export const treeDescriptionRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
-  filterTrees(trees, collection)
-    .reduce(
-      (descriptions, tree) => [...descriptions, `${tree.name} (${(tree.amount ?? "").toLocaleString()})`],
-      [] as string[]
-    )
-    .join(", ");

@@ -1,15 +1,14 @@
+import { AirtableEntity } from "./airtable-entity";
+import { Project, Site, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { groupBy, uniq } from "lodash";
 import {
-  AirtableEntity,
   associatedValueColumn,
-  ColumnMapping,
   commonEntityColumns,
   percentageColumn,
   treeAmountRollup,
-  treeDescriptionRollup,
-  UpdateAssociation
-} from "./airtable-entity";
-import { Project, Site, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { groupBy, uniq } from "lodash";
+  treeDescriptionRollup
+} from "../util/columns";
+import { ColumnMapping, UpdateAssociation } from "../util/types";
 
 type SiteAssociations = {
   projectUuid?: string;

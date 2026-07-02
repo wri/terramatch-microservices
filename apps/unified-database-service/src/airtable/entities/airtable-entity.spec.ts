@@ -1,4 +1,4 @@
-import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { faker } from "@faker-js/faker";
 import {
   Application,
@@ -69,6 +69,8 @@ import {
 } from "@terramatch-microservices/database/util/gadm-mock-data";
 import { AirtableBase } from "airtable/lib/airtable_base";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { ColumnMapping } from "../util/types";
+import { airtableColumnName } from "../util/columns";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
 const airtableSelectFirstPage = jest.fn<Promise<unknown>, never>(() => Promise.resolve([]));

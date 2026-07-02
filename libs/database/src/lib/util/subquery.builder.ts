@@ -3,9 +3,10 @@ import { Attributes, literal, ModelStatic } from "sequelize";
 import { isBoolean, isObject } from "lodash";
 import { Literal } from "sequelize/types/utils";
 import { isNotNull } from "../types/array";
+import { User } from "../entities";
 
-export const isLiteral = (
-  values: string | number | Date | boolean | string[] | number[] | Literal
+export const isLiteral = <T extends Model>(
+  values: string | number | Date | boolean | string[] | number[] | Literal | ModelStatic<T>
 ): values is Literal => isObject(values) && (values as { val: unknown }).val != null;
 
 type AggregateSelection = "MAX";
@@ -17,10 +18,14 @@ type SelectOptions<T extends Model> = {
 };
 
 export class Subquery<T extends Model> {
+  public readonly clauses: ClauseBuilder<T>;
+
   private constructor(
     public readonly modelStatic: ModelStatic<T>,
     public readonly tableAlias: string
-  ) {}
+  ) {
+    this.clauses = new ClauseBuilder(this);
+  }
 
   public static select<T extends Model>(
     modelStatic: ModelStatic<T>,
@@ -28,6 +33,10 @@ export class Subquery<T extends Model> {
     options: SelectOptions<T> = {}
   ) {
     return new Subquery(modelStatic, options.tableAlias ?? modelStatic.tableName).select(attribute, options);
+  }
+
+  public static clauseBuilder<T extends Model>(modelStatic: ModelStatic<T>, tableAlias?: string) {
+    return new Subquery(modelStatic, tableAlias ?? modelStatic.tableName).clauses;
   }
 
   /**
@@ -41,6 +50,10 @@ export class Subquery<T extends Model> {
     tableAlias = modelStatic.name
   ) {
     return literal(new Subquery(modelStatic, tableAlias).field(attribute));
+  }
+
+  public static escape(value: string | number | Date) {
+    return User.sql.escape(value);
   }
 
   private select(attribute: keyof Attributes<T>, options: SelectOptions<T> = {}) {
@@ -74,6 +87,40 @@ export class Subquery<T extends Model> {
   }
 }
 
+class ClauseBuilder<T extends Model> {
+  constructor(private readonly subquery: Subquery<T>) {}
+
+  field(attribute: keyof Attributes<T>) {
+    return this.subquery.field(attribute);
+  }
+
+  isNull(attribute: keyof Attributes<T>) {
+    return `${this.subquery.field(attribute)} IS NULL`;
+  }
+
+  isNotNull(attribute: keyof Attributes<T>) {
+    return `${this.subquery.field(attribute)} IS NOT NULL`;
+  }
+
+  eq(attribute: keyof Attributes<T>, value: string | number | Date | boolean | Literal) {
+    const escaped = isLiteral(value) ? value.val : isBoolean(value) ? value : this.subquery.sql.escape(value);
+    return `${this.subquery.field(attribute)} = ${escaped}`;
+  }
+
+  gte(attribute: keyof Attributes<T>, value: string | number | Date) {
+    return `${this.subquery.field(attribute)} >= ${this.subquery.sql.escape(value)}`;
+  }
+
+  lt(attribute: keyof Attributes<T>, value: string | number | Date) {
+    return `${this.subquery.field(attribute)} < ${this.subquery.sql.escape(value)}`;
+  }
+
+  in(attribute: keyof Attributes<T>, values: string[] | number[] | Literal) {
+    const escaped = isLiteral(values) ? values.val : values.map(v => this.subquery.sql.escape(v)).join(",");
+    return `${this.subquery.field(attribute)} IN (${escaped})`;
+  }
+}
+
 class SubqueryBuilder<T extends Model> {
   private where: string[] = [];
   private joins: string[] = [];
@@ -104,45 +151,54 @@ class SubqueryBuilder<T extends Model> {
     return literal(`EXISTS (${this.sqlString})`);
   }
 
+  get clauses() {
+    return this.subquery.clauses;
+  }
+
   isNull(attribute: keyof Attributes<T>) {
-    this.where.push(`${this.subquery.field(attribute)} IS NULL`);
+    this.where.push(this.clauses.isNull(attribute));
     return this;
   }
 
   isNotNull(attribute: keyof Attributes<T>) {
-    this.where.push(`${this.subquery.field(attribute)} IS NOT NULL`);
+    this.where.push(this.clauses.isNotNull(attribute));
     return this;
   }
 
   eq(attribute: keyof Attributes<T>, value: string | number | Date | boolean | Literal) {
-    const escaped = isLiteral(value) ? value.val : isBoolean(value) ? value : this.subquery.sql.escape(value);
-    this.where.push(`${this.subquery.field(attribute)} = ${escaped}`);
+    this.where.push(this.clauses.eq(attribute, value));
     return this;
   }
 
   gte(attribute: keyof Attributes<T>, value: string | number | Date) {
-    this.where.push(`${this.subquery.field(attribute)} >= ${this.subquery.sql.escape(value)}`);
+    this.where.push(this.clauses.gte(attribute, value));
     return this;
   }
 
   lt(attribute: keyof Attributes<T>, value: string | number | Date) {
-    this.where.push(`${this.subquery.field(attribute)} < ${this.subquery.sql.escape(value)}`);
+    this.where.push(this.clauses.lt(attribute, value));
     return this;
   }
 
   in(attribute: keyof Attributes<T>, values: string[] | number[] | Literal) {
-    const escaped = isLiteral(values) ? values.val : values.map(v => this.subquery.sql.escape(v)).join(",");
-    this.where.push(`${this.subquery.field(attribute)} IN (${escaped})`);
+    this.where.push(this.clauses.in(attribute, values));
     return this;
   }
 
-  innerJoin(select: Literal, as: string, on: string) {
-    this.joins.push(`INNER JOIN (${select.val}) AS \`${as}\` ON ${on}`);
+  innerJoin<ST extends Model>(select: Literal | ModelStatic<ST>, as: string, on: string) {
+    const joinClause = isLiteral(select) ? `(${select.val})` : select.tableName;
+    this.joins.push(`INNER JOIN ${joinClause} AS \`${as}\` ON ${on}`);
     return this;
   }
 
-  andLiteral(clause: Literal) {
-    this.where.push(`${clause.val}`);
+  leftJoin<ST extends Model>(select: Literal | ModelStatic<ST>, as: string, on: string) {
+    const joinClause = isLiteral(select) ? `(${select.val})` : select.tableName;
+    this.joins.push(`LEFT OUTER JOIN ${joinClause} AS \`${as}\` ON ${on}`);
+    return this;
+  }
+
+  andLiteral(clause: Literal | string) {
+    this.where.push(`${isLiteral(clause) ? clause.val : clause}`);
     return this;
   }
 }

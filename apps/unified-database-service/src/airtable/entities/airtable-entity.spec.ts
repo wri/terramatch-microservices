@@ -68,6 +68,7 @@ import {
   STATES
 } from "@terramatch-microservices/database/util/gadm-mock-data";
 import { AirtableBase } from "airtable/lib/airtable_base";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 const airtableUpdate = jest.fn<Promise<unknown>, [{ fields: object }[], object]>(() => Promise.resolve());
 const airtableSelectFirstPage = jest.fn<Promise<unknown>, never>(() => Promise.resolve([]));
@@ -169,12 +170,10 @@ describe("AirtableEntity", () => {
 
       it("includes the updatedSince timestamp in the query", async () => {
         const entity = new StubEntity(dataApi);
-        const spy = jest.spyOn(entity as never, "getUpdatePageFindOptions") as jest.SpyInstance<FindOptions<Site>>;
+        const spy = jest.spyOn(entity as never, "getUpdateIdSubquery") as jest.SpyInstance<FindOptions<Site>>;
         const updatedSince = new Date();
         await entity.updateBase(Base, { updatedSince });
-        expect(spy.mock.results[0].value.where).toMatchObject({
-          updatedAt: { [Op.gte]: updatedSince }
-        });
+        expect(spy.mock.results[0].value.literal.val).toContain(`updated_at\` >= ${Subquery.escape(updatedSince)}`);
         spy.mockReset();
       });
 

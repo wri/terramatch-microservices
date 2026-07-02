@@ -1,11 +1,12 @@
 import { Model, ModelCtor, ModelType } from "sequelize-typescript";
 import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
+import { Attributes, FindOptions, ModelStatic, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Dictionary } from "factory-girl-ts";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -27,6 +28,12 @@ const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
     hideCondition: isString(flag) ? true : flag.hideCondition
   }));
 
+export type UpdateAssociation<M extends Model, JoinModel extends Model> = {
+  model: ModelStatic<JoinModel>;
+  on: [keyof Attributes<M>, keyof Attributes<JoinModel>];
+  scope?: { [key in keyof Attributes<M>]: string };
+};
+
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
@@ -34,6 +41,10 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   readonly IDENTITY_COLUMN: string = "uuid";
   readonly SUPPORTS_UPDATED_SINCE: boolean = true;
   readonly FILTER_FLAGS: (string | FilterFlag)[] = [];
+  // Used to include an association in the selection of IDs to update when updatedSince is used. Ignored
+  // if SUPPORTS_UPDATED_SINCE is false.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly UPDATE_ASSOCIATIONS: UpdateAssociation<ModelType, any>[] = [];
 
   protected readonly logger = new TMLogger(AirtableEntity.name);
 
@@ -51,10 +62,8 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   }
 
   async updateBase(base: Airtable.Base, { startPage, updatedSince }: UpdateBaseOptions = {}) {
-    // Get any find options that might have been provided by a subclass to issue this query
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { offset, limit, attributes, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
-    const count = await this.MODEL.count(countOptions);
+    const where = { id: { [Op.in]: this.getUpdateIdSubquery(updatedSince).literal } } as WhereOptions<ModelType>;
+    const count = await this.MODEL.count({ where });
     if (count === 0) {
       this.logger.log(`No updates to process, skipping: ${JSON.stringify({ table: this.TABLE_NAME, updatedSince })}`);
       return;
@@ -62,7 +71,9 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
 
     const expectedPages = Math.floor(count / AIRTABLE_PAGE_SIZE);
     for (let page = startPage ?? 0; await this.processUpdatePage(base, page, updatedSince); page++) {
-      this.logger.log(`Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
+      this.logger.log(
+        `Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page: page + 1, expectedPages: expectedPages + 1 })}`
+      );
     }
   }
 
@@ -82,17 +93,59 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     }
   }
 
-  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
-    const where: Dictionary = {};
+  /**
+   * Creates a subquery that calculates all the IDs that should be included in an update process with
+   * the optional updatedSince time stamp.
+   *
+   * If this processor supports it, this will take into account any associations that are specified in
+   * UPDATE_ASSOCIATIONS to find records whose dependent associations have been updated.
+   */
+  protected getUpdateIdSubquery(updatedSince?: Date) {
+    const subquery = Subquery.select(this.MODEL, "id", { distinct: true });
 
-    if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
-      where["updatedAt"] = { [Op.gte]: updatedSince };
-    }
     if (!isEmpty(this.FILTER_FLAGS)) {
       for (const { attribute, hideCondition } of getFilterFlags(this.FILTER_FLAGS)) {
-        where[attribute] = !hideCondition;
+        subquery.eq(attribute, !hideCondition);
       }
     }
+
+    if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
+      if (isEmpty(this.UPDATE_ASSOCIATIONS)) {
+        subquery.gte("updatedAt", updatedSince);
+      } else {
+        let whereClause = subquery.clauses.gte("updatedAt", updatedSince);
+
+        // Builds up join queries that will include any item from UPDATE_ASSOCIATIONS that has been updated
+        // or deleted since the updatedSince timestamp.
+        for (const [index, association] of this.UPDATE_ASSOCIATIONS.entries()) {
+          const as = `association_${index}`;
+          const modelColumn = subquery.clauses.field(association.on[0]);
+          const joinClauses = Subquery.clauseBuilder(association.model, as);
+          const joinModelColumn = joinClauses.field(association.on[1]);
+          let on = `${modelColumn} = ${joinModelColumn} AND (${joinClauses.isNull("deletedAt")} OR ${joinClauses.gte("deletedAt", updatedSince)})`;
+
+          if (association.scope != null) {
+            for (const [attribute, value] of Object.entries(association.scope)) {
+              on += ` AND ${joinClauses.eq(attribute, value)}`;
+            }
+          }
+
+          // Include any row from the base table that has an update association where that association was
+          // updated or deleted since the updatedSince timestamp.
+          whereClause += ` OR ${joinClauses.gte("updatedAt", updatedSince)} OR ${joinClauses.gte("deletedAt", updatedSince)}`;
+
+          subquery.leftJoin(association.model, as, on);
+        }
+
+        subquery.andLiteral(`(${whereClause})`);
+      }
+    }
+
+    return subquery;
+  }
+
+  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
+    const where = { id: { [Op.in]: this.getUpdateIdSubquery(updatedSince).literal } } as WhereOptions<ModelType>;
 
     return {
       attributes: selectAttributes(this.COLUMNS),
@@ -307,9 +360,6 @@ export type Include = {
   model?: ModelType<any, any>;
   association?: string;
   attributes?: string[];
-  where?: WhereOptions;
-  paranoid?: boolean;
-  required?: boolean;
 };
 
 type AirtableValue = null | undefined | string | number | boolean | Date | string[];

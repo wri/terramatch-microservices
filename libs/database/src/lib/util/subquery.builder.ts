@@ -3,7 +3,6 @@ import { Attributes, literal, ModelStatic } from "sequelize";
 import { isBoolean, isObject } from "lodash";
 import { Literal } from "sequelize/types/utils";
 import { isNotNull } from "../types/array";
-import { User } from "../entities";
 
 export const isLiteral = <T extends Model>(
   values: string | number | Date | boolean | string[] | number[] | Literal | ModelStatic<T>
@@ -50,10 +49,6 @@ export class Subquery<T extends Model> {
     tableAlias = modelStatic.name
   ) {
     return literal(new Subquery(modelStatic, tableAlias).field(attribute));
-  }
-
-  public static escape(value: string | number | Date) {
-    return User.sql.escape(value);
   }
 
   private select(attribute: keyof Attributes<T>, options: SelectOptions<T> = {}) {

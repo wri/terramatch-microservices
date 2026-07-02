@@ -2,8 +2,6 @@ import { airtableColumnName, AirtableEntity, ColumnMapping } from "./airtable-en
 import { faker } from "@faker-js/faker";
 import {
   Application,
-  Tracking,
-  TrackingEntry,
   FinancialIndicator,
   Framework,
   FundingProgramme,
@@ -15,12 +13,12 @@ import {
   ProjectReport,
   Site,
   SiteReport,
+  Tracking,
+  TrackingEntry,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
-  TrackingEntryFactory,
-  TrackingFactory,
   FinancialIndicatorFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
@@ -34,13 +32,13 @@ import {
   SitePolygonFactory,
   SiteReportFactory,
   TaskFactory,
+  TrackingEntryFactory,
+  TrackingFactory,
   TreeSpeciesFactory
 } from "@terramatch-microservices/database/factories";
 import Airtable from "airtable";
 import {
   ApplicationEntity,
-  TrackingEntity,
-  TrackingEntryEntity,
   FinancialIndicatorEntity,
   FundingProgrammeEntity,
   NurseryEntity,
@@ -51,6 +49,8 @@ import {
   ProjectReportEntity,
   SiteEntity,
   SiteReportEntity,
+  TrackingEntity,
+  TrackingEntryEntity,
   TreeSpeciesEntity
 } from "./";
 import { orderBy, sortBy, uniq } from "lodash";
@@ -173,7 +173,9 @@ describe("AirtableEntity", () => {
         const spy = jest.spyOn(entity as never, "getUpdateIdSubquery") as jest.SpyInstance<FindOptions<Site>>;
         const updatedSince = new Date();
         await entity.updateBase(Base, { updatedSince });
-        expect(spy.mock.results[0].value.literal.val).toContain(`updated_at\` >= ${Subquery.escape(updatedSince)}`);
+        expect(spy.mock.results[0].value.literal.val).toContain(
+          `updated_at\` >= ${Subquery.clauseBuilder(Site).escape(updatedSince)}`
+        );
         spy.mockReset();
       });
 

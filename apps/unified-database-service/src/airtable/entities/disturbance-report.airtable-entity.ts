@@ -1,8 +1,14 @@
 /* istanbul ignore file */
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns, Include } from "./airtable-entity";
-import { DisturbanceReport, Project } from "@terramatch-microservices/database/entities";
-import { uniq } from "lodash";
-import { Op, WhereOptions } from "sequelize";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  ColumnMapping,
+  commonEntityColumns,
+  UpdateAssociation
+} from "./airtable-entity";
+import { DisturbanceReport, DisturbanceReportEntry, Project } from "@terramatch-microservices/database/entities";
+import { groupBy, uniq } from "lodash";
+import { Op } from "sequelize";
 import { getEntryData } from "@terramatch-microservices/common/events/processors/disturbance-report-entry.approval-processor";
 
 type DisturbanceReportAssociations = {
@@ -35,56 +41,31 @@ const COLUMNS: ColumnMapping<DisturbanceReport, DisturbanceReportAssociations>[]
   associatedValueColumn("disturbanceDate")
 ];
 
+const ENTRY_ASSOCIATION: UpdateAssociation<DisturbanceReport, DisturbanceReportEntry> = {
+  model: DisturbanceReportEntry,
+  on: ["id", "disturbanceReportId"]
+};
+
 export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, DisturbanceReportAssociations> {
   readonly TABLE_NAME = "Disturbance Reports";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = DisturbanceReport;
-
-  // Override the default behavior to both include all entries in the page and to include the
-  // entry updatedAt field as part of the where clause if updatedSince is not null.
-  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
-    const options = super.getUpdatePageFindOptions(page, updatedSince);
-
-    const entryInclude: Include = {
-      association: "entries",
-      attributes: ["name", "value", "deletedAt"],
-      required: false
-    };
-    (options.include as Include[]).push(entryInclude);
-
-    // If allowed to do the default behavior of wrapping in a subquery, the where clause
-    // construction may be incorrect
-    options.subQuery = false;
-
-    if (updatedSince != null) {
-      options.where = {
-        [Op.or]: [
-          options.where as WhereOptions<DisturbanceReport>,
-          {
-            "$entries.updated_at$": { [Op.gte]: updatedSince }
-          },
-          {
-            "$entries.deleted_at$": { [Op.gte]: updatedSince }
-          }
-        ]
-      };
-      // we have to make sure to join against entries that were deleted since the timestamp so that
-      // those reports count as updated as well.
-      entryInclude.paranoid = false;
-      entryInclude.where = { [Op.or]: [{ deletedAt: null }, { deletedAt: { [Op.gte]: updatedSince } }] };
-    }
-
-    return options;
-  }
+  readonly UPDATE_ASSOCIATIONS = [ENTRY_ASSOCIATION];
 
   protected async loadAssociations(reports: DisturbanceReport[]) {
     const projectIds = uniq(reports.map(({ projectId }) => projectId));
     const projects = await Project.findAll({ where: { id: projectIds }, attributes: ["id", "uuid"] });
+    const entriesByReport = groupBy(
+      await DisturbanceReportEntry.findAll({
+        where: { disturbanceReportId: { [Op.in]: reports.map(({ id }) => id) } }
+      }),
+      "disturbanceReportId"
+    );
 
     return reports.reduce(
-      (associations, { id, projectId, entries }) => {
+      (associations, { id, projectId }) => {
         const { disturbanceData, affectedPolygonUuids } = getEntryData(
-          (entries ?? []).filter(({ deletedAt }) => deletedAt == null)
+          (entriesByReport[id] ?? []).filter(({ deletedAt }) => deletedAt == null)
         );
         return {
           ...associations,

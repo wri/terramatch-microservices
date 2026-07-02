@@ -446,7 +446,9 @@ describe("ProjectPolygonsService", () => {
       expect(result.features[0].type).toBe("Feature");
       expect(result.features[0].geometry).toEqual(mockGeometry);
       expect(result.features[0].properties).toEqual({
-        projectPitchUuid: query.projectPitchUuid
+        projectPitchUuid: query.projectPitchUuid,
+        uuid: projectPolygon.polyUuid,
+        polygonUuid: projectPolygon.polyUuid
       });
     });
 

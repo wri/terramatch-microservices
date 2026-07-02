@@ -188,11 +188,13 @@ export class ProjectPolygonsService {
     return {
       type: "FeatureCollection",
       features: geoJsonStrings.map(
-        (gjs): Feature<Geometry> => ({
+        (gjs, index): Feature<Geometry> => ({
           type: "Feature",
           geometry: JSON.parse(gjs.geoJson) as Geometry,
           properties: {
-            projectPitchUuid: query.projectPitchUuid
+            projectPitchUuid: query.projectPitchUuid,
+            uuid: projectPolygons[index].polyUuid,
+            polygonUuid: projectPolygons[index].polyUuid
           }
         })
       )

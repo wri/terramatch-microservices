@@ -1,10 +1,12 @@
 /* istanbul ignore file */
 
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { User } from "@terramatch-microservices/database/entities";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { associatedValueColumn, commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 // There _are_ some columns with uuid null in the prod DB. However, they have all been deleted,
 // so for this processor, we can ignore them.

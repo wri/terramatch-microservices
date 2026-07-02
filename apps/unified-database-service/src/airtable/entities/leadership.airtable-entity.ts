@@ -1,6 +1,8 @@
 /* istanbul ignore file */
 import { Leadership, Organisation } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
+import { commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 const COLUMNS: ColumnMapping<Leadership>[] = [
   ...commonEntityColumns<Leadership>(),

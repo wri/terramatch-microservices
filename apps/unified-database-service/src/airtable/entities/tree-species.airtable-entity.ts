@@ -1,4 +1,4 @@
-import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import {
   Nursery,
   NurseryReport,
@@ -10,6 +10,8 @@ import {
   SiteReport,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
+import { associatedValueColumn } from "../util/columns";
+import { ColumnMapping, PolymorphicUuidAssociation } from "../util/types";
 
 const LARAVEL_TYPE_MAPPING: Record<string, PolymorphicUuidAssociation<TreeSpeciesAssociations>> = {
   [Nursery.LARAVEL_TYPE]: {

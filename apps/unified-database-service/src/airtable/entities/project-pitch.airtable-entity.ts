@@ -1,14 +1,8 @@
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  ColumnMapping,
-  commonEntityColumns,
-  treeAmountRollup,
-  treeDescriptionRollup,
-  UpdateAssociation
-} from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { ProjectPitch, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { filter, flatten, groupBy, uniq } from "lodash";
+import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
+import { ColumnMapping, UpdateAssociation } from "../util/types";
 
 type ProjectPitchAssociations = {
   projectCountryName: string | null;

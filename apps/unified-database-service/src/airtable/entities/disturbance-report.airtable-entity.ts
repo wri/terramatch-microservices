@@ -1,15 +1,11 @@
 /* istanbul ignore file */
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  ColumnMapping,
-  commonEntityColumns,
-  UpdateAssociation
-} from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { DisturbanceReport, DisturbanceReportEntry, Project } from "@terramatch-microservices/database/entities";
 import { groupBy, uniq } from "lodash";
 import { Op } from "sequelize";
 import { getEntryData } from "@terramatch-microservices/common/events/processors/disturbance-report-entry.approval-processor";
+import { associatedValueColumn, commonEntityColumns } from "../util/columns";
+import { ColumnMapping, UpdateAssociation } from "../util/types";
 
 type DisturbanceReportAssociations = {
   projectUuid?: string;

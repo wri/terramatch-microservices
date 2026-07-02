@@ -1,8 +1,10 @@
 /* istanbul ignore file */
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { FinancialReport, FundingType } from "@terramatch-microservices/database/entities";
 import { uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { associatedValueColumn, commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 type FundingTypeAssociations = {
   financialReportUuid?: string;

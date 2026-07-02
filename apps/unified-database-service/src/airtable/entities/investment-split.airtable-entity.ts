@@ -1,6 +1,8 @@
 /* istanbul ignore file */
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { Investment, InvestmentSplit } from "@terramatch-microservices/database/entities";
+import { commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 const COLUMNS: ColumnMapping<InvestmentSplit>[] = [
   ...commonEntityColumns<InvestmentSplit>(),

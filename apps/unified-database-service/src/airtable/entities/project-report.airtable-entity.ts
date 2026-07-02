@@ -1,11 +1,20 @@
 import { NurseryReport, Project, ProjectReport, TreeSpecies } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  ColumnMapping,
+  commonEntityColumns,
+  treeAmountRollup,
+  treeDescriptionRollup
+} from "./airtable-entity";
 import { filter, groupBy, uniq } from "lodash";
 
 type ProjectReportAssociations = {
   projectUuid?: string;
   associatedNurseryReports: NurseryReport[];
   trees: TreeSpecies[];
+  nurserySeedlingAmount: number | null;
+  nurserySeedlingNameAndAmount: string;
 };
 
 const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
@@ -71,17 +80,19 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
     dbColumn: "workdaysVolunteer",
     valueMap: async ({ workdaysVolunteer }) => workdaysVolunteer
   },
-  "elpDescription"
+  "elpDescription",
+  associatedValueColumn("nurserySeedlingAmount"),
+  associatedValueColumn("nurserySeedlingNameAndAmount")
 ];
 
 export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectReportAssociations> {
   readonly TABLE_NAME = "Project Reports";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = ProjectReport;
+  // If this gets flipped to true, UPDATED_ASSOCIATIONS for tree species will be required.
   readonly SUPPORTS_UPDATED_SINCE = false;
 
   protected async loadAssociations(projectReports: ProjectReport[]) {
-    const reportIds = projectReports.map(({ id }) => id);
     const projectIds = uniq(projectReports.map(({ projectId }) => projectId));
     const projects = await Project.findAll({
       where: { id: projectIds },
@@ -95,13 +106,7 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
       }),
       "taskId"
     );
-    const treesByReportId = groupBy(
-      await TreeSpecies.findAll({
-        where: { speciesableType: ProjectReport.LARAVEL_TYPE, speciesableId: reportIds, hidden: false },
-        attributes: ["id", "speciesableId", "amount"]
-      }),
-      "speciesableId"
-    );
+    const treesByReportId = groupBy(await TreeSpecies.visible().for(projectReports).findAll(), "speciesableId");
 
     return projectReports.reduce(
       (associations, { id, projectId, taskId }) => ({
@@ -109,7 +114,9 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
         [id]: {
           projectUuid: projects.find(({ id }) => id === projectId)?.uuid,
           associatedNurseryReports: (taskId == null ? null : nurseryReportsByTaskId[taskId]) ?? [],
-          trees: treesByReportId[id] ?? []
+          trees: treesByReportId[id] ?? [],
+          nurserySeedlingAmount: treeAmountRollup(treesByReportId[id], "nursery-seedling"),
+          nurserySeedlingNameAndAmount: treeDescriptionRollup(treesByReportId[id], "nursery-seedling")
         }
       }),
       {} as Record<number, ProjectReportAssociations>

@@ -6,6 +6,7 @@ import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Dictionary } from "factory-girl-ts";
+import { TreeSpecies } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
@@ -31,7 +32,7 @@ const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
 export type UpdateAssociation<M extends Model, JoinModel extends Model> = {
   model: ModelStatic<JoinModel>;
   on: [keyof Attributes<M>, keyof Attributes<JoinModel>];
-  scope?: { [key in keyof Attributes<M>]: string };
+  scope?: Partial<{ [key in keyof Attributes<JoinModel>]: string }>;
 };
 
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
@@ -126,7 +127,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
 
           if (association.scope != null) {
             for (const [attribute, value] of Object.entries(association.scope)) {
-              on += ` AND ${joinClauses.eq(attribute, value)}`;
+              if (value != null) on += ` AND ${joinClauses.eq(attribute, value)}`;
             }
           }
 
@@ -463,3 +464,17 @@ export const percentageColumn = <T extends Model, A = Record<string, never>>(
   dbColumn,
   valueMap: async model => ((model[dbColumn] as number | null) ?? 0) / 100
 });
+
+const filterTrees = (trees: TreeSpecies[] | null | undefined, collection: string) =>
+  (trees ?? []).filter(tree => tree.collection === collection);
+
+export const treeAmountRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
+  filterTrees(trees, collection).reduce((sum, tree) => (sum ?? 0) + (tree.amount ?? 0), null as number | null);
+
+export const treeDescriptionRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
+  filterTrees(trees, collection)
+    .reduce(
+      (descriptions, tree) => [...descriptions, `${tree.name} (${(tree.amount ?? "").toLocaleString()})`],
+      [] as string[]
+    )
+    .join(", ");

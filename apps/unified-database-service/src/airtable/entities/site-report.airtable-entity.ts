@@ -90,12 +90,7 @@ export class SiteReportEntity extends AirtableEntity<SiteReport, SiteReportAssoc
       where: { id: siteIds },
       attributes: ["id", "uuid"]
     });
-    const treesByReport = groupBy(
-      await TreeSpecies.visible()
-        .siteReports(siteReports.map(({ id }) => id))
-        .findAll(),
-      "speciesableId"
-    );
+    const treesByReport = groupBy(await TreeSpecies.visible().for(siteReports).findAll(), "speciesableId");
 
     return siteReports.reduce(
       (associations, { id, siteId }) => ({

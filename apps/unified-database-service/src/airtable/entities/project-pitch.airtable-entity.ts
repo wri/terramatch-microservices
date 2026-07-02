@@ -16,8 +16,8 @@ type ProjectPitchAssociations = {
   level0ProposedNames: string[];
   level1ProposedNames: string[];
   level2ProposedNames: string[];
-  treePlantedAmount?: number | null;
-  treePlantedNameAndAmount?: string;
+  treePlantedAmount: number | null;
+  treePlantedNameAndAmount: string;
 };
 
 const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [

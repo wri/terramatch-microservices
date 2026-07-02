@@ -12,16 +12,16 @@ import { groupBy, uniq } from "lodash";
 
 type SiteReportAssociations = {
   siteUuid?: string;
-  treePlantedAmount?: number | null;
-  treePlantedNameAndAmount?: string;
-  nonTreeAmount?: number | null;
-  nonTreeNameAndAmount?: string;
-  replantingAmount?: number | null;
-  replantingNameAndAmount?: string;
-  invasiveAmount?: number | null;
-  invasiveNameAndAmount?: string;
-  anrAmount?: number | null;
-  anrNameAndAmount?: string;
+  treePlantedAmount: number | null;
+  treePlantedNameAndAmount: string;
+  nonTreeAmount: number | null;
+  nonTreeNameAndAmount: string;
+  replantingAmount: number | null;
+  replantingNameAndAmount: string;
+  invasiveAmount: number | null;
+  invasiveNameAndAmount: string;
+  anrAmount: number | null;
+  anrNameAndAmount: string;
 };
 
 const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [

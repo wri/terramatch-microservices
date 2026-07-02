@@ -4,9 +4,17 @@ import {
   Organisation,
   Project,
   Site,
-  SitePolygon
+  SitePolygon,
+  TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import {
+  AirtableEntity,
+  associatedValueColumn,
+  ColumnMapping,
+  commonEntityColumns,
+  treeAmountRollup,
+  treeDescriptionRollup
+} from "./airtable-entity";
 import { filter, flatten, groupBy, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 
@@ -35,6 +43,10 @@ type ProjectAssociations = {
   level0Project?: string[];
   level1Project?: string[];
   level2Project?: string[];
+  treePlantedAmount: number | null;
+  treePlantedNameAndAmount: string;
+  nonTreeAmount: number | null;
+  nonTreeNameAndAmount: string;
 };
 
 const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
@@ -127,13 +139,18 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "bioeconomyProductList",
   "bioeconomyProductDescription",
   "polygonDataSubmission",
-  "readyForBaseline"
+  "readyForBaseline",
+  associatedValueColumn("treePlantedAmount"),
+  associatedValueColumn("treePlantedNameAndAmount"),
+  associatedValueColumn("nonTreeAmount"),
+  associatedValueColumn("nonTreeNameAndAmount")
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {
   readonly TABLE_NAME = "Projects";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = Project;
+  // If this gets flipped to true, UPDATED_ASSOCIATIONS for tree species will be required.
   readonly SUPPORTS_UPDATED_SINCE = false;
   readonly FILTER_FLAGS = ["isTest"];
 
@@ -150,6 +167,7 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
     const stateNames = await this.gadmLevel1Names(uniq([...stateCountries, ...level0Projects]));
     const level1Projects = uniq(flatten(projects.map(({ level1Project }) => level1Project))).filter(isNotNull);
     const level2Names = await this.gadmLevel2Names(level1Projects);
+    const treesByProject = groupBy(await TreeSpecies.visible().for(projects).findAll(), "speciesableId");
 
     return projects.reduce(
       (associations, { id, country, states, level0Project, level1Project, level2Project }) => ({
@@ -163,7 +181,11 @@ export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> 
           stateNames: filter(states?.map(state => stateNames[state])),
           level0Project: filter(level0Project?.map(code => countryNames[code])),
           level1Project: filter(level1Project?.map(code => stateNames[code])),
-          level2Project: filter(level2Project?.map(code => level2Names[code]))
+          level2Project: filter(level2Project?.map(code => level2Names[code])),
+          treePlantedAmount: treeAmountRollup(treesByProject[id], "tree-planted"),
+          treePlantedNameAndAmount: treeDescriptionRollup(treesByProject[id], "tree-planted"),
+          nonTreeAmount: treeAmountRollup(treesByProject[id], "non-tree"),
+          nonTreeNameAndAmount: treeDescriptionRollup(treesByProject[id], "non-tree")
         }
       }),
       {} as Record<number, ProjectAssociations>

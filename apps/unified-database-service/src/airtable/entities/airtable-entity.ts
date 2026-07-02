@@ -469,7 +469,10 @@ const filterTrees = (trees: TreeSpecies[] | null | undefined, collection: string
   (trees ?? []).filter(tree => tree.collection === collection);
 
 export const treeAmountRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
-  filterTrees(trees, collection).reduce((sum, tree) => (sum ?? 0) + (tree.amount ?? 0), null as number | null);
+  filterTrees(trees, collection).reduce(
+    (sum, tree) => (tree.amount == null ? sum : (sum ?? 0) + tree.amount),
+    null as number | null
+  );
 
 export const treeDescriptionRollup = (trees: TreeSpecies[] | null | undefined, collection: string) =>
   filterTrees(trees, collection)

@@ -94,30 +94,33 @@ class ClauseBuilder<T extends Model> {
     return this.subquery.field(attribute);
   }
 
+  escape(value: string | number | Date | boolean | Literal) {
+    return isLiteral(value) ? value.val : isBoolean(value) ? value : this.subquery.sql.escape(value);
+  }
+
   isNull(attribute: keyof Attributes<T>) {
-    return `${this.subquery.field(attribute)} IS NULL`;
+    return `${this.field(attribute)} IS NULL`;
   }
 
   isNotNull(attribute: keyof Attributes<T>) {
-    return `${this.subquery.field(attribute)} IS NOT NULL`;
+    return `${this.field(attribute)} IS NOT NULL`;
   }
 
   eq(attribute: keyof Attributes<T>, value: string | number | Date | boolean | Literal) {
-    const escaped = isLiteral(value) ? value.val : isBoolean(value) ? value : this.subquery.sql.escape(value);
-    return `${this.subquery.field(attribute)} = ${escaped}`;
+    return `${this.field(attribute)} = ${this.escape(value)}`;
   }
 
   gte(attribute: keyof Attributes<T>, value: string | number | Date) {
-    return `${this.subquery.field(attribute)} >= ${this.subquery.sql.escape(value)}`;
+    return `${this.field(attribute)} >= ${this.escape(value)}`;
   }
 
   lt(attribute: keyof Attributes<T>, value: string | number | Date) {
-    return `${this.subquery.field(attribute)} < ${this.subquery.sql.escape(value)}`;
+    return `${this.field(attribute)} < ${this.escape(value)}`;
   }
 
   in(attribute: keyof Attributes<T>, values: string[] | number[] | Literal) {
-    const escaped = isLiteral(values) ? values.val : values.map(v => this.subquery.sql.escape(v)).join(",");
-    return `${this.subquery.field(attribute)} IN (${escaped})`;
+    const escaped = isLiteral(values) ? values.val : values.map(v => this.escape(v)).join(",");
+    return `${this.field(attribute)} IN (${escaped})`;
   }
 }
 

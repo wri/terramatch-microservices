@@ -107,7 +107,7 @@ describe("geometry-upload-validation.util", () => {
       );
     });
 
-    it("should reject 3D coordinates", () => {
+    it("should allow KML-style coordinates with zero elevation", () => {
       const geojson: FeatureCollection = {
         type: "FeatureCollection",
         features: [
@@ -123,6 +123,32 @@ describe("geometry-upload-validation.util", () => {
                   [1, 1, 0],
                   [1, 0, 0],
                   [0, 0, 0]
+                ]
+              ]
+            }
+          }
+        ]
+      };
+
+      expect(() => validateParsedGeometryCollection(geojson)).not.toThrow();
+    });
+
+    it("should reject coordinates with non-zero elevation", () => {
+      const geojson: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [0, 0, 10],
+                  [0, 1, 10],
+                  [1, 1, 10],
+                  [1, 0, 10],
+                  [0, 0, 10]
                 ]
               ]
             }
@@ -173,7 +199,7 @@ describe("geometry-upload-validation.util", () => {
                   [0, 0],
                   [0, 1],
                   [1, 1],
-                  [0, 0]
+                  [1, 0]
                 ]
               ]
             }

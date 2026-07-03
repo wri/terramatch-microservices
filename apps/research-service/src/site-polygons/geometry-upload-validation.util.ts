@@ -14,8 +14,6 @@ export const GEOMETRY_UPLOAD_ERROR_MESSAGES = {
 const POINT_GEOMETRY_TYPES = new Set(["Point", "MultiPoint"]);
 const POLYGON_GEOMETRY_TYPES = new Set(["Polygon", "MultiPolygon"]);
 
-const WGS84_PROJECTION_MARKERS = ["EPSG:4326", "WGS 84", "WGS_1984", "WGS84"];
-
 export function assertGeometryUploadFileSize(file: Express.Multer.File): void {
   if (file.size > GEOMETRY_UPLOAD_MAX_FILE_SIZE_BYTES) {
     throw new BadRequestException(GEOMETRY_UPLOAD_ERROR_MESSAGES.FILE_SIZE_EXCEEDED);
@@ -27,14 +25,22 @@ export function assertShapefileProjection(prjContent: string | null): void {
     return;
   }
 
-  const normalized = prjContent.toUpperCase();
-  const hasEpsg4326Authority = /AUTHORITY\s*\[\s*"EPSG"\s*,\s*"4326"\s*\]/i.test(prjContent);
-  const isWgs84 =
-    hasEpsg4326Authority ||
-    normalized.includes("EPSG:4326") ||
-    WGS84_PROJECTION_MARKERS.some(marker => normalized.includes(marker.toUpperCase()));
+  const normalized = prjContent.trim();
+  const upper = normalized.toUpperCase();
+  const hasEpsg4326Authority = /AUTHORITY\s*\[\s*"EPSG"\s*,\s*"4326"\s*\]/i.test(normalized);
 
-  if (!isWgs84) {
+  if (hasEpsg4326Authority || upper.includes("EPSG:4326")) {
+    return;
+  }
+
+  if (upper.startsWith("PROJCS")) {
+    throw new BadRequestException(GEOMETRY_UPLOAD_ERROR_MESSAGES.PROJECTION);
+  }
+
+  const isGeographicWgs84 =
+    /GEOGCS\s*\[\s*"WGS\s*84"/i.test(normalized) || upper.includes("WGS_1984") || upper.includes("WGS84");
+
+  if (!isGeographicWgs84) {
     throw new BadRequestException(GEOMETRY_UPLOAD_ERROR_MESSAGES.PROJECTION);
   }
 }
@@ -78,7 +84,16 @@ function assertTwoDimensionalCoordinates(features: Feature[]): void {
 }
 
 function geometryHas3DCoordinates(geometry: Geometry): boolean {
-  return collectPositions(geometry).some(position => position.length > 2);
+  return collectPositions(geometry).some(hasNonZeroElevation);
+}
+
+function hasNonZeroElevation(position: Position): boolean {
+  if (position.length <= 2) {
+    return false;
+  }
+
+  const elevation = position[2];
+  return elevation != null && elevation !== 0;
 }
 
 function collectPositions(geometry: Geometry): Position[] {

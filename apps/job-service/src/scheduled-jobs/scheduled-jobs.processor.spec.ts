@@ -68,6 +68,10 @@ describe("ScheduledJobsProcessor", () => {
         data: { taskDefinition: { frameworkKey: "ppc", dueAt } }
       } as Job);
       expect(reportGenerationService.createTask).toHaveBeenCalledTimes(projects.length);
+      expect(reportGenerationService.createFinancialReports).toHaveBeenCalledWith(
+        "terrafund",
+        DateTime.fromISO(dueAt).toJSDate()
+      );
     });
 
     it("should log an error if the service fails", async () => {

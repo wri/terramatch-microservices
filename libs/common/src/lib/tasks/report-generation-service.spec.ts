@@ -1,18 +1,42 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { NurseryFactory, ProjectFactory, SiteFactory, TaskFactory } from "@terramatch-microservices/database/factories";
+import {
+  FinancialIndicatorFactory,
+  FinancialReportFactory,
+  FundingTypeFactory,
+  MediaFactory,
+  NurseryFactory,
+  OrganisationFactory,
+  ProjectFactory,
+  SiteFactory,
+  TaskFactory
+} from "@terramatch-microservices/database/factories";
 import { ReportGenerationService } from "./report-generation-service";
 import { Test } from "@nestjs/testing";
-import { Action, Task } from "@terramatch-microservices/database/entities";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import {
+  Action,
+  FinancialIndicator,
+  FinancialReport,
+  FundingType,
+  Project,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { uniq } from "lodash";
+import { MediaService } from "../media/media.service";
+import { NO_UPDATE } from "@terramatch-microservices/database/constants/status";
 
 describe("ReportGenerationService", () => {
   let service: ReportGenerationService;
+  let mediaService: DeepMocked<MediaService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [ReportGenerationService]
+      providers: [
+        ReportGenerationService,
+        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) }
+      ]
     }).compile();
 
     service = module.get(ReportGenerationService);
@@ -88,6 +112,152 @@ describe("ReportGenerationService", () => {
         projectId,
         organisationId
       });
+    });
+  });
+
+  describe("createFinancialReport", () => {
+    beforeEach(async () => {
+      await FinancialReport.truncate();
+      await FinancialIndicator.truncate();
+      await FundingType.truncate();
+      await Project.truncate({ cascade: true });
+    });
+
+    it("should create a financial report for an organisation with due_at on July 30", async () => {
+      const org = await OrganisationFactory.create({ finStartMonth: 4, currency: "USD" });
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+
+      const dueAt = DateTime.utc(2027, 7, 30).toJSDate();
+      const report = await service.createFinancialReport(org.id, dueAt);
+
+      expect(report).toMatchObject({
+        organisationId: org.id,
+        yearOfReport: 2027,
+        frameworkKey: "enterprises",
+        status: "due",
+        updateRequestStatus: NO_UPDATE,
+        finStartMonth: 4,
+        currency: "USD"
+      });
+      expect(report?.dueAt).toEqual(DateTime.utc(2027, 7, 30).toJSDate());
+    });
+
+    it("should clone org financial indicators, funding types, and documentation media", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+      const orgIndicator = await FinancialIndicatorFactory.org(org).create({
+        year: 2026,
+        collection: "financial-collection",
+        amount: 1000
+      });
+      await MediaFactory.financialIndicator(orgIndicator).create({ collectionName: "documentation" });
+      await FundingTypeFactory.org(org).create({ year: 2026, amount: 5000, type: "grant" });
+
+      const report = await service.createFinancialReport(org.id, DateTime.utc(2027, 7, 30).toJSDate());
+
+      const reportIndicators = await FinancialIndicator.financialReport(report!.id).findAll();
+      expect(reportIndicators).toHaveLength(1);
+      expect(reportIndicators[0]).toMatchObject({
+        year: 2026,
+        collection: "financial-collection",
+        amount: 1000,
+        organisationId: org.id
+      });
+
+      const reportFundingTypes = await FundingType.financialReport(report!.id).findAll();
+      expect(reportFundingTypes).toHaveLength(1);
+      expect(reportFundingTypes[0]).toMatchObject({
+        year: 2026,
+        amount: 5000,
+        type: "grant",
+        organisationId: org.uuid
+      });
+
+      expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw if the organisation has no eligible project", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc", status: "approved" });
+
+      await expect(service.createFinancialReport(org.id, DateTime.utc(2027, 7, 30).toJSDate())).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it("should create another report even if one already exists for the year", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+      await FinancialReportFactory.org(org).create({ yearOfReport: 2027 });
+
+      const report = await service.createFinancialReport(org.id, DateTime.utc(2027, 7, 30).toJSDate());
+
+      expect(report).not.toBeNull();
+      expect(await FinancialReport.count({ where: { organisationId: org.id, yearOfReport: 2027 } })).toBe(2);
+    });
+  });
+
+  describe("createFinancialReports", () => {
+    beforeEach(async () => {
+      await FinancialReport.truncate();
+      await Project.truncate({ cascade: true });
+    });
+
+    it("should noop for frameworks without financial reports", async () => {
+      const createSpy = jest.spyOn(FinancialReport, "create");
+      await service.createFinancialReports("ppc", DateTime.utc(2027, 1, 31).toJSDate());
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should noop for non-January report periods", async () => {
+      const createSpy = jest.spyOn(FinancialReport, "create");
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 7, 30).toJSDate());
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should create a financial report per organisation with due_at on July 30", async () => {
+      const org1 = await OrganisationFactory.create({ finStartMonth: 4, currency: "USD" });
+      const org2 = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org1.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
+
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+
+      const reports = await FinancialReport.findAll({
+        where: { organisationId: [org1.id, org2.id] },
+        order: [["organisationId", "ASC"]]
+      });
+      expect(reports).toHaveLength(2);
+      expect(reports[0]).toMatchObject({
+        organisationId: org1.id,
+        yearOfReport: 2027,
+        frameworkKey: "enterprises",
+        status: "due",
+        finStartMonth: 4,
+        currency: "USD"
+      });
+      expect(reports[0]?.dueAt).toEqual(DateTime.utc(2027, 7, 30).toJSDate());
+      expect(reports[1]?.organisationId).toBe(org2.id);
+    });
+
+    it("should create a report even if one already exists for the year", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-landscapes", status: "approved" });
+      await FinancialReportFactory.org(org).create({ yearOfReport: 2027 });
+
+      await service.createFinancialReports("terrafund-landscapes", DateTime.utc(2027, 1, 31).toJSDate());
+
+      expect(await FinancialReport.count({ where: { organisationId: org.id, yearOfReport: 2027 } })).toBe(2);
+    });
+
+    it("should not create reports for projects in started status", async () => {
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "started" });
+
+      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+
+      expect(await FinancialReport.count({ where: { organisationId: org.id } })).toBe(0);
     });
   });
 });

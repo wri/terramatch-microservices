@@ -69,7 +69,7 @@ describe("ScheduledJobsProcessor", () => {
       } as Job);
       expect(reportGenerationService.createTask).toHaveBeenCalledTimes(projects.length);
       expect(reportGenerationService.createFinancialReports).toHaveBeenCalledWith(
-        "terrafund",
+        "ppc",
         DateTime.fromISO(dueAt).toJSDate()
       );
     });

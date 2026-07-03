@@ -98,7 +98,6 @@ describe("ScheduledJobsService", () => {
     it("should schedule TaskDue jobs for future years when none exist", async () => {
       const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
       const taskDueSpy = jest.spyOn(ScheduledJob, "taskDue").mockReturnValue({
-        // simulate no existing jobs
         findAll: jest.fn().mockResolvedValue([])
       } as unknown as typeof ScheduledJob);
 
@@ -113,7 +112,6 @@ describe("ScheduledJobsService", () => {
       const dueAtISO = "2027-01-31T00:00:00.000Z";
       const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
       const taskDueSpy = jest.spyOn(ScheduledJob, "taskDue").mockReturnValue({
-        // simulate an existing TaskDue for enterprises 2027-01-31 so it should be skipped
         findAll: jest.fn().mockResolvedValue([{ taskDefinition: { frameworkKey: "enterprises", dueAt: dueAtISO } }])
       } as unknown as typeof ScheduledJob);
 

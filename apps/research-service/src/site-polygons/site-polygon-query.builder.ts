@@ -247,13 +247,14 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   private buildJsonArrayOverlapWhere(column: "practice" | "distr" | "submissionCycle", values: string[]): WhereOptions {
+    const sqlColumn = column === "submissionCycle" ? "submission_cycle" : column;
     const orContains = values.map(slug =>
-      literal(`JSON_CONTAINS(SitePolygon.${column}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
+      literal(`JSON_CONTAINS(SitePolygon.${sqlColumn}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
     );
     return {
       [Op.and]: [
         { [column]: { [Op.ne]: null } } as WhereOptions,
-        literal(`JSON_LENGTH(SitePolygon.${column}) > 0`),
+        literal(`JSON_LENGTH(SitePolygon.${sqlColumn}) > 0`),
         { [Op.or]: orContains }
       ]
     };

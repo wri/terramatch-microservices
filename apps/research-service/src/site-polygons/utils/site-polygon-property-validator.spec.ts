@@ -38,7 +38,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: 5.5,
         status: "draft",
         pointUuid: "point-uuid-123",
-        source: "greenhouse"
+        source: "greenhouse",
+        submissionCycle: null
       });
     });
 
@@ -69,7 +70,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: null,
         status: "draft",
         pointUuid: null,
-        source: null
+        source: null,
+        submissionCycle: null
       });
     });
 
@@ -100,7 +102,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: null,
         status: "draft",
         pointUuid: null,
-        source: null
+        source: null,
+        submissionCycle: null
       });
     });
 
@@ -331,7 +334,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: "not-a-number",
         status: "draft",
         pointUuid: [],
-        source: {}
+        source: {},
+        submissionCycle: null
       });
     });
 

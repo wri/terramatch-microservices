@@ -267,6 +267,7 @@ export class SitePolygonsController {
       practice,
       targetSys,
       distr,
+      submissionCycle,
       source,
       hasOverlap
     } = query;
@@ -343,6 +344,7 @@ export class SitePolygonsController {
       .filterPractice(practice)
       .filterDistr(distr)
       .filterTargetSys(targetSys)
+      .filterSubmissionCycle(submissionCycle)
       .filterSource(source)
       .filterHasOverlap(hasOverlap);
 
@@ -408,7 +410,7 @@ export class SitePolygonsController {
     operationId: "bulkUpdateSitePolygonAttributes",
     summary: "Bulk update site polygon attributes",
     description: `Creates a new version for each site polygon with the same attribute changes applied.
-    Supported fields: plantStart, practice, targetSys, distr, numTrees.
+    Supported fields: plantStart, practice, targetSys, distr, numTrees, submissionCycle.
     At least one attribute field must be provided. Empty string or empty array explicitly clears a field.
     Omitted fields inherit values from each polygon's active version.`
   })

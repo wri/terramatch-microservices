@@ -25,6 +25,10 @@ export function convertPropertiesToAttributeChanges(properties: Partial<SitePoly
     attributeChanges.distr = properties.distr;
   }
 
+  if (properties.submissionCycle != null && properties.submissionCycle.length > 0) {
+    attributeChanges.submissionCycle = properties.submissionCycle;
+  }
+
   if (properties.numTrees != null) {
     attributeChanges.numTrees = properties.numTrees;
   }

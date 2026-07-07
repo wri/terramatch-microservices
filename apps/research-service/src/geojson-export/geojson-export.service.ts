@@ -83,7 +83,7 @@ export class GeoJsonExportService {
     }
 
     const sitePolygon = await SitePolygon.findOne({
-      where: { polygonUuid },
+      where: { polygonUuid, isActive: true },
       include: this.siteIncludeForGeoJson()
     });
 

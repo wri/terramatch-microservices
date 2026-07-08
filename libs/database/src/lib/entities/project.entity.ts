@@ -44,6 +44,8 @@ import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
 
+import { setPpcExternalId } from "../util/sequelize-hooks";
+
 type ProjectMedia =
   | "media"
   | "socioeconomicBenefits"
@@ -61,6 +63,8 @@ type ProjectMedia =
   underscored: true,
   paranoid: true,
   hooks: {
+    beforeCreate: setPpcExternalId(Project),
+    beforeUpdate: setPpcExternalId(Project),
     afterCreate: statusUpdateSequelizeHook,
     afterDestroy: async (project: Project) => {
       await removeMedia(project);

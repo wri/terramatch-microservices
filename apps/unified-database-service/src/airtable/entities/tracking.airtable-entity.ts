@@ -1,4 +1,4 @@
-import { AirtableEntity, associatedValueColumn, ColumnMapping, PolymorphicUuidAssociation } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import {
   ProjectReport,
   SiteReport,
@@ -7,6 +7,8 @@ import {
   ProjectPitch,
   Project
 } from "@terramatch-microservices/database/entities";
+import { associatedValueColumn } from "../util/columns";
+import { ColumnMapping, PolymorphicUuidAssociation } from "../util/types";
 
 const LARAVEL_TYPE_MAPPINGS: Record<string, PolymorphicUuidAssociation<TrackingAssociations>> = {
   [ProjectReport.LARAVEL_TYPE]: {

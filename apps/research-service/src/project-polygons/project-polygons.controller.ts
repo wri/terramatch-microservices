@@ -106,10 +106,10 @@ export class ProjectPolygonsController {
   @ApiOperation({
     operationId: "createProjectPolygon",
     summary: "Create project polygon from GeoJSON",
-    description: `Create a project polygon for a project pitch from GeoJSON.
+    description: `Create project polygon(s) for a project pitch from GeoJSON.
     
     Each feature must have \`projectPitchUuid\` in properties.
-    Only one polygon per project pitch is supported. If a polygon already exists for the project pitch, it will be deleted and replaced with the new polygon.`
+    New polygons are appended to any existing polygons for the project pitch.`
   })
   @JsonApiResponse(ProjectPolygonDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
@@ -164,7 +164,7 @@ export class ProjectPolygonsController {
     - Single polygon/line: Uses the geometry as-is
     
     
-    If a project polygon already exists for the project pitch, it will be replaced.`
+    New polygons are appended to any existing polygons for the project pitch.`
   })
   @UseInterceptors(FileInterceptor("file"), FormDtoInterceptor)
   @JsonApiResponse(ProjectPolygonDto)

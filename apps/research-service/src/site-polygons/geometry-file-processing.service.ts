@@ -4,6 +4,11 @@ import * as shapefile from "shapefile";
 import AdmZip = require("adm-zip");
 import * as toGeoJSON from "@tmcw/togeojson";
 import { DOMParser } from "@xmldom/xmldom";
+import {
+  assertGeometryUploadFileSize,
+  assertShapefileProjection,
+  validateParsedGeometryCollection
+} from "./geometry-upload-validation.util";
 import "multer";
 
 @Injectable()
@@ -13,11 +18,15 @@ export class GeometryFileProcessingService {
       throw new BadRequestException("No file provided");
     }
 
+    assertGeometryUploadFileSize(file);
+
     const geojson = await this.parseFile(file);
 
     if (geojson.features == null || geojson.features.length === 0) {
       throw new BadRequestException("No features found in the uploaded file");
     }
+
+    validateParsedGeometryCollection(geojson);
 
     return geojson;
   }
@@ -95,6 +104,7 @@ export class GeometryFileProcessingService {
 
       const shpEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith(".shp"));
       const dbfEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith(".dbf"));
+      const prjEntry = zipEntries.find(entry => entry.entryName.toLowerCase().endsWith(".prj"));
 
       if (shpEntry == null) {
         throw new BadRequestException("ZIP file must contain a .shp file");
@@ -103,6 +113,9 @@ export class GeometryFileProcessingService {
       if (dbfEntry == null) {
         throw new BadRequestException("ZIP file must contain a .dbf file (required for attributes)");
       }
+
+      const prjContent = prjEntry != null ? prjEntry.getData().toString("utf-8") : null;
+      assertShapefileProjection(prjContent);
 
       const shpBuffer = shpEntry.getData();
       const dbfBuffer = dbfEntry.getData();

@@ -1,6 +1,8 @@
-import { AirtableEntity, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { Application, FormSubmission } from "@terramatch-microservices/database/entities";
 import { groupBy, orderBy } from "lodash";
+import { commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 const loadFormSubmissions = async (applicationIds: number[]) =>
   groupBy(

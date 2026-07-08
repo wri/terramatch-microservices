@@ -1,8 +1,10 @@
 /* istanbul ignore file */
 import { FinancialIndicator, FinancialReport, Organisation } from "@terramatch-microservices/database/entities";
-import { AirtableEntity, associatedValueColumn, ColumnMapping } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { associatedValueColumn } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 type FinancialIndicatorAssociations = {
   organisationUuid?: string;

@@ -1,13 +1,8 @@
 /* istanbul ignore file */
-import {
-  AirtableEntity,
-  associatedValueColumn,
-  ColumnMapping,
-  commonEntityColumns,
-  percentageColumn,
-  PolymorphicUuidAssociation
-} from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { Site, Strata } from "@terramatch-microservices/database/entities";
+import { associatedValueColumn, commonEntityColumns, percentageColumn } from "../util/columns";
+import { ColumnMapping, PolymorphicUuidAssociation } from "../util/types";
 
 const LARAVEL_TYPE_MAPPING: Record<string, PolymorphicUuidAssociation<StrataAssociations>> = {
   [Site.LARAVEL_TYPE]: {

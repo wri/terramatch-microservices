@@ -17,7 +17,7 @@ import {
 export class DisturbanceReportLightDto extends EntityDto {
   constructor(
     disturbanceReport?: DisturbanceReport,
-    props?: HybridSupportProps<DisturbanceReportLightDto, DisturbanceReport>
+    props?: HybridSupportProps<DisturbanceReportLightDto, Omit<DisturbanceReport, "entries">>
   ) {
     super();
     if (disturbanceReport != null && props != null) {
@@ -86,7 +86,10 @@ export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof
 export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
   constructor(
     disturbanceReport: DisturbanceReport,
-    props?: HybridSupportProps<DisturbanceReportFullDto, Omit<DisturbanceReport, "feedback" | "feedbackFields">>
+    props?: HybridSupportProps<
+      DisturbanceReportFullDto,
+      Omit<DisturbanceReport, "feedback" | "feedbackFields" | "entries">
+    >
   ) {
     super();
     if (disturbanceReport != null && props != null) {

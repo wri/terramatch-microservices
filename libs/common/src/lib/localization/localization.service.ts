@@ -11,7 +11,7 @@ import {
   I18nTranslation,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Attributes, Op, WhereOptions } from "sequelize";
+import { Attributes, CreationAttributes, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
@@ -165,7 +165,7 @@ export class LocalizationService {
     return t(text, params);
   }
 
-  async pullTranslations(config?: TransifexPullTranslationsConfig) {
+  async pullTranslations(forceAll: boolean, config?: TransifexPullTranslationsConfig) {
     const tx = this.createNativeInstance();
     const locales = ["en_US", "fr_FR", "es_MX", "pt_BR"];
     const txMapHashToTranslations: Record<string, TransifexPullTranslationsMap[]> = {};
@@ -186,12 +186,22 @@ export class LocalizationService {
         });
       }
     }
-    const i18nItems = await I18nItem.findAll({ where: { hash: { [Op.in]: Object.keys(txMapHashToTranslations) } } });
+    let whereI18n: WhereOptions<I18nItem> = { hash: { [Op.in]: Object.keys(txMapHashToTranslations) } };
+    if (!forceAll) {
+      whereI18n = {
+        ...whereI18n,
+        status: { [Op.ne]: "translated" }
+      };
+    }
+    const i18nItems = await I18nItem.findAll({ where: whereI18n });
     const i18nTranslations = await I18nTranslation.findAll({
       where: { i18nItemId: { [Op.in]: i18nItems.map(i18nItem => i18nItem.id) } }
     });
     const i18nTranslationsMap = groupBy(i18nTranslations, "i18nItemId");
-    const savePromises: Promise<I18nItem | I18nTranslation>[] = [];
+    const translationCreations: Pick<I18nTranslation, "i18nItemId" | "language" | "shortValue" | "longValue">[] = [];
+    const translationUpdates: Pick<I18nTranslation, "id" | "i18nItemId" | "language" | "shortValue" | "longValue">[] =
+      [];
+    const i18nItemStatusUpdates: Pick<I18nItem, "id" | "status">[] = [];
     for (const i18nItem of i18nItems) {
       const { hash } = i18nItem;
       txMapHashToTranslations[hash as string].forEach(txTranslation => {
@@ -201,30 +211,40 @@ export class LocalizationService {
           dbI18nTranslation => dbI18nTranslation.language === txTranslation.locale
         );
         const isShort = txTranslation.translation.length < 256;
+        const translationValues = {
+          language: txTranslation.locale,
+          shortValue: isShort ? txTranslation.translation : null,
+          longValue: isShort ? null : txTranslation.translation
+        };
         if (i18nTranslation !== undefined) {
-          i18nTranslation.shortValue = isShort ? txTranslation.translation : null;
-          i18nTranslation.longValue = isShort ? null : txTranslation.translation;
-          i18nTranslation.language = txTranslation.locale;
-          savePromises.push(i18nTranslation.save());
+          translationUpdates.push({
+            id: i18nTranslation.id,
+            i18nItemId,
+            ...translationValues
+          });
         } else {
-          savePromises.push(
-            I18nTranslation.create({
-              i18nItemId,
-              language: txTranslation.locale,
-              shortValue: isShort ? txTranslation.translation : null,
-              longValue: isShort ? null : txTranslation.translation
-            } as I18nTranslation)
-          );
+          translationCreations.push({
+            i18nItemId,
+            ...translationValues
+          });
         }
       });
-      i18nItem.status = "translated";
-      savePromises.push(
-        i18nItem.save({
-          hooks: false
-        })
-      );
+      i18nItemStatusUpdates.push({ id: i18nItem.id, status: "translated" });
     }
-    await Promise.all(savePromises);
+    if (translationCreations.length > 0) {
+      await I18nTranslation.bulkCreate(translationCreations as CreationAttributes<I18nTranslation>[]);
+    }
+    if (translationUpdates.length > 0) {
+      await I18nTranslation.bulkCreate(translationUpdates as CreationAttributes<I18nTranslation>[], {
+        updateOnDuplicate: ["shortValue", "longValue", "language"]
+      });
+    }
+    if (i18nItemStatusUpdates.length > 0) {
+      await I18nItem.bulkCreate(i18nItemStatusUpdates as CreationAttributes<I18nItem>[], {
+        updateOnDuplicate: ["status"],
+        hooks: false
+      });
+    }
     this.logger.log(`Finished processing ${i18nItems.length} keys`);
     return i18nItems.map(({ id }) => id);
   }

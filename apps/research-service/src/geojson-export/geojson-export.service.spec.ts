@@ -194,7 +194,7 @@ describe("GeoJsonExportService", () => {
         });
         expect(mockPolygonGeometry.getGeoJSON).toHaveBeenCalledWith(polygonUuid);
         expect(mockSitePolygon.findOne).toHaveBeenCalledWith({
-          where: { polygonUuid },
+          where: { polygonUuid, isActive: true },
           include: [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }]
         });
       });

@@ -1,11 +1,17 @@
-import { Model, ModelCtor, ModelType } from "sequelize-typescript";
-import { cloneDeep, flatten, groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
-import { Attributes, FindOptions, Op } from "sequelize";
+import { Model, ModelCtor } from "sequelize-typescript";
+import { groupBy, isEmpty, isObject, isString, keyBy, mapValues, merge, uniq } from "lodash";
+import { Attributes, FindOptions, Op, WhereOptions } from "sequelize";
 import Airtable from "airtable";
 import { UuidModel } from "@terramatch-microservices/database/types/util";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Dictionary } from "factory-girl-ts";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+
+import { ColumnMapping, FilterFlag, PolymorphicUuidAssociation, UpdateAssociation } from "../util/types";
+import { airtableColumnName } from "../util/columns";
+import { selectAttributes, selectIncludes } from "../util/db";
+import { BaseId } from "../airtable.processor";
 
 // The Airtable API only supports bulk updates of up to 10 rows.
 const AIRTABLE_PAGE_SIZE = 10;
@@ -15,13 +21,24 @@ type UpdateBaseOptions = { startPage?: number; updatedSince?: Date };
 // Limit in Airtable
 const LONG_TEXT_MAX_LENGTH = 100000;
 
+const getFilterFlags = (flags: (string | FilterFlag)[]): FilterFlag[] =>
+  flags.map(flag => ({
+    attribute: isString(flag) ? flag : flag.attribute,
+    hideCondition: isString(flag) ? true : flag.hideCondition
+  }));
+
 export abstract class AirtableEntity<ModelType extends Model, AssociationType = Record<string, never>> {
+  readonly BASE_ID: BaseId = "defaultBase";
   abstract readonly TABLE_NAME: string;
   abstract readonly COLUMNS: ColumnMapping<ModelType, AssociationType>[];
   abstract readonly MODEL: ModelCtor<ModelType>;
   readonly IDENTITY_COLUMN: string = "uuid";
   readonly SUPPORTS_UPDATED_SINCE: boolean = true;
-  readonly FILTER_FLAGS: string[] = [];
+  readonly FILTER_FLAGS: (string | FilterFlag)[] = [];
+  // Used to include an association in the selection of IDs to update when updatedSince is used. Ignored
+  // if SUPPORTS_UPDATED_SINCE is false.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly UPDATE_ASSOCIATIONS: UpdateAssociation<ModelType, any>[] = [];
 
   protected readonly logger = new TMLogger(AirtableEntity.name);
 
@@ -39,10 +56,8 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
   }
 
   async updateBase(base: Airtable.Base, { startPage, updatedSince }: UpdateBaseOptions = {}) {
-    // Get any find options that might have been provided by a subclass to issue this query
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { offset, limit, attributes, include, ...countOptions } = this.getUpdatePageFindOptions(0, updatedSince);
-    const count = await this.MODEL.count(countOptions);
+    const where = { id: { [Op.in]: this.getUpdateIdSubquery(updatedSince).literal } } as WhereOptions<ModelType>;
+    const count = await this.MODEL.count({ where });
     if (count === 0) {
       this.logger.log(`No updates to process, skipping: ${JSON.stringify({ table: this.TABLE_NAME, updatedSince })}`);
       return;
@@ -50,7 +65,9 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
 
     const expectedPages = Math.floor(count / AIRTABLE_PAGE_SIZE);
     for (let page = startPage ?? 0; await this.processUpdatePage(base, page, updatedSince); page++) {
-      this.logger.log(`Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page, expectedPages })}`);
+      this.logger.log(
+        `Processed update page: ${JSON.stringify({ table: this.TABLE_NAME, page: page + 1, expectedPages: expectedPages + 1 })}`
+      );
     }
   }
 
@@ -70,17 +87,59 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     }
   }
 
-  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
-    const where: Dictionary = {};
+  /**
+   * Creates a subquery that calculates all the IDs that should be included in an update process with
+   * the optional updatedSince time stamp.
+   *
+   * If this processor supports it, this will take into account any associations that are specified in
+   * UPDATE_ASSOCIATIONS to find records whose dependent associations have been updated.
+   */
+  protected getUpdateIdSubquery(updatedSince?: Date) {
+    const subquery = Subquery.select(this.MODEL, "id", { distinct: true });
 
-    if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
-      where["updatedAt"] = { [Op.gte]: updatedSince };
-    }
     if (!isEmpty(this.FILTER_FLAGS)) {
-      for (const flag of this.FILTER_FLAGS) {
-        where[flag] = false;
+      for (const { attribute, hideCondition } of getFilterFlags(this.FILTER_FLAGS)) {
+        subquery.eq(attribute, !hideCondition);
       }
     }
+
+    if (this.SUPPORTS_UPDATED_SINCE && updatedSince != null) {
+      if (isEmpty(this.UPDATE_ASSOCIATIONS)) {
+        subquery.gte("updatedAt", updatedSince);
+      } else {
+        let whereClause = subquery.clauses.gte("updatedAt", updatedSince);
+
+        // Builds up join queries that will include any item from UPDATE_ASSOCIATIONS that has been updated
+        // or deleted since the updatedSince timestamp.
+        for (const [index, association] of this.UPDATE_ASSOCIATIONS.entries()) {
+          const as = `association_${index}`;
+          const modelColumn = subquery.clauses.field(association.on[0]);
+          const joinClauses = Subquery.clauseBuilder(association.model, as);
+          const joinModelColumn = joinClauses.field(association.on[1]);
+          let on = `${modelColumn} = ${joinModelColumn} AND (${joinClauses.isNull("deletedAt")} OR ${joinClauses.gte("deletedAt", updatedSince)})`;
+
+          if (association.scope != null) {
+            for (const [attribute, value] of Object.entries(association.scope)) {
+              if (value != null) on += ` AND ${joinClauses.eq(attribute, value)}`;
+            }
+          }
+
+          // Include any row from the base table that has an update association where that association was
+          // updated or deleted since the updatedSince timestamp.
+          whereClause += ` OR ${joinClauses.gte("updatedAt", updatedSince)} OR ${joinClauses.gte("deletedAt", updatedSince)}`;
+
+          subquery.leftJoin(association.model, as, on);
+        }
+
+        subquery.andLiteral(`(${whereClause})`);
+      }
+    }
+
+    return subquery;
+  }
+
+  protected getUpdatePageFindOptions(page: number, updatedSince?: Date) {
+    const where = { id: { [Op.in]: this.getUpdateIdSubquery(updatedSince).literal } } as WhereOptions<ModelType>;
 
     return {
       attributes: selectAttributes(this.COLUMNS),
@@ -104,7 +163,10 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
         // include records that have been hidden since the timestamp as well
         [Op.and]: {
           updatedAt: { ...deletedAtCondition },
-          [Op.or]: this.FILTER_FLAGS.reduce((flags, flag) => ({ ...flags, [flag]: true }), {})
+          [Op.or]: getFilterFlags(this.FILTER_FLAGS).reduce(
+            (flags, { attribute, hideCondition }) => ({ ...flags, [attribute]: hideCondition }),
+            {}
+          )
         }
       };
     }
@@ -141,7 +203,7 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     }
 
     try {
-      // @ts-expect-error The types for this lib haven't caught up with its support for upserts
+      // @ts-expect-error the types for this lib haven't caught up with its support for upserts
       // https://github.com/Airtable/airtable.js/issues/348
       await base(this.TABLE_NAME).update(airtableRecords, {
         performUpsert: { fieldsToMergeOn: [this.IDENTITY_COLUMN] },
@@ -286,112 +348,3 @@ export abstract class AirtableEntity<ModelType extends Model, AssociationType = 
     );
   }
 }
-
-export type Include = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  model?: ModelType<any, any>;
-  association?: string;
-  attributes?: string[];
-};
-
-type AirtableValue = null | undefined | string | number | boolean | Date | string[];
-
-/**
- * A ColumnMapping is either a string (airtableColumn and dbColumn are the same), or a more descriptive object
- */
-export type ColumnMapping<T extends Model, A = Record<string, never>> =
-  | keyof Attributes<T>
-  | {
-      airtableColumn: string;
-      // Include if this mapping should include a particular DB column in the DB query
-      dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[];
-      // Include if this mapping should eager load an association on the DB query
-      include?: Include[];
-      valueMap: (entity: T, associations: A) => Promise<AirtableValue>;
-    };
-
-export type PolymorphicUuidAssociation<AssociationType> = {
-  model: ModelCtor;
-  association: keyof AssociationType;
-};
-
-// used in the test suite
-export const airtableColumnName = <T extends Model>(mapping: ColumnMapping<T, never>) =>
-  isObject(mapping) ? mapping.airtableColumn : (mapping as string);
-
-const selectAttributes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
-  uniq([
-    "id",
-    ...flatten(
-      columns.map(mapping => (isObject(mapping) ? mapping.dbColumn : mapping)).filter(dbColumn => dbColumn != null)
-    )
-  ]);
-
-/**
- * Merges Includes to arrive at a cohesive set of IncludeOptions for a Sequelize find query.
- */
-const mergeInclude = (includes: Include[], include: Include) => {
-  const existing = includes.find(
-    ({ model, association }) =>
-      (model != null && model === include.model) || (association != null && association === include.association)
-  );
-  if (existing == null) {
-    // Use clone deep here so that if this include gets modified in the future, it doesn't mutate the
-    // original definition.
-    includes.push(cloneDeep(include));
-  } else {
-    if (existing.attributes != null) {
-      // If either the current include or the new mapping is missing an attributes array, we want
-      // to make sure the final include is missing it as well so that all columns are pulled.
-      if (include.attributes == null) {
-        delete include.attributes;
-      } else {
-        // We don't need cloneDeep here because attributes is a simple string array.
-        existing.attributes = uniq([...existing.attributes, ...include.attributes]);
-      }
-    }
-  }
-
-  return includes;
-};
-
-const selectIncludes = <T extends Model, A>(columns: ColumnMapping<T, A>[]) =>
-  columns.reduce((includes, mapping) => {
-    if (!isObject(mapping)) return includes;
-    if (mapping.include == null) return includes;
-
-    return mapping.include.reduce(mergeInclude, includes);
-  }, [] as Include[]);
-
-export const commonEntityColumns = <T extends UuidModel, A = Record<string, never>>(adminSiteType?: string) =>
-  [
-    "uuid",
-    "createdAt",
-    "updatedAt",
-    ...(adminSiteType == null
-      ? []
-      : [
-          {
-            airtableColumn: "linkToTerramatch",
-            dbColumn: "uuid",
-            valueMap: (record: UuidModel) => `https://www.terramatch.org/admin#/${adminSiteType}/${record.uuid}/show`
-          }
-        ])
-  ] as ColumnMapping<T, A>[];
-
-export const associatedValueColumn = <T extends Model, A>(
-  valueName: keyof A,
-  dbColumn?: keyof Attributes<T> | (keyof Attributes<T>)[]
-): ColumnMapping<T, A> => ({
-  airtableColumn: valueName as string,
-  dbColumn,
-  valueMap: async (_, associations: A) => associations?.[valueName] as AirtableValue
-});
-
-export const percentageColumn = <T extends Model, A = Record<string, never>>(
-  dbColumn: keyof Attributes<T>
-): ColumnMapping<T, A> => ({
-  airtableColumn: dbColumn as string,
-  dbColumn,
-  valueMap: async model => ((model[dbColumn] as number | null) ?? 0) / 100
-});

@@ -50,12 +50,15 @@ import { LaravelModel, laravelType } from "../types/util";
     }
   }),
   collection: (collection: string) => ({ where: { collection } }),
-  forModel: (model: LaravelModel) => ({
-    where: {
-      speciesableType: laravelType(model),
-      speciesableId: model.id
-    }
-  })
+  associations: <T extends LaravelModel>(associations: T | T[]) => {
+    const models = Array.isArray(associations) ? associations : [associations];
+    return {
+      where: {
+        speciesableType: laravelType(models[0]),
+        speciesableId: models.map(({ id }) => id)
+      }
+    };
+  }
 }))
 @Table({
   tableName: "v2_tree_species",
@@ -91,8 +94,8 @@ export class TreeSpecies extends Model<InferAttributes<TreeSpecies>, InferCreati
     return chainScope(this, "projectReports", ids) as typeof TreeSpecies;
   }
 
-  static for(model: LaravelModel) {
-    return chainScope(this, "forModel", model) as typeof TreeSpecies;
+  static for<T extends LaravelModel>(models: T | T[]) {
+    return chainScope(this, "associations", models) as typeof TreeSpecies;
   }
 
   @PrimaryKey

@@ -204,7 +204,7 @@ describe("LocalizationService", () => {
           }))
         }
       }));
-      await service.pullTranslations();
+      await service.pullTranslations(true);
       const i18nItemAfter = await I18nItem.findOne({ where: { id: i18nItem.id } });
       expect(i18nItemAfter?.status).toBe("translated");
     });
@@ -223,7 +223,7 @@ describe("LocalizationService", () => {
           }))
         }
       }));
-      await service.pullTranslations();
+      await service.pullTranslations(true);
       const i18nItemAfter = await I18nItem.findOne({ where: { id: i18nItem.id } });
       expect(i18nItemAfter?.status).toBe("translated");
     });

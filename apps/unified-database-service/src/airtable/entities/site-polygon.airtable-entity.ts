@@ -1,8 +1,10 @@
 /* istanbul ignore file */
-import { AirtableEntity, associatedValueColumn, ColumnMapping, commonEntityColumns } from "./airtable-entity";
+import { AirtableEntity } from "./airtable-entity";
 import { Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
 import { isDate, isString, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { associatedValueColumn, commonEntityColumns } from "../util/columns";
+import { ColumnMapping } from "../util/types";
 
 type SitePolygonAssociations = {
   disturbanceUuid?: string;
@@ -42,6 +44,7 @@ export class SitePolygonEntity extends AirtableEntity<SitePolygon, SitePolygonAs
   readonly TABLE_NAME = "Site Polygons";
   readonly COLUMNS = COLUMNS;
   readonly MODEL = SitePolygon;
+  readonly FILTER_FLAGS = [{ attribute: "isActive", hideCondition: false }];
 
   protected async loadAssociations(sitePolygons: SitePolygon[]) {
     const disturbanceIds = uniq(sitePolygons.map(({ disturbanceId }) => disturbanceId)).filter(isNotNull);

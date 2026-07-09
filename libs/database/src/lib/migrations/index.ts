@@ -10,6 +10,7 @@ import { dropUnusedTables } from "./202605130922-drop-unused-tables";
 import { convertProjectCohortToSingleSelect } from "./202605291200-convert-project-cohort-to-single-select";
 import { addAuditStatusReadColumn } from "./202606071200-add-audit-status-read-column";
 import { addProjectSummaryColumn } from "./202606161200-add-project-summary-column";
+import { addSitePolygonSubmissionCycle } from "./202607061200-add-site-polygon-submission-cycle";
 import { removeDbTriggers } from "./202607071905-remove-db-triggers";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
@@ -23,5 +24,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   convertProjectCohortToSingleSelect,
   addAuditStatusReadColumn,
   addProjectSummaryColumn,
+  addSitePolygonSubmissionCycle,
   removeDbTriggers
 ];

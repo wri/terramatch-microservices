@@ -8,6 +8,7 @@ import {
   SITE_POLYGON_DISTRIBUTIONS,
   SITE_POLYGON_PRACTICES,
   SITE_POLYGON_SOURCES,
+  SITE_POLYGON_SUBMISSION_CYCLES,
   SITE_POLYGON_TARGET_SYSTEMS
 } from "@terramatch-microservices/database/constants";
 import { CursorPage, NumberPage, Page } from "@terramatch-microservices/common/dto/page.dto";
@@ -34,6 +35,7 @@ const SITE_POLYGON_PRACTICE_FILTER_VALUES = [...SITE_POLYGON_PRACTICES];
 const SITE_POLYGON_TARGET_SYS_FILTER_VALUES = [...SITE_POLYGON_TARGET_SYSTEMS];
 const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
+const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
 export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
   @ApiProperty({
@@ -201,6 +203,18 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @IsArray()
   @IsIn(SITE_POLYGON_DISTR_FILTER_VALUES, { each: true })
   distr?: string[];
+
+  @ApiProperty({
+    name: "submissionCycle[]",
+    isArray: true,
+    required: false,
+    enum: SITE_POLYGON_SUBMISSION_CYCLES,
+    description: "Filter by submission cycle (any selected value matches)"
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES, { each: true })
+  submissionCycle?: string[];
 
   @ApiProperty({
     name: "source[]",

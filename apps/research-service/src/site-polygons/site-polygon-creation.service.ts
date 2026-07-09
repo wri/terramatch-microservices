@@ -32,6 +32,7 @@ import {
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import {
   CriteriaId,
+  SITE_POLYGON_SUBMISSION_CYCLES,
   SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
@@ -916,6 +917,17 @@ export class SitePolygonCreationService {
         sitePolygonAttributes.distr =
           attributeChanges.distr.length > 0
             ? validateAndSortStrictStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES, "distr")
+            : null;
+      }
+
+      if (attributeChanges.submissionCycle !== undefined) {
+        sitePolygonAttributes.submissionCycle =
+          attributeChanges.submissionCycle.length > 0
+            ? validateAndSortStrictStringArray(
+                attributeChanges.submissionCycle,
+                SITE_POLYGON_SUBMISSION_CYCLES,
+                "submissionCycle"
+              )
             : null;
       }
 

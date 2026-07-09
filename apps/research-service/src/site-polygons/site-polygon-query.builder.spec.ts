@@ -317,6 +317,42 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("filterSubmissionCycle", () => {
+    it("should match any overlapping submissionCycle (OR) and exclude null submissionCycle", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const a = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        practice: ["tree-planting"],
+        distr: ["full"],
+        submissionCycle: ["1"]
+      });
+      const b = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        practice: ["tree-planting"],
+        distr: ["full"],
+        submissionCycle: ["2", "3"]
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        practice: ["tree-planting"],
+        distr: ["full"],
+        submissionCycle: ["5"]
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        practice: ["tree-planting"],
+        distr: ["full"],
+        submissionCycle: null
+      });
+
+      builder.filterSubmissionCycle(["1", "2"]);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([a.id, b.id].sort());
+    });
+  });
+
   describe("filterTargetSys", () => {
     it("should match any selected targetSys", async () => {
       const project = await ProjectFactory.create();
@@ -504,7 +540,7 @@ describe("SitePolygonQueryBuilder", () => {
       expect(result.map(p => p.id).sort()).toEqual([withDate.id, withoutDate.id].sort());
     });
 
-    it("filterPractice, filterDistr, filterTargetSys and filterSource should no-op on empty arrays", async () => {
+    it("filterPractice, filterDistr, filterSubmissionCycle, filterTargetSys and filterSource should no-op on empty arrays", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
       const polygon = await SitePolygonFactory.create({
@@ -517,6 +553,7 @@ describe("SitePolygonQueryBuilder", () => {
 
       builder.filterPractice([]);
       builder.filterDistr([]);
+      builder.filterSubmissionCycle([]);
       builder.filterTargetSys([]);
       builder.filterSource([]);
       const result = await builder.execute();

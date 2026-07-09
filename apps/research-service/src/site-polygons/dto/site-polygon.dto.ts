@@ -10,7 +10,11 @@ import {
   IndicatorTreeCoverDto,
   IndicatorTreeCoverLossDto
 } from "./indicators.dto";
-import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
+import {
+  POLYGON_STATUSES,
+  PolygonStatus,
+  SITE_POLYGON_SUBMISSION_CYCLES
+} from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
@@ -151,6 +155,15 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, isArray: true, type: String })
   distr: string[] | null;
+
+  @ApiProperty({
+    nullable: true,
+    isArray: true,
+    type: String,
+    enum: SITE_POLYGON_SUBMISSION_CYCLES,
+    description: "Submission cycle(s) assigned to the polygon"
+  })
+  submissionCycle: string[] | null;
 
   @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;

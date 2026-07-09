@@ -1,4 +1,5 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { SITE_POLYGON_SUBMISSION_CYCLES } from "@terramatch-microservices/database/constants";
 
 // Core property keys in both formats
 const CORE_PROPERTY_KEYS_SNAKE_CASE = [
@@ -12,7 +13,8 @@ const CORE_PROPERTY_KEYS_SNAKE_CASE = [
   "area",
   "status",
   "point_id",
-  "source"
+  "source",
+  "submission_cycle"
 ] as const;
 
 const CORE_PROPERTY_KEYS_CAMEL_CASE = [
@@ -26,7 +28,8 @@ const CORE_PROPERTY_KEYS_CAMEL_CASE = [
   "area",
   "status",
   "pointId",
-  "source"
+  "source",
+  "submissionCycle"
 ] as const;
 
 const CORE_PROPERTY_KEYS = [...CORE_PROPERTY_KEYS_SNAKE_CASE, ...CORE_PROPERTY_KEYS_CAMEL_CASE] as const;
@@ -40,6 +43,8 @@ function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: str
 export const VALID_DISTRIBUTION_VALUES = ["full", "partial", "single-line"] as const;
 
 export const VALID_PRACTICE_VALUES = ["assisted-natural-regeneration", "direct-seeding", "tree-planting"] as const;
+
+export const VALID_SUBMISSION_CYCLE_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES] as const;
 
 function toArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -91,6 +96,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
   const practiceValue = properties.practice; // Same in both formats
   const sourceValue = properties.source; // Same in both formats
   const areaValue = properties.area; // Same in both formats
+  const submissionCycleValue = getPropertyValue(properties, "submissionCycle", "submission_cycle");
 
   let plantStart: Date | null = null;
   if (plantStartValue != null && plantStartValue !== "") {
@@ -102,6 +108,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
 
   const distr = validateArrayProperty(distrValue, VALID_DISTRIBUTION_VALUES);
   const practice = validateArrayProperty(practiceValue, VALID_PRACTICE_VALUES);
+  const submissionCycle = validateArrayProperty(submissionCycleValue, VALID_SUBMISSION_CYCLE_VALUES);
   const targetSys = validateTargetSys((targetSysValue as string) ?? "");
 
   return {
@@ -111,6 +118,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
     practice: practice,
     targetSys: targetSys,
     distr: distr,
+    submissionCycle: submissionCycle,
     numTrees: numTrees,
     calcArea: (areaValue as number) ?? null,
     status: "draft" as const,

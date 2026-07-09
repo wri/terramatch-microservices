@@ -83,6 +83,7 @@ describe("SitePolygonsController", () => {
     filterPlantStartRange: jest.Mock;
     filterPractice: jest.Mock;
     filterDistr: jest.Mock;
+    filterSubmissionCycle: jest.Mock;
     filterTargetSys: jest.Mock;
     filterSource: jest.Mock;
     filterHasOverlap: jest.Mock;
@@ -109,6 +110,7 @@ describe("SitePolygonsController", () => {
       filterPlantStartRange: jest.fn().mockReturnThis(),
       filterPractice: jest.fn().mockReturnThis(),
       filterDistr: jest.fn().mockReturnThis(),
+      filterSubmissionCycle: jest.fn().mockReturnThis(),
       filterTargetSys: jest.fn().mockReturnThis(),
       filterSource: jest.fn().mockReturnThis(),
       filterHasOverlap: jest.fn().mockReturnThis()
@@ -447,6 +449,7 @@ describe("SitePolygonsController", () => {
         practice: ["tree-planting"],
         distr: ["partial", "full"],
         targetSys: ["mangrove", "urban-forest"],
+        submissionCycle: ["1", "3"],
         source: ["terramatch", "greenhouse"],
         hasOverlap: true
       });
@@ -455,6 +458,7 @@ describe("SitePolygonsController", () => {
       expect(builder.filterPractice).toHaveBeenCalledWith(["tree-planting"]);
       expect(builder.filterDistr).toHaveBeenCalledWith(["partial", "full"]);
       expect(builder.filterTargetSys).toHaveBeenCalledWith(["mangrove", "urban-forest"]);
+      expect(builder.filterSubmissionCycle).toHaveBeenCalledWith(["1", "3"]);
       expect(builder.filterSource).toHaveBeenCalledWith(["terramatch", "greenhouse"]);
       expect(builder.filterHasOverlap).toHaveBeenCalledWith(true);
     });

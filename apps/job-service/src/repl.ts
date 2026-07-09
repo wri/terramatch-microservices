@@ -39,7 +39,7 @@ bootstrapRepl("Job Service", AppModule, {
 
       // PPC
       await ScheduledJob.scheduleTaskDue(utcDate(2025, 9, 12), PPC, utcDate(2025, 10, 3));
-      await ScheduledJob.scheduleTaskDue(utcDate(2025, 12, 12), PPC, utcDate(2026, 1, 2));
+      await ScheduledJob.scheduleTaskDue(utcDate(2025, 12, 1), PPC, utcDate(2026, 1, 7));
       await ScheduledJob.scheduleTaskDue(utcDate(2026, 3, 13), PPC, utcDate(2026, 4, 3));
       await ScheduledJob.scheduleTaskDue(utcDate(2026, 6, 12), PPC, utcDate(2026, 7, 3));
 

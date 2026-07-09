@@ -105,14 +105,15 @@ export class ReportGenerationService {
       );
     }
 
-    // these reports are only available for the ppc framework
+    // Annual SRP reports sit on the same task as project/site/nursery for the January PPC due date
     if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
       const srpReport = await SrpReport.create({
         taskId: task.id,
         frameworkKey: project.frameworkKey,
         projectId: project.id,
         status: DUE,
-        dueAt
+        dueAt,
+        year: dueDateTime.year
       } as SrpReport);
 
       await Action.create({

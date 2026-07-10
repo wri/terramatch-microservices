@@ -249,6 +249,10 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto) {
     await this.policyService.authorize("read", SitePolygon);
 
+    if (query.deletedOnly === true) {
+      return this.findDeletedSitePolygons(query);
+    }
+
     const {
       siteId,
       projectId,
@@ -403,6 +407,46 @@ export class SitePolygonsController {
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
     else indexData.cursor = cursor;
     return document.addIndex(indexData);
+  }
+
+  private async findDeletedSitePolygons(query: SitePolygonQueryDto) {
+    const { siteId, search, searchFields } = query;
+    if (siteId == null || siteId.length !== 1) {
+      throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
+    }
+
+    const page = query.page ?? {};
+    page.size ??= MAX_PAGE_SIZE;
+    if (page.size > MAX_PAGE_SIZE || page.size < 1) {
+      throw new BadRequestException("Page size is invalid");
+    }
+    if (!isNumberPage(page)) {
+      throw new BadRequestException("deletedOnly requires number pagination (page[number]).");
+    }
+    if (page.number < 1) {
+      throw new BadRequestException("Page number is invalid");
+    }
+
+    const queryBuilder = this.sitePolygonService.buildDeletedQuery(page).filterSiteUuids(siteId);
+    if (search != null) {
+      queryBuilder.addSearch(search, searchFields);
+    }
+
+    const document = buildJsonApi(SitePolygonLightDto, { pagination: "number" });
+    const sitePolygons = await queryBuilder.execute();
+    const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, true);
+    for (const sitePolygon of sitePolygons) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
+    }
+
+    return document.addIndex({
+      requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
+      total: await queryBuilder.paginationTotal(),
+      pageNumber: page.number
+    });
   }
 
   @Patch("attributes")

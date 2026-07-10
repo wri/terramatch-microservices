@@ -12,6 +12,7 @@ import { addAuditStatusReadColumn } from "./202606071200-add-audit-status-read-c
 import { addProjectSummaryColumn } from "./202606161200-add-project-summary-column";
 import { addSitePolygonSubmissionCycle } from "./202607061200-add-site-polygon-submission-cycle";
 import { removeDbTriggers } from "./202607071905-remove-db-triggers";
+import { addSitePolygonSiteScopedQueryIndex } from "./202607091100-add-site-polygon-site-scoped-query-index";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -25,5 +26,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addAuditStatusReadColumn,
   addProjectSummaryColumn,
   addSitePolygonSubmissionCycle,
-  removeDbTriggers
+  removeDbTriggers,
+  addSitePolygonSiteScopedQueryIndex
 ];

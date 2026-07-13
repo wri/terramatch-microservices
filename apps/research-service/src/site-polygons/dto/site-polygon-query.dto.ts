@@ -247,6 +247,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @TransformBooleanString()
   hasOverlap?: boolean;
 
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description: "Soft-deleted polygons for one site. Search is supported; other filters are ignored."
+  })
+  @IsOptional()
+  @IsBoolean()
+  @TransformBooleanString()
+  deletedOnly?: boolean;
+
   @ValidateNested()
   @Type(({ object } = {} as TypeHelpOptions) => {
     // Surprisingly, the object here is the whole query DTO.

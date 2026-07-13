@@ -901,4 +901,211 @@ describe("ProjectPolygonCreationService", () => {
       expect(mockTransaction.rollback).toHaveBeenCalled();
     });
   });
+
+  describe("updateProjectPolygon", () => {
+    const polygonCoordinates = [
+      [
+        [0, 0],
+        [0, 1],
+        [1, 1],
+        [1, 0],
+        [0, 0]
+      ]
+    ];
+
+    const createGeometries = (): CreateProjectPolygonBatchRequestDto["geometries"] => [
+      {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: polygonCoordinates
+            },
+            properties: {}
+          }
+        ]
+      }
+    ];
+
+    it("should throw BadRequestException when database connection is not available", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({ polyUuid: "polygon-uuid" });
+      const originalSequelize = PolygonGeometry.sequelize;
+
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        value: null,
+        writable: true,
+        configurable: true
+      });
+
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        "Database connection not available"
+      );
+
+      Object.defineProperty(PolygonGeometry, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("should throw BadRequestException when no geometries are provided", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({ polyUuid: "polygon-uuid" });
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+
+      await expect(service.updateProjectPolygon(projectPolygon, [], 1)).rejects.toThrow(BadRequestException);
+      await expect(service.updateProjectPolygon(projectPolygon, [], 1)).rejects.toThrow(
+        "At least one geometry must be provided"
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when project polygon has no geometry uuid", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = {
+        ...(await ProjectPolygonFactory.forPitch(pitch).build()),
+        polyUuid: null
+      } as unknown as ProjectPolygon;
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        "Project polygon does not have an associated polygon geometry"
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when polygon geometry is missing", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({ polyUuid: "polygon-uuid" });
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+      jest.spyOn(PolygonGeometry, "findOne").mockResolvedValue(null);
+
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        NotFoundException
+      );
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow(
+        "Polygon geometry not found for uuid: polygon-uuid"
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for non-polygon geometry types", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({ polyUuid: "polygon-uuid" });
+      const polygonGeometry = { uuid: "polygon-uuid", save: jest.fn() } as unknown as PolygonGeometry;
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+      jest.spyOn(PolygonGeometry, "findOne").mockResolvedValue(polygonGeometry);
+
+      const geometries: CreateProjectPolygonBatchRequestDto["geometries"] = [
+        {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: [0, 0]
+              },
+              properties: {}
+            }
+          ]
+        }
+      ];
+
+      await expect(service.updateProjectPolygon(projectPolygon, geometries, 1)).rejects.toThrow(BadRequestException);
+      await expect(service.updateProjectPolygon(projectPolygon, geometries, 1)).rejects.toThrow(
+        "Only Polygon geometry is supported for project polygons. Received: Point"
+      );
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+    });
+
+    it("should update polygon geometry and project polygon metadata", async () => {
+      const userId = 7;
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({
+        polyUuid: "polygon-uuid",
+        lastModifiedBy: 1
+      });
+      const polygonGeometry = {
+        uuid: "polygon-uuid",
+        polygon: null,
+        save: jest.fn().mockResolvedValue(undefined)
+      } as unknown as PolygonGeometry;
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+      jest.spyOn(PolygonGeometry, "findOne").mockResolvedValue(polygonGeometry);
+      jest.spyOn(projectPolygon, "save").mockResolvedValue(projectPolygon);
+
+      const geometries = createGeometries();
+      const result = await service.updateProjectPolygon(projectPolygon, geometries, userId);
+
+      expect(polygonGeometry.polygon).toEqual(geometries[0].features[0].geometry);
+      expect(polygonGeometry.save).toHaveBeenCalledWith({ transaction: mockTransaction });
+      expect(projectPolygon.lastModifiedBy).toBe(userId);
+      expect(projectPolygon.save).toHaveBeenCalledWith({ transaction: mockTransaction });
+      expect(result).toBe(projectPolygon);
+      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(mockTransaction.rollback).not.toHaveBeenCalled();
+    });
+
+    it("should rollback when saving polygon geometry fails", async () => {
+      const pitch = await ProjectPitchFactory.build();
+      const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build({ polyUuid: "polygon-uuid" });
+      const polygonGeometry = {
+        uuid: "polygon-uuid",
+        polygon: null,
+        save: jest.fn().mockRejectedValue(new Error("save failed"))
+      } as unknown as PolygonGeometry;
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      const sequelize = PolygonGeometry.sequelize;
+      if (sequelize == null) {
+        throw new Error("Sequelize not available");
+      }
+
+      jest.spyOn(sequelize, "transaction").mockResolvedValue(mockTransaction as never);
+      jest.spyOn(PolygonGeometry, "findOne").mockResolvedValue(polygonGeometry);
+
+      await expect(service.updateProjectPolygon(projectPolygon, createGeometries(), 1)).rejects.toThrow("save failed");
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(mockTransaction.commit).not.toHaveBeenCalled();
+    });
+  });
 });

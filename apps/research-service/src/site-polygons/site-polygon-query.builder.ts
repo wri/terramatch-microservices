@@ -46,6 +46,11 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
 };
 
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
+  private polygonGeometryJoin: IncludeOptions = {
+    model: PolygonGeometry,
+    attributes: ["polygon"]
+  };
+
   private siteJoin: IncludeOptions = {
     model: Site,
     include: [{ association: "project", attributes: ["uuid", "shortName", "name", "level0Project"] }],
@@ -57,10 +62,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     super(SitePolygon, pageSize);
 
     this.findOptions.include = [
-      {
-        model: PolygonGeometry,
-        attributes: ["polygon"]
-      },
+      this.polygonGeometryJoin,
       {
         model: Disturbance,
         attributes: ["disturbanceableId"],
@@ -70,6 +72,16 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     ];
 
     this.where({ isActive: true });
+  }
+
+  includeSoftDeleted(): this {
+    this.findOptions.paranoid = false;
+    this.polygonGeometryJoin.paranoid = false;
+    return this;
+  }
+
+  filterSoftDeletedOnly(): this {
+    return this.where({ deletedAt: { [Op.ne]: null } });
   }
 
   async excludeTestProjects() {

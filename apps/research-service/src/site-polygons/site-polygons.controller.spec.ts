@@ -509,8 +509,8 @@ describe("SitePolygonsController", () => {
         execute: jest.fn().mockResolvedValue(executeResult),
         paginationTotal: jest.fn().mockResolvedValue(totalResult)
       };
-      builder.filterSiteUuids.mockReturnValue(builder);
-      builder.addSearch.mockReturnValue(builder);
+      builder.filterSiteUuids.mockResolvedValue(builder);
+      builder.addSearch.mockResolvedValue(builder);
 
       sitePolygonService.buildDeletedQuery.mockReturnValue(
         builder as unknown as ReturnType<typeof sitePolygonService.buildDeletedQuery>

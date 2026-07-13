@@ -31,7 +31,6 @@ import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { DeletedSitePolygonQueryBuilder } from "./deleted-site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
@@ -71,8 +70,11 @@ export class SitePolygonsService {
     return builder;
   }
 
-  buildDeletedQuery(page: NumberPage): DeletedSitePolygonQueryBuilder {
-    const builder = new DeletedSitePolygonQueryBuilder(page.size);
+  buildDeletedQuery(page: NumberPage): SitePolygonQueryBuilder {
+    const builder = new SitePolygonQueryBuilder(page.size)
+      .includeSoftDeleted()
+      .filterSoftDeletedOnly()
+      .order([["deletedAt", "DESC"]]);
     if (page.number != null) builder.pageNumber(page.number);
     return builder;
   }

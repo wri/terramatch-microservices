@@ -427,9 +427,10 @@ export class SitePolygonsController {
       throw new BadRequestException("Page number is invalid");
     }
 
-    const queryBuilder = this.sitePolygonService.buildDeletedQuery(page).filterSiteUuids(siteId);
+    let queryBuilder = this.sitePolygonService.buildDeletedQuery(page);
+    queryBuilder = await queryBuilder.filterSiteUuids(siteId);
     if (search != null) {
-      queryBuilder.addSearch(search, searchFields);
+      queryBuilder = await queryBuilder.addSearch(search, searchFields);
     }
 
     const document = buildJsonApi(SitePolygonLightDto, { pagination: "number" });

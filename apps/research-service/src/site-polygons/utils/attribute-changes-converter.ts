@@ -25,7 +25,7 @@ export function convertPropertiesToAttributeChanges(properties: Partial<SitePoly
     attributeChanges.distr = properties.distr;
   }
 
-  if (properties.submissionCycle != null && properties.submissionCycle.length > 0) {
+  if (properties.submissionCycle != null) {
     attributeChanges.submissionCycle = properties.submissionCycle;
   }
 

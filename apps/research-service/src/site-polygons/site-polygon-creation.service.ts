@@ -86,6 +86,18 @@ const validateTargetSystem = (value: unknown): string | null => {
   return trimmedValue;
 };
 
+const validateSubmissionCycle = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    throw new BadRequestException("submissionCycle must be a string");
+  }
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") return null;
+  if (!SITE_POLYGON_SUBMISSION_CYCLES.includes(trimmedValue as (typeof SITE_POLYGON_SUBMISSION_CYCLES)[number])) {
+    throw new BadRequestException(`submissionCycle contains invalid value: ${trimmedValue}`);
+  }
+  return trimmedValue;
+};
+
 const validatePlantStart = (value: unknown): Date | null => {
   if (typeof value !== "string") {
     throw new BadRequestException("plantStart must be a string");
@@ -927,14 +939,7 @@ export class SitePolygonCreationService {
       }
 
       if (attributeChanges.submissionCycle !== undefined) {
-        sitePolygonAttributes.submissionCycle =
-          attributeChanges.submissionCycle.length > 0
-            ? validateAndSortStrictStringArray(
-                attributeChanges.submissionCycle,
-                SITE_POLYGON_SUBMISSION_CYCLES,
-                "submissionCycle"
-              )
-            : null;
+        sitePolygonAttributes.submissionCycle = validateSubmissionCycle(attributeChanges.submissionCycle);
       }
 
       if (attributeChanges.numTrees !== undefined) {

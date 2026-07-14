@@ -1,5 +1,4 @@
 import { SitePolygon } from "@terramatch-microservices/database/entities";
-import { SITE_POLYGON_SUBMISSION_CYCLES } from "@terramatch-microservices/database/constants";
 
 // Core property keys in both formats
 const CORE_PROPERTY_KEYS_SNAKE_CASE = [
@@ -43,8 +42,6 @@ function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: str
 export const VALID_DISTRIBUTION_VALUES = ["full", "partial", "single-line"] as const;
 
 export const VALID_PRACTICE_VALUES = ["assisted-natural-regeneration", "direct-seeding", "tree-planting"] as const;
-
-export const VALID_SUBMISSION_CYCLE_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES] as const;
 
 function toArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -108,8 +105,8 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
 
   const distr = validateArrayProperty(distrValue, VALID_DISTRIBUTION_VALUES);
   const practice = validateArrayProperty(practiceValue, VALID_PRACTICE_VALUES);
-  const submissionCycle = validateArrayProperty(submissionCycleValue, VALID_SUBMISSION_CYCLE_VALUES);
-  const targetSys = validateTargetSys((targetSysValue as string) ?? "");
+  const submissionCycle = trimToNullableString((submissionCycleValue as string) ?? "");
+  const targetSys = trimToNullableString((targetSysValue as string) ?? "");
 
   return {
     polyName: (polyNameValue as string) ?? null,
@@ -175,9 +172,8 @@ export function validateAndSortStringArray(
   return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
-function validateTargetSys(value: string): string | null {
+function trimToNullableString(value: string): string | null {
   if (value == null || value.trim().length === 0) return null;
 
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return value.trim();
 }

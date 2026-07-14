@@ -651,7 +651,6 @@ export class FormsService {
     form.descriptionId = await this.localizationService.generateI18nId(attributes.description, form.descriptionId);
     form.documentation = attributes.documentation ?? null;
     form.documentationLabel = attributes.documentationLabel ?? null;
-    form.deadlineAt = attributes.deadlineAt ?? null;
     form.submissionMessage = attributes.submissionMessage;
     form.submissionMessageId = await this.localizationService.generateI18nId(
       attributes.submissionMessage,

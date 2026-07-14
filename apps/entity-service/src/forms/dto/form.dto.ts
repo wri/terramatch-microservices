@@ -12,7 +12,7 @@ import {
   JsonApiBodyDto,
   JsonApiDataDto
 } from "@terramatch-microservices/common/util/json-api-update-dto";
-import { IsDate, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 
@@ -105,12 +105,6 @@ export class FormFullDto extends FormLightDto {
   @ApiProperty({ nullable: true, required: false, type: String })
   documentationLabel?: string | null;
 
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  @ApiProperty({ nullable: true, required: false, type: Date })
-  deadlineAt?: Date | null;
-
   @IsNotEmpty()
   @IsString()
   @ApiProperty()
@@ -136,7 +130,6 @@ export class StoreFormAttributes extends PickType(FormFullDto, [
   "description",
   "documentation",
   "documentationLabel",
-  "deadlineAt",
   "submissionMessage",
   "stageId"
 ]) {

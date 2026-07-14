@@ -14,6 +14,7 @@ import { addSitePolygonSubmissionCycle } from "./202607061200-add-site-polygon-s
 import { removeDbTriggers } from "./202607071905-remove-db-triggers";
 import { addSitePolygonSiteScopedQueryIndex } from "./202607091100-add-site-polygon-site-scoped-query-index";
 import { addProjectQaStatusColumns } from "./202607131530-add-project-qa-status-columns";
+import { removeFormDeadline } from "./202607141029-remove-form-deadline";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -29,5 +30,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addSitePolygonSubmissionCycle,
   removeDbTriggers,
   addSitePolygonSiteScopedQueryIndex,
-  addProjectQaStatusColumns
+  addProjectQaStatusColumns,
+  removeFormDeadline
 ];

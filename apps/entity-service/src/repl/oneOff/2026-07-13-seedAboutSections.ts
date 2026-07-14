@@ -219,6 +219,171 @@ const DEFAULT_NURSERY_ONBOARDING: AboutSectionSeed = {
   ]
 };
 
+const REPORT_PREPARE_SUBMIT_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/21683197977627-How-to-Prepare-Submit-Your-Reports-on-TerraMatch";
+
+const DEFAULT_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  type: "project-report",
+  header: "About Project Reports",
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential, it ensures your work is fairly represented, supports transparency and accountability, and helps TerraFund track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>" +
+    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Project Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports"
+    },
+    {
+      title: "TerraFund Report Quality Assurance Process",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/12512083927579-TerraFund-Program-Hub"
+    },
+    {
+      title: "TerraFund Guidance for Socioeconomic Reporting",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27167882984859-TerraFund-Guidance-for-Socioeconomic-Reporting"
+    }
+  ]
+};
+
+const PPC_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_REPORT_ABOUT,
+  frameworks: ["ppc"],
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with your Project Manager/Global Lead each quarter. Accurate and detailed reporting is essential. It ensures your work is fairly represented, supports transparency and accountability, and helps the PPC team track progress across the portfolio.</p>" +
+    "<p>Beside you can find guidance to help you with reporting.</p>",
+  contactSupportMessage: "If you encounter challenges or need assistance, contact your Project Manager/Global Lead or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: 'How to calculate "person-days of work"',
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13705002950683-How-to-calculcate-person-days-of-work"
+    }
+  ]
+};
+
+const HBF_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_REPORT_ABOUT,
+  frameworks: ["hbf"],
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential, it ensures your work is fairly represented, supports transparency and accountability, and helps the HBF team track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "HBF Reporting Guidance",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/18003977594523-Harit-Bharat-Fund-Program-Hub"
+    },
+    {
+      title: "HBF Handbook",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/18003977594523-Harit-Bharat-Fund-Program-Hub"
+    }
+  ]
+};
+
+const SITE_REPORT_CHECKLIST_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports";
+const HIGH_QUALITY_PHOTOS_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/29388895801115-Submitting-High-Quality-Photos-on-TerraMatch";
+const TREE_SURVIVAL_COUNT_GUIDELINES_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/23261734402203-Tree-Survival-Count-Guidelines-for-TerraFund-Projects";
+
+const DEFAULT_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  type: "site-report",
+  header: "About Site Reports",
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period.</p>" +
+    "<p>Accurate and detailed site reporting is essential, it ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps TerraFund verify progress across the portfolio towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Site Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: SITE_REPORT_CHECKLIST_LINK
+    },
+    {
+      title: "Submitting High-Quality Photos",
+      url: HIGH_QUALITY_PHOTOS_LINK
+    },
+    {
+      title: "Tree Survival Count Guidelines for TerraFund Projects",
+      url: TREE_SURVIVAL_COUNT_GUIDELINES_LINK
+    }
+  ]
+};
+
+const PPC_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_SITE_REPORT_ABOUT,
+  frameworks: ["ppc"],
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your sites each quarter.</p>" +
+    "<p>Accurate and detailed site reporting is essential. It ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps the PPC team verify progress across the portfolio.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your Project Manager/Global Lead or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: 'How to calculate "person-days of work"',
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13705002950683-How-to-calculcate-person-days-of-work"
+    }
+  ]
+};
+
+const HBF_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_SITE_REPORT_ABOUT,
+  frameworks: ["hbf"],
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period. Accurate and detailed site reporting is essential, it ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps HBF verify progress across the portfolio towards restoration goals.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    }
+  ]
+};
+
+const NURSERY_REPORT_CHECKLIST_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports";
+
+const DEFAULT_NURSERY_REPORT_ABOUT: AboutSectionSeed = {
+  type: "nursery-report",
+  header: "About Nursery Reports",
+  description:
+    "<p><strong>Nursery Reports</strong> capture seedling production progress across any nurseries your project is building, expanding, or managing. You will report on each nursery profile, a profile may represent a single nursery or a grouping, every six months.</p>" +
+    "<p>If your organization procures seedlings only from an external source, you do not need to submit nursery reports. Accurate and detailed reporting ensures your work is fully represented, supports transparency and accountability, and helps TerraFund track portfolio progress towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Nursery Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: NURSERY_REPORT_CHECKLIST_LINK
+    }
+  ]
+};
+
 const SEED_DATA: AboutSectionSeed[] = [
   DEFAULT_PROJECT_ONBOARDING,
   HBF_PROJECT_ONBOARDING,
@@ -226,5 +391,12 @@ const SEED_DATA: AboutSectionSeed[] = [
   DEFAULT_SITE_ONBOARDING,
   HBF_SITE_ONBOARDING,
   PPC_SITE_ONBOARDING,
-  DEFAULT_NURSERY_ONBOARDING
+  DEFAULT_NURSERY_ONBOARDING,
+  DEFAULT_PROJECT_REPORT_ABOUT,
+  PPC_PROJECT_REPORT_ABOUT,
+  HBF_PROJECT_REPORT_ABOUT,
+  DEFAULT_SITE_REPORT_ABOUT,
+  PPC_SITE_REPORT_ABOUT,
+  HBF_SITE_REPORT_ABOUT,
+  DEFAULT_NURSERY_REPORT_ABOUT
 ];

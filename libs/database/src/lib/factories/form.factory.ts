@@ -17,7 +17,6 @@ const defaultAttributesFactory = async () => ({
   submissionMessage: faker.lorem.sentence(),
   duration: 30,
   published: true,
-  deadlineAt: faker.date.future(),
   updatedBy: UserFactory.associate("id")
 });
 

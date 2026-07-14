@@ -5,11 +5,11 @@ export const removeFormDeadline: RunnableMigration<QueryInterface> = {
   name: "202607141029-remove-form-deadline",
 
   async up({ context }) {
-    await context.removeColumn("forms", "deadlineAt");
+    await context.removeColumn("forms", "deadline_at");
   },
 
   async down({ context }) {
-    await context.addColumn("forms", "deadlineAt", {
+    await context.addColumn("forms", "deadline_at", {
       type: DATE,
       allowNull: true
     });

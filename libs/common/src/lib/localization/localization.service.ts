@@ -13,7 +13,7 @@ import {
   Link,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Attributes, CreationAttributes, Op, WhereOptions } from "sequelize";
+import { Attributes, CreationAttributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
@@ -102,27 +102,29 @@ export class LocalizationService {
 
   /**
    * Returns a mapping of the given I18nItem IDs to their translated values in the given locale. Fallback
-   * default is the original EN value in the I18nItem.
+   * default is the original EN value in the I18nItem. To just get the original value without mapping
+   * to the translation in Transifex, pass undefined for locale.
    */
-  async translateIds(ids: number[], locale: ValidLocale) {
+  async translateIds(ids: number[], locale?: ValidLocale) {
     if (ids.length === 0) return {} as Translations;
 
-    const language = locale === "en-US" ? [locale, "en"] : locale;
-    return (
-      await I18nItem.findAll({
-        where: { id: ids },
-        // Note: it is expected that a given translation has either a short value or a long value; never both.
-        attributes: ["id", "shortValue", "longValue"],
-        include: [
-          {
-            association: "i18nTranslations",
-            attributes: ["shortValue", "longValue"],
-            where: { language },
-            required: false
-          }
-        ]
-      })
-    ).reduce(
+    const options: FindOptions<I18nItem> = {
+      where: { id: ids },
+      // Note: it is expected that a given translation has either a short value or a long value; never both.
+      attributes: ["id", "shortValue", "longValue"]
+    };
+    if (locale != null) {
+      const language = locale === "en-US" ? [locale, "en"] : locale;
+      options.include = [
+        {
+          association: "i18nTranslations",
+          attributes: ["shortValue", "longValue"],
+          where: { language },
+          required: false
+        }
+      ];
+    }
+    return (await I18nItem.findAll(options)).reduce(
       (translations, { id, shortValue, longValue, i18nTranslations }) => ({
         ...translations,
         [id]: i18nTranslations?.[0]?.shortValue ?? i18nTranslations?.[0]?.longValue ?? shortValue ?? longValue

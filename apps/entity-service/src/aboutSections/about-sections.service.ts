@@ -20,21 +20,18 @@ export class AboutSectionsService {
     return locale;
   }
 
-  async findOne(type: AboutSectionType, framework?: FrameworkKey) {
-    if (framework != null) {
-      const aboutSection = await AboutSection.findOne({
-        where: [{ type }, fn("JSON_CONTAINS", col("frameworks"), cast(`"${framework}"`, "CHAR"))]
-      });
-      if (aboutSection != null) return aboutSection;
-    }
+  async findOne(type: AboutSectionType, framework: FrameworkKey) {
+    const aboutSection = await AboutSection.findOne({
+      where: [{ type }, fn("JSON_CONTAINS", col("frameworks"), cast(`"${framework}"`, "CHAR"))]
+    });
 
-    return await AboutSection.findOne({ where: { type, frameworks: null } });
+    return aboutSection ?? (await AboutSection.findOne({ where: { type, frameworks: null } }));
   }
 
-  async addDto(document: DocumentBuilder, section: AboutSection) {
+  async addDto(document: DocumentBuilder, section: AboutSection, translate = true) {
     section.links ??= await section.$get("links");
     const i18nIds = await this.getI18nIds(section);
-    const translations = await this.localizationService.translateIds(i18nIds, this.userLocale);
+    const translations = await this.localizationService.translateIds(i18nIds, translate ? this.userLocale : undefined);
 
     document.addData(
       section.uuid,

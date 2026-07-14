@@ -172,6 +172,20 @@ describe("ProjectProcessor", () => {
       await expectProjects([ready], { readyForBaseline: true });
     });
 
+    it("filters by projectQaStatus fields", async () => {
+      const matching = await ProjectFactory.create({
+        projectQaStatus1: "qa-in-progress",
+        projectQaStatus3: "qa-completed"
+      });
+      await ProjectFactory.create({
+        projectQaStatus1: "due",
+        projectQaStatus3: "due"
+      });
+
+      await expectProjects([matching], { projectQaStatus1: "qa-in-progress" });
+      await expectProjects([matching], { projectQaStatus3: "qa-completed" });
+    });
+
     it("filters by landscape, cohort and organisationType", async () => {
       const orgForProfit = await OrganisationFactory.create({ type: "for-profit-organisation" });
       const orgNonProfit = await OrganisationFactory.create({ type: "non-profit-organisation" });
@@ -369,6 +383,34 @@ describe("ProjectProcessor", () => {
       const handoff = audits.filter(a => a.type === "polygon-data-submission" || a.type === "ready-for-baseline");
       expect(handoff.length).toBe(2);
       expect(handoff.map(a => a.comment)).toEqual(["verified", "verified"]);
+    });
+
+    it("records audits when project QA status fields change", async () => {
+      const project = await ProjectFactory.create({
+        projectQaStatus1: "due",
+        projectQaStatus2: "due"
+      });
+      await AuditStatus.destroy({
+        where: { auditableId: project.id, auditableType: Project.LARAVEL_TYPE },
+        force: true
+      });
+
+      await processor.update(project, {
+        projectQaStatus1: "qa-in-progress",
+        projectQaStatus2: "qa-completed",
+        polygonHandoffComment: "qa review"
+      });
+      await project.reload();
+      expect(project.projectQaStatus1).toBe("qa-in-progress");
+      expect(project.projectQaStatus2).toBe("qa-completed");
+
+      const audits = await AuditStatus.for(project).findAll({ order: [["id", "ASC"]] });
+      const qaAudits = audits.filter(a => a.type === "project-qa-status-1" || a.type === "project-qa-status-2");
+      expect(qaAudits).toHaveLength(2);
+      expect(qaAudits.map(a => ({ type: a.type, status: a.status, comment: a.comment }))).toEqual([
+        { type: "project-qa-status-1", status: "qa-in-progress", comment: "qa review" },
+        { type: "project-qa-status-2", status: "qa-completed", comment: "qa review" }
+      ]);
     });
 
     it("should call super.update", async () => {

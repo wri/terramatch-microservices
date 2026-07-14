@@ -12,6 +12,7 @@ import { MAX_PAGE_SIZE } from "@terramatch-microservices/common/util/paginated-q
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { PlantingStatus } from "@terramatch-microservices/database/constants/status";
 import { POLYGON_DATA_SUBMISSION_VALUES } from "@terramatch-microservices/database/constants/polygon-data-submission";
+import { PROJECT_QA_STATUS_VALUES } from "@terramatch-microservices/database/constants/project-qa-status";
 
 export const VALID_SIDELOAD_TYPES = [...PROCESSABLE_ENTITIES, ...PROCESSABLE_ASSOCIATIONS] as const;
 
@@ -145,4 +146,49 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   @TransformBooleanString({ optional: true })
   readyForBaseline?: boolean;
+
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "Filter projects by QA status for polygon dataset stage 1"
+  })
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  projectQaStatus1?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "Filter projects by QA status for polygon dataset stage 2"
+  })
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  projectQaStatus2?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "Filter projects by QA status for polygon dataset stage 3"
+  })
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  projectQaStatus3?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "Filter projects by QA status for polygon dataset stage 4"
+  })
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  projectQaStatus4?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "Filter projects by QA status for polygon dataset stage 5"
+  })
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  projectQaStatus5?: string;
 }

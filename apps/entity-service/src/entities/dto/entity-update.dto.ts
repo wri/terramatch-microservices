@@ -7,6 +7,7 @@ import {
 } from "@terramatch-microservices/database/constants/status";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 import { POLYGON_DATA_SUBMISSION_VALUES } from "@terramatch-microservices/database/constants/polygon-data-submission";
+import { PROJECT_QA_STATUS_VALUES } from "@terramatch-microservices/database/constants/project-qa-status";
 import { JsonApiDataDto, JsonApiMultiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Type } from "class-transformer";
 
@@ -58,6 +59,51 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsBoolean()
   @ApiProperty({ required: false, description: "Whether the project is ready for baseline analysis" })
   readyForBaseline?: boolean;
+
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "QA status for polygon dataset stage 1"
+  })
+  projectQaStatus1?: string;
+
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "QA status for polygon dataset stage 2"
+  })
+  projectQaStatus2?: string;
+
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "QA status for polygon dataset stage 3"
+  })
+  projectQaStatus3?: string;
+
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "QA status for polygon dataset stage 4"
+  })
+  projectQaStatus4?: string;
+
+  @IsOptional()
+  @IsIn(PROJECT_QA_STATUS_VALUES)
+  @ApiProperty({
+    required: false,
+    enum: PROJECT_QA_STATUS_VALUES,
+    description: "QA status for polygon dataset stage 5"
+  })
+  projectQaStatus5?: string;
 
   @IsOptional()
   @IsString()

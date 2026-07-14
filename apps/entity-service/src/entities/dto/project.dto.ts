@@ -14,6 +14,7 @@ import { Project } from "@terramatch-microservices/database/entities";
 import { EntityDto } from "./entity.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { PROJECT_QA_STATUS_VALUES } from "@terramatch-microservices/database/constants/project-qa-status";
 
 @JsonApiDto({ type: "projects" })
 export class ProjectLightDto extends EntityDto {
@@ -367,4 +368,44 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({ nullable: true, type: MediaDto })
   detailedProjectBudget: MediaDto | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "QA status for polygon dataset stage 1",
+    enum: PROJECT_QA_STATUS_VALUES
+  })
+  projectQaStatus1: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "QA status for polygon dataset stage 2",
+    enum: PROJECT_QA_STATUS_VALUES
+  })
+  projectQaStatus2: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "QA status for polygon dataset stage 3",
+    enum: PROJECT_QA_STATUS_VALUES
+  })
+  projectQaStatus3: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "QA status for polygon dataset stage 4",
+    enum: PROJECT_QA_STATUS_VALUES
+  })
+  projectQaStatus4: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "QA status for polygon dataset stage 5",
+    enum: PROJECT_QA_STATUS_VALUES
+  })
+  projectQaStatus5: string | null;
 }

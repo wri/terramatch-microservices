@@ -22,6 +22,9 @@ export class AboutSectionsController {
     const aboutSection = await this.aboutSectionsService.findOne(type, framework);
     if (aboutSection == null) throw new NotFoundException();
 
-    return await this.aboutSectionsService.addDto(buildJsonApi<AboutSectionDto>(AboutSectionDto), aboutSection);
+    return buildJsonApi<AboutSectionDto>(AboutSectionDto).addData(
+      `${type}|${framework ?? ""}`,
+      await this.aboutSectionsService.getDto(aboutSection)
+    );
   }
 }

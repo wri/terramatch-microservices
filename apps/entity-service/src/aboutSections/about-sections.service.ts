@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { cast, col, fn } from "sequelize";
 import { Link } from "@terramatch-microservices/database/entities";
@@ -32,7 +31,7 @@ export class AboutSectionsService {
     return await AboutSection.findOne({ where: { type, frameworks: null } });
   }
 
-  async addDto(document: DocumentBuilder, section: AboutSection) {
+  async getDto(section: AboutSection) {
     const links = await Link.for(section).findAll();
     const i18nIds = [
       section.headerId,
@@ -44,23 +43,18 @@ export class AboutSectionsService {
     ].filter(isNotNull);
     const translations = await this.localizationService.translateIds(i18nIds, this.userLocale);
 
-    document.addData<AboutSectionDto>(
-      "",
-      new AboutSectionDto(section, {
-        header: translations[section.headerId] as string,
-        title: section.titleId == null ? null : translations[section.titleId],
-        description: translations[section.descriptionId] as string,
-        contactSupportMessage: translations[section.contactSupportMessageId] as string,
-        contactSupportSubject: translations[section.contactSupportSubjectId] as string,
-        links: links.map(link =>
-          populateDto<LinkDto>(new LinkDto(), {
-            title: translations[link.titleId] as string,
-            url: link.url
-          })
-        )
-      })
-    );
-
-    return document;
+    return new AboutSectionDto(section, {
+      header: translations[section.headerId] as string,
+      title: section.titleId == null ? null : translations[section.titleId],
+      description: translations[section.descriptionId] as string,
+      contactSupportMessage: translations[section.contactSupportMessageId] as string,
+      contactSupportSubject: translations[section.contactSupportSubjectId] as string,
+      links: links.map(link =>
+        populateDto<LinkDto>(new LinkDto(), {
+          title: translations[link.titleId] as string,
+          url: link.url
+        })
+      )
+    });
   }
 }

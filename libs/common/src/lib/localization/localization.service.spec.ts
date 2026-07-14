@@ -247,7 +247,7 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslationByForm(form, [1, 2, 3]);
+      await service.pushTranslationsForEntity(form, [1, 2, 3]);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });

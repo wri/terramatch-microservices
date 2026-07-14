@@ -3,7 +3,6 @@ import { AboutSection, AboutSectionType } from "@terramatch-microservices/databa
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { cast, col, fn } from "sequelize";
-import { Link } from "@terramatch-microservices/database/entities";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { AboutSectionDto, LinkDto } from "./dto/about-section.dto";
@@ -33,15 +32,8 @@ export class AboutSectionsService {
   }
 
   async addDto(document: DocumentBuilder, section: AboutSection) {
-    const links = await Link.for(section).findAll();
-    const i18nIds = [
-      section.headerId,
-      section.titleId,
-      section.descriptionId,
-      section.contactSupportMessageId,
-      section.contactSupportSubjectId,
-      ...links.map(({ titleId }) => titleId)
-    ].filter(isNotNull);
+    section.links ??= await section.$get("links");
+    const i18nIds = await this.getI18nIds(section);
     const translations = await this.localizationService.translateIds(i18nIds, this.userLocale);
 
     document.addData(
@@ -53,7 +45,7 @@ export class AboutSectionsService {
         description: translations[section.descriptionId] ?? "",
         contactSupportMessage: translations[section.contactSupportMessageId] ?? "",
         contactSupportSubject: translations[section.contactSupportSubjectId] ?? "",
-        links: links.map(link =>
+        links: section.links.map(link =>
           populateDto<LinkDto>(new LinkDto(), {
             id: link.uuid,
             title: translations[link.titleId] ?? "",
@@ -64,5 +56,22 @@ export class AboutSectionsService {
     );
 
     return document;
+  }
+
+  async getI18nIds(section: AboutSection) {
+    section.links ??= await section.$get("links");
+    return [
+      section.headerId,
+      section.titleId,
+      section.descriptionId,
+      section.contactSupportMessageId,
+      section.contactSupportSubjectId,
+      ...section.links.map(({ titleId }) => titleId)
+    ].filter(isNotNull);
+  }
+
+  async pushTranslations(section: AboutSection) {
+    const i18nIds = await this.getI18nIds(section);
+    await this.localizationService.pushTranslationsForEntity(section.uuid, i18nIds);
   }
 }

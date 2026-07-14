@@ -3,6 +3,7 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
+  HasMany,
   Index,
   Model,
   PrimaryKey,
@@ -13,6 +14,7 @@ import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STR
 import { I18nItem } from "./i18n-item.entity";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
+import { Link } from "./link.entity";
 
 export const ABOUT_SECTION_TYPES = [
   "project",
@@ -76,4 +78,11 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
 
   @BelongsTo(() => I18nItem, { foreignKey: "contact_support_subject_id", constraints: false })
   declare contactSupportSubject: I18nItem | null;
+
+  @HasMany(() => Link, {
+    foreignKey: "linkableId",
+    constraints: false,
+    scope: { linkableType: AboutSection.LARAVEL_TYPE }
+  })
+  declare links: Link[] | null;
 }

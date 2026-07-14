@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
+  AboutSection,
   Form,
   FormOptionListOption,
   FormQuestion,
@@ -9,6 +10,7 @@ import {
   FundingProgramme,
   I18nItem,
   I18nTranslation,
+  Link,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
 import { Attributes, CreationAttributes, Op, WhereOptions } from "sequelize";
@@ -267,10 +269,10 @@ export class LocalizationService {
     this.logger.log(`Finished pushing ${items.length} items`);
   }
 
-  public async pushTranslationByForm(form: Form, i18nIds: number[]) {
+  public async pushTranslationsForEntity(uuid: string, i18nIds: number[]) {
     const tx = this.createNativeInstance();
     const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
-    const source = this.createSource(items, ["custom-form", form.uuid]);
+    const source = this.createSource(items, ["custom-form", uuid]);
     await tx.pushSource(source);
     this.logger.log(`Finished pushing ${items.length} items`);
     return i18nIds;
@@ -314,7 +316,12 @@ export class LocalizationService {
       { entity: FormTableHeader, attributes: ["labelId"] },
       { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
       { entity: FundingProgramme, attributes: ["locationId"] },
-      { entity: LocalizationKey, attributes: ["valueId"] }
+      { entity: LocalizationKey, attributes: ["valueId"] },
+      {
+        entity: AboutSection,
+        attributes: ["headerId", "titleId", "descriptionId", "contactSupportMessageId", "contactSupportSubjectId"]
+      },
+      { entity: Link, attributes: ["titleId"] }
     ];
     const i18nIds: number[] = [];
     for (const { entity, attributes } of i18nEntitiesColumns) {

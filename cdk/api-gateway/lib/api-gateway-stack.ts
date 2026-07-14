@@ -17,7 +17,15 @@ import { Stack, StackProps } from "aws-cdk-lib";
 const V3_SERVICES = {
   "user-service": ["auth", "users", "organisations", "userAssociations"],
   "job-service": ["jobs"],
-  "entity-service": ["entities", "trees", "forms", "applications", "fundingProgrammes", "reportingFrameworks"],
+  "entity-service": [
+    "entities",
+    "trees",
+    "forms",
+    "applications",
+    "fundingProgrammes",
+    "reportingFrameworks",
+    "aboutSections"
+  ],
   "research-service": ["research", "boundingBoxes", "validations", "polygonClipping"],
   "dashboard-service": ["dashboard"],
   "unified-database-service": ["unified-database"]

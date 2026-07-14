@@ -6,13 +6,11 @@ import {
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
 import { IsIn, IsOptional } from "class-validator";
 
-export class AboutSectionGetParamDto {
+export class AboutSectionQueryDto {
   @ApiProperty({ enum: ABOUT_SECTION_TYPES })
   @IsIn(ABOUT_SECTION_TYPES)
   type: AboutSectionType;
-}
 
-export class AboutSectionGetQueryDto {
   @ApiProperty({ enum: FRAMEWORK_KEYS, required: false })
   @IsOptional()
   @IsIn(FRAMEWORK_KEYS)

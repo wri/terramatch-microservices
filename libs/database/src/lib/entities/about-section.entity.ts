@@ -1,5 +1,15 @@
-import { AllowNull, AutoIncrement, BelongsTo, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STRING } from "sequelize";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  Index,
+  Model,
+  PrimaryKey,
+  Table,
+  Unique
+} from "sequelize-typescript";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STRING, UUID, UUIDV4 } from "sequelize";
 import { I18nItem } from "./i18n-item.entity";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
@@ -23,6 +33,11 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
   declare id: CreationOptional<number>;
+
+  @Index
+  @Unique
+  @Column({ type: UUID, defaultValue: UUIDV4 })
+  declare uuid: CreationOptional<string>;
 
   @Column(STRING)
   declare type: AboutSectionType;

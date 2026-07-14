@@ -10,6 +10,9 @@ import { AdditionalProps, populateDto } from "@terramatch-microservices/common/d
 
 export class LinkDto {
   @ApiProperty()
+  id: string;
+
+  @ApiProperty()
   title: string;
 
   @ApiProperty()
@@ -18,7 +21,7 @@ export class LinkDto {
 
 type AboutSectionWithoutExtras = Pick<AboutSection, "type" | "frameworks">;
 
-@JsonApiDto({ type: "aboutSections", id: "string" })
+@JsonApiDto({ type: "aboutSections" })
 export class AboutSectionDto {
   constructor(
     aboutSection: AboutSectionWithoutExtras,
@@ -26,6 +29,9 @@ export class AboutSectionDto {
   ) {
     populateDto<AboutSectionDto, AboutSectionWithoutExtras>(this, aboutSection, additional);
   }
+
+  @ApiProperty()
+  id: string;
 
   @ApiProperty({ enum: ABOUT_SECTION_TYPES })
   type: AboutSectionType;

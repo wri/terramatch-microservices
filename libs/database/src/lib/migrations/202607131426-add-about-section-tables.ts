@@ -1,4 +1,4 @@
-import { BIGINT, QueryInterface, JSON, STRING, DATE } from "sequelize";
+import { BIGINT, DATE, JSON, QueryInterface, STRING, TINYINT, UUID } from "sequelize";
 import { RunnableMigration } from "umzug";
 
 export const addAboutSectionTables: RunnableMigration<QueryInterface> = {
@@ -12,6 +12,7 @@ export const addAboutSectionTables: RunnableMigration<QueryInterface> = {
         "about_sections",
         {
           id: { type: BIGINT.UNSIGNED, allowNull: false, primaryKey: true, autoIncrement: true },
+          uuid: { type: UUID, allowNull: false },
           created_at: { type: DATE, allowNull: true },
           updated_at: { type: DATE, allowNull: true },
           deleted_at: { type: DATE, allowNull: true },
@@ -30,9 +31,11 @@ export const addAboutSectionTables: RunnableMigration<QueryInterface> = {
         "links",
         {
           id: { type: BIGINT.UNSIGNED, allowNull: false, primaryKey: true, autoIncrement: true },
+          uuid: { type: UUID, allowNull: false },
           created_at: { type: DATE, allowNull: true },
           updated_at: { type: DATE, allowNull: true },
           deleted_at: { type: DATE, allowNull: true },
+          order: { type: TINYINT, allowNull: false },
           title_id: { type: BIGINT.UNSIGNED, allowNull: false },
           url: { type: STRING, allowNull: false },
           linkable_type: { type: STRING, allowNull: false },

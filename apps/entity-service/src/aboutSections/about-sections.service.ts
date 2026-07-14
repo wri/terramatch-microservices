@@ -8,6 +8,7 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { AboutSectionDto, LinkDto } from "./dto/about-section.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
 
 @Injectable()
 export class AboutSectionsService {
@@ -31,7 +32,7 @@ export class AboutSectionsService {
     return await AboutSection.findOne({ where: { type, frameworks: null } });
   }
 
-  async getDto(section: AboutSection) {
+  async addDto(document: DocumentBuilder, section: AboutSection) {
     const links = await Link.for(section).findAll();
     const i18nIds = [
       section.headerId,
@@ -43,18 +44,25 @@ export class AboutSectionsService {
     ].filter(isNotNull);
     const translations = await this.localizationService.translateIds(i18nIds, this.userLocale);
 
-    return new AboutSectionDto(section, {
-      header: translations[section.headerId] ?? "",
-      title: section.titleId == null ? null : translations[section.titleId],
-      description: translations[section.descriptionId] ?? "",
-      contactSupportMessage: translations[section.contactSupportMessageId] ?? "",
-      contactSupportSubject: translations[section.contactSupportSubjectId] ?? "",
-      links: links.map(link =>
-        populateDto<LinkDto>(new LinkDto(), {
-          title: translations[link.titleId] ?? "",
-          url: link.url
-        })
-      )
-    });
+    document.addData(
+      section.uuid,
+      new AboutSectionDto(section, {
+        id: section.uuid,
+        header: translations[section.headerId] ?? "",
+        title: section.titleId == null ? null : translations[section.titleId],
+        description: translations[section.descriptionId] ?? "",
+        contactSupportMessage: translations[section.contactSupportMessageId] ?? "",
+        contactSupportSubject: translations[section.contactSupportSubjectId] ?? "",
+        links: links.map(link =>
+          populateDto<LinkDto>(new LinkDto(), {
+            id: link.uuid,
+            title: translations[link.titleId] ?? "",
+            url: link.url
+          })
+        )
+      })
+    );
+
+    return document;
   }
 }

@@ -49,7 +49,8 @@ export const seedAboutSections = withoutSqlLogs(async () => {
 
     await Link.bulkCreate(
       await Promise.all(
-        seed.links.map(async link => ({
+        seed.links.map(async (link, index) => ({
+          order: index,
           titleId: (await localizationService.generateI18nId(link.title)) as number,
           url: link.url,
           linkableType: AboutSection.LARAVEL_TYPE,

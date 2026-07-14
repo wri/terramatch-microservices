@@ -8,6 +8,7 @@ import { IsIn, IsOptional } from "class-validator";
 
 export class AboutSectionGetParamDto {
   @ApiProperty({ enum: ABOUT_SECTION_TYPES })
+  @IsIn(ABOUT_SECTION_TYPES)
   type: AboutSectionType;
 }
 

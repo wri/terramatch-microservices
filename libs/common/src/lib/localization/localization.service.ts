@@ -99,22 +99,31 @@ export class LocalizationService {
   }
 
   /**
-   * Returns a mapping of the given I18nItem IDs to their translated values in the given locale
+   * Returns a mapping of the given I18nItem IDs to their translated values in the given locale. Fallback
+   * default is the original EN value in the I18nItem.
    */
   async translateIds(ids: number[], locale: ValidLocale) {
     if (ids.length === 0) return {} as Translations;
 
     const language = locale === "en-US" ? [locale, "en"] : locale;
     return (
-      await I18nTranslation.findAll({
-        where: { language, i18nItemId: ids },
+      await I18nItem.findAll({
+        where: { id: ids },
         // Note: it is expected that a given translation has either a short value or a long value; never both.
-        attributes: ["i18nItemId", "shortValue", "longValue"]
+        attributes: ["id", "shortValue", "longValue"],
+        include: [
+          {
+            association: "i18nTranslations",
+            attributes: ["shortValue", "longValue"],
+            where: { language },
+            required: false
+          }
+        ]
       })
     ).reduce(
-      (translations, { i18nItemId, shortValue, longValue }) => ({
+      (translations, { id, shortValue, longValue, i18nTranslations }) => ({
         ...translations,
-        [i18nItemId]: shortValue ?? longValue
+        [id]: i18nTranslations?.[0]?.shortValue ?? i18nTranslations?.[0]?.longValue ?? shortValue ?? longValue
       }),
       {} as Translations
     );

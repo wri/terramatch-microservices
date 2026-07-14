@@ -44,14 +44,14 @@ export class AboutSectionsService {
     const translations = await this.localizationService.translateIds(i18nIds, this.userLocale);
 
     return new AboutSectionDto(section, {
-      header: translations[section.headerId] as string,
+      header: translations[section.headerId] ?? "",
       title: section.titleId == null ? null : translations[section.titleId],
-      description: translations[section.descriptionId] as string,
-      contactSupportMessage: translations[section.contactSupportMessageId] as string,
-      contactSupportSubject: translations[section.contactSupportSubjectId] as string,
+      description: translations[section.descriptionId] ?? "",
+      contactSupportMessage: translations[section.contactSupportMessageId] ?? "",
+      contactSupportSubject: translations[section.contactSupportSubjectId] ?? "",
       links: links.map(link =>
         populateDto<LinkDto>(new LinkDto(), {
-          title: translations[link.titleId] as string,
+          title: translations[link.titleId] ?? "",
           url: link.url
         })
       )

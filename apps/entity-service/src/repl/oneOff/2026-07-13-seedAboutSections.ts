@@ -142,7 +142,7 @@ const DEFAULT_SITE_ONBOARDING: AboutSectionSeed = {
   type: "site",
   header: "About Sites",
   description:
-    "<strong>Sites</strong> are the core units for reporting your restoration work in TerraMatch. Each site can include one or more restoration areas or polygons and should reflect a meaningful geographic grouping for your project.",
+    "<p><strong>Sites</strong> are the core units for reporting your restoration work in TerraMatch. Each site can include one or more restoration areas or polygons and should reflect a meaningful geographic grouping for your project.</p>",
   contactSupportMessage:
     "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to your project manager or",
   contactSupportSubject: "Support Request for Site Profile",
@@ -187,7 +187,7 @@ const PPC_SITE_ONBOARDING: AboutSectionSeed = {
   contactSupportMessage:
     "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to",
   description:
-    "<strong>Sites</strong> are the core units for reporting your restoration work on the IMP. Each site typically includes one restoration area (polygon), but can include multiple areas, based on proximity and other characteristics. Please review your siting approach with your Project Manager or Global Lead to determine how many sites you need to create for your PPC project.",
+    "<p><strong>Sites</strong> are the core units for reporting your restoration work on the IMP. Each site typically includes one restoration area (polygon), but can include multiple areas, based on proximity and other characteristics. Please review your siting approach with your Project Manager or Global Lead to determine how many sites you need to create for your PPC project.</p>",
   links: [
     {
       title: "What is the PPC definition of a site? ",

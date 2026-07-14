@@ -4,6 +4,7 @@ import { AboutSection, AboutSectionType } from "@terramatch-microservices/databa
 import { getService } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { Link } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
 
 type AboutSectionSeed = {
   type: AboutSectionType;
@@ -25,7 +26,16 @@ export const seedAboutSections = withoutSqlLogs(async () => {
   const localizationService = getService(LocalizationService);
   for (const seed of SEED_DATA) {
     const { type, frameworks, header } = seed;
-    console.log(`Creating About Section [${type}, ${frameworks ?? "[default]"}, ${header}`);
+    if (
+      (await AboutSection.count({
+        where: { type, frameworks: frameworks == null ? null : { [Op.eq]: frameworks } }
+      })) > 0
+    ) {
+      console.log(`Skipping already extant about section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
+      continue;
+    }
+
+    console.log(`Creating About Section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
 
     const aboutSection = await AboutSection.create({
       type: seed.type,
@@ -127,4 +137,77 @@ const PPC_PROJECT_ONBOARDING: AboutSectionSeed = {
   ]
 };
 
-const SEED_DATA: AboutSectionSeed[] = [DEFAULT_PROJECT_ONBOARDING, HBF_PROJECT_ONBOARDING, PPC_PROJECT_ONBOARDING];
+const DEFAULT_SITE_ONBOARDING: AboutSectionSeed = {
+  type: "site",
+  header: "About Sites",
+  description:
+    "<strong>Sites</strong> are the core units for reporting your restoration work in TerraMatch. Each site can include one or more restoration areas or polygons and should reflect a meaningful geographic grouping for your project.",
+  contactSupportMessage:
+    "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to your project manager or",
+  contactSupportSubject: "Support Request for Site Profile",
+  links: [
+    {
+      title: "Follow the TerraFund Siting Guide",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/25201750730907-TerraFund-Siting-Guide"
+    },
+    {
+      title: "Create a Site Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-Profile"
+    },
+    {
+      title: "Use the Site Profile Polygon Guide",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27065988566811-How-to-Add-Edit-and-View-Polygons-on-your-Site-Profiles"
+    },
+    {
+      title: "Download & Use Greenhouse.Flority",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/24537092253467-How-to-Download-Use-greenhouse-Flority"
+    }
+  ]
+};
+
+const HBF_SITE_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_SITE_ONBOARDING,
+  frameworks: ["hbf"],
+  links: [
+    {
+      title: "How to Create a Site on TerraMatch",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-on-TerraMatch"
+    },
+    {
+      title: "Citizen Science App User Manual",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27520000999835-Citizen-Science-App-User-Manual"
+    }
+  ]
+};
+
+const PPC_SITE_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_SITE_ONBOARDING,
+  frameworks: ["ppc"],
+  contactSupportMessage:
+    "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to",
+  description:
+    "<strong>Sites</strong> are the core units for reporting your restoration work on the IMP. Each site typically includes one restoration area (polygon), but can include multiple areas, based on proximity and other characteristics. Please review your siting approach with your Project Manager or Global Lead to determine how many sites you need to create for your PPC project.",
+  links: [
+    {
+      title: "What is the PPC definition of a site? ",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13157025276187-What-is-the-PPC-definition-of-a-site"
+    },
+    {
+      title: "How to Create a Site Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-Profile"
+    },
+    {
+      title: "Review the PPC Monitoring Framework",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13319985438363-What-is-the-Tree-Restoration-Monitoring-Framework"
+    }
+  ]
+};
+
+const SEED_DATA: AboutSectionSeed[] = [
+  DEFAULT_PROJECT_ONBOARDING,
+  HBF_PROJECT_ONBOARDING,
+  PPC_PROJECT_ONBOARDING,
+  DEFAULT_SITE_ONBOARDING,
+  HBF_SITE_ONBOARDING,
+  PPC_SITE_ONBOARDING
+];

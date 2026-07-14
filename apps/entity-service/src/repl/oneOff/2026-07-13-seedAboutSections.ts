@@ -204,11 +204,27 @@ const PPC_SITE_ONBOARDING: AboutSectionSeed = {
   ]
 };
 
+const DEFAULT_NURSERY_ONBOARDING: AboutSectionSeed = {
+  type: "nursery",
+  header: "About Nurseries",
+  description:
+    "<p><strong>Nurseries</strong> are the lifeblood of your tree planting project. Whenever your project builds a new nursery or expands an existing one to supply your sites, create a nursery profile on TerraMatch. If your project uses nurseries managed by others, or relies only on direct seeding or assisted natural regeneration, you do not need to add any nursery profiles.",
+  contactSupportMessage: "If you have challenges or need assistance, please reach out to your project manager or",
+  contactSupportSubject: "Support Request for Nursery Profile",
+  links: [
+    {
+      title: "Create a Nursery Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512665359899-How-to-Create-a-Nursery-Profile"
+    }
+  ]
+};
+
 const SEED_DATA: AboutSectionSeed[] = [
   DEFAULT_PROJECT_ONBOARDING,
   HBF_PROJECT_ONBOARDING,
   PPC_PROJECT_ONBOARDING,
   DEFAULT_SITE_ONBOARDING,
   HBF_SITE_ONBOARDING,
-  PPC_SITE_ONBOARDING
+  PPC_SITE_ONBOARDING,
+  DEFAULT_NURSERY_ONBOARDING
 ];

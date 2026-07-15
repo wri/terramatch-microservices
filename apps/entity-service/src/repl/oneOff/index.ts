@@ -35,3 +35,4 @@ export { updateRequestDataFix } from "./2026-06-23-updateRequestDataFix";
 export { useQuestionName } from "./2026-06-25-useQuestionName";
 export { importTerraFundProjects, importTerraFundTreeSpecies } from "./2026-07-01-importTerraFundContractData";
 export { seedAboutSections } from "./2026-07-13-seedAboutSections";
+export { updateDisturbanceReportMonetaryDamageField } from "./2026-07-15-updateDisturbanceReportMonetaryDamagefield";

@@ -38,7 +38,7 @@ const extent: DisturbanceMapping<"extent"> = { column: "extent", mapper: mapValu
 const type: DisturbanceMapping<"type"> = { column: "type", mapper: mapValue };
 const subtype: DisturbanceMapping<"subtype"> = { column: "subtype", mapper: mapJson };
 const peopleAffected: DisturbanceMapping<"peopleAffected"> = { column: "peopleAffected", mapper: mapNumber };
-const monetaryDamage: DisturbanceMapping<"monetaryDamage"> = { column: "monetaryDamage", mapper: mapNumber };
+const financialLoss: DisturbanceMapping<"financialLoss"> = { column: "financialLoss", mapper: mapNumber };
 const propertyAffected: DisturbanceMapping<"propertyAffected"> = { column: "propertyAffected", mapper: mapJson };
 const disturbanceStartDate: DisturbanceMapping<"disturbanceDate"> = {
   column: "disturbanceDate",
@@ -51,7 +51,7 @@ const DISTURBANCE_MAPPING = {
   "disturbance-type": type,
   "disturbance-subtype": subtype,
   "people-affected": peopleAffected,
-  "monetary-damage": monetaryDamage,
+  "financial-loss": financialLoss,
   "property-affected": propertyAffected,
   "disturbance-start-date": disturbanceStartDate
 };

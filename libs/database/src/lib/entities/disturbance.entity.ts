@@ -92,7 +92,7 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
 
   @AllowNull
   @Column(DECIMAL(15, 2))
-  declare monetaryDamage: number | null;
+  declare financialLoss: number | null;
 
   @AllowNull
   @Column(TEXT)

@@ -35,7 +35,7 @@ export const seedAboutSections = withoutSqlLogs(async () => {
       continue;
     }
 
-    console.log(`Creating About Section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
+    console.log(`Creating about section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
 
     const aboutSection = await AboutSection.create({
       type: seed.type,
@@ -226,8 +226,8 @@ const DEFAULT_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
   type: "project-report",
   header: "About Project Reports",
   description:
-    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential, it ensures your work is fairly represented, supports transparency and accountability, and helps TerraFund track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>" +
-    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential; it ensures your work is fairly represented, supports transparency and accountability, and helps TerraFund track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
   contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
   contactSupportSubject: "Support Request for Project Report",
   links: [
@@ -241,7 +241,7 @@ const DEFAULT_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
     },
     {
       title: "TerraFund Report Quality Assurance Process",
-      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/12512083927579-TerraFund-Program-Hub"
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/24993375284251-TerraFund-Report-Quality-Assurance-Process"
     },
     {
       title: "TerraFund Guidance for Socioeconomic Reporting",
@@ -255,7 +255,7 @@ const PPC_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
   frameworks: ["ppc"],
   description:
     "<p><strong>Project Reports</strong> are how you share your project's overall progress with your Project Manager/Global Lead each quarter. Accurate and detailed reporting is essential. It ensures your work is fairly represented, supports transparency and accountability, and helps the PPC team track progress across the portfolio.</p>" +
-    "<p>Beside you can find guidance to help you with reporting.</p>",
+    "<p>You can find guidance to help you with reporting under Helpful Links.</p>",
   contactSupportMessage: "If you encounter challenges or need assistance, contact your Project Manager/Global Lead or",
   links: [
     {
@@ -303,8 +303,8 @@ const DEFAULT_SITE_REPORT_ABOUT: AboutSectionSeed = {
   header: "About Site Reports",
   description:
     "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period.</p>" +
-    "<p>Accurate and detailed site reporting is essential, it ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps TerraFund verify progress across the portfolio towards restoration goals.</p>" +
-    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+    "<p>Accurate and detailed site reporting is essential. It ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps TerraFund verify progress across the portfolio towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
   contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
   contactSupportSubject: "Support Request for Site Report",
   links: [
@@ -367,9 +367,9 @@ const DEFAULT_NURSERY_REPORT_ABOUT: AboutSectionSeed = {
   type: "nursery-report",
   header: "About Nursery Reports",
   description:
-    "<p><strong>Nursery Reports</strong> capture seedling production progress across any nurseries your project is building, expanding, or managing. You will report on each nursery profile, a profile may represent a single nursery or a grouping, every six months.</p>" +
-    "<p>If your organization procures seedlings only from an external source, you do not need to submit nursery reports. Accurate and detailed reporting ensures your work is fully represented, supports transparency and accountability, and helps TerraFund track portfolio progress towards restoration goals.</p>" +
-    "<p>To support your reporting efforts, TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+    "<p><strong>Nursery Reports</strong> capture seedling production progress across any nurseries your project is building, expanding, or managing. You will report on each nursery profile every six months. A profile may represent a single nursery or a grouping.</p>" +
+    "<p>Accurate and detailed reporting ensures your work is fully represented, supports transparency and accountability, and helps TerraFund track portfolio progress towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
   contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
   contactSupportSubject: "Support Request for Nursery Report",
   links: [

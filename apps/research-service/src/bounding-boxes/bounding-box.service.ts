@@ -89,23 +89,39 @@ export class BoundingBoxService {
     return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
   }
 
+  private async getPolygonGeometryBoundingBox(
+    whereCondition: WhereOptions,
+    identifier?: string
+  ): Promise<BoundingBoxDto> {
+    const envelopes = await PolygonGeometry.findAll({
+      where: whereCondition,
+      paranoid: false,
+      attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
+    });
+
+    if (envelopes.length === 0) {
+      const errorMsg = !isEmpty(identifier)
+        ? `No polygon found with UUID ${identifier}`
+        : "No polygon found with the provided criteria";
+      throw new NotFoundException(errorMsg);
+    }
+
+    const { minLng, minLat, maxLng, maxLat } = this.extractBoundingBoxFromEnvelopes(envelopes);
+    return this.createBoundingBoxDto(minLng, minLat, maxLng, maxLat);
+  }
+
   async getPolygonBoundingBox(polygonUuid: string): Promise<BoundingBoxDto> {
     const polygon = await PolygonGeometry.findOne({
       where: { uuid: polygonUuid },
-      attributes: ["uuid"]
+      attributes: ["uuid"],
+      paranoid: false
     });
 
     if (polygon === null) {
       throw new NotFoundException(`${EntityType.POLYGON} with UUID ${polygonUuid} not found`);
     }
 
-    return this.getBoundingBoxFromGeometries(
-      PolygonGeometry,
-      { uuid: polygonUuid },
-      "geom",
-      EntityType.POLYGON,
-      polygonUuid
-    );
+    return this.getPolygonGeometryBoundingBox({ uuid: polygonUuid }, polygonUuid);
   }
 
   async getPolygonsBoundingBox(polygonUuids: string[]): Promise<BoundingBoxDto> {
@@ -117,7 +133,8 @@ export class BoundingBoxService {
 
     const polygons = await PolygonGeometry.findAll({
       where: { uuid: { [Op.in]: uniquePolygonUuids } },
-      attributes: ["uuid"]
+      attributes: ["uuid"],
+      paranoid: false
     });
 
     if (polygons.length === 0) {
@@ -130,12 +147,7 @@ export class BoundingBoxService {
       throw new NotFoundException(`Polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
-    return this.getBoundingBoxFromGeometries(
-      PolygonGeometry,
-      { uuid: { [Op.in]: uniquePolygonUuids } },
-      "geom",
-      EntityType.POLYGON
-    );
+    return this.getPolygonGeometryBoundingBox({ uuid: { [Op.in]: uniquePolygonUuids } });
   }
 
   async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {

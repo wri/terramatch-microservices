@@ -256,12 +256,14 @@ describe("BoundingBoxService", () => {
       // Verify the polygon exists check
       expect(PolygonGeometry.findOne).toHaveBeenCalledWith({
         where: { uuid: polygonUuid },
-        attributes: ["uuid"]
+        attributes: ["uuid"],
+        paranoid: false
       });
 
       // Verify the bounding box query
       expect(PolygonGeometry.findAll).toHaveBeenCalledWith({
         where: { uuid: polygonUuid },
+        paranoid: false,
         attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
       });
 
@@ -296,10 +298,12 @@ describe("BoundingBoxService", () => {
 
       expect(PolygonGeometry.findAll).toHaveBeenNthCalledWith(1, {
         where: { uuid: { [Op.in]: polygonUuids } },
-        attributes: ["uuid"]
+        attributes: ["uuid"],
+        paranoid: false
       });
       expect(PolygonGeometry.findAll).toHaveBeenNthCalledWith(2, {
         where: { uuid: { [Op.in]: polygonUuids } },
+        paranoid: false,
         attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
       });
       expect(result.bbox).toEqual([-122.4194, 37.7749, -73.9538, 40.8075]);

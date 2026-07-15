@@ -587,7 +587,8 @@ export class PolygonClippingService {
     polygonUuids: string[],
     userId: number,
     userFullName: string | null,
-    source: string
+    source: string,
+    isAdminSession = false
   ): Promise<ClippedVersionResult[]> {
     if (polygonUuids.length === 0) {
       this.logger.warn("No polygons provided for clipping and versioning");
@@ -664,7 +665,8 @@ export class PolygonClippingService {
               userId,
               userFullName,
               source,
-              transaction
+              transaction,
+              isAdminSession
             );
 
             results.push({

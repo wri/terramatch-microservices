@@ -807,7 +807,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -865,7 +866,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -946,7 +948,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        expect.anything()
+        expect.anything(),
+        false
       );
     });
 
@@ -1591,7 +1594,8 @@ describe("SitePolygonsController", () => {
         "site-uuid",
         1,
         user.fullName,
-        "terramatch"
+        "terramatch",
+        false
       );
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);

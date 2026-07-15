@@ -67,6 +67,7 @@ import { GeometryUploadComparisonService } from "./geometry-upload-comparison.se
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
 import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
+import { isAdminSessionFromRoles } from "@terramatch-microservices/common/analytics/polygon-version-changed";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -141,6 +142,7 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
     const changeReason = createRequest?.data?.attributes?.changeReason;
@@ -155,7 +157,8 @@ export class SitePolygonsController {
         changeReason ?? "Version created via API",
         userId,
         userFullName,
-        source
+        source,
+        isAdminSession
       );
     }
 
@@ -495,6 +498,7 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const newVersions = await SitePolygon.sql.transaction(async transaction =>
       this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
@@ -503,7 +507,8 @@ export class SitePolygonsController {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       )
     );
 
@@ -872,6 +877,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -906,7 +912,8 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null
+      userFullName: user?.fullName ?? null,
+      isAdminSession
     };
 
     await this.geometryUploadQueue.add("geometryUpload", jobData);
@@ -944,6 +951,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -978,7 +986,8 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null
+      userFullName: user?.fullName ?? null,
+      isAdminSession
     };
 
     await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
@@ -1014,6 +1023,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -1023,7 +1033,8 @@ export class SitePolygonsController {
       siteId,
       userId,
       user?.fullName ?? null,
-      source
+      source,
+      isAdminSession
     );
 
     const document = buildJsonApi(SitePolygonLightDto);
@@ -1046,7 +1057,8 @@ export class SitePolygonsController {
     changeReason: string,
     userId: number,
     userFullName: string | null,
-    source: string
+    source: string,
+    isAdminSession: boolean
   ) {
     const hasGeometryChange = geometries != null && geometries.length > 0;
     const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
@@ -1070,7 +1082,8 @@ export class SitePolygonsController {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       );
     });
 

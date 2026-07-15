@@ -12,6 +12,7 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { PolygonClippingService } from "./polygon-clipping.service";
 import { PolygonListClippingRequestBody } from "./dto/clip-polygon-request.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { isAdminSessionFromRoles } from "@terramatch-microservices/common/analytics/polygon-version-changed";
 import { DelayedJob, Project, Site, SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
@@ -64,6 +65,7 @@ export class PolygonClippingController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     let fixablePolygons: string[];
     let entityId: number;
@@ -124,6 +126,7 @@ export class PolygonClippingController {
       userId: UserContext.authenticatedUserId,
       userFullName,
       source,
+      isAdminSession,
       delayedJobId: delayedJob.id,
       siteUuid
     });
@@ -152,6 +155,7 @@ export class PolygonClippingController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const polygonUuids = payload.data.attributes.polygonUuids;
 
@@ -170,7 +174,8 @@ export class PolygonClippingController {
         fixablePolygons,
         UserContext.authenticatedUserId as number,
         userFullName,
-        source
+        source,
+        isAdminSession
       );
 
       if (createdVersions.length === 0) {
@@ -268,6 +273,7 @@ export class PolygonClippingController {
       userId: UserContext.authenticatedUserId,
       userFullName,
       source,
+      isAdminSession,
       delayedJobId: delayedJob.id,
       siteUuid: siteUuidForEmail
     });

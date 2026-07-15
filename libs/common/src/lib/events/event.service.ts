@@ -8,6 +8,7 @@ import { TMLogger } from "../util/tm-logger";
 import { MediaService } from "../media/media.service";
 import { Media, PolygonGeometry, User } from "@terramatch-microservices/database/entities";
 import { POLYGON_PUSHED_VIA_API_EVENT, PolygonPushedViaApiParams } from "../analytics/polygon-pushed-via-api";
+import { POLYGON_VERSION_CHANGED_EVENT, PolygonVersionChangedParams } from "../analytics/polygon-version-changed";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -69,6 +70,16 @@ export class EventService {
     );
     await this.analyticsQueue.add(POLYGON_PUSHED_VIA_API_EVENT, {
       uuid: partnerId,
+      params
+    });
+  }
+
+  async sendPolygonVersionChangedAnalytics(primaryUuid: string, params: PolygonVersionChangedParams) {
+    this.logger.debug(
+      `Sending polygon version changed analytics for polygon group ${params.polygon_id} (${params.change_source}) to queue.`
+    );
+    await this.analyticsQueue.add(POLYGON_VERSION_CHANGED_EVENT, {
+      uuid: primaryUuid,
       params
     });
   }

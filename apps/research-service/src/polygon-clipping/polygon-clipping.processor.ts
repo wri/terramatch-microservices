@@ -17,6 +17,7 @@ export interface ClippingJobData {
   userId: number;
   userFullName: string | null;
   source: string;
+  isAdminSession?: boolean;
   delayedJobId: number;
   siteUuid?: string;
 }
@@ -39,7 +40,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
   }
 
   async processDelayedJob(job: Job<ClippingJobData>) {
-    const { polygonUuids, userId, userFullName, source, siteUuid } = job.data;
+    const { polygonUuids, userId, userFullName, source, isAdminSession = false, siteUuid } = job.data;
 
     if (polygonUuids.length === 0) {
       throw new DelayedJobException(400, "No polygon UUIDs provided");
@@ -55,7 +56,8 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
       polygonUuids,
       userId,
       userFullName,
-      source
+      source,
+      isAdminSession
     );
 
     if (createdVersions.length === 0) {

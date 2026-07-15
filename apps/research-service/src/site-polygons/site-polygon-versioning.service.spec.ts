@@ -3,20 +3,32 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction, Op } from "sequelize";
+import { EventService } from "@terramatch-microservices/common/events/event.service";
 
 const mockTransaction = {
   commit: jest.fn(),
   rollback: jest.fn(),
-  afterCommit: jest.fn(),
+  afterCommit: jest.fn((callback: () => void) => callback()),
   LOCK: {}
 } as unknown as Transaction;
 
 describe("SitePolygonVersioningService", () => {
   let service: SitePolygonVersioningService;
+  let eventService: { sendPolygonVersionChangedAnalytics: jest.Mock };
 
   beforeEach(async () => {
+    eventService = {
+      sendPolygonVersionChangedAnalytics: jest.fn().mockResolvedValue(undefined)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SitePolygonVersioningService]
+      providers: [
+        SitePolygonVersioningService,
+        {
+          provide: EventService,
+          useValue: eventService
+        }
+      ]
     }).compile();
 
     service = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
@@ -266,6 +278,51 @@ describe("SitePolygonVersioningService", () => {
           transaction: mockTransaction
         })
       );
+    });
+
+    it("should queue polygon_version_changed analytics after commit", async () => {
+      const basePrimaryUuid = "primary-group-uuid";
+      const basePolygon = {
+        uuid: "previous-version-uuid",
+        primaryUuid: basePrimaryUuid,
+        siteUuid: "site-uuid",
+        polyName: "Polygon 1",
+        get: jest.fn().mockReturnValue({
+          uuid: "previous-version-uuid",
+          primaryUuid: basePrimaryUuid,
+          siteUuid: "site-uuid",
+          polyName: "Polygon 1"
+        })
+      } as unknown as SitePolygon;
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+      await service.createVersions(
+        [
+          {
+            basePolygon,
+            attributeChanges: { numTrees: 10, status: "draft" },
+            newPolygonGeometryUuid: null,
+            userId: 1,
+            changeReason: "Updated attributes",
+            userFullName: "User One",
+            source: "terramatch",
+            isAdminSession: false
+          }
+        ],
+        mockTransaction
+      );
+
+      expect(eventService.sendPolygonVersionChangedAnalytics).toHaveBeenCalledWith("primary-group-uuid", {
+        polygon_id: "primary-group-uuid",
+        entity_id: "site-uuid",
+        entity_type: "site",
+        previous_version: "previous-version-uuid",
+        new_version: "new-version-uuid",
+        change_source: "attribute_edit"
+      });
     });
   });
 

@@ -70,7 +70,8 @@ describe("ClippingProcessor", () => {
         ["polygon-uuid-1"],
         1,
         "Test User",
-        "terramatch"
+        "terramatch",
+        false
       );
     });
 
@@ -110,7 +111,8 @@ describe("ClippingProcessor", () => {
         ["polygon-uuid-1", "polygon-uuid-2"],
         1,
         "Test User",
-        "terramatch"
+        "terramatch",
+        false
       );
       expect(result.processedContent).toBe(2);
       expect(result.progressMessage).toBe("Completed clipping of 2 polygons");
@@ -150,7 +152,13 @@ describe("ClippingProcessor", () => {
 
       const result = await processor.processDelayedJob(job);
 
-      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(["polygon-uuid-1"], 1, null, "terramatch");
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        ["polygon-uuid-1"],
+        1,
+        null,
+        "terramatch",
+        false
+      );
       expect(result.processedContent).toBe(1);
     });
 

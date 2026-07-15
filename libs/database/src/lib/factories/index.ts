@@ -1,3 +1,4 @@
+export * from "./about-section.factory";
 export * from "./application.factory";
 export * from "./audit.factory";
 export * from "./audit-status.factory";
@@ -30,6 +31,7 @@ export * from "./indicator-output-tree-cover-loss.factory";
 export * from "./invasive.factory";
 export * from "./landscape-geometry.factory";
 export * from "./leadership.factory";
+export * from "./link.factory";
 export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";

@@ -1,3 +1,4 @@
+export { AboutSection } from "./about-section.entity";
 export * from "./action.entity";
 export * from "./srp-report.entity";
 export * from "./audit.entity";
@@ -36,6 +37,7 @@ export * from "./investment.entity";
 export * from "./investment-split.entity";
 export * from "./landscape-geometry.entity";
 export * from "./leadership.entity";
+export { Link } from "./link.entity";
 export * from "./localization-key.entity";
 export * from "./media.entity";
 export * from "./model-has-role.entity";

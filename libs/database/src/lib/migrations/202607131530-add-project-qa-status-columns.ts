@@ -1,6 +1,6 @@
 import { RunnableMigration } from "umzug";
 import { QueryInterface, STRING } from "sequelize";
-import { PROJECT_QA_STATUS_DEFAULT } from "../constants/project-qa-status";
+import { PROJECT_QA_STATUS_DEFAULT } from "../constants";
 
 const PROJECT_QA_STATUS_COLUMNS = [
   "project_qa_status1",

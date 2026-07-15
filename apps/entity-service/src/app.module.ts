@@ -43,6 +43,8 @@ import {
   ENTITY_SERVICE_EXPORT_QUEUE,
   EntityServiceDelayedJobsProcessor
 } from "./jobs/entity-service-delayed-jobs.processor";
+import { AboutSectionsController } from "./aboutSections/about-sections.controller";
+import { AboutSectionsService } from "./aboutSections/about-sections.service";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -61,6 +63,7 @@ const IS_REPL = process.env["REPL"] === "true";
   controllers: [
     ProjectPitchesController,
     ImpactStoriesController,
+    AboutSectionsController,
     TasksController,
     FilesController,
     TreesController,
@@ -86,6 +89,7 @@ const IS_REPL = process.env["REPL"] === "true";
     TreeService,
     ProjectPitchService,
     ImpactStoryService,
+    AboutSectionsService,
     TasksService,
     DisturbanceService,
     AuditStatusService,

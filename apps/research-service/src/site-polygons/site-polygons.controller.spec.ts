@@ -1283,7 +1283,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
@@ -1349,7 +1350,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: null
+        userFullName: null,
+        isAdminSession: false
       });
     });
   });
@@ -1537,7 +1539,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();

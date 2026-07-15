@@ -227,7 +227,7 @@ const DEFAULT_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
   header: "About Project Reports",
   description:
     "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential; it ensures your work is fairly represented, supports transparency and accountability, and helps TerraFund track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>" +
-    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
   contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
   contactSupportSubject: "Support Request for Project Report",
   links: [
@@ -304,7 +304,7 @@ const DEFAULT_SITE_REPORT_ABOUT: AboutSectionSeed = {
   description:
     "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period.</p>" +
     "<p>Accurate and detailed site reporting is essential. It ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps TerraFund verify progress across the portfolio towards restoration goals.</p>" +
-    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly, thoroughly.</p>",
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
   contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
   contactSupportSubject: "Support Request for Site Report",
   links: [

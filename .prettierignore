@@ -4,6 +4,5 @@
 /.nx/cache
 /.nx/workspace-data
 /data
-# Entire geoserver tree: Docker writes root-owned tiles Prettier cannot scandir
-/docker
+/docker/geoserver/geoserver_data/gwc
 .nx/self-healing

@@ -2,6 +2,7 @@
 // MUST NOT be exported here.
 export * from "./polygon-indicators";
 export * from "./polygon-data-submission";
+export * from "./project-qa-status";
 export * from "./polygon-status";
 export * from "./landscapes";
 export * from "./organisations";

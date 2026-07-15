@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, INTEGER, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
@@ -198,10 +198,6 @@ export class Form extends Model<Form> {
 
   @Column(STRING)
   declare updatedBy: string | null;
-
-  @AllowNull
-  @Column(DATE)
-  declare deadlineAt: Date | null;
 
   @AllowNull
   @Column(STRING)

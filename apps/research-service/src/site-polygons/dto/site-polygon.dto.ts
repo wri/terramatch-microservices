@@ -210,6 +210,13 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, type: Date })
   createdAt: Date | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Date,
+    description: "When this site polygon was soft-deleted. Only populated when deletedOnly is requested."
+  })
+  deletedAt: Date | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

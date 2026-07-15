@@ -354,7 +354,6 @@ describe("FormsService", () => {
         frameworkKey: "ppc",
         type: "project",
         submissionMessage: faker.lorem.paragraph(),
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -405,7 +404,6 @@ describe("FormsService", () => {
       expect(form.frameworkKey).toBe(attributes.frameworkKey);
       expect(form.type).toBe(attributes.type);
       expect(form.submissionMessage).toBe(attributes.submissionMessage);
-      expect(form.deadlineAt).toEqual(attributes.deadlineAt);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title, undefined);
 
       const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
@@ -481,7 +479,6 @@ describe("FormsService", () => {
         frameworkKey: "ppc",
         type: "site",
         submissionMessage: faker.lorem.paragraph(),
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -532,7 +529,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -569,7 +565,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -619,7 +614,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -653,7 +647,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           // scramble order and drop section 1
           {

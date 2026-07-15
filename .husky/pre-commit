@@ -1,2 +1,8 @@
-npx prettier --write .
+# Format only staged files so prettier never walks docker/geoserver cache
+# (those dirs are often root-owned and cause EACCES / pre-commit failures).
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|jsx|ts|tsx|json|md|yml|yaml|css|scss|html|mjs|cjs)$' || true)
+if [ -n "$FILES" ]; then
+  echo "$FILES" | xargs -r npx prettier --write --
+  echo "$FILES" | xargs -r git add --
+fi
 git update-index --again

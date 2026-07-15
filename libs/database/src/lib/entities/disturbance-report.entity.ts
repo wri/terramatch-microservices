@@ -138,6 +138,10 @@ export class DisturbanceReport extends Model<
   @Column(TEXT)
   declare actionDescription: string | null;
 
+  @AllowNull
+  @Column(STRING)
+  declare currency: string | null;
+
   @BelongsTo(() => Project)
   declare project: Project | null;
 

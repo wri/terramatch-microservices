@@ -245,7 +245,7 @@ describe("EntityApprovalProcessor", () => {
         value: '["flooding"]'
       });
       await DisturbanceReportEntryFactory.report(report).create({ name: "people-affected", value: "1000" });
-      await DisturbanceReportEntryFactory.report(report).create({ name: "monetary-damage", value: "5000" });
+      await DisturbanceReportEntryFactory.report(report).create({ name: "financial-loss", value: "5000" });
       await DisturbanceReportEntryFactory.report(report).create({
         name: "property-affected",
         value: '["seedlings","saplings"]'
@@ -272,7 +272,7 @@ describe("EntityApprovalProcessor", () => {
         type: "climatic",
         subtype: ["flooding"],
         peopleAffected: 1000,
-        monetaryDamage: 5000,
+        financialLoss: 5000,
         propertyAffected: ["seedlings", "saplings"],
         disturbanceDate: date
       });

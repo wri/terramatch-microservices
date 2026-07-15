@@ -15,7 +15,9 @@ import { removeDbTriggers } from "./202607071905-remove-db-triggers";
 import { addSitePolygonSiteScopedQueryIndex } from "./202607091100-add-site-polygon-site-scoped-query-index";
 import { addProjectQaStatusColumns } from "./202607131530-add-project-qa-status-columns";
 import { removeFormDeadline } from "./202607141029-remove-form-deadline";
+import { updateV2DisturbancesMonetaryDamageField } from "./202607151029-update-v2-disturbances-monetary-damage-field";
 import { addAboutSectionTables } from "./202607131426-add-about-section-tables";
+import { addCurrencyColumn } from "./202607151300-add-currency-column";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -33,5 +35,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addSitePolygonSiteScopedQueryIndex,
   addProjectQaStatusColumns,
   removeFormDeadline,
-  addAboutSectionTables
+  addAboutSectionTables,
+  updateV2DisturbancesMonetaryDamageField,
+  addCurrencyColumn
 ];

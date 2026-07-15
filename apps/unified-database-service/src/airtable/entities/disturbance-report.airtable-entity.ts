@@ -15,7 +15,7 @@ type DisturbanceReportAssociations = {
   type?: string; // single select
   subtype?: string[]; // multi select
   peopleAffected?: number; // integer
-  monetaryDamage?: number; // decimal
+  financialLoss?: number; // decimal
   propertyAffected?: string[]; // multi select
   disturbanceDate?: Date; // date no timestamp
 };
@@ -32,7 +32,7 @@ const COLUMNS: ColumnMapping<DisturbanceReport, DisturbanceReportAssociations>[]
   associatedValueColumn("type"),
   associatedValueColumn("subtype"),
   associatedValueColumn("peopleAffected"),
-  associatedValueColumn("monetaryDamage"),
+  associatedValueColumn("financialLoss"),
   associatedValueColumn("propertyAffected"),
   associatedValueColumn("disturbanceDate")
 ];

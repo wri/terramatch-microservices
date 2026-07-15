@@ -11,7 +11,7 @@ export const disturbancesCollector = polymorphicCollector(Disturbance, EmbeddedD
     "intensity",
     "extent",
     "peopleAffected",
-    "monetaryDamage",
+    "financialLoss",
     "description",
     "actionDescription",
     "propertyAffected"

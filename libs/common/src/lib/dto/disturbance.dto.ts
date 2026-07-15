@@ -34,7 +34,7 @@ export class DisturbanceDto extends AssociationDto {
   peopleAffected: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
-  monetaryDamage: number | null;
+  financialLoss: number | null;
 
   @ApiProperty({ nullable: true, type: String })
   description: string | null;

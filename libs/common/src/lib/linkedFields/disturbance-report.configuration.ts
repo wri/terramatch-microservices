@@ -5,6 +5,13 @@ import { LinkedFieldConfiguration } from "@terramatch-microservices/database/con
 export const DisturbanceReportConfiguration: LinkedFieldConfiguration<DisturbanceReport> = {
   label: "Disturbance Report",
   fields: {
+    "dis-rep-local-currency": {
+      property: "currency",
+      label: "Local Currency",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "currencies"
+    },
     "dis-rep-description": { property: "description", label: "Description", inputType: "long-text" },
     "dis-rep-action-description": {
       property: "actionDescription",

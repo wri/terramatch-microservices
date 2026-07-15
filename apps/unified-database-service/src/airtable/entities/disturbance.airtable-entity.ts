@@ -33,7 +33,7 @@ const COLUMNS: ColumnMapping<Disturbance, DisturbanceAssociations>[] = [
   "intensity",
   "extent",
   "peopleAffected",
-  "monetaryDamage",
+  "financialLoss",
   "description",
   "actionDescription",
   "propertyAffected",

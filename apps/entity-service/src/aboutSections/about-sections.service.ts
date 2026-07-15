@@ -51,7 +51,7 @@ export class AboutSectionsService {
     const builder = PaginatedQueryBuilder.forNumberPage(AboutSection, query.page);
     if (query.type != null) builder.where({ type: query.type });
     const sections = await builder.execute();
-    const links = groupBy(await Link.for(sections).findAll(), "linkableId");
+    const links = sections.length === 0 ? {} : groupBy(await Link.for(sections).findAll(), "linkableId");
 
     const i18nIds: number[] = [];
     for (const section of sections) {

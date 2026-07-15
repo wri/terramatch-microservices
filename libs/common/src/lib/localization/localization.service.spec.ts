@@ -154,8 +154,15 @@ describe("LocalizationService", () => {
       await expect(service.translateKeys({ foo: "bar" }, "es-MX")).rejects.toThrow(NotFoundException);
     });
 
-    it("should use the value from LocalizationKey if there is no translation", async () => {
-      const { key, value } = await LocalizationKeyFactory.create();
+    it("should use the base value from I18nItem when there is no translation", async () => {
+      const i18nItem = await I18nItemFactory.create();
+      const { key } = await LocalizationKeyFactory.create({ valueId: i18nItem.id });
+      expect((await service.translateKeys({ foo: key as string }, "es-MX"))["foo"]).toEqual(i18nItem.shortValue);
+    });
+
+    it("should use the value from LocalizationKey if there is no translation or base value in I18nItem", async () => {
+      const i18nItem = await I18nItemFactory.create({ shortValue: null, longValue: null });
+      const { key, value } = await LocalizationKeyFactory.create({ valueId: i18nItem.id });
       expect((await service.translateKeys({ foo: key as string }, "es-MX"))["foo"]).toEqual(value);
     });
   });
@@ -247,7 +254,7 @@ describe("LocalizationService", () => {
       (createNativeInstance as jest.Mock).mockImplementation(() => ({
         pushSource: pushSouceMock
       }));
-      await service.pushTranslationsForEntity(form, [1, 2, 3]);
+      await service.pushTranslationsForEntity(form.uuid, [1, 2, 3]);
       expect(pushSouceMock).toHaveBeenCalled();
     });
   });

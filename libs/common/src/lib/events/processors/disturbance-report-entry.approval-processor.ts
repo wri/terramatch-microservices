@@ -8,7 +8,7 @@ import {
 import { Attributes, CreationAttributes } from "sequelize";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { isNotEmpty, isNotNull } from "@terramatch-microservices/database/types/array";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 
 type DisturbanceAttribute = keyof Attributes<Disturbance>;
@@ -57,25 +57,43 @@ const DISTURBANCE_MAPPING = {
 };
 
 type AffectedPolygon = { polyUuid?: string };
+type AffectedSite = { siteUuid?: string };
+type AffectedNursery = { nurseryUuid?: string };
 
 export const getEntryData = (entries: DisturbanceReportEntry[]) => {
   const disturbanceData: Dictionary<unknown> = {};
-  const affectedPolygonUuids = entries.reduce((uuids, entry) => {
+  const affectedPolygonUuids: string[] = [];
+  const affectedSiteUuids: string[] = [];
+  const affectedNurseryUuids: string[] = [];
+
+  for (const entry of entries) {
     const mapping = DISTURBANCE_MAPPING[entry.name as keyof typeof DISTURBANCE_MAPPING];
     if (mapping != null) {
       disturbanceData[mapping.column] = mapping.mapper(entry.value);
+      continue;
     }
 
-    if (entry.name !== "polygon-affected" || entry.value == null) return uuids;
+    if (entry.name === "polygon-affected") {
+      const polygons = mapJson(entry.value) as AffectedPolygon[][] | null;
+      if (polygons != null && polygons.length > 0) {
+        affectedPolygonUuids.push(...polygons.flatMap(group => group.map(p => p.polyUuid)).filter(isNotNull));
+      }
+    } else if (entry.name === "site-affected") {
+      const sites = mapJson(entry.value) as AffectedSite[] | null;
+      console.log("sites", sites);
+      if (sites != null && sites.length > 0) {
+        affectedSiteUuids.push(...sites.map(({ siteUuid }) => siteUuid).filter(isNotEmpty));
+      }
+    } else if (entry.name === "nursery-affected") {
+      const nurseries = mapJson(entry.value) as AffectedNursery[] | null;
+      console.log("nurseries", nurseries);
+      if (nurseries != null && nurseries.length > 0) {
+        affectedNurseryUuids.push(...nurseries.map(({ nurseryUuid }) => nurseryUuid).filter(isNotEmpty));
+      }
+    }
+  }
 
-    const polygons = mapJson(entry.value) as AffectedPolygon[][] | null;
-    if (polygons == null || polygons.length === 0) return uuids;
-
-    const newUuids = polygons.flatMap(group => group.map(p => p.polyUuid)).filter(isNotNull);
-    return [...uuids, ...newUuids];
-  }, [] as string[]);
-
-  return { disturbanceData, affectedPolygonUuids };
+  return { disturbanceData, affectedPolygonUuids, affectedSiteUuids, affectedNurseryUuids };
 };
 
 export const DisturbanceReportEntryApprovalProcessor: EntityApprovalProcessor = {

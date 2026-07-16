@@ -143,7 +143,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   associatedValueColumn("treePlantedAmount"),
   associatedValueColumn("treePlantedNameAndAmount"),
   associatedValueColumn("nonTreeAmount"),
-  associatedValueColumn("nonTreeNameAndAmount")
+  associatedValueColumn("nonTreeNameAndAmount"),
+  "projectSummary",
+  "incomeGeneratingActivities"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

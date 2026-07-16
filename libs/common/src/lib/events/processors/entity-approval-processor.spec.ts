@@ -20,7 +20,8 @@ import {
   SiteFactory,
   SitePolygonFactory,
   StratasFactory,
-  TreeSpeciesFactory
+  TreeSpeciesFactory,
+  NurseryFactory
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "../../media/media.service";
@@ -258,6 +259,16 @@ describe("EntityApprovalProcessor", () => {
       await DisturbanceReportEntryFactory.report(report).create({
         name: "polygon-affected",
         value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+      const site = await SiteFactory.create();
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "site-affected",
+        value: `[{"siteUuid":"${site.uuid}"}]`
+      });
+      const nursery = await NurseryFactory.create();
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "nursery-affected",
+        value: `[{"nurseryUuid":"${nursery.uuid}"}]`
       });
 
       await process(report);

@@ -440,6 +440,11 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       property: "bioeconomyProductDescription",
       label: "Bioeconomy product description",
       inputType: "long-text"
+    },
+    "pro-rep-women-governance": {
+      property: "womenGovernance",
+      label: "Women in Governance or Leadership",
+      inputType: "text"
     }
   },
   fileCollections: {

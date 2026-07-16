@@ -56,7 +56,7 @@ export class UpdateRequestsController {
           model,
           form,
           updateRequest.content ?? {},
-          {},
+          await this.formDataService.buildFormModels(entity, model),
           {
             preserveReportStatus: true
           }
@@ -99,7 +99,10 @@ export class UpdateRequestsController {
       populateDto<UpdateRequestDto>(new UpdateRequestDto(), {
         formUuid: form.uuid,
         status: updateRequest.status,
-        entityAnswers: await this.formDataService.getAnswers(form, { [entity]: model }),
+        entityAnswers: await this.formDataService.getAnswers(
+          form,
+          await this.formDataService.buildFormModels(entity, model)
+        ),
         updateRequestAnswers: updateRequest.content ?? {}
       })
     );

@@ -299,7 +299,47 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       label: "Non Youth Trained",
       inputType: "number"
     },
-    "pro-rep-elp-description": { property: "elpDescription", label: "ELP description", inputType: "long-text" }
+    "pro-rep-elp-description": { property: "elpDescription", label: "ELP description", inputType: "long-text" },
+    "pro-rep-bioeconomy-product-list": {
+      property: "bioeconomyProductList",
+      label: "Bioeconomy product list (Project Report)",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "pro-rep-bioeconomy-product-benefit": {
+      property: "bioeconomyProductBenefit",
+      label: "Bioeconomy product benefit (Project Report)",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "pro-rep-bioeconomy-product-sold": {
+      property: "bioeconomyProductSold",
+      label: "Bioeconomy product sold (Project Report)",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "bioeconomy-product-list"
+    },
+    "pro-rep-bioeconomy-quality-certifications": {
+      property: "bioeconomyQualityCertifications",
+      label: "Bioeconomy quality certifications (Project Report)",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "bioeconomy-quality-certifications"
+    },
+    "pro-rep-bioeconomy-other-certifications": {
+      property: "bioeconomyOtherCertifications",
+      label: "Bioeconomy other certifications (Project Report)",
+      inputType: "text"
+    },
+    "pro-rep-bioeconomy-buyers": {
+      property: "bioeconomyBuyers",
+      label: "Bioeconomy buyers (Project Report)",
+      inputType: "select",
+      multiChoice: false,
+      optionListKey: "bioeconomy-buyers"
+    }
   },
   fileCollections: {
     "pro-rep-col-media": { collection: "media", label: "Media", inputType: "file", multiChoice: true },

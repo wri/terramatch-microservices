@@ -519,6 +519,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column(TEXT)
   declare bioeconomyProductDescription: string | null;
 
+  @AllowNull
+  @Column(TEXT)
+  declare womenGovernance: string | null;
+
   @Column({ type: STRING(64), allowNull: false, defaultValue: POLYGON_DATA_SUBMISSION_DEFAULT })
   declare polygonDataSubmission: CreationOptional<string>;
 

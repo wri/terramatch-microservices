@@ -8,6 +8,7 @@ import {
   FundingProgramme,
   I18nTranslation,
   Media,
+  ProjectReport,
   Stage,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -16,6 +17,7 @@ import {
   EntityModel,
   EntityType,
   FormModel,
+  FormModelType,
   formModelType,
   getOrganisationId,
   getProjectId,
@@ -66,7 +68,9 @@ export class FormDataService {
       model.updateRequestStatus = newUpdateRequest.status;
       await model.save();
     } else {
-      await this.updateModelFromForm(model, form, answers);
+      const entityType = formModelType(model as FormModel);
+      const associatedModels = entityType == null ? {} : await this.buildFormModels(entityType, model);
+      await this.updateModelFromForm(model, form, answers, associatedModels);
     }
   }
 
@@ -96,7 +100,8 @@ export class FormDataService {
       .findOne({ attributes: ["uuid", "content", "feedback", "feedbackFields"] });
     const hasURFeedback = currentUpdateRequest?.feedback != null || currentUpdateRequest?.feedbackFields != null;
     const { feedback, feedbackFields } = hasURFeedback ? currentUpdateRequest : entity;
-    const answers = currentUpdateRequest?.content ?? (await this.getAnswers(form, { [entityType]: entity }));
+    const answers =
+      currentUpdateRequest?.content ?? (await this.getAnswers(form, await this.buildFormModels(entityType, entity)));
     return populateDto(new FormDataDto(), {
       entityType,
       entityUuid: entity.uuid,
@@ -242,6 +247,20 @@ export class FormDataService {
     }
 
     return document;
+  }
+
+  async buildFormModels(modelType: FormModelType, entity: EntityModel): Promise<FormModels> {
+    const models: FormModels = { [modelType]: entity };
+
+    if (modelType === "projectReports") {
+      const report = entity as ProjectReport;
+      report.project ??= (await report.$get("project")) ?? null;
+      if (report.project != null) {
+        models.projects = report.project;
+      }
+    }
+
+    return models;
   }
 
   async getAnswers(form: Form, models: FormModels, answersModel?: { answers: Dictionary<unknown> | null }) {

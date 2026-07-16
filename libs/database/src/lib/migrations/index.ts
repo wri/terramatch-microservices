@@ -10,6 +10,7 @@ import { dropUnusedTables } from "./202605130922-drop-unused-tables";
 import { convertProjectCohortToSingleSelect } from "./202605291200-convert-project-cohort-to-single-select";
 import { addAuditStatusReadColumn } from "./202606071200-add-audit-status-read-column";
 import { addProjectSummaryColumn } from "./202606161200-add-project-summary-column";
+import { addSitePolygonStatusValidationIndex } from "./202607161200-add-site-polygon-status-validation-index";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -21,5 +22,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   dropUnusedTables,
   convertProjectCohortToSingleSelect,
   addAuditStatusReadColumn,
-  addProjectSummaryColumn
+  addProjectSummaryColumn,
+  addSitePolygonStatusValidationIndex
 ];

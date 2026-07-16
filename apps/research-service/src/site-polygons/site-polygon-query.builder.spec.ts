@@ -46,6 +46,66 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("excludeGeometry", () => {
+    it("should include the polygon_geometry join by default", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].polygon).not.toBeNull();
+    });
+
+    it("should drop the polygon_geometry join when called", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      builder.excludeGeometry();
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].polygon).toBeUndefined();
+    });
+  });
+
+  describe("excludeDisturbance", () => {
+    it("should include the disturbance join by default", async () => {
+      const findOptions = (builder as unknown as { findOptions: { include: { model?: { name: string } }[] } })
+        .findOptions;
+      expect(findOptions.include.some(({ model }) => model?.name === "Disturbance")).toBe(true);
+    });
+
+    it("should drop the disturbance join when called", async () => {
+      builder.excludeDisturbance();
+      const findOptions = (builder as unknown as { findOptions: { include: { model?: { name: string } }[] } })
+        .findOptions;
+      expect(findOptions.include.some(({ model }) => model?.name === "Disturbance")).toBe(false);
+    });
+  });
+
+  describe("minimizeSiteAttributes", () => {
+    it("should stop selecting site/project columns while still filtering by them", async () => {
+      const project = await ProjectFactory.create({ isTest: true });
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+      const otherProject = await ProjectFactory.create();
+      const otherSite = await SiteFactory.create({ projectId: otherProject.id });
+      await SitePolygonFactory.create({ siteUuid: otherSite.uuid });
+
+      builder.minimizeSiteAttributes();
+      await builder.excludeTestProjects();
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].siteUuid).toBe(otherSite.uuid);
+      expect(result[0].site?.name).toBeUndefined();
+      expect(result[0].site?.project?.name).toBeUndefined();
+    });
+  });
+
   describe("filterValidationStatus", () => {
     it("should return records with null when including not_checked and other statuses", async () => {
       const project = await ProjectFactory.create();

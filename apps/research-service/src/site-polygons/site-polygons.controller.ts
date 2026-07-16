@@ -25,7 +25,7 @@ import {
 import { ApiExtraModels, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
-import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { SitePolygonFullDto, SitePolygonLightDto, SitePolygonMapDto } from "./dto/site-polygon.dto";
 import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import {
   IndicatorFieldMonitoringDto,
@@ -242,7 +242,8 @@ export class SitePolygonsController {
   @ApiOperation({ operationId: "sitePolygonsIndex", summary: "Get all site polygons" })
   @JsonApiResponse([
     { data: SitePolygonFullDto, pagination: "cursor" },
-    { data: SitePolygonLightDto, pagination: "number" }
+    { data: SitePolygonLightDto, pagination: "number" },
+    { data: SitePolygonMapDto, pagination: "number" }
   ])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "One or more query param values is invalid." })
@@ -257,6 +258,7 @@ export class SitePolygonsController {
       missingIndicator,
       presentIndicator,
       lightResource,
+      mapResource,
       projectCohort,
       landscape,
       validationStatus,
@@ -279,8 +281,12 @@ export class SitePolygonsController {
     // these two can be used together, but not along with the other project / site filters.
     if (projectCohort != null || landscape != null) countSelectedParams++;
 
-    if (lightResource && !isNumberPage(query.page)) {
-      throw new BadRequestException("Light resources must use number pagination.");
+    if (lightResource === true && mapResource === true) {
+      throw new BadRequestException("Only one of lightResource or mapResource may be used in a single request.");
+    }
+
+    if ((lightResource === true || mapResource === true) && !isNumberPage(query.page)) {
+      throw new BadRequestException("Light and map resources must use number pagination.");
     }
 
     if (countSelectedParams > 1) {
@@ -304,7 +310,12 @@ export class SitePolygonsController {
       throw new BadRequestException("Page number is invalid");
     }
 
-    const queryBuilder = (await this.sitePolygonService.buildQuery(page))
+    const queryBuilder = (
+      await this.sitePolygonService.buildQuery(page, {
+        lightResource: lightResource ?? false,
+        mapResource: mapResource ?? false
+      })
+    )
       .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate);
 
@@ -373,15 +384,23 @@ export class SitePolygonsController {
       }
     }
 
-    const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
+    const dtoType =
+      mapResource === true ? SitePolygonMapDto : lightResource === true ? SitePolygonLightDto : SitePolygonFullDto;
 
     const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
     const sitePolygons = await queryBuilder.execute();
-    const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, lightResource ?? false);
+    // The map resource never displays indicators (or anything else loadAssociationDtos computes), so
+    // skip it entirely rather than paying for the up-to-6-extra-queries-per-page it costs to build.
+    const associations =
+      mapResource === true
+        ? {}
+        : await this.sitePolygonService.loadAssociationDtos(sitePolygons, lightResource ?? false);
     let cursor: string | undefined = undefined;
     for (const sitePolygon of sitePolygons) {
       if (cursor == null) cursor = sitePolygon.uuid;
-      if (lightResource) {
+      if (mapResource === true) {
+        document.addData(sitePolygon.uuid, await this.sitePolygonService.buildMapDto(sitePolygon));
+      } else if (lightResource === true) {
         document.addData(
           sitePolygon.uuid,
           await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
@@ -395,9 +414,15 @@ export class SitePolygonsController {
     }
 
     const indexData: Partial<IndexData> & { requestPath: string } = {
-      requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
-      total: await queryBuilder.paginationTotal()
+      requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`
     };
+    // The pagination total requires a COUNT query with the same joins/filters as the main query, which
+    // is expensive to repeat on every page. Callers that already know the total (e.g. from page 1 of a
+    // multi-page load) can set skipTotal=true on subsequent pages to skip it; existing callers that don't
+    // send this param keep getting `total` on every response, unchanged.
+    if (query.skipTotal !== true) {
+      indexData.total = await queryBuilder.paginationTotal();
+    }
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
     else indexData.cursor = cursor;
     return document.addIndex(indexData);

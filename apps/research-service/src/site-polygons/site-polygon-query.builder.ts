@@ -53,23 +53,67 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     required: true
   };
 
+  private polygonGeometryJoin: IncludeOptions = {
+    model: PolygonGeometry,
+    attributes: ["polygon"]
+  };
+
+  private disturbanceJoin: IncludeOptions = {
+    model: Disturbance,
+    attributes: ["disturbanceableId"],
+    required: false
+  };
+
   constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
 
-    this.findOptions.include = [
-      {
-        model: PolygonGeometry,
-        attributes: ["polygon"]
-      },
-      {
-        model: Disturbance,
-        attributes: ["disturbanceableId"],
-        required: false
-      },
-      this.siteJoin
-    ];
+    this.findOptions.include = [this.polygonGeometryJoin, this.disturbanceJoin, this.siteJoin];
 
     this.where({ isActive: true });
+  }
+
+  /**
+   * Drops the join to `polygon_geometry` (and the `geom` blob it selects). Callers that never read
+   * `sitePolygon.polygon` (e.g. the light resource, which uses `site_polygon.lat`/`long` instead) can
+   * use this to avoid the cost of joining and transferring/deserializing geometry data that's discarded.
+   */
+  excludeGeometry(): this {
+    const include = this.findOptions.include;
+    if (Array.isArray(include)) {
+      this.findOptions.include = include.filter(association => association !== this.polygonGeometryJoin);
+    }
+    return this;
+  }
+
+  /**
+   * Drops the join to `disturbance`. Callers that never read `sitePolygon.disturbance` (e.g. the map
+   * resource, which only needs uuid/lat/long/status) can use this to avoid the extra join.
+   */
+  excludeDisturbance(): this {
+    const include = this.findOptions.include;
+    if (Array.isArray(include)) {
+      this.findOptions.include = include.filter(association => association !== this.disturbanceJoin);
+    }
+    return this;
+  }
+
+  /**
+   * The join to `site` (and, through it, `project`) is required structurally by several of the filters
+   * below (e.g. excludeTestProjects, filterProjectAttributes, addSearch's siteName search), so it can't
+   * be dropped outright. But callers that don't display any site/project fields (e.g. the map resource)
+   * can use this to stop selecting those columns, which are otherwise fetched and deserialized for every
+   * row despite going unused.
+   */
+  minimizeSiteAttributes(): this {
+    this.siteJoin.attributes = [];
+    if (Array.isArray(this.siteJoin.include)) {
+      for (const association of this.siteJoin.include) {
+        if (typeof association === "object" && "attributes" in association) {
+          association.attributes = [];
+        }
+      }
+    }
+    return this;
   }
 
   async excludeTestProjects() {

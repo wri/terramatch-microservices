@@ -269,6 +269,31 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @TransformBooleanString()
   lightResource?: boolean;
 
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description:
+      "Return only the minimal set of fields needed to plot a site polygon as a point on a map " +
+      "(uuid, polygonUuid, lat, long, status). Skips computing indicators and other display data that's " +
+      "expensive to build (indicators alone cost up to 6 extra DB queries per page) but unused by a map " +
+      "layer. Mutually exclusive with lightResource, and requires number pagination."
+  })
+  @TransformBooleanString()
+  mapResource?: boolean;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
+    description:
+      "Skip computing the pagination total (omits meta.total from the response). Intended for clients that " +
+      "page through an entire result set and already know the total from an earlier page, so they can avoid " +
+      "the cost of a redundant COUNT query (with the same joins/filters as the main query) on every page."
+  })
+  @TransformBooleanString()
+  skipTotal?: boolean;
+
   @ValidateNested()
   @IsOptional()
   sort?: QuerySort;

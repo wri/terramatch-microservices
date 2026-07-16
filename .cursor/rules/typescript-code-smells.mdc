@@ -1,0 +1,51 @@
+---
+description: Avoid redundant recompute and DTO-revalidation TypeScript smells
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript Code Smells (from PR review)
+
+## 1. Don't call a pure function twice for the same value
+
+If you need both the result and a derived check (empty, length), compute once into a local.
+
+```typescript
+// ❌ BAD — .trim() runs twice
+if (value == null || value.trim().length === 0) return null;
+return value.trim();
+
+// ✅ GOOD
+const result = (value ?? "").trim();
+return result.length === 0 ? null : result;
+```
+
+Same idea for `.toLowerCase()`, `.map()`, expensive lookups, etc.
+
+## 2. Trust validated DTO types — don't re-check `typeof`
+
+When a value comes from a class-validator / Nest DTO that already constrains the type (e.g. `@IsString()`), type the helper as that DTO type instead of `unknown` + runtime `typeof` throws.
+
+```typescript
+// ❌ BAD — DTO already guarantees string; redundant runtime check
+const validateFoo = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    throw new BadRequestException("foo must be a string");
+  }
+  // ...
+};
+
+// ✅ GOOD — trust the validated pipe; keep domain checks (enum, empty → null)
+const validateFoo = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  // domain validation only...
+};
+```
+
+**When `unknown` / `typeof` is still OK:** untrusted inputs (GeoJSON properties, raw query params without a DTO, JSON columns, external APIs).
+
+## Checklist before PR
+
+- [ ] No repeated `.trim()` / map / lookup for the same expression
+- [ ] Helpers accepting DTO fields use DTO types, not defensive `typeof` that duplicates pipes

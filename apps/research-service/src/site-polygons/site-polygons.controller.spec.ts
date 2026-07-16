@@ -14,7 +14,7 @@ import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
 import type { SitePolygonBulkDeleteBodyDto } from "./dto/site-polygon-bulk-delete.dto";
 import { CreateSitePolygonJsonApiRequestDto } from "./dto/create-site-polygon-request.dto";
 import { Sequelize, Transaction } from "sequelize";
-import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { SitePolygonFullDto, SitePolygonLightDto, SitePolygonMapDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
@@ -181,6 +181,10 @@ describe("SitePolygonsController", () => {
 
     sitePolygonService.buildFullDto.mockImplementation(sitePolygon => {
       return Promise.resolve(new SitePolygonFullDto(sitePolygon, [], [], []));
+    });
+
+    sitePolygonService.buildMapDto.mockImplementation(sitePolygon => {
+      return Promise.resolve(new SitePolygonMapDto(sitePolygon));
     });
 
     sitePolygonCreationService.createSitePolygons.mockImplementation(async () => ({
@@ -350,6 +354,81 @@ describe("SitePolygonsController", () => {
       );
       expect(result.data).toHaveLength(2);
     });
+    it("should pass lightResource through to buildQuery so the geometry join can be skipped", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 5, number: 1 } });
+      expect(sitePolygonService.buildQuery).toHaveBeenCalledWith(
+        { size: 5, number: 1 },
+        { lightResource: false, mapResource: false }
+      );
+
+      await controller.findMany({ lightResource: true, page: { size: 5, number: 1 } });
+      expect(sitePolygonService.buildQuery).toHaveBeenCalledWith(
+        { size: 5, number: 1 },
+        { lightResource: true, mapResource: false }
+      );
+    });
+
+    it("should compute the pagination total by default", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder([], 42);
+
+      const result = serialize(await controller.findMany({ page: { size: 5, number: 1 } }));
+
+      expect(builder.paginationTotal).toHaveBeenCalled();
+      expect(result.meta?.indices?.[0].total).toBe(42);
+    });
+
+    it("should skip the pagination total when skipTotal is true", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder([], 42);
+
+      const result = serialize(await controller.findMany({ skipTotal: true, page: { size: 5, number: 2 } }));
+
+      expect(builder.paginationTotal).not.toHaveBeenCalled();
+      expect(result.meta?.indices?.[0].total).toBeUndefined();
+      expect(result.meta?.indices?.[0].pageNumber).toBe(2);
+    });
+
+    it("should pass mapResource through to buildQuery and build map DTOs without loading associations", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygon = await SitePolygonFactory.build();
+      mockQueryBuilder([sitePolygon], 1);
+
+      const result = serialize(await controller.findMany({ mapResource: true, page: { size: 5, number: 1 } }));
+
+      expect(sitePolygonService.buildQuery).toHaveBeenCalledWith(
+        { size: 5, number: 1 },
+        { lightResource: false, mapResource: true }
+      );
+      expect(sitePolygonService.loadAssociationDtos).not.toHaveBeenCalled();
+      expect(sitePolygonService.buildMapDto).toHaveBeenCalledWith(sitePolygon);
+      expect(sitePolygonService.buildLightDto).not.toHaveBeenCalled();
+      expect(sitePolygonService.buildFullDto).not.toHaveBeenCalled();
+
+      const resources = result.data as Resource[];
+      expect(resources).toHaveLength(1);
+      expect(resources[0].id).toBe(sitePolygon.uuid);
+    });
+
+    it("should throw BadRequestException when both lightResource and mapResource are true", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      await expect(
+        controller.findMany({ lightResource: true, mapResource: true, page: { size: 5, number: 1 } })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when mapResource is true and pagination is not number-based", async () => {
+      const query = {
+        mapResource: true,
+        page: { after: "cursor" }
+      };
+
+      await expect(controller.findMany(query)).rejects.toThrow(BadRequestException);
+    });
+
     it("should throw BadRequestException when lightResource is true and pagination is not number-based", async () => {
       const query = {
         lightResource: true,

@@ -88,6 +88,38 @@ describe("SitePolygonsService", () => {
     expect((result as unknown as { findOptions: { offset: number } }).findOptions.offset).toBe(12);
   });
 
+  it("should include the polygon_geometry join by default", async () => {
+    const result = await service.buildQuery({ size: 3, number: 1 });
+    const { include } = (result as unknown as { findOptions: { include: { model?: { name: string } }[] } }).findOptions;
+    expect(include.some(({ model }) => model?.name === "PolygonGeometry")).toBe(true);
+  });
+
+  it("should drop the polygon_geometry join for the light resource", async () => {
+    const result = await service.buildQuery({ size: 3, number: 1 }, { lightResource: true });
+    const { include } = (result as unknown as { findOptions: { include: { model?: { name: string } }[] } }).findOptions;
+    expect(include.some(({ model }) => model?.name === "PolygonGeometry")).toBe(false);
+  });
+
+  it("should drop the polygon_geometry and disturbance joins for the map resource", async () => {
+    const result = await service.buildQuery({ size: 3, number: 1 }, { mapResource: true });
+    const { include } = (result as unknown as { findOptions: { include: { model?: { name: string } }[] } }).findOptions;
+    expect(include.some(({ model }) => model?.name === "PolygonGeometry")).toBe(false);
+    expect(include.some(({ model }) => model?.name === "Disturbance")).toBe(false);
+  });
+
+  it("should build a minimal SitePolygonMapDto with only map-relevant fields", async () => {
+    const sitePolygon = await SitePolygonFactory.create({ lat: 12.3, long: 45.6, status: "approved" });
+    const dto = await service.buildMapDto(sitePolygon);
+    expect(dto).toMatchObject({
+      uuid: sitePolygon.uuid,
+      polygonUuid: sitePolygon.polygonUuid,
+      lat: 12.3,
+      long: 45.6,
+      status: "approved"
+    });
+    expect((dto as unknown as { indicators?: unknown }).indicators).toBeUndefined();
+  });
+
   it("should succeed when there are 0 polygons in the filtered request", async () => {
     const associations = await service.loadAssociationDtos([], false);
     expect(associations).toEqual({});

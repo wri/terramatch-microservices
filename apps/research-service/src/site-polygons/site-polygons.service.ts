@@ -25,6 +25,7 @@ import {
   ReportingPeriodDto,
   SitePolygonFullDto,
   SitePolygonLightDto,
+  SitePolygonMapDto,
   TreeSpeciesDto
 } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
@@ -59,8 +60,19 @@ export class SitePolygonsService {
     @InjectQueue("validation") private readonly validationQueue: Queue
   ) {}
 
-  async buildQuery(page: CursorPage | NumberPage) {
+  /**
+   * @param options.lightResource When true, skips the join to `polygon_geometry` since
+   *   `SitePolygonLightDto` never reads it (it relies on `site_polygon.lat`/`long` instead of the
+   *   polygon boundary).
+   * @param options.mapResource When true, builds the query for the minimal `SitePolygonMapDto` shape:
+   *   skips `polygon_geometry` and `disturbance` entirely, and stops selecting site/project columns
+   *   (the site join itself is kept since some filters require it, but its columns aren't needed).
+   */
+  async buildQuery(page: CursorPage | NumberPage, options: { lightResource?: boolean; mapResource?: boolean } = {}) {
+    const { lightResource = false, mapResource = false } = options;
     const builder = new SitePolygonQueryBuilder(page.size);
+    if (lightResource || mapResource) builder.excludeGeometry();
+    if (mapResource) builder.excludeDisturbance().minimizeSiteAttributes();
     if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
       throw new BadRequestException("page[after] or page[number] may be provided, but not both.");
     }
@@ -388,6 +400,10 @@ export class SitePolygonsService {
 
   async buildLightDto(sitePolygon: SitePolygon, { indicators }: AssociationDtos): Promise<SitePolygonLightDto> {
     return new SitePolygonLightDto(sitePolygon, indicators);
+  }
+
+  async buildMapDto(sitePolygon: SitePolygon): Promise<SitePolygonMapDto> {
+    return new SitePolygonMapDto(sitePolygon);
   }
 
   async buildFullDto(

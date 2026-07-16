@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# tm-v3-cli spawns `nx` directly; ensure the local binary is on PATH when this script is run
+# without an activated npm/npx shell (otherwise: spawn nx ENOENT).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="${SCRIPT_DIR}/../node_modules/.bin:${PATH}"
+
 ENVS=("local" "dev" "test" "staging" "prod")
 COMMANDS=("up" "down" "pending")
 

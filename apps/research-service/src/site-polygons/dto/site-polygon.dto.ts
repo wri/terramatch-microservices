@@ -45,6 +45,54 @@ export class ReportingPeriodDto {
   treeSpecies: TreeSpeciesDto[];
 }
 
+/**
+ * The minimum set of fields needed to render a site polygon as a point/marker on a map (e.g. the
+ * polygon-explorer). Deliberately excludes everything else on SitePolygonLightDto (indicators,
+ * project/site names, dates, etc) since computing those (in particular `indicators`, which costs up
+ * to 6 extra DB round trips per page) is wasted work when the caller only draws points on a map.
+ * Consumers that need the rest of the display data for a single polygon (e.g. a map popup) should
+ * fetch it on demand via `SitePolygonLightDto` once, rather than paying that cost for every polygon
+ * up front.
+ */
+@JsonApiDto({ type: "sitePolygons" })
+export class SitePolygonMapDto {
+  constructor(sitePolygon?: SitePolygon) {
+    if (sitePolygon != null) {
+      populateDto<SitePolygonMapDto, SitePolygon>(this, sitePolygon, {});
+    }
+  }
+
+  @ApiProperty({
+    type: String,
+    description: "UUID of the site polygon"
+  })
+  uuid: string;
+
+  @ApiProperty({
+    description: "UUID of the associated polygon geometry",
+    nullable: true,
+    type: String
+  })
+  polygonUuid: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Latitude of the site polygon"
+  })
+  lat: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "Longitude of the site polygon"
+  })
+  long: number | null;
+
+  @ApiProperty({ enum: POLYGON_STATUSES })
+  status: PolygonStatus;
+}
+
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonLightDto extends HybridSupportDto {
   constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {

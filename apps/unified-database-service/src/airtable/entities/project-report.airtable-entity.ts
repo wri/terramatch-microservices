@@ -76,12 +76,6 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
     valueMap: async ({ workdaysVolunteer }) => workdaysVolunteer
   },
   "elpDescription",
-  "bioeconomyProductList",
-  "bioeconomyProductBenefit",
-  "bioeconomyProductSold",
-  "bioeconomyQualityCertifications",
-  "bioeconomyOtherCertifications",
-  "bioeconomyBuyers",
   associatedValueColumn("nurserySeedlingAmount"),
   associatedValueColumn("nurserySeedlingNameAndAmount")
 ];

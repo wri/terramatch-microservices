@@ -133,7 +133,6 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "landownerAgreement",
   "bioeconomyProductList",
   "bioeconomyProductDescription",
-  "womenGovernance",
   "polygonDataSubmission",
   "readyForBaseline",
   "projectQaStatus1",

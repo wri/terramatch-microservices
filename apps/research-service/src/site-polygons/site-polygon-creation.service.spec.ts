@@ -959,7 +959,8 @@ describe("SitePolygonCreationService", () => {
         userId,
         userFullName,
         source,
-        mockTransaction
+        mockTransaction,
+        false
       );
     });
 
@@ -1011,7 +1012,8 @@ describe("SitePolygonCreationService", () => {
         userId,
         userFullName,
         source,
-        mockTransaction
+        mockTransaction,
+        false
       );
     });
 
@@ -1210,6 +1212,38 @@ describe("SitePolygonCreationService", () => {
         where: { polygonId: basePolygon.polygonUuid },
         transaction
       });
+    });
+
+    it("should pass source and admin session context to versioning for GA4 analytics", async () => {
+      const newVersion = { uuid: "new-version-uuid", polyName: "Renamed" } as SitePolygon;
+      const attributeChanges: AttributeChangesDto = {
+        polyName: "Renamed"
+      };
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      await service.createSitePolygonVersion(
+        basePolygon.uuid,
+        undefined,
+        attributeChanges,
+        "Updated polygon attributes from admin panel",
+        userId,
+        userFullName,
+        source,
+        transaction,
+        true
+      );
+
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            source: "terramatch",
+            isAdminSession: true
+          })
+        ],
+        transaction
+      );
     });
 
     it("should create a version with a replacement geometry", async () => {

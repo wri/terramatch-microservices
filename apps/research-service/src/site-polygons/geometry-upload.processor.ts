@@ -27,6 +27,7 @@ export interface GeometryUploadJobData {
   userId: number;
   source: string;
   userFullName: string | null;
+  isAdminSession?: boolean;
 }
 
 @Processor("geometry-upload")
@@ -41,10 +42,10 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
   }
 
   async processDelayedJob(job: Job<GeometryUploadJobData>): Promise<DelayedJobResult> {
-    const { geojson, siteId, userId, source, userFullName } = job.data;
+    const { geojson, siteId, userId, source, userFullName, isAdminSession = false } = job.data;
 
     if (job.name === "geometryUploadWithVersions") {
-      return await this.processWithVersioning(job, geojson, siteId, userId, source, userFullName);
+      return await this.processWithVersioning(job, geojson, siteId, userId, source, userFullName, isAdminSession);
     }
 
     return await this.processWithoutVersioning(job, geojson, siteId, userId, source, userFullName);
@@ -115,7 +116,8 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
     siteId: string,
     userId: number,
     source: string,
-    userFullName: string | null
+    userFullName: string | null,
+    isAdminSession: boolean
   ): Promise<DelayedJobResult> {
     const totalFeatures = geojson.features.length;
 
@@ -282,7 +284,8 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             userId,
             userFullName,
             source,
-            transaction
+            transaction,
+            isAdminSession
           );
 
           createdVersions.push(newVersion);

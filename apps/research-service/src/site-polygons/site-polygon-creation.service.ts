@@ -769,7 +769,8 @@ export class SitePolygonCreationService {
     userId: number,
     userFullName: string | null,
     source: string,
-    transaction: Transaction
+    transaction: Transaction,
+    isAdminSession = false
   ): Promise<SitePolygon[]> {
     const activeByRequestUuid = await this.versioningService.validateBulkVersioningEligibility(
       sitePolygonUuids,
@@ -807,7 +808,9 @@ export class SitePolygonCreationService {
         newPolygonGeometryUuid: null,
         userId,
         changeReason: `${BULK_ATTRIBUTE_UPDATE_CHANGE_REASON} - ${changeDescription}`,
-        userFullName
+        userFullName,
+        source,
+        isAdminSession
       };
     });
 
@@ -822,7 +825,8 @@ export class SitePolygonCreationService {
     userId: number,
     userFullName: string | null,
     source: string,
-    transaction: Transaction
+    transaction: Transaction,
+    isAdminSession = false
   ): Promise<SitePolygon> {
     const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid, transaction);
 
@@ -879,7 +883,9 @@ export class SitePolygonCreationService {
           newPolygonGeometryUuid,
           userId,
           changeReason: `${changeReason} - ${changeDescription}`,
-          userFullName
+          userFullName,
+          source,
+          isAdminSession
         }
       ],
       transaction
@@ -987,7 +993,8 @@ export class SitePolygonCreationService {
     siteId: string,
     userId: number,
     userFullName: string | null,
-    source: string
+    source: string,
+    isAdminSession = false
   ): Promise<SitePolygon> {
     const site = await Site.findOne({
       where: { uuid: siteId },
@@ -1067,7 +1074,8 @@ export class SitePolygonCreationService {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       );
     });
 

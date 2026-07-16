@@ -807,7 +807,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -865,7 +866,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -946,7 +948,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        expect.anything()
+        expect.anything(),
+        false
       );
     });
 
@@ -1280,7 +1283,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
@@ -1346,7 +1350,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: null
+        userFullName: null,
+        isAdminSession: false
       });
     });
   });
@@ -1534,7 +1539,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
@@ -1591,7 +1597,8 @@ describe("SitePolygonsController", () => {
         "site-uuid",
         1,
         user.fullName,
-        "terramatch"
+        "terramatch",
+        false
       );
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);

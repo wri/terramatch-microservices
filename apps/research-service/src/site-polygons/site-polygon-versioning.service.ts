@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from "@nes
 import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
+import { EventService } from "@terramatch-microservices/common/events/event.service";
+import { buildPolygonVersionChangedParams } from "@terramatch-microservices/common/analytics/polygon-version-changed";
 
 export interface VersionCreateEntry {
   basePolygon: SitePolygon;
@@ -10,11 +12,15 @@ export interface VersionCreateEntry {
   userId: number;
   changeReason: string;
   userFullName: string | null;
+  source?: string;
+  isAdminSession?: boolean;
 }
 
 @Injectable()
 export class SitePolygonVersioningService {
   private readonly logger = new Logger(SitePolygonVersioningService.name);
+
+  constructor(private readonly eventService: EventService) {}
 
   buildVersionData(
     basePolygon: SitePolygon,
@@ -118,7 +124,36 @@ export class SitePolygonVersioningService {
       this.logger.log(`Created ${newVersions.length} new site polygon version(s)`);
     }
 
+    this.queuePolygonVersionChangedAnalytics(entries, newVersions, transaction);
+
     return newVersions;
+  }
+
+  private queuePolygonVersionChangedAnalytics(
+    entries: VersionCreateEntry[],
+    newVersions: SitePolygon[],
+    transaction: Transaction
+  ): void {
+    const analyticsParams = entries
+      .map((entry, index) =>
+        buildPolygonVersionChangedParams(entry.basePolygon, newVersions[index], {
+          changeReason: entry.changeReason,
+          newPolygonGeometryUuid: entry.newPolygonGeometryUuid,
+          source: entry.source,
+          isAdminSession: entry.isAdminSession
+        })
+      )
+      .filter((params): params is NonNullable<typeof params> => params != null);
+
+    if (analyticsParams.length === 0) {
+      return;
+    }
+
+    transaction.afterCommit(() => {
+      void Promise.all(
+        analyticsParams.map(params => this.eventService.sendPolygonVersionChangedAnalytics(params.polygon_id, params))
+      );
+    });
   }
 
   async createVersion(

@@ -397,6 +397,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -744,6 +745,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -778,6 +780,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -808,6 +811,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,

@@ -6,6 +6,7 @@ import { Transaction } from "sequelize";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { Polygon, MultiPolygon } from "geojson";
 import { SitePolygonCreationService } from "../site-polygons/site-polygon-creation.service";
+import { ValidationService } from "../validations/validation.service";
 
 interface MockSequelize {
   query: jest.Mock;
@@ -45,6 +46,7 @@ describe("PolygonClippingService", () => {
   let service: PolygonClippingService;
   let mockTransaction: Transaction;
   let mockSequelize: MockSequelize;
+  let validationService: { validatePolygonsBatch: jest.Mock };
 
   const samplePolygon: Polygon = {
     type: "Polygon",
@@ -87,6 +89,10 @@ describe("PolygonClippingService", () => {
   };
 
   beforeEach(async () => {
+    validationService = {
+      validatePolygonsBatch: jest.fn().mockResolvedValue(undefined)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PolygonClippingService,
@@ -96,6 +102,10 @@ describe("PolygonClippingService", () => {
             createSitePolygons: jest.fn(),
             createSitePolygonVersion: jest.fn()
           }
+        },
+        {
+          provide: ValidationService,
+          useValue: validationService
         }
       ]
     }).compile();
@@ -1613,12 +1623,14 @@ describe("PolygonClippingService", () => {
 
       const newVersion1 = {
         uuid: "version-uuid-1",
+        polygonUuid: "new-poly-uuid-1",
         polyName: "Polygon 1",
         primaryUuid: "primary-uuid-1"
       } as SitePolygon;
 
       const newVersion2 = {
         uuid: "version-uuid-2",
+        polygonUuid: "new-poly-uuid-2",
         polyName: "Polygon 2",
         primaryUuid: "primary-uuid-2"
       } as SitePolygon;
@@ -1715,6 +1727,75 @@ describe("PolygonClippingService", () => {
       expect(result[0].newArea).toBeDefined();
       expect(result[0].areaRemoved).toBeDefined();
       expect(mockSitePolygonCreationService.createSitePolygonVersion).toHaveBeenCalled();
+      expect(validationService.validatePolygonsBatch).toHaveBeenCalled();
+    });
+
+    it("should revalidate clipped polygons and overlap partners in the same clipping flow", async () => {
+      const polygonUuid1 = "polygon-uuid-1";
+      const polygonUuid2 = "polygon-uuid-2";
+      const sitePolygonUuid1 = "site-polygon-uuid-1";
+
+      const baseSitePolygon1 = {
+        uuid: sitePolygonUuid1,
+        polygonUuid: polygonUuid1,
+        siteUuid: "site-uuid-1",
+        primaryUuid: "primary-uuid-1",
+        isActive: true
+      } as SitePolygon;
+
+      const newVersion1 = {
+        uuid: "version-uuid-1",
+        polygonUuid: "new-poly-uuid-1",
+        polyName: "Polygon 1",
+        primaryUuid: "primary-uuid-1"
+      } as SitePolygon;
+
+      jest.spyOn(CriteriaSite, "findAll").mockResolvedValue([
+        {
+          polygonId: polygonUuid1,
+          extraInfo: [
+            {
+              polyUuid: polygonUuid2,
+              percentage: 2.5,
+              intersectionArea: 0.05
+            }
+          ]
+        } as unknown as CriteriaSite
+      ]);
+
+      (mockSequelize.query as jest.Mock)
+        .mockResolvedValueOnce([
+          {
+            uuid: polygonUuid1,
+            name: "Polygon 1",
+            area: 0.001,
+            geojson: JSON.stringify(samplePolygon)
+          },
+          {
+            uuid: polygonUuid2,
+            name: "Polygon 2",
+            area: 0.0005,
+            geojson: JSON.stringify(samplePolygon2)
+          }
+        ])
+        .mockResolvedValueOnce([{ clipped_geojson: JSON.stringify(sampleMultiPolygon) }]);
+
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([baseSitePolygon1]);
+
+      const mockSitePolygonCreationService = service[
+        "sitePolygonCreationService"
+      ] as jest.Mocked<SitePolygonCreationService>;
+      mockSitePolygonCreationService.createSitePolygonVersion = jest.fn().mockResolvedValueOnce(newVersion1);
+
+      jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      await service.clipAndCreateVersions([polygonUuid1, polygonUuid2], userId, userFullName, source);
+
+      expect(validationService.validatePolygonsBatch).toHaveBeenCalledWith(
+        expect.arrayContaining(["new-poly-uuid-1", polygonUuid2]),
+        expect.any(Array)
+      );
     });
 
     it("should handle case where base site polygon is not found", async () => {

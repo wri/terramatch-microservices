@@ -304,28 +304,28 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "bioeconomyProductList",
       label: "Bioeconomy product list (Project Report)",
       inputType: "select",
-      multiChoice: false,
+      multiChoice: true,
       optionListKey: "bioeconomy-product-list"
     },
     "pro-rep-bioeconomy-product-benefit": {
       property: "bioeconomyProductBenefit",
       label: "Bioeconomy product benefit (Project Report)",
       inputType: "select",
-      multiChoice: false,
+      multiChoice: true,
       optionListKey: "bioeconomy-product-list"
     },
     "pro-rep-bioeconomy-product-sold": {
       property: "bioeconomyProductSold",
       label: "Bioeconomy product sold (Project Report)",
       inputType: "select",
-      multiChoice: false,
+      multiChoice: true,
       optionListKey: "bioeconomy-product-list"
     },
     "pro-rep-bioeconomy-quality-certifications": {
       property: "bioeconomyQualityCertifications",
       label: "Bioeconomy quality certifications (Project Report)",
       inputType: "select",
-      multiChoice: false,
+      multiChoice: true,
       optionListKey: "bioeconomy-quality-certifications"
     },
     "pro-rep-bioeconomy-other-certifications": {
@@ -337,7 +337,7 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "bioeconomyBuyers",
       label: "Bioeconomy buyers (Project Report)",
       inputType: "select",
-      multiChoice: false,
+      multiChoice: true,
       optionListKey: "bioeconomy-buyers"
     },
     "pro-rep-women-governance": {

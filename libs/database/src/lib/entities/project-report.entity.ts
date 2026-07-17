@@ -775,28 +775,28 @@ export class ProjectReport extends Model<ProjectReport> {
   declare elpDescription: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  declare bioeconomyProductList: string | null;
+  @JsonColumn()
+  declare bioeconomyProductList: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  declare bioeconomyProductBenefit: string | null;
+  @JsonColumn()
+  declare bioeconomyProductBenefit: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  declare bioeconomyProductSold: string | null;
+  @JsonColumn()
+  declare bioeconomyProductSold: string[] | null;
 
   @AllowNull
-  @Column(TEXT)
-  declare bioeconomyQualityCertifications: string | null;
+  @JsonColumn()
+  declare bioeconomyQualityCertifications: string[] | null;
 
   @AllowNull
   @Column(TEXT)
   declare bioeconomyOtherCertifications: string | null;
 
   @AllowNull
-  @Column(TEXT)
-  declare bioeconomyBuyers: string | null;
+  @JsonColumn()
+  declare bioeconomyBuyers: string[] | null;
 
   @AllowNull
   @Column(TEXT)

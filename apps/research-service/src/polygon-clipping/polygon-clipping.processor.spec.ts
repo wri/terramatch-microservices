@@ -71,8 +71,7 @@ describe("ClippingProcessor", () => {
         1,
         "Test User",
         "terramatch",
-        false,
-        expect.any(Function)
+        false
       );
     });
 
@@ -90,7 +89,6 @@ describe("ClippingProcessor", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
-          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -98,7 +96,6 @@ describe("ClippingProcessor", () => {
         },
         {
           uuid: "version-uuid-2",
-          polygonUuid: "poly-uuid-2",
           polyName: "Test Polygon 2",
           originalArea: 5.2,
           newArea: 5.0,
@@ -115,11 +112,10 @@ describe("ClippingProcessor", () => {
         1,
         "Test User",
         "terramatch",
-        false,
-        expect.any(Function)
+        false
       );
       expect(result.processedContent).toBe(2);
-      expect(result.progressMessage).toBe("Completed clipping and validation of 2 polygons");
+      expect(result.progressMessage).toBe("Completed clipping of 2 polygons");
       expect(result.payload).toBeDefined();
       expect(mockEmailQueue.add).toHaveBeenCalledWith(
         "polygonClippingComplete",
@@ -145,7 +141,6 @@ describe("ClippingProcessor", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
-          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon",
           originalArea: 10.5,
           newArea: 10.2,
@@ -162,8 +157,7 @@ describe("ClippingProcessor", () => {
         1,
         null,
         "terramatch",
-        false,
-        expect.any(Function)
+        false
       );
       expect(result.processedContent).toBe(1);
     });
@@ -182,7 +176,6 @@ describe("ClippingProcessor", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
-          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon",
           originalArea: 10.5,
           newArea: 10.2,
@@ -195,7 +188,7 @@ describe("ClippingProcessor", () => {
       const result = await processor.processDelayedJob(job);
 
       expect(result.processedContent).toBe(1);
-      expect(result.progressMessage).toBe("Completed clipping and validation of 1 polygons");
+      expect(result.progressMessage).toBe("Completed clipping of 1 polygons");
     });
 
     it("should queue email with siteUuid when provided", async () => {
@@ -213,7 +206,6 @@ describe("ClippingProcessor", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
-          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon",
           originalArea: 10.5,
           newArea: 10.2,
@@ -250,7 +242,6 @@ describe("ClippingProcessor", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
-          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon",
           originalArea: 10.5,
           newArea: 10.2,
@@ -264,7 +255,7 @@ describe("ClippingProcessor", () => {
       const result = await processor.processDelayedJob(job);
 
       expect(result.processedContent).toBe(1);
-      expect(result.progressMessage).toBe("Completed clipping and validation of 1 polygons");
+      expect(result.progressMessage).toBe("Completed clipping of 1 polygons");
     });
   });
 });

@@ -1,15 +1,13 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
 import { PolygonGeometry, SitePolygon, CriteriaSite, Site, Project } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
-import { VALIDATION_CRITERIA_IDS, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import { simplify } from "@turf/simplify";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon } from "@turf/helpers";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { uniq } from "lodash";
 import { SitePolygonCreationService } from "../site-polygons/site-polygon-creation.service";
 import { CreateSitePolygonRequestDto } from "../site-polygons/dto/create-site-polygon-request.dto";
-import { ValidationService } from "../validations/validation.service";
 
 interface OverlapInfo {
   polyUuid: string;
@@ -29,7 +27,6 @@ interface ClippedPolygonResult {
 
 export interface ClippedVersionResult {
   uuid: string;
-  polygonUuid: string | null;
   polyName: string | null;
   originalArea: number;
   newArea: number;
@@ -45,10 +42,7 @@ const OVERLAPPING_CRITERIA_ID = VALIDATION_CRITERIA_IDS.OVERLAPPING;
 export class PolygonClippingService {
   private readonly logger = new Logger(PolygonClippingService.name);
 
-  constructor(
-    private readonly sitePolygonCreationService: SitePolygonCreationService,
-    private readonly validationService: ValidationService
-  ) {}
+  constructor(private readonly sitePolygonCreationService: SitePolygonCreationService) {}
 
   async getFixablePolygonsForSite(siteUuid: string): Promise<{ site: Site; polygonIds: string[] }> {
     const site = await Site.findOne({
@@ -594,8 +588,7 @@ export class PolygonClippingService {
     userId: number,
     userFullName: string | null,
     source: string,
-    isAdminSession = false,
-    onProgress?: (progressMessage: string) => Promise<void>
+    isAdminSession = false
   ): Promise<ClippedVersionResult[]> {
     if (polygonUuids.length === 0) {
       this.logger.warn("No polygons provided for clipping and versioning");
@@ -605,8 +598,6 @@ export class PolygonClippingService {
     if (SitePolygon.sequelize == null) {
       throw new InternalServerErrorException("SitePolygon model is missing sequelize connection");
     }
-
-    await onProgress?.(`Clipping ${polygonUuids.length} polygons...`);
 
     const clippedResults = await this.clipPolygons(polygonUuids);
 
@@ -680,7 +671,6 @@ export class PolygonClippingService {
 
             results.push({
               uuid: newVersion.uuid,
-              polygonUuid: newVersion.polygonUuid,
               polyName: newVersion.polyName,
               originalArea: clippedResult.originalArea,
               newArea: clippedResult.newArea,
@@ -695,34 +685,6 @@ export class PolygonClippingService {
       });
     }
 
-    if (results.length === 0) {
-      return [];
-    }
-
-    // Same delayed job: do not mark clipping complete until validation has finished.
-    await onProgress?.(`Validating ${results.length} clipped polygon(s)...`);
-    await this.revalidateAfterClipping(results, clippedPolygonUuids, relatedPolygonUuids);
-
     return results;
-  }
-
-  private async revalidateAfterClipping(
-    createdVersions: ClippedVersionResult[],
-    clippedPolygonUuids: string[],
-    relatedPolygonUuids: string[]
-  ): Promise<void> {
-    const newPolygonUuids = createdVersions.map(version => version.polygonUuid).filter(isNotNull);
-    const partnerUuids = relatedPolygonUuids.filter(uuid => !clippedPolygonUuids.includes(uuid));
-    const polygonUuidsToValidate = uniq([...newPolygonUuids, ...partnerUuids]);
-
-    if (polygonUuidsToValidate.length === 0) {
-      throw new InternalServerErrorException(
-        "Clipping created versions but no polygon UUIDs were available to revalidate"
-      );
-    }
-
-    this.logger.log(`Revalidating ${polygonUuidsToValidate.length} polygons after clipping`);
-    await this.validationService.validatePolygonsBatch(polygonUuidsToValidate, [...VALIDATION_TYPES]);
-    this.logger.log(`Finished revalidation of ${polygonUuidsToValidate.length} polygons after clipping`);
   }
 }

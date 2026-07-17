@@ -52,16 +52,12 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
       progressMessage: `Starting clipping of ${polygonUuids.length} polygons...`
     });
 
-    // Clipping + validation run in this same delayed job; status stays pending until both finish.
     const createdVersions = await this.clippingService.clipAndCreateVersions(
       polygonUuids,
       userId,
       userFullName,
       source,
-      isAdminSession,
-      async progressMessage => {
-        await this.updateJobProgress(job, { progressMessage });
-      }
+      isAdminSession
     );
 
     if (createdVersions.length === 0) {
@@ -70,7 +66,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
 
     await this.updateJobProgress(job, {
       processedContent: createdVersions.length,
-      progressMessage: `Completed clipping and validation of ${createdVersions.length} polygons`
+      progressMessage: `Clipped ${createdVersions.length} polygons`
     });
 
     const document = buildJsonApi(ClippedVersionDto);
@@ -103,7 +99,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
 
     return {
       processedContent: createdVersions.length,
-      progressMessage: `Completed clipping and validation of ${createdVersions.length} polygons`,
+      progressMessage: `Completed clipping of ${createdVersions.length} polygons`,
       payload: document
     };
   }

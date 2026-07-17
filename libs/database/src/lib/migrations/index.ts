@@ -18,6 +18,7 @@ import { removeFormDeadline } from "./202607141029-remove-form-deadline";
 import { updateV2DisturbancesMonetaryDamageField } from "./202607151029-update-v2-disturbances-monetary-damage-field";
 import { addAboutSectionTables } from "./202607131426-add-about-section-tables";
 import { addCurrencyColumn } from "./202607151300-add-currency-column";
+import { addFundoFloraProjectReportBioeconomyFields } from "./202607161500-add-fundo-flora-project-report-bioeconomy-fields";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -37,5 +38,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeFormDeadline,
   addAboutSectionTables,
   updateV2DisturbancesMonetaryDamageField,
-  addCurrencyColumn
+  addCurrencyColumn,
+  addFundoFloraProjectReportBioeconomyFields
 ];

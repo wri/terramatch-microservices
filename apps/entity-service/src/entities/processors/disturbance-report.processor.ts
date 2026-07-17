@@ -381,14 +381,16 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     });
     const media = await Media.for(report).collection("media").findAll();
 
-    const fileName = timestampFileName(`${report.projectName ?? "Project"} - Disturbance Report`);
+    const projectLabel = await this.entitiesService.localizeText("Project");
+    const reportLabel = await this.entitiesService.localizeText("Disturbance Report");
+    const fileName = timestampFileName(`${report.projectName ?? projectLabel} - ${reportLabel}`);
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       addRow(report, this.buildExportAdditionalData(report, entries, media));
     });
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = timestampFileName("Disturbance Reports Export");
+    const fileName = timestampFileName(await this.entitiesService.localizeText("Disturbance Reports Export"));
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {

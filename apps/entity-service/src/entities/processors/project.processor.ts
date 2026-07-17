@@ -902,12 +902,13 @@ export class ProjectProcessor extends EntityProcessor<
 
     if (target instanceof ServerResponse) await this.entitiesService.authorize("read", project);
 
+    const establishmentDataLabel = await this.entitiesService.localizeText("project establishment data");
     const fillArchive = async (archive: Archiver) => {
       const fileNamePrefix = `${project.name}`;
       await this.entitiesService.entityExport("projects", PD_CSV_COLUMNS, [project], {
         target: archive,
         frameworkKey,
-        fileName: normalizedFileName(`${fileNamePrefix} - project establishment data`)
+        fileName: normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       });
 
       for (const entityType of CHILD_ENTITIES_FOR_EXPORT) {
@@ -917,7 +918,8 @@ export class ProjectProcessor extends EntityProcessor<
     };
 
     if (target instanceof ServerResponse) {
-      await streamZipToResponse(`${project.name} full export`, target, fillArchive);
+      const fullExportLabel = await this.entitiesService.localizeText("full export");
+      await streamZipToResponse(`${project.name} ${fullExportLabel}`, target, fillArchive);
     } else {
       await fillArchive(target);
     }

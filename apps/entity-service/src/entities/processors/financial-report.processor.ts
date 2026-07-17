@@ -169,7 +169,8 @@ export class FinancialReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = timestampFileName(`${report.organisationName} - Financial Report`);
+    const reportLabel = await this.entitiesService.localizeText("Financial Report");
+    const fileName = timestampFileName(`${report.organisationName} - ${reportLabel}`);
     await this.entitiesService.entityExport("financialReports", PD_CSV_COLUMNS, [report], {
       frameworkKey: report.frameworkKey,
       fileName,

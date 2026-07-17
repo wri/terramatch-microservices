@@ -40,6 +40,7 @@ import {
 } from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { EntitiesService } from "../entities/entities.service";
 
 describe("FormsService", () => {
   let service: FormsService;
@@ -57,6 +58,10 @@ describe("FormsService", () => {
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
+        {
+          provide: EntitiesService,
+          useValue: createMock<EntitiesService>({ localizeText: jest.fn(async (text: string) => text) })
+        },
         FormsService
       ]
     }).compile();

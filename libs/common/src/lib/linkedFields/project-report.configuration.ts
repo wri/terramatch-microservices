@@ -339,6 +339,11 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       inputType: "select",
       multiChoice: false,
       optionListKey: "bioeconomy-buyers"
+    },
+    "pro-rep-women-governance": {
+      property: "womenGovernance",
+      label: "Women in Governance or Leadership",
+      inputType: "text"
     }
   },
   fileCollections: {

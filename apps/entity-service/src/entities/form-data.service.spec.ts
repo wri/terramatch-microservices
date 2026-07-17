@@ -17,7 +17,6 @@ import {
   OrganisationFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
-  ProjectFactory,
   SiteFactory,
   SiteReportFactory,
   StageFactory,
@@ -192,29 +191,6 @@ describe("FormDataService", () => {
       });
 
       expect(report.plantingStatus).toBe("completed");
-    });
-
-    it("persists project-linked answers when saving a project report form", async () => {
-      const project = await ProjectFactory.create();
-      const report = await ProjectReportFactory.create({ projectId: project.id, frameworkKey: project.frameworkKey });
-      const form = await FormFactory.create({
-        frameworkKey: report.frameworkKey ?? "fundo-flora",
-        model: ProjectReport.LARAVEL_TYPE,
-        type: "project-report"
-      });
-      const section = await FormSectionFactory.form(form).create();
-      const womenGovernanceQuestion = await FormQuestionFactory.section(section).create({
-        inputType: "text",
-        linkedFieldKey: "pro-rep-women-governance"
-      });
-
-      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
-      await service.storeEntityAnswers(report, await form.reload(), {
-        [womenGovernanceQuestion.uuid]: "Board includes women leaders"
-      });
-
-      await project.reload();
-      expect(project.womenGovernance).toBe("Board includes women leaders");
     });
 
     it("does additional report processing", async () => {

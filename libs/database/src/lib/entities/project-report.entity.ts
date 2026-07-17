@@ -797,4 +797,8 @@ export class ProjectReport extends Model<ProjectReport> {
   @AllowNull
   @Column(TEXT)
   declare bioeconomyBuyers: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare womenGovernance: string | null;
 }

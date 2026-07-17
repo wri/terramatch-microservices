@@ -11,18 +11,14 @@ export const addFundoFloraProjectReportBioeconomyFields: RunnableMigration<Query
       "bioeconomy_product_sold",
       "bioeconomy_quality_certifications",
       "bioeconomy_other_certifications",
-      "bioeconomy_buyers"
+      "bioeconomy_buyers",
+      "women_governance"
     ]) {
       await context.addColumn("v2_project_reports", column, {
         type: TEXT,
         allowNull: true
       });
     }
-
-    await context.addColumn("v2_projects", "women_governance", {
-      type: TEXT,
-      allowNull: true
-    });
   },
 
   async down({ context }) {
@@ -32,11 +28,10 @@ export const addFundoFloraProjectReportBioeconomyFields: RunnableMigration<Query
       "bioeconomy_product_sold",
       "bioeconomy_quality_certifications",
       "bioeconomy_other_certifications",
-      "bioeconomy_buyers"
+      "bioeconomy_buyers",
+      "women_governance"
     ]) {
       await context.removeColumn("v2_project_reports", column);
     }
-
-    await context.removeColumn("v2_projects", "women_governance");
   }
 };

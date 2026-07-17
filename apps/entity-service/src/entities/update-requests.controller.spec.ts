@@ -34,7 +34,6 @@ describe("UpdateRequestsController", () => {
     controller = module.get(UpdateRequestsController);
     processor = new StubProcessor(entitiesService, "projects");
     entitiesService.createEntityProcessor.mockImplementation(() => processor);
-    service.buildFormModels.mockImplementation(async (entityType, entity) => ({ [entityType]: entity }));
   });
 
   afterEach(() => {
@@ -158,7 +157,6 @@ describe("UpdateRequestsController", () => {
       });
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload();
-      service.buildFormModels.mockResolvedValue({ projects: project });
       service.getAnswers.mockResolvedValue({ color: "blue" });
 
       await controller.update(
@@ -169,7 +167,7 @@ describe("UpdateRequestsController", () => {
         project,
         form,
         expect.objectContaining({ color: "red" }),
-        { projects: project },
+        {},
         { preserveReportStatus: true }
       );
     });

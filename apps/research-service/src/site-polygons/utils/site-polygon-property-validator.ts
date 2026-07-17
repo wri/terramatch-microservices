@@ -105,8 +105,8 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
 
   const distr = validateArrayProperty(distrValue, VALID_DISTRIBUTION_VALUES);
   const practice = validateArrayProperty(practiceValue, VALID_PRACTICE_VALUES);
-  const submissionCycle = trimToNullableString((submissionCycleValue as string) ?? "");
-  const targetSys = trimToNullableString((targetSysValue as string) ?? "");
+  const submissionCycle = trimToNullableString(submissionCycleValue as string | null | undefined);
+  const targetSys = trimToNullableString(targetSysValue as string | null | undefined);
 
   return {
     polyName: (polyNameValue as string) ?? null,
@@ -172,8 +172,8 @@ export function validateAndSortStringArray(
   return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
-function trimToNullableString(value: string): string | null {
-  if (value == null || value.trim().length === 0) return null;
-
-  return value.trim();
+function trimToNullableString(value: string | null | undefined): string | null {
+  // Trim once; empty/whitespace-only becomes null so DB stores absence, not "".
+  const result = (value ?? "").trim();
+  return result.length === 0 ? null : result;
 }

@@ -86,10 +86,7 @@ const validateTargetSystem = (value: unknown): string | null => {
   return trimmedValue;
 };
 
-const validateSubmissionCycle = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    throw new BadRequestException("submissionCycle must be a string");
-  }
+const validateSubmissionCycle = (value: string): string | null => {
   const trimmedValue = value.trim();
   if (trimmedValue === "") return null;
   if (!SITE_POLYGON_SUBMISSION_CYCLES.includes(trimmedValue as (typeof SITE_POLYGON_SUBMISSION_CYCLES)[number])) {

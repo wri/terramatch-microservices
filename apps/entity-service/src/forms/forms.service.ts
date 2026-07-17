@@ -68,6 +68,7 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { EntitiesService } from "../entities/entities.service";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
@@ -160,7 +161,8 @@ export class FormsService {
   constructor(
     private readonly localizationService: LocalizationService,
     private readonly mediaService: MediaService,
-    private readonly csvExportService: CsvExportService
+    private readonly csvExportService: CsvExportService,
+    private readonly entitiesService: EntitiesService
   ) {}
 
   async findOne(uuid: string) {
@@ -390,7 +392,7 @@ export class FormsService {
     if (fundingProgramme == null) throw new InternalServerErrorException("Application missing funding programme");
 
     const mappings = await this.getExportMappings(fundingProgramme);
-    const fileName = timestampFileName("Application Export");
+    const fileName = timestampFileName(await this.entitiesService.localizeText("Application Export"));
     await this.writeSubmissionsCsv(
       fileName,
       response,
@@ -402,7 +404,8 @@ export class FormsService {
 
   async exportApplications(fundingProgramme: FundingProgramme) {
     const mappings = await this.getExportMappings(fundingProgramme);
-    const fileName = timestampFileName(`${fundingProgramme.name} Export`);
+    const exportLabel = await this.entitiesService.localizeText("Export");
+    const fileName = timestampFileName(`${fundingProgramme.name} ${exportLabel}`);
     await this.writeSubmissionsCsv(
       fileName,
       undefined,
@@ -426,7 +429,8 @@ export class FormsService {
     if (form == null) throw new BadRequestException(`Form with UUID ${formUuid} not found`);
 
     const mappings = await getFormQuestionsForExport(form);
-    const fileName = timestampFileName(`${form?.title} Submission Export`);
+    const submissionExportLabel = await this.entitiesService.localizeText("Submission Export");
+    const fileName = timestampFileName(`${form?.title} ${submissionExportLabel}`);
     await this.writeSubmissionsCsv(
       fileName,
       response,

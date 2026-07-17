@@ -295,7 +295,8 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = timestampFileName(`${report.projectName?.replace(/\/\\/g, "-")} - Project Report`);
+    const reportLabel = await this.entitiesService.localizeText("Project Report");
+    const fileName = timestampFileName(`${report.projectName?.replace(/\/\\/g, "-")} - ${reportLabel}`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
@@ -321,11 +322,12 @@ export class ProjectReportProcessor extends ReportProcessor<
       }
     }
 
+    const reportsLabel = await this.entitiesService.localizeText("project reports");
     await this.exportReports(
       frameworkKey,
       target,
       new PaginatedQueryBuilder(ProjectReport, 10, CSV_EXPORT_INCLUDES).where(where),
-      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - project reports`)
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
     );
   }
 
@@ -416,7 +418,12 @@ export class ProjectReportProcessor extends ReportProcessor<
       dueAt.setMonth(dueAt.getMonth() - 5);
       const wStart = dueAt.toLocaleString(projectReport.user?.locale ?? "en-GB", { month: "long" });
 
-      return `Project Report for ${wStart} - ${wEnd}`;
+      const title = await this.entitiesService.localizeText("Project Report");
+      return await this.entitiesService.localizeText(`{title} for {startDate} - {endDate}`, {
+        title,
+        startDate: wStart,
+        endDate: wEnd
+      });
     }
   }
 

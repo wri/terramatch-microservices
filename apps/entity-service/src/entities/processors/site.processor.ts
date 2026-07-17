@@ -522,12 +522,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     await this.entitiesService.authorize("read", site);
 
+    const establishmentDataLabel = await this.entitiesService.localizeText("site establishment data");
     const fillArchive = async (archive: Archiver) => {
       const fileNamePrefix = `${site.projectName} - ${site.name}`;
       await this.entitiesService.entityExport("sites", PD_CSV_COLUMNS, [site], {
         target: archive,
         frameworkKey,
-        fileName: normalizedFileName(`${fileNamePrefix} - site establishment data`)
+        fileName: normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       });
 
       const reportProcessor = this.entitiesService.createEntityProcessor("siteReports") as SiteReportProcessor;
@@ -535,7 +536,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     };
 
     if (target instanceof ServerResponse) {
-      await streamZipToResponse(`${site.name} export`, target, fillArchive);
+      const exportLabel = await this.entitiesService.localizeText("export");
+      await streamZipToResponse(`${site.name} ${exportLabel}`, target, fillArchive);
     } else {
       await fillArchive(target);
     }
@@ -560,6 +562,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
+    const establishmentDataLabel = await this.entitiesService.localizeText("site establishment data");
     await this.entitiesService.entityExport(
       "sites",
       ADMIN_CSV_COLUMNS,
@@ -569,7 +572,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         target,
         frameworkKey,
         ability: target instanceof ServerResponse ? "read" : undefined,
-        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site establishment data`)
+        fileName:
+          fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       }
     );
   }

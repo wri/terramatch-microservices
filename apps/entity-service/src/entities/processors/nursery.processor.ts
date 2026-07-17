@@ -302,12 +302,13 @@ export class NurseryProcessor extends EntityProcessor<
 
     await this.entitiesService.authorize("read", nursery);
 
+    const establishmentDataLabel = await this.entitiesService.localizeText("nursery establishment data");
     const fillArchive = async (archive: Archiver) => {
       const fileNamePrefix = `${nursery.projectName} - ${nursery.name}`;
       await this.entitiesService.entityExport("nurseries", PD_CSV_COLUMNS, [nursery], {
         target: archive,
         frameworkKey,
-        fileName: normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
+        fileName: normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       });
 
       const reportProcessor = this.entitiesService.createEntityProcessor("nurseryReports") as NurseryReportProcessor;
@@ -315,7 +316,8 @@ export class NurseryProcessor extends EntityProcessor<
     };
 
     if (target instanceof ServerResponse) {
-      await streamZipToResponse(`${nursery.name} export`, target, fillArchive);
+      const exportLabel = await this.entitiesService.localizeText("export");
+      await streamZipToResponse(`${nursery.name} ${exportLabel}`, target, fillArchive);
     } else {
       await fillArchive(target);
     }
@@ -339,6 +341,7 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+    const establishmentDataLabel = await this.entitiesService.localizeText("nursery establishment data");
     await this.entitiesService.entityExport(
       "nurseries",
       ADMIN_CSV_COLUMNS,
@@ -349,7 +352,7 @@ export class NurseryProcessor extends EntityProcessor<
         frameworkKey,
         ability: target instanceof ServerResponse ? "read" : undefined,
         fileName:
-          fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery establishment data`)
+          fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       }
     );
   }

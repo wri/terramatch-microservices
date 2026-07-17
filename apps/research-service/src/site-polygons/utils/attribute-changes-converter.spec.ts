@@ -241,5 +241,27 @@ describe("AttributeChangesConverter", () => {
         distr: ["partial"]
       });
     });
+
+    it("should handle only submissionCycle", () => {
+      const properties: Partial<SitePolygon> = {
+        submissionCycle: "1"
+      };
+
+      const result = convertPropertiesToAttributeChanges(properties);
+
+      expect(result).toEqual({
+        submissionCycle: "1"
+      });
+    });
+
+    it("should exclude null submissionCycle", () => {
+      const properties: Partial<SitePolygon> = {
+        submissionCycle: null
+      };
+
+      const result = convertPropertiesToAttributeChanges(properties);
+
+      expect(result).toEqual({});
+    });
   });
 });

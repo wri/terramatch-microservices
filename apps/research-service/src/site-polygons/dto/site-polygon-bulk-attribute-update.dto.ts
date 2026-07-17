@@ -104,16 +104,15 @@ export class SitePolygonBulkAttributeChangesDto {
   distr?: string[];
 
   @ApiProperty({
-    description: "Submission cycle slug(s). Empty array clears the field.",
+    description: "Submission cycle slug. Empty string clears the field.",
     required: false,
-    example: ["1", "2"],
-    type: [String]
+    example: "1"
   })
   @ValidateIf((_, value) => value !== undefined)
-  @IsArray()
-  @IsString({ each: true })
-  @IsIn(SITE_POLYGON_SUBMISSION_CYCLES, { each: true })
-  submissionCycle?: string[];
+  @IsString()
+  @ValidateIf((_, value) => value !== "")
+  @IsIn(SITE_POLYGON_SUBMISSION_CYCLES)
+  submissionCycle?: string;
 
   @ApiProperty({
     description: "Number of trees planted",

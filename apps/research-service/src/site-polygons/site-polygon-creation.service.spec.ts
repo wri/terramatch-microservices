@@ -1085,7 +1085,7 @@ describe("SitePolygonCreationService", () => {
           practice: ["tree-planting"],
           targetSys: "natural-forest",
           distr: ["full"],
-          submissionCycle: ["1"]
+          submissionCycle: "1"
         },
         userId,
         userFullName,
@@ -1106,7 +1106,7 @@ describe("SitePolygonCreationService", () => {
               practice: ["tree-planting"],
               targetSys: "natural-forest",
               distr: ["full"],
-              submissionCycle: ["1"],
+              submissionCycle: "1",
               status: "draft",
               validationStatus: null
             })

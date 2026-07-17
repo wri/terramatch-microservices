@@ -224,7 +224,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
 
   filterSubmissionCycle(submissionCycles?: string[]) {
     if (submissionCycles == null || submissionCycles.length === 0) return this;
-    this.where(this.buildJsonArrayOverlapWhere("submissionCycle", submissionCycles));
+    this.where({
+      [Op.and]: [{ submissionCycle: { [Op.ne]: null } }, { submissionCycle: { [Op.in]: submissionCycles } }]
+    });
     return this;
   }
 
@@ -258,15 +260,14 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this;
   }
 
-  private buildJsonArrayOverlapWhere(column: "practice" | "distr" | "submissionCycle", values: string[]): WhereOptions {
-    const sqlColumn = column === "submissionCycle" ? "submission_cycle" : column;
+  private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {
     const orContains = values.map(slug =>
-      literal(`JSON_CONTAINS(SitePolygon.${sqlColumn}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
+      literal(`JSON_CONTAINS(SitePolygon.${column}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
     );
     return {
       [Op.and]: [
         { [column]: { [Op.ne]: null } } as WhereOptions,
-        literal(`JSON_LENGTH(SitePolygon.${sqlColumn}) > 0`),
+        literal(`JSON_LENGTH(SitePolygon.${column}) > 0`),
         { [Op.or]: orContains }
       ]
     };

@@ -7,11 +7,10 @@ import {
   IsOptional,
   IsUUID,
   IsNumber,
-  ValidateIf,
-  IsIn
+  ValidateIf
 } from "class-validator";
 import { Type } from "class-transformer";
-import { Feature as BaseFeature, SITE_POLYGON_SUBMISSION_CYCLES } from "@terramatch-microservices/database/constants";
+import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
 
 export interface FeatureProperties {
   siteId?: string;
@@ -129,16 +128,13 @@ export class AttributeChangesDto {
   distr?: string[];
 
   @ApiProperty({
-    description: "Updated submission cycle(s) as array of strings",
+    description: "Updated submission cycle",
     required: false,
-    example: ["1", "2"],
-    type: [String]
+    example: "1"
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @IsIn(SITE_POLYGON_SUBMISSION_CYCLES, { each: true })
-  submissionCycle?: string[];
+  @IsString()
+  submissionCycle?: string;
 
   @ApiProperty({
     description: "Updated number of trees",

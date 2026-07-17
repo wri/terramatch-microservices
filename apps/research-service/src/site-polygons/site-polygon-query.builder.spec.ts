@@ -318,26 +318,26 @@ describe("SitePolygonQueryBuilder", () => {
   });
 
   describe("filterSubmissionCycle", () => {
-    it("should match any overlapping submissionCycle (OR) and exclude null submissionCycle", async () => {
+    it("should match any selected submissionCycle and exclude null submissionCycle", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
       const a = await SitePolygonFactory.create({
         siteUuid: site.uuid,
         practice: ["tree-planting"],
         distr: ["full"],
-        submissionCycle: ["1"]
+        submissionCycle: "1"
       });
       const b = await SitePolygonFactory.create({
         siteUuid: site.uuid,
         practice: ["tree-planting"],
         distr: ["full"],
-        submissionCycle: ["2", "3"]
+        submissionCycle: "2"
       });
       await SitePolygonFactory.create({
         siteUuid: site.uuid,
         practice: ["tree-planting"],
         distr: ["full"],
-        submissionCycle: ["5"]
+        submissionCycle: "5"
       });
       await SitePolygonFactory.create({
         siteUuid: site.uuid,

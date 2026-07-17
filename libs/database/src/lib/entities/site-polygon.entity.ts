@@ -149,8 +149,8 @@ export class SitePolygon extends Model<SitePolygon> {
   declare distr: string[] | null;
 
   @AllowNull
-  @JsonColumn({ type: STRING })
-  declare submissionCycle: string[] | null;
+  @Column(STRING)
+  declare submissionCycle: string | null;
 
   @AllowNull
   @Column(INTEGER)

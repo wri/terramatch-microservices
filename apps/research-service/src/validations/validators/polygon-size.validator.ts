@@ -6,7 +6,7 @@ import { QueryTypes } from "sequelize";
 
 interface PolygonSizeValidationResult extends ValidationResult {
   extraInfo: {
-    area_hectares: number;
+    areaHectares: number;
   } | null;
 }
 
@@ -30,7 +30,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     return {
       valid,
       extraInfo: {
-        area_hectares: areaHectares
+        areaHectares
       }
     };
   }
@@ -54,7 +54,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
         polygonUuid,
         valid,
         extraInfo: {
-          area_hectares: areaHectares
+          areaHectares
         }
       };
     });
@@ -69,7 +69,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
       return {
         valid: true,
         extraInfo: {
-          area_hectares: 0
+          areaHectares: 0
         }
       };
     }
@@ -99,7 +99,7 @@ export class PolygonSizeValidator implements PolygonValidator, GeometryValidator
     return {
       valid,
       extraInfo: {
-        area_hectares: areaHectares
+        areaHectares
       }
     };
   }

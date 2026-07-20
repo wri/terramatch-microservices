@@ -174,8 +174,8 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.inside_percentage).toBeGreaterThanOrEqual(75);
-        expect(result.extraInfo.country_name).toBe("Cambodia");
+        expect(result.extraInfo.insidePercentage).toBeGreaterThanOrEqual(75);
+        expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });
 
@@ -184,7 +184,7 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result).toBeDefined();
       expect(result.polygonUuid).toBe(testPolygonUuids[1]);
       expect(result.extraInfo).not.toBeNull();
-      expect(result.extraInfo).toEqual(expect.objectContaining({ country_name: expect.any(String) }));
+      expect(result.extraInfo).toEqual(expect.objectContaining({ countryName: expect.any(String) }));
     });
 
     it("should validate polygon D as valid", async () => {
@@ -192,7 +192,7 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result).toBeDefined();
       expect(result.polygonUuid).toBe(testPolygonUuids[2]);
       expect(result.extraInfo).not.toBeNull();
-      expect(result.extraInfo).toEqual(expect.objectContaining({ country_name: expect.any(String) }));
+      expect(result.extraInfo).toEqual(expect.objectContaining({ countryName: expect.any(String) }));
     });
 
     it("should validate polygon A as invalid", async () => {
@@ -202,8 +202,8 @@ describe("WithinCountryValidator - Integration Tests", () => {
       expect(result.extraInfo).not.toBeNull();
 
       if (result.extraInfo != null) {
-        expect(result.extraInfo.inside_percentage).toBeLessThan(75);
-        expect(result.extraInfo.country_name).toBe("Cambodia");
+        expect(result.extraInfo.insidePercentage).toBeLessThan(75);
+        expect(result.extraInfo.countryName).toBe("Cambodia");
       }
     });
 

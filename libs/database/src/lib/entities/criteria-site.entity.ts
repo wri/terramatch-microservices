@@ -8,14 +8,12 @@ import {
   Model,
   PrimaryKey,
   Table,
-  BeforeCreate,
-  BeforeUpdate,
   AfterFind
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, JSON, UUID, UUIDV4 } from "sequelize";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { CriteriaId } from "../constants";
-import { transformKeysToSnakeCase, transformKeysToCamelCase } from "../util/case-transformation.util";
+import { transformKeysToCamelCase } from "../util/case-transformation.util";
 
 @Table({
   tableName: "criteria_site",
@@ -55,18 +53,9 @@ export class CriteriaSite extends Model<CriteriaSite> {
   declare extraInfo: object | null;
 
   /**
-   * Transform camelCase to snake_case before saving to database
-   */
-  @BeforeCreate
-  @BeforeUpdate
-  static transformExtraInfoForDb(instance: CriteriaSite) {
-    if (instance.extraInfo != null) {
-      instance.extraInfo = transformKeysToSnakeCase(instance.extraInfo, instance.criteriaId) as object | null;
-    }
-  }
-
-  /**
-   * Transform snake_case to camelCase after reading from database
+   * `extraInfo` is always written in camelCase by the validators. This hook only exists to bridge
+   * legacy rows that still have snake_case `extraInfo` from before that was true - see
+   * transformKeysToCamelCase for details. It can be removed once that legacy data is backfilled.
    */
   @AfterFind
   static transformExtraInfoForApi(instances: CriteriaSite | CriteriaSite[]) {

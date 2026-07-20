@@ -5,19 +5,19 @@ import { Op, WhereOptions } from "sequelize";
 
 interface EstimatedAreaResult extends ValidationResult {
   extraInfo: {
-    polygon_status: string | null;
-    polygon_area: number | null;
-    is_polygon_approved: boolean;
-    sum_area_site_approved: number | null;
-    percentage_site_approved: number | null;
-    total_area_site: number | null;
-    sum_area_project_approved: number | null;
-    percentage_project_approved: number | null;
-    total_area_project: number | null;
-    projected_sum_area_site?: number | null;
-    projected_percentage_site?: number | null;
-    projected_sum_area_project?: number | null;
-    projected_percentage_project?: number | null;
+    polygonStatus: string | null;
+    polygonArea: number | null;
+    isPolygonApproved: boolean;
+    sumAreaSiteApproved: number | null;
+    percentageSiteApproved: number | null;
+    totalAreaSite: number | null;
+    sumAreaProjectApproved: number | null;
+    percentageProjectApproved: number | null;
+    totalAreaProject: number | null;
+    projectedSumAreaSite?: number | null;
+    projectedPercentageSite?: number | null;
+    projectedSumAreaProject?: number | null;
+    projectedPercentageProject?: number | null;
   } | null;
 }
 
@@ -41,22 +41,22 @@ export class EstimatedAreaValidator implements PolygonValidator {
     return {
       valid,
       extraInfo: {
-        polygon_status: sitePolygon.status,
-        polygon_area: sitePolygon.calcArea != null ? this.round2(sitePolygon.calcArea) : null,
-        is_polygon_approved: isApproved,
-        sum_area_site_approved: siteData.sumAreaSiteApproved,
-        percentage_site_approved: siteData.percentageSiteApproved,
-        total_area_site: siteData.totalAreaSite,
-        sum_area_project_approved: projectData.sumAreaProjectApproved,
-        percentage_project_approved: projectData.percentageProjectApproved,
-        total_area_project: projectData.totalAreaProject,
+        polygonStatus: sitePolygon.status,
+        polygonArea: sitePolygon.calcArea != null ? this.round2(sitePolygon.calcArea) : null,
+        isPolygonApproved: isApproved,
+        sumAreaSiteApproved: siteData.sumAreaSiteApproved,
+        percentageSiteApproved: siteData.percentageSiteApproved,
+        totalAreaSite: siteData.totalAreaSite,
+        sumAreaProjectApproved: projectData.sumAreaProjectApproved,
+        percentageProjectApproved: projectData.percentageProjectApproved,
+        totalAreaProject: projectData.totalAreaProject,
         ...(siteData.projectedSumAreaSite !== undefined && {
-          projected_sum_area_site: siteData.projectedSumAreaSite,
-          projected_percentage_site: siteData.projectedPercentageSite
+          projectedSumAreaSite: siteData.projectedSumAreaSite,
+          projectedPercentageSite: siteData.projectedPercentageSite
         }),
         ...(projectData.projectedSumAreaProject !== undefined && {
-          projected_sum_area_project: projectData.projectedSumAreaProject,
-          projected_percentage_project: projectData.projectedPercentageProject
+          projectedSumAreaProject: projectData.projectedSumAreaProject,
+          projectedPercentageProject: projectData.projectedPercentageProject
         })
       }
     };

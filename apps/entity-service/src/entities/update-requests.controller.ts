@@ -46,6 +46,8 @@ export class UpdateRequestsController {
 
     const attributes = updatePayload.data.attributes;
     if (attributes.status != null && attributes.status !== updateRequest.status) {
+      await this.policyService.authorize("approve", model);
+
       // Calling update() below when the status is approved kicks off a series of updates and model
       // changes through the entity status update event processor that require the entity data to be
       // correct on the base entity. So in that case, validate the transition early and then stash
@@ -76,7 +78,6 @@ export class UpdateRequestsController {
   private async findUpdateRequest(entity: ProcessableEntity, uuid: string) {
     const model = await this.entitiesService.createEntityProcessor(entity).findOne(uuid);
     if (model == null) throw new NotFoundException(`Entity not found for uuid: ${uuid}`);
-    await this.policyService.authorize("approve", model);
 
     const updateRequest = await UpdateRequest.for(model).current().findOne();
     if (updateRequest == null) throw new NotFoundException(`Update request not found for uuid: ${uuid}`);

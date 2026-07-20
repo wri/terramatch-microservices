@@ -55,7 +55,7 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
+import { LinkedFile, isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
 import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
@@ -301,6 +301,14 @@ export class FormsService {
 
     const questionToDto = (question: FormQuestion, sectionQuestions: FormQuestion[] = []): FormQuestionDto => {
       const config = getLinkedFieldConfig(question.linkedFieldKey ?? "");
+      const linkedFieldMultiChoice =
+        config != null &&
+        isField(config.field) &&
+        isPropertyField(config.field) &&
+        config.field.inputType === "select" &&
+        config.field.multiChoice != null
+          ? config.field.multiChoice
+          : null;
       // For file questions, the collection is the collection of the field.
       const collection =
         (question.inputType === "file" ? (config?.field as LinkedFile | undefined)?.collection : question.collection) ??
@@ -308,7 +316,7 @@ export class FormsService {
       const childQuestions = sectionQuestions.filter(({ parentId }) => parentId === question.uuid);
       const options = optionsByQuestionId[question.id];
       const tableHeaders = tableHeadersByQuestionId[question.id];
-      return new FormQuestionDto(question, {
+      const dto = new FormQuestionDto(question, {
         name: question.formName,
         model: config?.model ?? null,
         collection,
@@ -334,6 +342,10 @@ export class FormsService {
               ),
         children: childQuestions.length === 0 ? null : childQuestions.map(child => questionToDto(child))
       });
+      if (linkedFieldMultiChoice != null) {
+        dto.multiChoice = linkedFieldMultiChoice;
+      }
+      return dto;
     };
 
     const sectionToDto = (section: FormSection) => {

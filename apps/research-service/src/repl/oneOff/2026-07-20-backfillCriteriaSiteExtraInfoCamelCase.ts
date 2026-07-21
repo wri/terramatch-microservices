@@ -154,7 +154,7 @@ export const backfillCriteriaSiteExtraInfoCamelCase = withoutSqlLogs(
         try {
           await flushPendingUpdates(sequelize, pendingUpdates);
           summary.updated += pendingUpdates.length;
-        } catch (error) {
+        } catch {
           for (const update of pendingUpdates) {
             try {
               await sequelize.query(`UPDATE criteria_site SET extra_info = ? WHERE id = ?`, {

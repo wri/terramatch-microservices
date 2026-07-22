@@ -47,6 +47,7 @@ export class UpdateRequestsController {
     const attributes = updatePayload.data.attributes;
     if (attributes.status != null && attributes.status !== updateRequest.status) {
       await this.policyService.authorize("approve", model);
+
       // Calling update() below when the status is approved kicks off a series of updates and model
       // changes through the entity status update event processor that require the entity data to be
       // correct on the base entity. So in that case, validate the transition early and then stash

@@ -345,6 +345,25 @@ describe("FormsService", () => {
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject(formMatch);
     });
+
+    it("uses linked field multiChoice when the stored question is single-select", async () => {
+      mockUserContext({ userId: (await UserFactory.create()).id });
+      mockTranslateFieldsWithOriginal(localizationService);
+
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.form(form).create();
+      await FormQuestionFactory.section(section).create({
+        inputType: "select",
+        linkedFieldKey: "pro-rep-bioeconomy-product-list",
+        multiChoice: false
+      });
+
+      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false));
+      const dto = (document.data as Resource).attributes;
+      expect(dto).toMatchObject({
+        sections: [{ questions: [{ multiChoice: true }] }]
+      });
+    });
   });
 
   describe("store", () => {

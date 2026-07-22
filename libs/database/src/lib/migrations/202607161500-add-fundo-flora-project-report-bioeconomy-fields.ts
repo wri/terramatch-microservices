@@ -13,6 +13,7 @@ export const addFundoFloraProjectReportBioeconomyFields: RunnableMigration<Query
   name: "202607161500-add-fundo-flora-project-report-bioeconomy-fields",
 
   async up({ context }) {
+    // Multi-select linked fields store string[]; JSON columns match @JsonColumn() on ProjectReport.
     for (const column of BIOECONOMY_MULTI_SELECT_COLUMNS) {
       await context.addColumn("v2_project_reports", column, {
         type: JSON_TYPE,

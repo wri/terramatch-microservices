@@ -40,6 +40,7 @@ import {
 } from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { EntitiesService } from "../entities/entities.service";
 
 describe("FormsService", () => {
   let service: FormsService;
@@ -57,6 +58,10 @@ describe("FormsService", () => {
         { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
+        {
+          provide: EntitiesService,
+          useValue: createMock<EntitiesService>({ localizeText: jest.fn(async (text: string) => text) })
+        },
         FormsService
       ]
     }).compile();
@@ -340,6 +345,25 @@ describe("FormsService", () => {
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject(formMatch);
     });
+
+    it("uses linked field multiChoice when the stored question is single-select", async () => {
+      mockUserContext({ userId: (await UserFactory.create()).id });
+      mockTranslateFieldsWithOriginal(localizationService);
+
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.form(form).create();
+      await FormQuestionFactory.section(section).create({
+        inputType: "select",
+        linkedFieldKey: "pro-rep-bioeconomy-product-list",
+        multiChoice: false
+      });
+
+      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false));
+      const dto = (document.data as Resource).attributes;
+      expect(dto).toMatchObject({
+        sections: [{ questions: [{ multiChoice: true }] }]
+      });
+    });
   });
 
   describe("store", () => {
@@ -354,7 +378,6 @@ describe("FormsService", () => {
         frameworkKey: "ppc",
         type: "project",
         submissionMessage: faker.lorem.paragraph(),
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -405,7 +428,6 @@ describe("FormsService", () => {
       expect(form.frameworkKey).toBe(attributes.frameworkKey);
       expect(form.type).toBe(attributes.type);
       expect(form.submissionMessage).toBe(attributes.submissionMessage);
-      expect(form.deadlineAt).toEqual(attributes.deadlineAt);
       expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title, undefined);
 
       const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
@@ -481,7 +503,6 @@ describe("FormsService", () => {
         frameworkKey: "ppc",
         type: "site",
         submissionMessage: faker.lorem.paragraph(),
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             title: faker.lorem.sentence(),
@@ -532,7 +553,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -569,7 +589,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -619,7 +638,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           {
             id: section.uuid,
@@ -653,7 +671,6 @@ describe("FormsService", () => {
         frameworkKey: form.frameworkKey ?? undefined,
         type: form.type,
         submissionMessage: form.submissionMessage!,
-        deadlineAt: faker.date.soon(),
         sections: [
           // scramble order and drop section 1
           {

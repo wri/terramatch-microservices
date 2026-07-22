@@ -197,7 +197,8 @@ export class SrpReportProcessor extends ReportProcessor<
     const report = await SrpReport.findOne({ where: { uuid }, include: CSV_EXPORT_INCLUDES });
     if (report == null) throw new NotFoundException();
 
-    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - SRP Report - ${DateTime.now().toFormat(
+    const reportLabel = await this.entitiesService.localizeText("SRP Report");
+    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - ${reportLabel} - ${DateTime.now().toFormat(
       "yyyy-MM-dd HH:mm:ss"
     )}.csv`;
     await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, [report], {
@@ -208,7 +209,9 @@ export class SrpReportProcessor extends ReportProcessor<
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = timestampFileName("Annual Socio Economic Restoration Reports Export");
+    const fileName = timestampFileName(
+      await this.entitiesService.localizeText("Annual Socio Economic Restoration Reports Export")
+    );
     const where: WhereOptions<Site> = { "$project.is_test$": false };
     const permissions = this.entitiesService.permissions;
     if (permissions?.includes("manage-own")) {

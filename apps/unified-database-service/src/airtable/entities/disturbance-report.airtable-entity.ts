@@ -10,12 +10,14 @@ import { ColumnMapping, UpdateAssociation } from "../util/types";
 type DisturbanceReportAssociations = {
   projectUuid?: string;
   affectedPolygonUuids?: string[];
+  affectedSiteUuids?: string[];
+  affectedNurseryUuids?: string[];
   intensity?: string; // single select
   extent?: string; // single select
   type?: string; // single select
   subtype?: string[]; // multi select
   peopleAffected?: number; // integer
-  monetaryDamage?: number; // decimal
+  financialLoss?: number; // decimal
   propertyAffected?: string[]; // multi select
   disturbanceDate?: Date; // date no timestamp
 };
@@ -27,12 +29,14 @@ const COLUMNS: ColumnMapping<DisturbanceReport, DisturbanceReportAssociations>[]
   "actionDescription",
   associatedValueColumn("projectUuid", "projectId"),
   associatedValueColumn("affectedPolygonUuids"),
+  associatedValueColumn("affectedSiteUuids"),
+  associatedValueColumn("affectedNurseryUuids"),
   associatedValueColumn("intensity"),
   associatedValueColumn("extent"),
   associatedValueColumn("type"),
   associatedValueColumn("subtype"),
   associatedValueColumn("peopleAffected"),
-  associatedValueColumn("monetaryDamage"),
+  associatedValueColumn("financialLoss"),
   associatedValueColumn("propertyAffected"),
   associatedValueColumn("disturbanceDate")
 ];
@@ -60,7 +64,7 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
 
     return reports.reduce(
       (associations, { id, projectId }) => {
-        const { disturbanceData, affectedPolygonUuids } = getEntryData(
+        const { disturbanceData, affectedPolygonUuids, affectedSiteUuids, affectedNurseryUuids } = getEntryData(
           (entriesByReport[id] ?? []).filter(({ deletedAt }) => deletedAt == null)
         );
         return {
@@ -68,6 +72,8 @@ export class DisturbanceReportEntity extends AirtableEntity<DisturbanceReport, D
           [id]: {
             projectUuid: projects.find(({ id }) => id === projectId)?.uuid,
             affectedPolygonUuids,
+            affectedSiteUuids,
+            affectedNurseryUuids,
             ...disturbanceData
           }
         };

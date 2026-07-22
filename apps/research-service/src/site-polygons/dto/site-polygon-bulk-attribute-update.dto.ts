@@ -19,10 +19,18 @@ import { DeleteDataDto, JsonApiBulkBodyDto } from "@terramatch-microservices/com
 import {
   SITE_POLYGON_DISTRIBUTIONS,
   SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_SUBMISSION_CYCLES,
   SITE_POLYGON_TARGET_SYSTEMS
 } from "@terramatch-microservices/database/constants";
 
-export const BULK_ATTRIBUTE_CHANGE_KEYS = ["plantStart", "practice", "targetSys", "distr", "numTrees"] as const;
+export const BULK_ATTRIBUTE_CHANGE_KEYS = [
+  "plantStart",
+  "practice",
+  "targetSys",
+  "distr",
+  "numTrees",
+  "submissionCycle"
+] as const;
 
 @ValidatorConstraint({ name: "isBulkAttributeChanges", async: false })
 export class IsBulkAttributeChangesConstraint implements ValidatorConstraintInterface {
@@ -94,6 +102,17 @@ export class SitePolygonBulkAttributeChangesDto {
   @IsString({ each: true })
   @IsIn(SITE_POLYGON_DISTRIBUTIONS, { each: true })
   distr?: string[];
+
+  @ApiProperty({
+    description: "Submission cycle slug. Empty string clears the field.",
+    required: false,
+    example: "1"
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @ValidateIf((_, value) => value !== "")
+  @IsIn(SITE_POLYGON_SUBMISSION_CYCLES)
+  submissionCycle?: string;
 
   @ApiProperty({
     description: "Number of trees planted",

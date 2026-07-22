@@ -128,6 +128,15 @@ export class AttributeChangesDto {
   distr?: string[];
 
   @ApiProperty({
+    description: "Updated submission cycle",
+    required: false,
+    example: "1"
+  })
+  @IsOptional()
+  @IsString()
+  submissionCycle?: string;
+
+  @ApiProperty({
     description: "Updated number of trees",
     required: false,
     example: 150

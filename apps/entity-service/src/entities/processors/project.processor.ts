@@ -47,11 +47,15 @@ import { normalizedFileName } from "@terramatch-microservices/common/util/fileNa
 import {
   AuditStatusType,
   POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+  PROJECT_QA_STATUS_FIELD_AUDIT_TYPE,
+  ProjectQaStatusField,
   READY_FOR_BASELINE_AUDIT_TYPE
 } from "@terramatch-microservices/database/constants/audit-status";
 import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { Literal } from "sequelize/types/utils";
+
+const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "country",
@@ -61,7 +65,12 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "projectUuid",
   "organisationUuid",
   "polygonDataSubmission",
-  "readyForBaseline"
+  "readyForBaseline",
+  "projectQaStatus1",
+  "projectQaStatus2",
+  "projectQaStatus3",
+  "projectQaStatus4",
+  "projectQaStatus5"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
@@ -271,8 +280,13 @@ export class ProjectProcessor extends EntityProcessor<
 
     const prevSubmission = project.polygonDataSubmission;
     const prevBaseline = project.readyForBaseline;
+    const prevQaStatuses = Object.fromEntries(PROJECT_QA_STATUS_FIELDS.map(field => [field, project[field]])) as Record<
+      ProjectQaStatusField,
+      string
+    >;
     let submissionChanged = false;
     let baselineChanged = false;
+    const changedQaStatusFields: ProjectQaStatusField[] = [];
     const handoffComment = update.polygonHandoffComment ?? null;
 
     if (update.polygonDataSubmission !== undefined && update.polygonDataSubmission !== prevSubmission) {
@@ -285,9 +299,17 @@ export class ProjectProcessor extends EntityProcessor<
       baselineChanged = true;
     }
 
+    for (const field of PROJECT_QA_STATUS_FIELDS) {
+      const nextValue = update[field];
+      if (nextValue !== undefined && nextValue !== prevQaStatuses[field]) {
+        project[field] = nextValue;
+        changedQaStatusFields.push(field);
+      }
+    }
+
     await super.update(project, update);
 
-    if (!submissionChanged && !baselineChanged && handoffComment == null) {
+    if (!submissionChanged && !baselineChanged && changedQaStatusFields.length === 0 && handoffComment == null) {
       return;
     }
 
@@ -327,6 +349,20 @@ export class ProjectProcessor extends EntityProcessor<
       });
       commentHasBeenSaved = true;
     }
+    for (const field of changedQaStatusFields) {
+      auditRows.push({
+        auditableType: Project.LARAVEL_TYPE,
+        auditableId: project.id,
+        createdBy: user?.emailAddress ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        comment: handoffComment,
+        status: project[field],
+        type: PROJECT_QA_STATUS_FIELD_AUDIT_TYPE[field],
+        isActive: null
+      });
+      commentHasBeenSaved = true;
+    }
 
     if (!commentHasBeenSaved && handoffComment != null) {
       const latestPolygonValidation = await AuditStatus.findOne({
@@ -334,7 +370,11 @@ export class ProjectProcessor extends EntityProcessor<
           auditableType: Project.LARAVEL_TYPE,
           auditableId: project.id,
           type: {
-            [Op.in]: [POLYGON_DATA_SUBMISSION_AUDIT_TYPE, READY_FOR_BASELINE_AUDIT_TYPE]
+            [Op.in]: [
+              POLYGON_DATA_SUBMISSION_AUDIT_TYPE,
+              READY_FOR_BASELINE_AUDIT_TYPE,
+              ...Object.values(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE)
+            ]
           }
         },
         order: [["updatedAt", "DESC"]],
@@ -862,12 +902,13 @@ export class ProjectProcessor extends EntityProcessor<
 
     if (target instanceof ServerResponse) await this.entitiesService.authorize("read", project);
 
+    const establishmentDataLabel = await this.entitiesService.localizeText("project establishment data");
     const fillArchive = async (archive: Archiver) => {
       const fileNamePrefix = `${project.name}`;
       await this.entitiesService.entityExport("projects", PD_CSV_COLUMNS, [project], {
         target: archive,
         frameworkKey,
-        fileName: normalizedFileName(`${fileNamePrefix} - project establishment data`)
+        fileName: normalizedFileName(`${fileNamePrefix} - ${establishmentDataLabel}`)
       });
 
       for (const entityType of CHILD_ENTITIES_FOR_EXPORT) {
@@ -877,7 +918,8 @@ export class ProjectProcessor extends EntityProcessor<
     };
 
     if (target instanceof ServerResponse) {
-      await streamZipToResponse(`${project.name} full export`, target, fillArchive);
+      const fullExportLabel = await this.entitiesService.localizeText("full export");
+      await streamZipToResponse(`${project.name} ${fullExportLabel}`, target, fillArchive);
     } else {
       await fillArchive(target);
     }

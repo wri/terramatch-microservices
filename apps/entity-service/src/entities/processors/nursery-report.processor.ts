@@ -247,7 +247,8 @@ export class NurseryReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = timestampFileName(`${report.projectName} - ${report.nurseryName} - Nursery Report`);
+    const reportLabel = await this.entitiesService.localizeText("Nursery Report");
+    const fileName = timestampFileName(`${report.projectName} - ${report.nurseryName} - ${reportLabel}`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
@@ -282,11 +283,12 @@ export class NurseryReportProcessor extends ReportProcessor<
     }
     if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
 
+    const reportsLabel = await this.entitiesService.localizeText("nursery reports");
     await this.exportReports(
       frameworkKey,
       target,
       new PaginatedQueryBuilder(NurseryReport, 10, CSV_EXPORT_INCLUDES).where(where),
-      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - nursery reports`)
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
     );
   }
 

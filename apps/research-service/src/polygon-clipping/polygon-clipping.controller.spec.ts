@@ -397,6 +397,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -744,6 +745,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -764,7 +766,13 @@ describe("PolygonClippingController", () => {
       const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(result).toBeDefined();
-      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        fixablePolygonUuids,
+        1,
+        null,
+        "terramatch",
+        false
+      );
     });
 
     it("should handle user not found (null user) in polygon list endpoint", async () => {
@@ -772,6 +780,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -788,7 +797,13 @@ describe("PolygonClippingController", () => {
       const result = await controller.createPolygonListClippedVersions(payload);
 
       expect(result).toBeDefined();
-      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(fixablePolygonUuids, 1, null, "terramatch");
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        fixablePolygonUuids,
+        1,
+        null,
+        "terramatch",
+        false
+      );
     });
 
     it("should handle user with null getSourceFromRoles in polygon list endpoint", async () => {
@@ -796,6 +811,7 @@ describe("PolygonClippingController", () => {
       const createdVersions = [
         {
           uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
           polyName: "Test Polygon 1",
           originalArea: 10.5,
           newArea: 10.2,
@@ -820,7 +836,8 @@ describe("PolygonClippingController", () => {
         fixablePolygonUuids,
         1,
         "Test User",
-        "terramatch"
+        "terramatch",
+        false
       );
     });
   });

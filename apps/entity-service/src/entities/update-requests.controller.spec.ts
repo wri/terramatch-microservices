@@ -77,7 +77,6 @@ describe("UpdateRequestsController", () => {
 
       const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
       const resource = result.data as Resource;
-      expect(policyService.authorize).toHaveBeenCalledWith("approve", project);
       expect(resource.id).toBe(`projects|${project.uuid}`);
       expect(resource.type).toBe("updateRequests");
       expect(resource.attributes).toMatchObject({

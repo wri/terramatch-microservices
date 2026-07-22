@@ -32,6 +32,7 @@ import {
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import {
   CriteriaId,
+  SITE_POLYGON_SUBMISSION_CYCLES,
   SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
@@ -81,6 +82,15 @@ const validateTargetSystem = (value: unknown): string | null => {
   if (trimmedValue === "") return null;
   if (!SITE_POLYGON_TARGET_SYSTEMS.includes(trimmedValue as (typeof SITE_POLYGON_TARGET_SYSTEMS)[number])) {
     throw new BadRequestException(`targetSys contains invalid value: ${trimmedValue}`);
+  }
+  return trimmedValue;
+};
+
+const validateSubmissionCycle = (value: string): string | null => {
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") return null;
+  if (!SITE_POLYGON_SUBMISSION_CYCLES.includes(trimmedValue as (typeof SITE_POLYGON_SUBMISSION_CYCLES)[number])) {
+    throw new BadRequestException(`submissionCycle contains invalid value: ${trimmedValue}`);
   }
   return trimmedValue;
 };
@@ -768,7 +778,8 @@ export class SitePolygonCreationService {
     userId: number,
     userFullName: string | null,
     source: string,
-    transaction: Transaction
+    transaction: Transaction,
+    isAdminSession = false
   ): Promise<SitePolygon[]> {
     const activeByRequestUuid = await this.versioningService.validateBulkVersioningEligibility(
       sitePolygonUuids,
@@ -806,7 +817,9 @@ export class SitePolygonCreationService {
         newPolygonGeometryUuid: null,
         userId,
         changeReason: `${BULK_ATTRIBUTE_UPDATE_CHANGE_REASON} - ${changeDescription}`,
-        userFullName
+        userFullName,
+        source,
+        isAdminSession
       };
     });
 
@@ -821,7 +834,8 @@ export class SitePolygonCreationService {
     userId: number,
     userFullName: string | null,
     source: string,
-    transaction: Transaction
+    transaction: Transaction,
+    isAdminSession = false
   ): Promise<SitePolygon> {
     const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid, transaction);
 
@@ -878,7 +892,9 @@ export class SitePolygonCreationService {
           newPolygonGeometryUuid,
           userId,
           changeReason: `${changeReason} - ${changeDescription}`,
-          userFullName
+          userFullName,
+          source,
+          isAdminSession
         }
       ],
       transaction
@@ -917,6 +933,10 @@ export class SitePolygonCreationService {
           attributeChanges.distr.length > 0
             ? validateAndSortStrictStringArray(attributeChanges.distr, VALID_DISTRIBUTION_VALUES, "distr")
             : null;
+      }
+
+      if (attributeChanges.submissionCycle !== undefined) {
+        sitePolygonAttributes.submissionCycle = validateSubmissionCycle(attributeChanges.submissionCycle);
       }
 
       if (attributeChanges.numTrees !== undefined) {
@@ -975,7 +995,8 @@ export class SitePolygonCreationService {
     siteId: string,
     userId: number,
     userFullName: string | null,
-    source: string
+    source: string,
+    isAdminSession = false
   ): Promise<SitePolygon> {
     const site = await Site.findOne({
       where: { uuid: siteId },
@@ -1055,7 +1076,8 @@ export class SitePolygonCreationService {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       );
     });
 

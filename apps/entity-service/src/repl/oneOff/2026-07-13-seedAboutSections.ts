@@ -1,0 +1,402 @@
+import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
+import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
+import { getService } from "@terramatch-microservices/common/util/bootstrap-repl";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { Link } from "@terramatch-microservices/database/entities";
+import { Op } from "sequelize";
+
+type AboutSectionSeed = {
+  type: AboutSectionType;
+  frameworks?: FrameworkKey[];
+  header: string;
+  title?: string;
+  description: string;
+  contactSupportMessage: string;
+  contactSupportSubject: string;
+  links: LinkSeed[];
+};
+
+type LinkSeed = {
+  title: string;
+  url: string;
+};
+
+export const seedAboutSections = withoutSqlLogs(async () => {
+  const localizationService = getService(LocalizationService);
+  for (const seed of SEED_DATA) {
+    const { type, frameworks, header } = seed;
+    if (
+      (await AboutSection.count({
+        where: { type, frameworks: frameworks == null ? null : { [Op.eq]: frameworks } }
+      })) > 0
+    ) {
+      console.log(`Skipping already extant about section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
+      continue;
+    }
+
+    console.log(`Creating about section [${type}, ${frameworks ?? "[default]"}, ${header}]`);
+
+    const aboutSection = await AboutSection.create({
+      type: seed.type,
+      frameworks: seed.frameworks,
+      headerId: (await localizationService.generateI18nId(seed.header)) as number,
+      titleId: await localizationService.generateI18nId(seed.title),
+      descriptionId: (await localizationService.generateI18nId(seed.description)) as number,
+      contactSupportMessageId: (await localizationService.generateI18nId(seed.contactSupportMessage)) as number,
+      contactSupportSubjectId: (await localizationService.generateI18nId(seed.contactSupportSubject)) as number
+    });
+
+    await Link.bulkCreate(
+      await Promise.all(
+        seed.links.map(async (link, index) => ({
+          order: index,
+          titleId: (await localizationService.generateI18nId(link.title)) as number,
+          url: link.url,
+          linkableType: AboutSection.LARAVEL_TYPE,
+          linkableId: aboutSection.id
+        }))
+      )
+    );
+  }
+});
+
+const PROJECT_LINKS: LinkSeed[] = [
+  {
+    title: "MRV Glossary",
+    url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/21972136717979-Glossary-TerraFund-Monitoring-Reporting-Verification"
+  },
+  {
+    title: "How to Complete Your Project Profile",
+    url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/21995497152027-How-to-Create-Your-TerraMatch-Project-Profile"
+  },
+  {
+    title: "How to Add Partners to Your Project",
+    url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/22124468665243-How-to-Add-Partners-to-Your-Project"
+  }
+];
+
+const DEFAULT_PROJECT_ONBOARDING: AboutSectionSeed = {
+  type: "project",
+  header: "Project Onboarding",
+  title: "Monitoring, Reporting, and Verification (MRV)",
+  description:
+    "<ul><li><strong>Monitoring:</strong> The process of collecting and analyzing data and information to measure progress toward specific goals that the restoration effort aims to achieve.</li>" +
+    "<li><strong>Reporting:</strong> The sharing of data collected by restoration champions through project, nursery, and site reports, which are submitted on the TerraMatch platform in a standardized format every six months.</li>" +
+    "<li><strong>Verification:</strong> Periodically subjecting reported information to some form of review, analysis or independent assessment to establish completeness and reliability.</li></ul>",
+  contactSupportMessage: "If you have challenges or need assistance, please reach out to your project manager or",
+  contactSupportSubject: "Support Request for Project Profile",
+  links: [
+    {
+      title: "MRV Framework",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/21972136717979-Glossary-Monitoring-Reporting-Verification"
+    },
+    ...PROJECT_LINKS
+  ]
+};
+
+const HBF_PROJECT_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_ONBOARDING,
+  frameworks: ["hbf"],
+  description:
+    "<ul><li><strong>Monitoring:</strong> The process of collecting and analyzing data and information to measure progress toward specific goals that the restoration effort aims to achieve.</li>" +
+    "<li><strong>Reporting:</strong> The sharing of data collected by restoration champions through project and site reports, which are submitted on the TerraMatch platform in a standardized format every six months.</li>" +
+    "<li><strong>Verification:</strong> Periodically subjecting reported information to some form of review, analysis or independent assessment to establish completeness and reliability.</li>",
+  links: [
+    {
+      title: "MRV Framework",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/21178354112539-The-TerraFund-Monitoring-Reporting-and-Verification-Framework?brand_id=12511322362267"
+    },
+    ...PROJECT_LINKS
+  ]
+};
+
+const PPC_PROJECT_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_ONBOARDING,
+  frameworks: ["ppc"],
+  description:
+    "<ul><li><strong>Monitoring:</strong> refers to checking your project against a set of indicators (these can be ecological, like “Trees restored” or socioeconomic, like “Workdays created”) at pre-determined intervals (for example, Year 0, Year 2.5, and Year 5 of a project).</li>" +
+    "<li><strong>Reporting:</strong> refers to your team’s work, filling out project, site, socioeconomic restoration partners, and disturbance reports on TerraMatch.</li>" +
+    "<li><strong>Verification:</strong> refers to remote or field-based measurement of project progress.</li></ul>",
+  links: [
+    {
+      title: "PPC Monitoring Framework",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13319985438363-What-is-the-Tree-Restoration-Monitoring-Framework"
+    },
+    {
+      title: "How to Submit Your Quarterly Reports",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13322085147035-How-to-Submit-Your-Quarterly-Reports-PPC"
+    },
+    {
+      title: "How to report (annually) on PPC Socioeconomic Restoration Partners",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13322399098267-How-to-report-annually-on-PPC-Socioeconomic-Restoration-Partners"
+    },
+    {
+      title: "How to do Field Tree Monitoring",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13384531523227-How-to-do-Field-Tree-Monitoring-for-the-PPC"
+    }
+  ]
+};
+
+const DEFAULT_SITE_ONBOARDING: AboutSectionSeed = {
+  type: "site",
+  header: "About Sites",
+  description:
+    "<p><strong>Sites</strong> are the core units for reporting your restoration work in TerraMatch. Each site can include one or more restoration areas or polygons and should reflect a meaningful geographic grouping for your project.</p>",
+  contactSupportMessage:
+    "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to your project manager or",
+  contactSupportSubject: "Support Request for Site Profile",
+  links: [
+    {
+      title: "Follow the TerraFund Siting Guide",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/25201750730907-TerraFund-Siting-Guide"
+    },
+    {
+      title: "Create a Site Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-Profile"
+    },
+    {
+      title: "Use the Site Profile Polygon Guide",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27065988566811-How-to-Add-Edit-and-View-Polygons-on-your-Site-Profiles"
+    },
+    {
+      title: "Download & Use Greenhouse.Flority",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/24537092253467-How-to-Download-Use-greenhouse-Flority"
+    }
+  ]
+};
+
+const HBF_SITE_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_SITE_ONBOARDING,
+  frameworks: ["hbf"],
+  links: [
+    {
+      title: "How to Create a Site on TerraMatch",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-on-TerraMatch"
+    },
+    {
+      title: "Citizen Science App User Manual",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27520000999835-Citizen-Science-App-User-Manual"
+    }
+  ]
+};
+
+const PPC_SITE_ONBOARDING: AboutSectionSeed = {
+  ...DEFAULT_SITE_ONBOARDING,
+  frameworks: ["ppc"],
+  contactSupportMessage:
+    "Keep your site profiles up to date to track progress, report challenges, and share successes. If you have challenges or need assistance, please reach out to",
+  description:
+    "<p><strong>Sites</strong> are the core units for reporting your restoration work on the IMP. Each site typically includes one restoration area (polygon), but can include multiple areas, based on proximity and other characteristics. Please review your siting approach with your Project Manager or Global Lead to determine how many sites you need to create for your PPC project.</p>",
+  links: [
+    {
+      title: "What is the PPC definition of a site? ",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13157025276187-What-is-the-PPC-definition-of-a-site"
+    },
+    {
+      title: "How to Create a Site Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512561941915-How-to-Create-a-Site-Profile"
+    },
+    {
+      title: "Review the PPC Monitoring Framework",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13319985438363-What-is-the-Tree-Restoration-Monitoring-Framework"
+    }
+  ]
+};
+
+const DEFAULT_NURSERY_ONBOARDING: AboutSectionSeed = {
+  type: "nursery",
+  header: "About Nurseries",
+  description:
+    "<p><strong>Nurseries</strong> are the lifeblood of your tree planting project. Whenever your project builds a new nursery or expands an existing one to supply your sites, create a nursery profile on TerraMatch. If your project uses nurseries managed by others, or relies only on direct seeding or assisted natural regeneration, you do not need to add any nursery profiles.",
+  contactSupportMessage: "If you have challenges or need assistance, please reach out to your project manager or",
+  contactSupportSubject: "Support Request for Nursery Profile",
+  links: [
+    {
+      title: "Create a Nursery Profile",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/12512665359899-How-to-Create-a-Nursery-Profile"
+    }
+  ]
+};
+
+const REPORT_PREPARE_SUBMIT_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/21683197977627-How-to-Prepare-Submit-Your-Reports-on-TerraMatch";
+
+const DEFAULT_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  type: "project-report",
+  header: "About Project Reports",
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential; it ensures your work is fairly represented, supports transparency and accountability, and helps TerraFund track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Project Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports"
+    },
+    {
+      title: "TerraFund Report Quality Assurance Process",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/24993375284251-TerraFund-Report-Quality-Assurance-Process"
+    },
+    {
+      title: "TerraFund Guidance for Socioeconomic Reporting",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/27167882984859-TerraFund-Guidance-for-Socioeconomic-Reporting"
+    }
+  ]
+};
+
+const PPC_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_REPORT_ABOUT,
+  frameworks: ["ppc"],
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with your Project Manager/Global Lead each quarter. Accurate and detailed reporting is essential. It ensures your work is fairly represented, supports transparency and accountability, and helps the PPC team track progress across the portfolio.</p>" +
+    "<p>You can find guidance to help you with reporting under Helpful Links.</p>",
+  contactSupportMessage: "If you encounter challenges or need assistance, contact your Project Manager/Global Lead or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: 'How to calculate "person-days of work"',
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13705002950683-How-to-calculcate-person-days-of-work"
+    }
+  ]
+};
+
+const HBF_PROJECT_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_PROJECT_REPORT_ABOUT,
+  frameworks: ["hbf"],
+  description:
+    "<p><strong>Project Reports</strong> are how you share your project's overall progress with WRI and your funders every six months. Accurate and detailed reporting is essential, it ensures your work is fairly represented, supports transparency and accountability, and helps the HBF team track progress across the portfolio towards restoration goals, community engagement, and socioeconomic impacts.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "HBF Reporting Guidance",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/18003977594523-Harit-Bharat-Fund-Program-Hub"
+    },
+    {
+      title: "HBF Handbook",
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/categories/18003977594523-Harit-Bharat-Fund-Program-Hub"
+    }
+  ]
+};
+
+const SITE_REPORT_CHECKLIST_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports";
+const HIGH_QUALITY_PHOTOS_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/29388895801115-Submitting-High-Quality-Photos-on-TerraMatch";
+const TREE_SURVIVAL_COUNT_GUIDELINES_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/23261734402203-Tree-Survival-Count-Guidelines-for-TerraFund-Projects";
+
+const DEFAULT_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  type: "site-report",
+  header: "About Site Reports",
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period.</p>" +
+    "<p>Accurate and detailed site reporting is essential. It ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps TerraFund verify progress across the portfolio towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Site Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: SITE_REPORT_CHECKLIST_LINK
+    },
+    {
+      title: "Submitting High-Quality Photos",
+      url: HIGH_QUALITY_PHOTOS_LINK
+    },
+    {
+      title: "Tree Survival Count Guidelines for TerraFund Projects",
+      url: TREE_SURVIVAL_COUNT_GUIDELINES_LINK
+    }
+  ]
+};
+
+const PPC_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_SITE_REPORT_ABOUT,
+  frameworks: ["ppc"],
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your sites each quarter.</p>" +
+    "<p>Accurate and detailed site reporting is essential. It ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps the PPC team verify progress across the portfolio.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your Project Manager/Global Lead or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: 'How to calculate "person-days of work"',
+      url: "https://terramatchsupport.zendesk.com/hc/en-us/articles/13705002950683-How-to-calculcate-person-days-of-work"
+    }
+  ]
+};
+
+const HBF_SITE_REPORT_ABOUT: AboutSectionSeed = {
+  ...DEFAULT_SITE_REPORT_ABOUT,
+  frameworks: ["hbf"],
+  description:
+    "<p><strong>Site Reports</strong> are how you document restoration progress across each of your active sites every six months. You will need to submit a separate report for every active site profile on TerraMatch each reporting period. Accurate and detailed site reporting is essential, it ensures your restoration work is fully and fairly represented, supports transparency and accountability, and helps HBF verify progress across the portfolio towards restoration goals.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    }
+  ]
+};
+
+const NURSERY_REPORT_CHECKLIST_LINK =
+  "https://terramatchsupport.zendesk.com/hc/en-us/articles/26920946851227-Checklists-for-your-TerraFund-Project-Nursery-and-Site-Reports";
+
+const DEFAULT_NURSERY_REPORT_ABOUT: AboutSectionSeed = {
+  type: "nursery-report",
+  header: "About Nursery Reports",
+  description:
+    "<p><strong>Nursery Reports</strong> capture seedling production progress across any nurseries your project is building, expanding, or managing. You will report on each nursery profile every six months. A profile may represent a single nursery or a grouping.</p>" +
+    "<p>Accurate and detailed reporting ensures your work is fully represented, supports transparency and accountability, and helps TerraFund track portfolio progress towards restoration goals.</p>" +
+    "<p>To support your reporting efforts, the TerraFund team has created guidance articles to help you report clearly and thoroughly.</p>",
+  contactSupportMessage: "If you have challenges or need assistance, contact your project manager or",
+  contactSupportSubject: "Support Request for Nursery Report",
+  links: [
+    {
+      title: "How to Prepare & Submit Your Reports on TerraMatch",
+      url: REPORT_PREPARE_SUBMIT_LINK
+    },
+    {
+      title: "Checklists for your TerraFund Reports",
+      url: NURSERY_REPORT_CHECKLIST_LINK
+    }
+  ]
+};
+
+const SEED_DATA: AboutSectionSeed[] = [
+  DEFAULT_PROJECT_ONBOARDING,
+  HBF_PROJECT_ONBOARDING,
+  PPC_PROJECT_ONBOARDING,
+  DEFAULT_SITE_ONBOARDING,
+  HBF_SITE_ONBOARDING,
+  PPC_SITE_ONBOARDING,
+  DEFAULT_NURSERY_ONBOARDING,
+  DEFAULT_PROJECT_REPORT_ABOUT,
+  PPC_PROJECT_REPORT_ABOUT,
+  HBF_PROJECT_REPORT_ABOUT,
+  DEFAULT_SITE_REPORT_ABOUT,
+  PPC_SITE_REPORT_ABOUT,
+  HBF_SITE_REPORT_ABOUT,
+  DEFAULT_NURSERY_REPORT_ABOUT
+];

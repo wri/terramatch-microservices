@@ -300,7 +300,8 @@ export class SiteReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
-    const fileName = timestampFileName(`${report.projectName} - ${report.siteName} - Site Report`);
+    const reportLabel = await this.entitiesService.localizeText("Site Report");
+    const fileName = timestampFileName(`${report.projectName} - ${report.siteName} - ${reportLabel}`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
@@ -338,11 +339,12 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
+    const reportsLabel = await this.entitiesService.localizeText("site reports");
     await this.exportReports(
       frameworkKey,
       target,
       new PaginatedQueryBuilder(SiteReport, 10, CSV_EXPORT_INCLUDES).where(where),
-      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - site reports`)
+      fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
     );
   }
 

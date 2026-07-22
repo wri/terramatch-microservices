@@ -135,10 +135,17 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "bioeconomyProductDescription",
   "polygonDataSubmission",
   "readyForBaseline",
+  "projectQaStatus1",
+  "projectQaStatus2",
+  "projectQaStatus3",
+  "projectQaStatus4",
+  "projectQaStatus5",
   associatedValueColumn("treePlantedAmount"),
   associatedValueColumn("treePlantedNameAndAmount"),
   associatedValueColumn("nonTreeAmount"),
-  associatedValueColumn("nonTreeNameAndAmount")
+  associatedValueColumn("nonTreeNameAndAmount"),
+  "projectSummary",
+  "incomeGeneratingActivities"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

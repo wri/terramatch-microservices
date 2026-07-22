@@ -17,6 +17,7 @@ export interface ClippingJobData {
   userId: number;
   userFullName: string | null;
   source: string;
+  isAdminSession?: boolean;
   delayedJobId: number;
   siteUuid?: string;
 }
@@ -39,7 +40,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
   }
 
   async processDelayedJob(job: Job<ClippingJobData>) {
-    const { polygonUuids, userId, userFullName, source, siteUuid } = job.data;
+    const { polygonUuids, userId, userFullName, source, isAdminSession = false, siteUuid } = job.data;
 
     if (polygonUuids.length === 0) {
       throw new DelayedJobException(400, "No polygon UUIDs provided");
@@ -51,11 +52,16 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
       progressMessage: `Starting clipping of ${polygonUuids.length} polygons...`
     });
 
+    // Clipping + validation run in this same delayed job; status stays pending until both finish.
     const createdVersions = await this.clippingService.clipAndCreateVersions(
       polygonUuids,
       userId,
       userFullName,
-      source
+      source,
+      isAdminSession,
+      async progressMessage => {
+        await this.updateJobProgress(job, { progressMessage });
+      }
     );
 
     if (createdVersions.length === 0) {
@@ -64,7 +70,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
 
     await this.updateJobProgress(job, {
       processedContent: createdVersions.length,
-      progressMessage: `Clipped ${createdVersions.length} polygons`
+      progressMessage: `Completed clipping and validation of ${createdVersions.length} polygons`
     });
 
     const document = buildJsonApi(ClippedVersionDto);
@@ -97,7 +103,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
 
     return {
       processedContent: createdVersions.length,
-      progressMessage: `Completed clipping of ${createdVersions.length} polygons`,
+      progressMessage: `Completed clipping and validation of ${createdVersions.length} polygons`,
       payload: document
     };
   }

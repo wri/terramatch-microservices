@@ -136,7 +136,7 @@ describe("FormsController", () => {
       service().getI18nIdsForForm.mockResolvedValue(ids);
       jest.spyOn(policyService(), "authorize").mockResolvedValue();
       await controller.pushFormTranslation("fake-uuid");
-      expect(localizationService().pushTranslationByForm).toHaveBeenCalledWith(form, ids);
+      expect(localizationService().pushTranslationsForEntity).toHaveBeenCalledWith(form.uuid, ids);
     });
   });
 

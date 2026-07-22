@@ -38,7 +38,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: 5.5,
         status: "draft",
         pointUuid: "point-uuid-123",
-        source: "greenhouse"
+        source: "greenhouse",
+        submissionCycle: null
       });
     });
 
@@ -69,7 +70,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: null,
         status: "draft",
         pointUuid: null,
-        source: null
+        source: null,
+        submissionCycle: null
       });
     });
 
@@ -100,7 +102,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: null,
         status: "draft",
         pointUuid: null,
-        source: null
+        source: null,
+        submissionCycle: null
       });
     });
 
@@ -132,6 +135,36 @@ describe("SitePolygonPropertyValidator", () => {
       const result = validateSitePolygonProperties(properties);
 
       expect(result.plantStart).toBeNull();
+    });
+
+    it("should accept a submissionCycle value", () => {
+      const properties = {
+        submission_cycle: "2"
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.submissionCycle).toBe("2");
+    });
+
+    it("should trim submissionCycle whitespace", () => {
+      const properties = {
+        submissionCycle: "  3  "
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.submissionCycle).toBe("3");
+    });
+
+    it("should return null for an empty submissionCycle", () => {
+      const properties = {
+        submission_cycle: ""
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.submissionCycle).toBeNull();
     });
 
     it("should handle non-integer num_trees", () => {
@@ -331,7 +364,8 @@ describe("SitePolygonPropertyValidator", () => {
         calcArea: "not-a-number",
         status: "draft",
         pointUuid: [],
-        source: {}
+        source: {},
+        submissionCycle: null
       });
     });
 

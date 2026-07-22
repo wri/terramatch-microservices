@@ -33,7 +33,7 @@ import { Application } from "./application.entity";
 import { Site } from "./site.entity";
 import { Nursery } from "./nursery.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { FrameworkKey, POLYGON_DATA_SUBMISSION_DEFAULT } from "../constants";
+import { FrameworkKey, POLYGON_DATA_SUBMISSION_DEFAULT, PROJECT_QA_STATUS_DEFAULT } from "../constants";
 import { Framework } from "./framework.entity";
 import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { Subquery } from "../util/subquery.builder";
@@ -43,6 +43,8 @@ import { InternalServerErrorException } from "@nestjs/common";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
+
+import { setPpcExternalId } from "../util/sequelize-hooks";
 
 type ProjectMedia =
   | "media"
@@ -61,6 +63,8 @@ type ProjectMedia =
   underscored: true,
   paranoid: true,
   hooks: {
+    beforeCreate: setPpcExternalId(Project),
+    beforeUpdate: setPpcExternalId(Project),
     afterCreate: statusUpdateSequelizeHook,
     afterDestroy: async (project: Project) => {
       await removeMedia(project);
@@ -520,6 +524,21 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
 
   @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
   declare readyForBaseline: CreationOptional<boolean>;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus1: CreationOptional<string>;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus2: CreationOptional<string>;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus3: CreationOptional<string>;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus4: CreationOptional<string>;
+
+  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus5: CreationOptional<string>;
 
   @BelongsTo(() => Organisation)
   declare organisation: Organisation | null;

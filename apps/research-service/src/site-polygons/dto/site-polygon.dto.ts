@@ -10,7 +10,11 @@ import {
   IndicatorTreeCoverDto,
   IndicatorTreeCoverLossDto
 } from "./indicators.dto";
-import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
+import {
+  POLYGON_STATUSES,
+  PolygonStatus,
+  SITE_POLYGON_SUBMISSION_CYCLES
+} from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
@@ -152,6 +156,14 @@ export class SitePolygonLightDto extends HybridSupportDto {
   @ApiProperty({ nullable: true, isArray: true, type: String })
   distr: string[] | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    enum: SITE_POLYGON_SUBMISSION_CYCLES,
+    description: "Submission cycle assigned to the polygon"
+  })
+  submissionCycle: string | null;
+
   @ApiProperty({ nullable: true, type: Number })
   numTrees: number | null;
 
@@ -197,6 +209,13 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({ nullable: true, type: Date })
   createdAt: Date | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Date,
+    description: "When this site polygon was soft-deleted. Only populated when deletedOnly is requested."
+  })
+  deletedAt: Date | null;
 }
 
 @JsonApiDto({ type: "sitePolygons" })

@@ -13,11 +13,17 @@ import {
   SitePolygonData,
   CriteriaSite
 } from "@terramatch-microservices/database/entities";
-import { CreateSitePolygonBatchRequestDto, Feature } from "./dto/create-site-polygon-request.dto";
+import {
+  CreateSitePolygonBatchRequestDto,
+  Feature,
+  AttributeChangesDto,
+  CreateSitePolygonRequestDto
+} from "./dto/create-site-polygon-request.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { FeatureCollection } from "geojson";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
+import { Transaction } from "sequelize";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -36,6 +42,7 @@ describe("SitePolygonCreationService", () => {
   let voronoiService: VoronoiService;
   let geometryFileProcessingService: GeometryFileProcessingService;
   let eventService: EventService;
+  let versioningService: SitePolygonVersioningService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -78,6 +85,8 @@ describe("SitePolygonCreationService", () => {
           provide: SitePolygonVersioningService,
           useValue: {
             validateVersioningEligibility: jest.fn(),
+            validateBulkVersioningEligibility: jest.fn(),
+            createVersions: jest.fn(),
             createVersion: jest.fn(),
             generateVersionName: jest.fn()
           }
@@ -104,6 +113,7 @@ describe("SitePolygonCreationService", () => {
     voronoiService = module.get<VoronoiService>(VoronoiService);
     geometryFileProcessingService = module.get<GeometryFileProcessingService>(GeometryFileProcessingService);
     eventService = module.get<EventService>(EventService);
+    versioningService = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
@@ -949,7 +959,8 @@ describe("SitePolygonCreationService", () => {
         userId,
         userFullName,
         source,
-        mockTransaction
+        mockTransaction,
+        false
       );
     });
 
@@ -1001,7 +1012,8 @@ describe("SitePolygonCreationService", () => {
         userId,
         userFullName,
         source,
-        mockTransaction
+        mockTransaction,
+        false
       );
     });
 
@@ -1040,6 +1052,348 @@ describe("SitePolygonCreationService", () => {
       await expect(
         service.uploadVersionFromFile(mockFile, sitePolygonUuid, siteId, userId, userFullName, source)
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("bulkUpdateSitePolygonAttributes", () => {
+    const userId = 1;
+    const userFullName = "Test User";
+    const source = "terramatch";
+    const transaction = mockTransaction as unknown as Transaction;
+
+    it("should create new versions with parsed attribute changes", async () => {
+      const basePolygon = {
+        uuid: "site-polygon-uuid-1",
+        primaryUuid: "primary-uuid-1",
+        polygonUuid: "polygon-uuid-1",
+        polyName: "Original",
+        plantStart: null,
+        practice: null,
+        targetSys: null
+      } as SitePolygon;
+      const newVersion = { uuid: "new-version-uuid", polyName: "Original" } as SitePolygon;
+
+      jest
+        .spyOn(versioningService, "validateBulkVersioningEligibility")
+        .mockResolvedValue(new Map([[basePolygon.uuid, basePolygon]]));
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      const result = await service.bulkUpdateSitePolygonAttributes(
+        [basePolygon.uuid],
+        {
+          plantStart: "2023-06-15",
+          practice: ["tree-planting"],
+          targetSys: "natural-forest",
+          distr: ["full"],
+          submissionCycle: "1"
+        },
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+
+      expect(result).toEqual([newVersion]);
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon,
+            userId,
+            userFullName,
+            newPolygonGeometryUuid: null,
+            attributeChanges: expect.objectContaining({
+              plantStart: new Date("2023-06-15"),
+              practice: ["tree-planting"],
+              targetSys: "natural-forest",
+              distr: ["full"],
+              submissionCycle: "1",
+              status: "draft",
+              validationStatus: null
+            })
+          })
+        ],
+        transaction
+      );
+      expect(CriteriaSite.destroy).toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when a site polygon is missing from eligibility results", async () => {
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(new Map());
+
+      await expect(
+        service.bulkUpdateSitePolygonAttributes(
+          ["missing-uuid"],
+          { numTrees: 10 },
+          userId,
+          userFullName,
+          source,
+          transaction
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should reject invalid numTrees values", async () => {
+      const basePolygon = {
+        uuid: "site-polygon-uuid-1",
+        primaryUuid: "primary-uuid-1",
+        polygonUuid: "polygon-uuid-1"
+      } as SitePolygon;
+
+      jest
+        .spyOn(versioningService, "validateBulkVersioningEligibility")
+        .mockResolvedValue(new Map([[basePolygon.uuid, basePolygon]]));
+
+      await expect(
+        service.bulkUpdateSitePolygonAttributes(
+          [basePolygon.uuid],
+          { numTrees: null as unknown as number },
+          userId,
+          userFullName,
+          source,
+          transaction
+        )
+      ).rejects.toThrow(new BadRequestException("numTrees cannot be null"));
+    });
+  });
+
+  describe("createSitePolygonVersion", () => {
+    const userId = 1;
+    const userFullName = "Test User";
+    const source = "terramatch";
+    const transaction = mockTransaction as unknown as Transaction;
+
+    const basePolygon = {
+      uuid: "site-polygon-uuid-1",
+      primaryUuid: "primary-uuid-1",
+      polygonUuid: "polygon-uuid-1",
+      polyName: "Original",
+      plantStart: null,
+      targetSys: "agroforest"
+    } as SitePolygon;
+
+    it("should create a version from attribute changes only", async () => {
+      const newVersion = { uuid: "new-version-uuid", polyName: "Renamed" } as SitePolygon;
+      const attributeChanges: AttributeChangesDto = {
+        polyName: "Renamed",
+        targetSys: "natural-forest",
+        plantStart: "2024-01-01"
+      };
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      const result = await service.createSitePolygonVersion(
+        basePolygon.uuid,
+        undefined,
+        attributeChanges,
+        "Manual update",
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+
+      expect(result).toBe(newVersion);
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            basePolygon,
+            newPolygonGeometryUuid: null,
+            attributeChanges: expect.objectContaining({
+              polyName: "Renamed",
+              targetSys: "natural-forest",
+              plantStart: new Date("2024-01-01")
+            })
+          })
+        ],
+        transaction
+      );
+      expect(CriteriaSite.destroy).toHaveBeenCalledWith({
+        where: { polygonId: basePolygon.polygonUuid },
+        transaction
+      });
+    });
+
+    it("should pass source and admin session context to versioning for GA4 analytics", async () => {
+      const newVersion = { uuid: "new-version-uuid", polyName: "Renamed" } as SitePolygon;
+      const attributeChanges: AttributeChangesDto = {
+        polyName: "Renamed"
+      };
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      await service.createSitePolygonVersion(
+        basePolygon.uuid,
+        undefined,
+        attributeChanges,
+        "Updated polygon attributes from admin panel",
+        userId,
+        userFullName,
+        source,
+        transaction,
+        true
+      );
+
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            source: "terramatch",
+            isAdminSession: true
+          })
+        ],
+        transaction
+      );
+    });
+
+    it("should create a version with a replacement geometry", async () => {
+      const newVersion = { uuid: "new-version-uuid" } as SitePolygon;
+      const newGeometry: CreateSitePolygonRequestDto[] = [
+        {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [0, 0],
+                    [0, 1],
+                    [1, 1],
+                    [1, 0],
+                    [0, 0]
+                  ]
+                ]
+              },
+              properties: { site_id: "site-uuid-1" }
+            }
+          ]
+        }
+      ];
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(polygonGeometryService, "createGeometriesFromFeatures").mockResolvedValue({
+        uuids: ["new-polygon-uuid"],
+        areas: [42.5]
+      });
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      const result = await service.createSitePolygonVersion(
+        basePolygon.uuid,
+        newGeometry,
+        undefined,
+        "Geometry update",
+        userId,
+        userFullName,
+        source,
+        transaction
+      );
+
+      expect(result).toBe(newVersion);
+      expect(polygonGeometryService.createGeometriesFromFeatures).toHaveBeenCalled();
+      expect(polygonGeometryService.bulkUpdateSitePolygonCentroids).toHaveBeenCalledWith(
+        ["new-polygon-uuid"],
+        transaction
+      );
+      expect(versioningService.createVersions).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            newPolygonGeometryUuid: "new-polygon-uuid",
+            attributeChanges: expect.objectContaining({ calcArea: 42.5 })
+          })
+        ],
+        transaction
+      );
+    });
+
+    it("should throw when geometry collection has no features", async () => {
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+
+      await expect(
+        service.createSitePolygonVersion(
+          basePolygon.uuid,
+          [{ type: "FeatureCollection", features: [] }],
+          undefined,
+          "Geometry update",
+          userId,
+          userFullName,
+          source,
+          transaction
+        )
+      ).rejects.toThrow(new BadRequestException("No features provided in geometry collection"));
+    });
+
+    it("should throw when geometry collection has multiple features", async () => {
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+
+      const newGeometry: CreateSitePolygonRequestDto[] = [
+        {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [0, 0],
+                    [0, 1],
+                    [1, 1],
+                    [0, 0]
+                  ]
+                ]
+              },
+              properties: {}
+            },
+            {
+              type: "Feature",
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [2, 2],
+                    [2, 3],
+                    [3, 3],
+                    [2, 2]
+                  ]
+                ]
+              },
+              properties: {}
+            }
+          ]
+        }
+      ];
+
+      await expect(
+        service.createSitePolygonVersion(
+          basePolygon.uuid,
+          newGeometry,
+          undefined,
+          "Geometry update",
+          userId,
+          userFullName,
+          source,
+          transaction
+        )
+      ).rejects.toThrow(new BadRequestException("Version creation only supports single polygon. Received 2 features"));
+    });
+
+    it("should reject invalid plantStart values", async () => {
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+
+      await expect(
+        service.createSitePolygonVersion(
+          basePolygon.uuid,
+          undefined,
+          { plantStart: "not-a-date" },
+          "Manual update",
+          userId,
+          userFullName,
+          source,
+          transaction
+        )
+      ).rejects.toThrow(new BadRequestException("plantStart contains invalid date: not-a-date"));
     });
   });
 });

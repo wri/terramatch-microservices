@@ -53,9 +53,9 @@ const REPORT_ENTRIES = [
     title: "People Affected"
   },
   {
-    name: "monetary-damage",
+    name: "financial-loss",
     inputType: "number",
-    title: "Monetary Damage"
+    title: "Financial Loss"
   },
   {
     name: "property-affected",
@@ -115,7 +115,7 @@ const CSV_COLUMNS: Dictionary<string> = {
   extent: "Extent",
   propertyAffected: "Property Affected",
   peopleAffected: "People Affected",
-  monetaryDamage: "Monetary Damage",
+  financialLoss: "Financial Loss",
   description: "Description",
   actionDescription: "Action Description",
   disturbanceType: "Disturbance Type",
@@ -143,7 +143,7 @@ const ENTRY_EXPORT_COLUMN_MAP: Record<string, keyof typeof CSV_COLUMNS> = {
   intensity: "intensity",
   extent: "extent",
   "people-affected": "peopleAffected",
-  "monetary-damage": "monetaryDamage",
+  "financial-loss": "financialLoss",
   "property-affected": "propertyAffected",
   "disturbance-start-date": "disturbanceStartDate",
   "disturbance-end-date": "disturbanceEndDate",
@@ -218,7 +218,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   async create(createPayload: EntityCreateAttributes) {
     const project = await Project.findOne({
       where: { uuid: createPayload.parentUuid },
-      attributes: ["frameworkKey", "id"]
+      attributes: ["frameworkKey", "id"],
+      include: [{ association: "organisation", attributes: ["currency"] }]
     });
     if (project == null) {
       throw new BadRequestException(`Project with UUID ${createPayload.parentUuid} not found`);
@@ -230,7 +231,8 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       status: "due",
       updateRequestStatus: "no-update",
       title: "Disturbance Report",
-      createdBy: this.entitiesService.userId
+      createdBy: this.entitiesService.userId,
+      currency: project.organisation?.currency ?? null
     });
 
     await DisturbanceReportEntry.bulkCreate(
@@ -379,14 +381,16 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     });
     const media = await Media.for(report).collection("media").findAll();
 
-    const fileName = timestampFileName(`${report.projectName ?? "Project"} - Disturbance Report`);
+    const projectLabel = await this.entitiesService.localizeText("Project");
+    const reportLabel = await this.entitiesService.localizeText("Disturbance Report");
+    const fileName = timestampFileName(`${report.projectName ?? projectLabel} - ${reportLabel}`);
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       addRow(report, this.buildExportAdditionalData(report, entries, media));
     });
   }
 
   async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = timestampFileName("Disturbance Reports Export");
+    const fileName = timestampFileName(await this.entitiesService.localizeText("Disturbance Reports Export"));
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {

@@ -113,6 +113,48 @@ describe("ReportGenerationService", () => {
         organisationId
       });
     });
+
+    it("should create an SRP report on the same task as project and site reports for January PPC dues", async () => {
+      const { id: projectId, organisationId } = await ProjectFactory.create({ frameworkKey: "ppc" });
+      const siteIds = (await SiteFactory.createMany(2, { projectId, status: "approved" })).map(({ id }) => id).sort();
+      const dueAt = DateTime.utc(2027, 1, 7).toJSDate();
+      await service.createTask(projectId, dueAt);
+
+      const task = await Task.findOne({ where: { projectId } });
+      expect(task).toBeDefined();
+      expect((await task!.$get("projectReport"))?.projectId).toBe(projectId);
+
+      const siteReports = await task!.$get("siteReports");
+      expect(siteReports.map(({ siteId }) => siteId).sort()).toEqual(siteIds);
+
+      const srpReports = await task!.$get("srpReports");
+      expect(srpReports).toHaveLength(1);
+      expect(srpReports![0]).toMatchObject({
+        projectId,
+        frameworkKey: "ppc",
+        status: "due",
+        dueAt,
+        year: 2027,
+        taskId: task!.id
+      });
+
+      const action = await Action.for(srpReports![0]).findOne();
+      expect(action).toMatchObject({
+        status: "pending",
+        type: "notification",
+        title: "Srp report",
+        text: "Annual Socioeconomic Restoration Partners Report available",
+        projectId,
+        organisationId
+      });
+    });
+
+    it("should not create an SRP report for non-January PPC dues", async () => {
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "ppc" });
+      await service.createTask(projectId, DateTime.utc(2027, 4, 3).toJSDate());
+      const task = await Task.findOne({ where: { projectId } });
+      expect(await task!.$get("srpReports")).toHaveLength(0);
+    });
   });
 
   describe("createFinancialReport", () => {

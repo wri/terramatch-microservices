@@ -20,7 +20,8 @@ import {
   SiteFactory,
   SitePolygonFactory,
   StratasFactory,
-  TreeSpeciesFactory
+  TreeSpeciesFactory,
+  NurseryFactory
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "../../media/media.service";
@@ -245,7 +246,7 @@ describe("EntityApprovalProcessor", () => {
         value: '["flooding"]'
       });
       await DisturbanceReportEntryFactory.report(report).create({ name: "people-affected", value: "1000" });
-      await DisturbanceReportEntryFactory.report(report).create({ name: "monetary-damage", value: "5000" });
+      await DisturbanceReportEntryFactory.report(report).create({ name: "financial-loss", value: "5000" });
       await DisturbanceReportEntryFactory.report(report).create({
         name: "property-affected",
         value: '["seedlings","saplings"]'
@@ -258,6 +259,16 @@ describe("EntityApprovalProcessor", () => {
       await DisturbanceReportEntryFactory.report(report).create({
         name: "polygon-affected",
         value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+      const site = await SiteFactory.create();
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "site-affected",
+        value: `[{"siteUuid":"${site.uuid}"}]`
+      });
+      const nursery = await NurseryFactory.create();
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "nursery-affected",
+        value: `[{"nurseryUuid":"${nursery.uuid}"}]`
       });
 
       await process(report);
@@ -272,7 +283,7 @@ describe("EntityApprovalProcessor", () => {
         type: "climatic",
         subtype: ["flooding"],
         peopleAffected: 1000,
-        monetaryDamage: 5000,
+        financialLoss: 5000,
         propertyAffected: ["seedlings", "saplings"],
         disturbanceDate: date
       });

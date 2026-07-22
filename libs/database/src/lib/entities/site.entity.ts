@@ -51,6 +51,7 @@ import { Dictionary, isNumber } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
 import { Literal } from "sequelize/types/utils";
+import { setPpcExternalId } from "../util/sequelize-hooks";
 
 type SiteMedia =
   | "media"
@@ -72,6 +73,8 @@ type SiteMedia =
   underscored: true,
   paranoid: true,
   hooks: {
+    beforeCreate: setPpcExternalId(Site),
+    beforeUpdate: setPpcExternalId(Site),
     afterCreate: statusUpdateSequelizeHook,
     afterDestroy: async (site: Site) => {
       await removeMedia(site);

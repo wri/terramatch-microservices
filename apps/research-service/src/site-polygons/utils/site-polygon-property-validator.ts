@@ -12,7 +12,8 @@ const CORE_PROPERTY_KEYS_SNAKE_CASE = [
   "area",
   "status",
   "point_id",
-  "source"
+  "source",
+  "submission_cycle"
 ] as const;
 
 const CORE_PROPERTY_KEYS_CAMEL_CASE = [
@@ -26,7 +27,8 @@ const CORE_PROPERTY_KEYS_CAMEL_CASE = [
   "area",
   "status",
   "pointId",
-  "source"
+  "source",
+  "submissionCycle"
 ] as const;
 
 const CORE_PROPERTY_KEYS = [...CORE_PROPERTY_KEYS_SNAKE_CASE, ...CORE_PROPERTY_KEYS_CAMEL_CASE] as const;
@@ -91,6 +93,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
   const practiceValue = properties.practice; // Same in both formats
   const sourceValue = properties.source; // Same in both formats
   const areaValue = properties.area; // Same in both formats
+  const submissionCycleValue = getPropertyValue(properties, "submissionCycle", "submission_cycle");
 
   let plantStart: Date | null = null;
   if (plantStartValue != null && plantStartValue !== "") {
@@ -102,7 +105,8 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
 
   const distr = validateArrayProperty(distrValue, VALID_DISTRIBUTION_VALUES);
   const practice = validateArrayProperty(practiceValue, VALID_PRACTICE_VALUES);
-  const targetSys = validateTargetSys((targetSysValue as string) ?? "");
+  const submissionCycle = trimToNullableString(submissionCycleValue as string | null | undefined);
+  const targetSys = trimToNullableString(targetSysValue as string | null | undefined);
 
   return {
     polyName: (polyNameValue as string) ?? null,
@@ -111,6 +115,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
     practice: practice,
     targetSys: targetSys,
     distr: distr,
+    submissionCycle: submissionCycle,
     numTrees: numTrees,
     calcArea: (areaValue as number) ?? null,
     status: "draft" as const,
@@ -167,9 +172,8 @@ export function validateAndSortStringArray(
   return filteredValues.length > 0 ? filteredValues.sort() : null;
 }
 
-function validateTargetSys(value: string): string | null {
-  if (value == null || value.trim().length === 0) return null;
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+function trimToNullableString(value: string | null | undefined): string | null {
+  // Trim once; empty/whitespace-only becomes null so DB stores absence, not "".
+  const result = (value ?? "").trim();
+  return result.length === 0 ? null : result;
 }

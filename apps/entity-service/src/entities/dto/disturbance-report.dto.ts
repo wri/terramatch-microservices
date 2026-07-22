@@ -136,6 +136,9 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   actionDescription: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  currency: string | null;
+
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];
 }

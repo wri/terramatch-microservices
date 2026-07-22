@@ -67,6 +67,7 @@ import { GeometryUploadComparisonService } from "./geometry-upload-comparison.se
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
 import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
+import { isAdminSessionFromRoles } from "@terramatch-microservices/common/analytics/polygon-version-changed";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -141,6 +142,7 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
     const changeReason = createRequest?.data?.attributes?.changeReason;
@@ -155,7 +157,8 @@ export class SitePolygonsController {
         changeReason ?? "Version created via API",
         userId,
         userFullName,
-        source
+        source,
+        isAdminSession
       );
     }
 
@@ -249,6 +252,10 @@ export class SitePolygonsController {
   async findMany(@Query() query: SitePolygonQueryDto) {
     await this.policyService.authorize("read", SitePolygon);
 
+    if (query.deletedOnly === true) {
+      return this.findDeletedSitePolygons(query);
+    }
+
     const {
       siteId,
       projectId,
@@ -267,6 +274,7 @@ export class SitePolygonsController {
       practice,
       targetSys,
       distr,
+      submissionCycle,
       source,
       hasOverlap
     } = query;
@@ -343,6 +351,7 @@ export class SitePolygonsController {
       .filterPractice(practice)
       .filterDistr(distr)
       .filterTargetSys(targetSys)
+      .filterSubmissionCycle(submissionCycle)
       .filterSource(source)
       .filterHasOverlap(hasOverlap);
 
@@ -403,12 +412,53 @@ export class SitePolygonsController {
     return document.addIndex(indexData);
   }
 
+  private async findDeletedSitePolygons(query: SitePolygonQueryDto) {
+    const { siteId, search, searchFields } = query;
+    if (siteId == null || siteId.length !== 1) {
+      throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
+    }
+
+    const page = query.page ?? {};
+    page.size ??= MAX_PAGE_SIZE;
+    if (page.size > MAX_PAGE_SIZE || page.size < 1) {
+      throw new BadRequestException("Page size is invalid");
+    }
+    if (!isNumberPage(page)) {
+      throw new BadRequestException("deletedOnly requires number pagination (page[number]).");
+    }
+    if (page.number < 1) {
+      throw new BadRequestException("Page number is invalid");
+    }
+
+    let queryBuilder = this.sitePolygonService.buildDeletedQuery(page);
+    queryBuilder = await queryBuilder.filterSiteUuids(siteId);
+    if (search != null) {
+      queryBuilder = await queryBuilder.addSearch(search, searchFields);
+    }
+
+    const document = buildJsonApi(SitePolygonLightDto, { pagination: "number" });
+    const sitePolygons = await queryBuilder.execute();
+    const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, true);
+    for (const sitePolygon of sitePolygons) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
+    }
+
+    return document.addIndex({
+      requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
+      total: await queryBuilder.paginationTotal(),
+      pageNumber: page.number
+    });
+  }
+
   @Patch("attributes")
   @ApiOperation({
     operationId: "bulkUpdateSitePolygonAttributes",
     summary: "Bulk update site polygon attributes",
     description: `Creates a new version for each site polygon with the same attribute changes applied.
-    Supported fields: plantStart, practice, targetSys, distr, numTrees.
+    Supported fields: plantStart, practice, targetSys, distr, numTrees, submissionCycle.
     At least one attribute field must be provided. Empty string or empty array explicitly clears a field.
     Omitted fields inherit values from each polygon's active version.`
   })
@@ -448,6 +498,7 @@ export class SitePolygonsController {
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const newVersions = await SitePolygon.sql.transaction(async transaction =>
       this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
@@ -456,7 +507,8 @@ export class SitePolygonsController {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       )
     );
 
@@ -825,6 +877,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -859,7 +912,8 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null
+      userFullName: user?.fullName ?? null,
+      isAdminSession
     };
 
     await this.geometryUploadQueue.add("geometryUpload", jobData);
@@ -897,6 +951,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -931,7 +986,8 @@ export class SitePolygonsController {
       geojson,
       userId,
       source,
-      userFullName: user?.fullName ?? null
+      userFullName: user?.fullName ?? null,
+      isAdminSession
     };
 
     await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
@@ -967,6 +1023,7 @@ export class SitePolygonsController {
       include: [{ association: "roles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
+    const isAdminSession = isAdminSessionFromRoles(user?.roles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -976,7 +1033,8 @@ export class SitePolygonsController {
       siteId,
       userId,
       user?.fullName ?? null,
-      source
+      source,
+      isAdminSession
     );
 
     const document = buildJsonApi(SitePolygonLightDto);
@@ -999,7 +1057,8 @@ export class SitePolygonsController {
     changeReason: string,
     userId: number,
     userFullName: string | null,
-    source: string
+    source: string,
+    isAdminSession: boolean
   ) {
     const hasGeometryChange = geometries != null && geometries.length > 0;
     const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
@@ -1023,7 +1082,8 @@ export class SitePolygonsController {
         userId,
         userFullName,
         source,
-        transaction
+        transaction,
+        isAdminSession
       );
     });
 

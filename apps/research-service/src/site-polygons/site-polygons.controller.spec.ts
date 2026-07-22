@@ -83,6 +83,7 @@ describe("SitePolygonsController", () => {
     filterPlantStartRange: jest.Mock;
     filterPractice: jest.Mock;
     filterDistr: jest.Mock;
+    filterSubmissionCycle: jest.Mock;
     filterTargetSys: jest.Mock;
     filterSource: jest.Mock;
     filterHasOverlap: jest.Mock;
@@ -109,6 +110,7 @@ describe("SitePolygonsController", () => {
       filterPlantStartRange: jest.fn().mockReturnThis(),
       filterPractice: jest.fn().mockReturnThis(),
       filterDistr: jest.fn().mockReturnThis(),
+      filterSubmissionCycle: jest.fn().mockReturnThis(),
       filterTargetSys: jest.fn().mockReturnThis(),
       filterSource: jest.fn().mockReturnThis(),
       filterHasOverlap: jest.fn().mockReturnThis()
@@ -447,6 +449,7 @@ describe("SitePolygonsController", () => {
         practice: ["tree-planting"],
         distr: ["partial", "full"],
         targetSys: ["mangrove", "urban-forest"],
+        submissionCycle: ["1", "3"],
         source: ["terramatch", "greenhouse"],
         hasOverlap: true
       });
@@ -455,6 +458,7 @@ describe("SitePolygonsController", () => {
       expect(builder.filterPractice).toHaveBeenCalledWith(["tree-planting"]);
       expect(builder.filterDistr).toHaveBeenCalledWith(["partial", "full"]);
       expect(builder.filterTargetSys).toHaveBeenCalledWith(["mangrove", "urban-forest"]);
+      expect(builder.filterSubmissionCycle).toHaveBeenCalledWith(["1", "3"]);
       expect(builder.filterSource).toHaveBeenCalledWith(["terramatch", "greenhouse"]);
       expect(builder.filterHasOverlap).toHaveBeenCalledWith(true);
     });
@@ -487,6 +491,88 @@ describe("SitePolygonsController", () => {
       await expect(
         controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "invalid", direction: "ASC" } })
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("findMany with deletedOnly", () => {
+    interface MockDeletedQueryBuilder {
+      filterSiteUuids: jest.Mock;
+      addSearch: jest.Mock;
+      execute: jest.Mock;
+      paginationTotal: jest.Mock;
+    }
+
+    const mockDeletedQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockDeletedQueryBuilder => {
+      const builder: MockDeletedQueryBuilder = {
+        filterSiteUuids: jest.fn(),
+        addSearch: jest.fn(),
+        execute: jest.fn().mockResolvedValue(executeResult),
+        paginationTotal: jest.fn().mockResolvedValue(totalResult)
+      };
+      builder.filterSiteUuids.mockResolvedValue(builder);
+      builder.addSearch.mockResolvedValue(builder);
+
+      sitePolygonService.buildDeletedQuery.mockReturnValue(
+        builder as unknown as ReturnType<typeof sitePolygonService.buildDeletedQuery>
+      );
+
+      return builder;
+    };
+
+    it("should throw when siteId is missing", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockDeletedQueryBuilder();
+
+      await expect(controller.findMany({ deletedOnly: true, page: { number: 1 } })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("should throw when more than one siteId is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockDeletedQueryBuilder();
+
+      await expect(
+        controller.findMany({ deletedOnly: true, siteId: ["site-1", "site-2"], page: { number: 1 } })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw when number pagination is not used", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockDeletedQueryBuilder();
+
+      await expect(
+        controller.findMany({ deletedOnly: true, siteId: ["site-1"], page: { after: "cursor" } })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should filter by the requested site and return results", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygon = await SitePolygonFactory.create();
+      const builder = mockDeletedQueryBuilder([sitePolygon], 1);
+
+      const result = serialize(
+        await controller.findMany({ deletedOnly: true, siteId: ["site-1"], page: { number: 1 } })
+      );
+
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["site-1"]);
+      expect(result.meta?.indices?.[0].total).toBe(1);
+      expect(result.meta?.indices?.[0].pageNumber).toBe(1);
+    });
+
+    it("should apply search when provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockDeletedQueryBuilder();
+
+      await controller.findMany({
+        deletedOnly: true,
+        siteId: ["site-1"],
+        page: { number: 1 },
+        search: "forest",
+        searchFields: ["polyName"]
+      });
+
+      expect(builder.addSearch).toHaveBeenCalledWith("forest", ["polyName"]);
     });
   });
 
@@ -721,7 +807,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -779,7 +866,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        mockTransaction
+        mockTransaction,
+        false
       );
 
       Object.defineProperty(SitePolygon, "sequelize", {
@@ -860,7 +948,8 @@ describe("SitePolygonsController", () => {
         1,
         "Test User",
         "terramatch",
-        expect.anything()
+        expect.anything(),
+        false
       );
     });
 
@@ -1194,7 +1283,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
@@ -1260,7 +1350,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: null
+        userFullName: null,
+        isAdminSession: false
       });
     });
   });
@@ -1448,7 +1539,8 @@ describe("SitePolygonsController", () => {
         geojson,
         userId: 1,
         source: "terramatch",
-        userFullName: "Test User"
+        userFullName: "Test User",
+        isAdminSession: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
@@ -1505,7 +1597,8 @@ describe("SitePolygonsController", () => {
         "site-uuid",
         1,
         user.fullName,
-        "terramatch"
+        "terramatch",
+        false
       );
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);

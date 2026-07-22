@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
+  AboutSection,
   Form,
   FormOptionListOption,
   FormQuestion,
@@ -9,9 +10,10 @@ import {
   FundingProgramme,
   I18nItem,
   I18nTranslation,
+  Link,
   LocalizationKey
 } from "@terramatch-microservices/database/entities";
-import { Attributes, CreationAttributes, Op, WhereOptions } from "sequelize";
+import { Attributes, CreationAttributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
@@ -99,22 +101,33 @@ export class LocalizationService {
   }
 
   /**
-   * Returns a mapping of the given I18nItem IDs to their translated values in the given locale
+   * Returns a mapping of the given I18nItem IDs to their translated values in the given locale. Fallback
+   * default is the original EN value in the I18nItem. To just get the original value without mapping
+   * to the translation in Transifex, pass undefined for locale.
    */
-  async translateIds(ids: number[], locale: ValidLocale) {
+  async translateIds(ids: number[], locale?: ValidLocale) {
     if (ids.length === 0) return {} as Translations;
 
-    const language = locale === "en-US" ? [locale, "en"] : locale;
-    return (
-      await I18nTranslation.findAll({
-        where: { language, i18nItemId: ids },
-        // Note: it is expected that a given translation has either a short value or a long value; never both.
-        attributes: ["i18nItemId", "shortValue", "longValue"]
-      })
-    ).reduce(
-      (translations, { i18nItemId, shortValue, longValue }) => ({
+    const options: FindOptions<I18nItem> = {
+      where: { id: ids },
+      // Note: it is expected that a given translation has either a short value or a long value; never both.
+      attributes: ["id", "shortValue", "longValue"]
+    };
+    if (locale != null) {
+      const language = locale === "en-US" ? [locale, "en"] : locale;
+      options.include = [
+        {
+          association: "i18nTranslations",
+          attributes: ["shortValue", "longValue"],
+          where: { language },
+          required: false
+        }
+      ];
+    }
+    return (await I18nItem.findAll(options)).reduce(
+      (translations, { id, shortValue, longValue, i18nTranslations }) => ({
         ...translations,
-        [i18nItemId]: shortValue ?? longValue
+        [id]: i18nTranslations?.[0]?.shortValue ?? i18nTranslations?.[0]?.longValue ?? shortValue ?? longValue
       }),
       {} as Translations
     );
@@ -258,10 +271,10 @@ export class LocalizationService {
     this.logger.log(`Finished pushing ${items.length} items`);
   }
 
-  public async pushTranslationByForm(form: Form, i18nIds: number[]) {
+  public async pushTranslationsForEntity(uuid: string, i18nIds: number[]) {
     const tx = this.createNativeInstance();
     const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
-    const source = this.createSource(items, ["custom-form", form.uuid]);
+    const source = this.createSource(items, ["custom-form", uuid]);
     await tx.pushSource(source);
     this.logger.log(`Finished pushing ${items.length} items`);
     return i18nIds;
@@ -305,7 +318,12 @@ export class LocalizationService {
       { entity: FormTableHeader, attributes: ["labelId"] },
       { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
       { entity: FundingProgramme, attributes: ["locationId"] },
-      { entity: LocalizationKey, attributes: ["valueId"] }
+      { entity: LocalizationKey, attributes: ["valueId"] },
+      {
+        entity: AboutSection,
+        attributes: ["headerId", "titleId", "descriptionId", "contactSupportMessageId", "contactSupportSubjectId"]
+      },
+      { entity: Link, attributes: ["titleId"] }
     ];
     const i18nIds: number[] = [];
     for (const { entity, attributes } of i18nEntitiesColumns) {

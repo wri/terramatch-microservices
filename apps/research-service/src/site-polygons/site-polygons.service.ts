@@ -70,6 +70,15 @@ export class SitePolygonsService {
     return builder;
   }
 
+  buildDeletedQuery(page: NumberPage): SitePolygonQueryBuilder {
+    const builder = new SitePolygonQueryBuilder(page.size)
+      .includeSoftDeleted()
+      .filterSoftDeletedOnly()
+      .order([["deletedAt", "DESC"]]);
+    if (page.number != null) builder.pageNumber(page.number);
+    return builder;
+  }
+
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
     const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } =

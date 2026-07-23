@@ -92,11 +92,13 @@ export class Tracking extends Model<InferAttributes<Tracking>, InferCreationAttr
   static readonly HECTARES_GOAL_TYPE = "hectares-goal";
   static readonly HECTARES_HISTORICAL_TYPE = "hectares-historical";
   static readonly TREES_GOAL_TYPE = "trees-goal";
+  static readonly TREES_PLANTED_GOAL_TYPE = "trees-planted-goal";
   static readonly TREES_HISTORICAL_TYPE = "trees-historical";
   static readonly RESTORATION_TYPES = [
     Tracking.HECTARES_GOAL_TYPE,
     Tracking.HECTARES_HISTORICAL_TYPE,
     Tracking.TREES_GOAL_TYPE,
+    Tracking.TREES_PLANTED_GOAL_TYPE,
     Tracking.TREES_HISTORICAL_TYPE
   ] as const;
 

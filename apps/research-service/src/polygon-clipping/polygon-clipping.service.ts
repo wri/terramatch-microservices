@@ -10,13 +10,7 @@ import { uniq } from "lodash";
 import { SitePolygonCreationService } from "../site-polygons/site-polygon-creation.service";
 import { CreateSitePolygonRequestDto } from "../site-polygons/dto/create-site-polygon-request.dto";
 import { ValidationService } from "../validations/validation.service";
-
-interface OverlapInfo {
-  polyUuid: string;
-  polyName: string;
-  percentage: number;
-  intersectionArea: number;
-}
+import { OverlapInfo } from "../validations/validators/overlapping.validator";
 
 interface ClippedPolygonResult {
   polyUuid: string;

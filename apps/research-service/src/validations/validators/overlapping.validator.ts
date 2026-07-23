@@ -3,13 +3,13 @@ import { PolygonValidator, ValidationResult, PolygonValidationResult } from "./v
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction } from "sequelize";
 
-interface OverlapInfo {
-  poly_uuid: string;
-  poly_name: string;
-  site_name: string;
+export interface OverlapInfo {
+  polyUuid: string;
+  polyName: string;
+  siteName: string;
   percentage: number;
-  intersect_smaller: boolean;
-  intersection_area: number;
+  intersectSmaller: boolean;
+  intersectionArea: number;
 }
 
 interface OverlappingValidationResult extends ValidationResult {
@@ -313,12 +313,12 @@ export class OverlappingValidator implements PolygonValidator {
       );
 
       return {
-        poly_uuid: intersection.candidateUuid,
-        poly_name: intersection.candidateName ?? "",
-        site_name: intersection.siteName ?? "",
+        polyUuid: intersection.candidateUuid,
+        polyName: intersection.candidateName ?? "",
+        siteName: intersection.siteName ?? "",
         percentage,
-        intersect_smaller: intersection.candidateArea < intersection.targetArea,
-        intersection_area: intersectionAreaInHectares
+        intersectSmaller: intersection.candidateArea < intersection.targetArea,
+        intersectionArea: intersectionAreaInHectares
       };
     });
   }

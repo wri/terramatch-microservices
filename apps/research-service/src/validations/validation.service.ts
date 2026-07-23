@@ -653,7 +653,7 @@ export class ValidationService {
 
     if (dataCriteria?.extraInfo != null && !dataCriteria.valid) {
       const validationErrors = Array.isArray(dataCriteria.extraInfo) ? dataCriteria.extraInfo : [];
-      const numTreesError = validationErrors.find((error: { field?: string }) => error.field === "num_trees");
+      const numTreesError = validationErrors.find((error: { field?: string }) => error.field === "numTrees");
       const hasOnlyNumTreesError = validationErrors.length === 1 && numTreesError != null;
 
       if (hasOnlyNumTreesError) {

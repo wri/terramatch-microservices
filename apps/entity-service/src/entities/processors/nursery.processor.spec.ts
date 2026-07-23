@@ -364,11 +364,19 @@ describe("NurseryProcessor", () => {
       expect(nursery.deletedAt).not.toBeNull();
     });
 
-    it("should not allow a non-admin to delete a nursery if it has reports", async () => {
-      const nursery = await NurseryFactory.create();
+    it("should not allow a non-admin to delete a non-draft nursery if it has reports", async () => {
+      const nursery = await NurseryFactory.create({ status: "approved" });
       await NurseryReportFactory.create({ nurseryId: nursery.id });
       setMockedPermissions("manage-own");
       await expect(processor.delete(nursery)).rejects.toThrow(NotAcceptableException);
+    });
+
+    it("should allow a non-admin to delete a draft nursery even if it has reports", async () => {
+      const nursery = await NurseryFactory.create({ status: "started" });
+      await NurseryReportFactory.create({ nurseryId: nursery.id });
+      setMockedPermissions("manage-own");
+      await processor.delete(nursery);
+      expect(nursery.deletedAt).not.toBeNull();
     });
 
     it("should allow a non-admin to delete a nursery if it has no reports", async () => {

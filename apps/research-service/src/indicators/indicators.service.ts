@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { INDICATORS, IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { getIndicatorDisplayName, INDICATORS, IndicatorSlug } from "@terramatch-microservices/database/constants";
 import {
   IndicatorOutputHectares,
   IndicatorOutputTreeCover,
@@ -44,19 +44,22 @@ const DEFAULT_EXPORT_HEADERS: Record<string, string> = {
 const PPC_EXPORT_COLUMN = { key: "ppc_external_id", header: "PPC External ID" } as const;
 
 const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: string }> = {
-  treeCoverLoss: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss" },
-  treeCoverLossFires: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: "Tree Cover Loss from Fire" },
+  treeCoverLoss: { columns: { ...DEFAULT_EXPORT_HEADERS }, title: getIndicatorDisplayName("treeCoverLoss") },
+  treeCoverLossFires: {
+    columns: { ...DEFAULT_EXPORT_HEADERS },
+    title: getIndicatorDisplayName("treeCoverLossFires")
+  },
   restorationByStrategy: {
     columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
-    title: "Hectares Under Restoration By Strategy"
+    title: getIndicatorDisplayName("restorationByStrategy")
   },
   restorationByLandUse: {
     columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
-    title: "Hectares Under Restoration By Target Land Use System"
+    title: getIndicatorDisplayName("restorationByLandUse")
   },
   restorationByEcoRegion: {
     columns: { ...DEFAULT_EXPORT_HEADERS, created_at: "Baseline" },
-    title: "Hectares Under Restoration By WWF EcoRegion"
+    title: getIndicatorDisplayName("restorationByEcoRegion")
   },
   treeCover: {
     columns: {
@@ -65,7 +68,7 @@ const EXPORT_CONFIGS: Record<string, { columns: Record<string, string>; title: s
       project_phase: "Project Phase",
       plus_minus_percent: "Plus Minus Percent"
     },
-    title: "Tree Cover"
+    title: getIndicatorDisplayName("treeCover")
   }
 };
 

@@ -736,6 +736,13 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       resource: "restoration",
       inputType: "treesGoal",
       collection: "all"
+    },
+    "pro-pit-trees-planted-goal": {
+      label: "Trees Planted Goal",
+      exportHeading: "treesPlantedGoal",
+      resource: "restoration",
+      inputType: "treesPlantedGoal",
+      collection: "all"
     }
   }
 };

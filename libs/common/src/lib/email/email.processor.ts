@@ -35,6 +35,7 @@ export type SpecificEntityData = {
 
 export type ProjectEmailData = {
   projectIds: number[];
+  dueAt?: string;
 };
 
 export type AdminReminderEmailData = {

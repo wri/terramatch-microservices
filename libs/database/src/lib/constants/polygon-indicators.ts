@@ -13,3 +13,19 @@ export const INDICATORS = {
 } as const;
 export const INDICATOR_SLUGS = Object.values(INDICATORS);
 export type IndicatorSlug = (typeof INDICATOR_SLUGS)[number];
+
+export const INDICATOR_DISPLAY_NAMES: Record<IndicatorSlug, string> = {
+  treeCover: "Tree Cover",
+  treeCoverLoss: "Tree Cover Loss",
+  treeCoverLossFires: "Tree Cover Loss from Fire",
+  restorationByEcoRegion: "Hectares Under Restoration By WWF EcoRegion",
+  restorationByStrategy: "Hectares Under Restoration By Strategy",
+  restorationByLandUse: "Hectares Under Restoration By Target Land Use System",
+  treeCount: "Tree Count",
+  earlyTreeVerification: "Early Tree Verification",
+  fieldMonitoring: "Field Monitoring",
+  msuCarbon: "MSU Carbon"
+};
+
+export const getIndicatorDisplayName = (slug: IndicatorSlug): string =>
+  INDICATOR_DISPLAY_NAMES[slug] ?? "Indicator Calculation";

@@ -7,7 +7,7 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { IndicatorsBodyDto } from "./dto/indicators-body.dto";
 import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { getIndicatorDisplayName, IndicatorSlug } from "@terramatch-microservices/database/constants";
 
 describe("IndicatorsController", () => {
   let controller: IndicatorsController;
@@ -77,12 +77,44 @@ describe("IndicatorsController", () => {
       };
       const slug: IndicatorSlug = "treeCoverLoss";
       const result = serialize(await controller.startIndicatorCalculation({ slug }, request));
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: getIndicatorDisplayName(slug),
+          payload: { data: { slug } },
+          metadata: {
+            entity_name: `${sampleIndicatorsSummary.polygonUuids.length} polygons`
+          }
+        })
+      );
       expect(mockQueue.add).toHaveBeenCalledWith("indicatorCalculation", {
         slug,
         ...request.data.attributes,
         delayedJobId: 1
       });
       expect(result.data).toBeDefined();
+    });
+
+    it("should label the delayed job with the indicator display name", async () => {
+      const request: IndicatorsBodyDto = {
+        data: {
+          type: "indicators",
+          attributes: {
+            polygonUuids: sampleIndicatorsSummary.polygonUuids,
+            updateExisting: false,
+            forceRecalculation: false
+          }
+        }
+      };
+      const slug: IndicatorSlug = "restorationByStrategy";
+
+      await controller.startIndicatorCalculation({ slug }, request);
+
+      expect(DelayedJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Hectares Under Restoration By Strategy",
+          payload: { data: { slug } }
+        })
+      );
     });
   });
 

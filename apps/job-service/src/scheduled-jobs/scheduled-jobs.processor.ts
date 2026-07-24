@@ -15,7 +15,11 @@ import {
 import { TerrafundReportReminderEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "@terramatch-microservices/common/email/terrafund-site-and-nursery-reminder.email";
 import * as Sentry from "@sentry/nestjs";
-import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
+import {
+  FRAMEWORK_KEYS_TF_REPORT_REMINDER,
+  FrameworkKey,
+  TERRAFUND
+} from "@terramatch-microservices/database/constants/framework";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
@@ -74,9 +78,11 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
 
+    const projectIds: number[] = [];
     const failed: PromiseSettledResult<void>[] = [];
     for (let ii = 0; ii < count; ii += 100) {
       const projects = await Project.findAll({ where, limit: 100, offset: ii, attributes: ["id"] });
+      projectIds.push(...projects.map(({ id }) => id));
       failed.push(
         ...(
           await Promise.allSettled(projects.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))
@@ -87,13 +93,22 @@ export class ScheduledJobsProcessor extends WorkerHost {
     if (failed.length > 0) {
       this.logger.error(`Failed to create task for some projects: ${JSON.stringify(failed)}`);
     }
+
+    if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey) && projectIds.length > 0) {
+      await new TerrafundReportReminderEmail({ projectIds, dueAt: dueAtString }).sendLater(this.emailQueue);
+    }
   }
 
   private async processReportReminder(reportReminder: ReportReminder) {
     this.logger.log(`processReportReminder ${JSON.stringify(reportReminder)}`);
     const { frameworkKey } = reportReminder;
-    if (frameworkKey !== "terrafund") {
-      this.logger.warn(`Report reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
+    if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey)) {
+      this.logger.debug(`Report reminder for ${frameworkKey} is sent from TaskDue job processing; skipping duplicate`);
+      return;
+    }
+
+    if (frameworkKey !== TERRAFUND) {
+      this.logger.warn(`Report reminder for unsupported framework: ${frameworkKey}, ignoring`);
       return;
     }
 

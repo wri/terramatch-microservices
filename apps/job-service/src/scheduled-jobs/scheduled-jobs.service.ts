@@ -8,7 +8,7 @@ import {
   ScheduledJob,
   Verification
 } from "@terramatch-microservices/database/entities";
-import { ENTERPRISES, LANDSCAPES } from "@terramatch-microservices/database/constants";
+import { FRAMEWORK_KEYS_TF } from "@terramatch-microservices/database/constants";
 import { Op, Transaction } from "sequelize";
 import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import {
@@ -91,8 +91,9 @@ export class ScheduledJobsService {
     const now = DateTime.utc();
     const currentYear = now.year;
     const years = [currentYear, currentYear + 1] as const;
+    const reportingMonths = [1, 7] as const;
 
-    const existing = await ScheduledJob.taskDue([LANDSCAPES, ENTERPRISES]).findAll({
+    const existing = await ScheduledJob.taskDue(FRAMEWORK_KEYS_TF).findAll({
       where: { executionTime: { [Op.gte]: DateTime.utc(currentYear, 1, 1).toJSDate() } },
       attributes: ["taskDefinition"]
     });
@@ -102,19 +103,19 @@ export class ScheduledJobsService {
         .map(j => `${(j.taskDefinition as TaskDue).frameworkKey}|${(j.taskDefinition as TaskDue).dueAt}`)
     );
 
-    for (const framework of [LANDSCAPES, ENTERPRISES]) {
+    for (const framework of FRAMEWORK_KEYS_TF) {
       for (const year of years) {
-        const month = 1;
-        const day = 31;
-        const dueAt = DateTime.utc(year, month, day);
-        if (dueAt < now) continue;
-        const dueAtISO = dueAt.toISO();
-        const key = `${framework}|${dueAtISO}`;
-        if (existingKeys.has(key)) continue;
-        const executionTime = DateTime.utc(year, month, 1).toJSDate();
-        await ScheduledJob.scheduleTaskDue(executionTime, framework, dueAt.toJSDate());
-        existingKeys.add(key);
-        this.logger.log(`Scheduled TaskDue ${framework} dueAt ${dueAtISO}`);
+        for (const month of reportingMonths) {
+          const dueAt = DateTime.utc(year, month, 31);
+          if (dueAt < now) continue;
+          const dueAtISO = dueAt.toISO();
+          const key = `${framework}|${dueAtISO}`;
+          if (existingKeys.has(key)) continue;
+          const executionTime = DateTime.utc(year, month, 1).toJSDate();
+          await ScheduledJob.scheduleTaskDue(executionTime, framework, dueAt.toJSDate());
+          existingKeys.add(key);
+          this.logger.log(`Scheduled TaskDue ${framework} dueAt ${dueAtISO}`);
+        }
       }
     }
   }

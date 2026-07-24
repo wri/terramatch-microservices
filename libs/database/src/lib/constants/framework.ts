@@ -12,6 +12,10 @@ export const WCB = "wcb" as const;
 export const FRAMEWORK_KEYS_TF = [TERRAFUND, LANDSCAPES, ENTERPRISES, EPA, TERRAFUND_3] as const;
 export type FrameworkKeyTF = (typeof FRAMEWORK_KEYS_TF)[number];
 
+/** TerraFund frameworks that receive scheduled report reminder emails (excludes Top 100 / terrafund). */
+export const FRAMEWORK_KEYS_TF_REPORT_REMINDER = [LANDSCAPES, ENTERPRISES, EPA, TERRAFUND_3] as const;
+export type FrameworkKeyTFReportReminder = (typeof FRAMEWORK_KEYS_TF_REPORT_REMINDER)[number];
+
 export const FINANCIAL_REPORT_FRAMEWORKS = [LANDSCAPES, ENTERPRISES, TERRAFUND] as const;
 export type FinancialReportFramework = (typeof FINANCIAL_REPORT_FRAMEWORKS)[number];
 

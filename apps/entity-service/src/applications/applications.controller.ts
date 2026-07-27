@@ -130,7 +130,7 @@ export class ApplicationsController {
   @JsonApiResponse(ApplicationDto)
   @ExceptionResponse(NotFoundException, { description: "Application not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this application" })
-  async get(@Param() { uuid }: SingleResourceDto, @Query() { sideloads, translated }: ApplicationGetQueryDto) {
+  async get(@Param() { uuid }: SingleResourceDto, @Query() { sideloads }: ApplicationGetQueryDto) {
     const application = await Application.findOne({
       where: { uuid },
       include: [
@@ -160,11 +160,7 @@ export class ApplicationsController {
     if (sideloads?.includes("fundingProgramme")) {
       const fundingProgramme = await application.$get("fundingProgramme");
       if (fundingProgramme != null) {
-        await this.formDataService.addFundingProgrammeDtos(
-          document,
-          [fundingProgramme],
-          translated === false ? undefined : UserContext.userLocale
-        );
+        await this.formDataService.addFundingProgrammeDtos(document, [fundingProgramme]);
       }
     }
 

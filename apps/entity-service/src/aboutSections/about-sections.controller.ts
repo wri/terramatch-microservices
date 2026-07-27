@@ -34,7 +34,6 @@ export class AboutSectionsController {
   })
   @JsonApiResponse(AboutSectionDto)
   @ExceptionResponse(NotFoundException, { description: "About section for this type not found" })
-  @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
   async get(@Param() { uuid }: SingleResourceDto) {
     const aboutSection = await AboutSection.findOne({ where: { uuid } });
     if (aboutSection == null) throw new NotFoundException();

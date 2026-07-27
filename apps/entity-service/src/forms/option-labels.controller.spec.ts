@@ -13,6 +13,7 @@ import { NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock } from "@golevelup/ts-jest";
 import { ConfigService } from "@nestjs/config";
+import { TransifexApiService } from "@terramatch-microservices/transifex-api";
 
 describe("OptionsLabelsController", () => {
   let controller: OptionLabelsController;
@@ -20,7 +21,11 @@ describe("OptionsLabelsController", () => {
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [OptionLabelsController],
-      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+      providers: [
+        LocalizationService,
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
+        { provide: TransifexApiService, useValue: createMock<TransifexApiService>() }
+      ]
     }).compile();
 
     controller = module.get(OptionLabelsController);

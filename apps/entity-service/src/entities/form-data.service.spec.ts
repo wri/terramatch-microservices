@@ -2,7 +2,6 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { FormDataService } from "./form-data.service";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import {
   ApplicationFactory,
@@ -12,7 +11,6 @@ import {
   FormSectionFactory,
   FormSubmissionFactory,
   FundingProgrammeFactory,
-  I18nItemFactory,
   MediaFactory,
   OrganisationFactory,
   ProjectPitchFactory,
@@ -25,7 +23,6 @@ import {
 } from "@terramatch-microservices/database/factories";
 import {
   Form,
-  I18nTranslation,
   Organisation,
   Project,
   ProjectReport,
@@ -33,12 +30,7 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
-import {
-  mockTranslateFieldsWithOriginal,
-  mockUserContext,
-  serialize,
-  mockContextForUser
-} from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize, mockContextForUser } from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
   RelationResourceCollector
@@ -47,7 +39,6 @@ import { LinkedFieldResource } from "@terramatch-microservices/database/constant
 import { faker } from "@faker-js/faker";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { SubmissionDto } from "./dto/submission.dto";
-import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { FundingProgrammeDto } from "../fundingProgrammes/dto/funding-programme.dto";
 
 jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector", () => {
@@ -88,7 +79,6 @@ describe("FormDataService", () => {
   let service: FormDataService;
   let mediaService: DeepMocked<MediaService>;
   let policyService: PolicyService;
-  let localizationService: DeepMocked<LocalizationService>;
   let collector: LinkedAnswerCollector;
 
   beforeEach(async () => {
@@ -98,7 +88,6 @@ describe("FormDataService", () => {
       providers: [
         FormDataService,
         PolicyService,
-        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) }
       ]
     }).compile();
@@ -274,18 +263,6 @@ describe("FormDataService", () => {
   });
 
   describe("getDtoForEntity", () => {
-    it("translates the form title", async () => {
-      let form = await FormFactory.create();
-      let dto = await service.getDtoForEntity("projects", new Project(), form, "es-MX");
-      expect(dto.formTitle).toBe(form.title);
-
-      form = await FormFactory.create({ titleId: 42 });
-      localizationService.translateIds.mockResolvedValue({ 42: "translated title" });
-      localizationService.translateFields.mockReturnValue({ title: "translated title" });
-      dto = await service.getDtoForEntity("projects", new Project(), form, "es-MX");
-      expect(dto.formTitle).toBe("translated title");
-    });
-
     it("uses update request content and feedback when one exists", async () => {
       const site = await SiteFactory.create();
       const updateRequest = await UpdateRequestFactory.site(site).create({
@@ -294,7 +271,7 @@ describe("FormDataService", () => {
         feedbackFields: ["color"]
       });
       const form = await EntityFormFactory.site(site).create();
-      const dto = await service.getDtoForEntity("sites", site, form, "en-US");
+      const dto = await service.getDtoForEntity("sites", site, form);
       expect(dto.answers).toStrictEqual(updateRequest.content);
       expect(dto.feedback).toBe(updateRequest.feedback);
       expect(dto.feedbackFields).toStrictEqual(updateRequest.feedbackFields);
@@ -312,7 +289,7 @@ describe("FormDataService", () => {
         inputType: "text",
         linkedFieldKey: "site-name"
       });
-      const dto = await service.getDtoForEntity("sites", site, form, "en-US");
+      const dto = await service.getDtoForEntity("sites", site, form);
       expect(dto.answers).toStrictEqual({ [question.uuid]: "Site Name" });
       expect(dto.feedback).toBe("New name please!");
       expect(dto.feedbackFields).toStrictEqual(["name"]);
@@ -434,7 +411,7 @@ describe("FormDataService", () => {
       });
       const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
       const stage = await StageFactory.create({});
-      const user = await UserFactory.create({ locale: "es-MX" });
+      const user = await UserFactory.create();
       mockContextForUser(user);
       const submission = await FormSubmissionFactory.create({
         answers: { [conditional.uuid]: true },
@@ -447,11 +424,6 @@ describe("FormDataService", () => {
         feedbackFields: ["Organisation Phone Number"]
       });
 
-      const i18nItem = await I18nItemFactory.create({ shortValue: "Organisation Phone Number" });
-      await I18nTranslation.truncate();
-      await I18nTranslationFactory.create({ shortValue: "Organisation Phone Number", i18nItemId: i18nItem.id });
-      localizationService.translateIds.mockResolvedValue({ [i18nItem.id]: "Número de teléfono de la organización" });
-
       const document = buildJsonApi(SubmissionDto);
       // Setting up this test is easier if the appropriate associations are loaded by the service.
       const forService = await service.getFullSubmission(submission.uuid);
@@ -461,7 +433,6 @@ describe("FormDataService", () => {
       forService.projectPitch = null;
       await service.addSubmissionDto(document, forService);
 
-      expect(localizationService.translateIds).toHaveBeenCalledWith([i18nItem.id], "es-MX");
       const dto = (serialize(document).data as Resource).attributes;
       expect(dto.uuid).toBe(submission.uuid);
       expect(dto.updatedByName).toBe(user.fullName);
@@ -471,7 +442,7 @@ describe("FormDataService", () => {
       expect(dto.frameworkKey).toBe(form.frameworkKey);
       expect(dto.status).toBe(submission.status);
       expect(dto.organisationName).toBe(org.name);
-      expect(dto.translatedFeedbackFields).toEqual(["Número de teléfono de la organización"]);
+      expect(dto.feedbackFields).toEqual(["Organisation Phone Number"]);
       expect(dto.answers).toMatchObject({
         [conditional.uuid]: true,
         [orgQuestion.uuid]: org.phone,
@@ -494,7 +465,6 @@ describe("FormDataService", () => {
 
       const result = serialize(await service.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [programme]));
       const dto = (result.data as Resource).attributes;
-      expect(localizationService.translateIds).not.toHaveBeenCalled();
       expect(dto).toMatchObject({
         uuid: programme.uuid,
         name: programme.name,
@@ -504,34 +474,6 @@ describe("FormDataService", () => {
         stages: stages.map((stage, index) =>
           expect.objectContaining({ uuid: stage.uuid, formUuid: forms[index].uuid, deadlineAt: stage.deadlineAt })
         )
-      });
-    });
-
-    it("translates if a locale is provided", async () => {
-      const programmes = [
-        await FundingProgrammeFactory.create({ nameId: 1, descriptionId: 2, locationId: 3 }),
-        await FundingProgrammeFactory.create({ nameId: 4 })
-      ];
-      mockTranslateFieldsWithOriginal(localizationService);
-      localizationService.translateIds.mockResolvedValue({
-        1: "translated name",
-        2: "translated description",
-        3: "translated location",
-        4: "other translated named"
-      });
-      const result = serialize(
-        await service.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), programmes, "es-MX")
-      );
-      const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
-      expect(dtos[0]).toMatchObject({
-        name: "translated name",
-        description: "translated description",
-        location: "translated location"
-      });
-      expect(dtos[1]).toMatchObject({
-        name: "other translated named",
-        description: programmes[1].description,
-        location: programmes[1].location
       });
     });
   });

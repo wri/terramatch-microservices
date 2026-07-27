@@ -18,13 +18,20 @@ import { CreateFormBody, FormFullDto, FormLightDto, Forms, UpdateFormBody } from
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormsService } from "./forms.service";
-import { FormGetQueryDto, FormIndexQueryDto } from "./dto/form-query.dto";
+import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { PolicyService } from "@terramatch-microservices/common";
 import { Form, FormSubmission } from "@terramatch-microservices/database/entities";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto";
 import { FormPullTranslationQueryDto } from "./dto/form-pull-translation-query.dto";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  EntityServiceDelayedJobsProcessor
+} from "../jobs/entity-service-delayed-jobs.processor";
 
 @Controller("forms/v3/forms")
 @ApiExtraModels(Forms)
@@ -32,7 +39,8 @@ export class FormsController {
   constructor(
     private readonly formsService: FormsService,
     private readonly policyService: PolicyService,
-    private readonly localizationService: LocalizationService
+    private readonly localizationService: LocalizationService,
+    @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
 
   @Get()
@@ -54,10 +62,9 @@ export class FormsController {
   @ApiParam({ name: "uuid", type: String, description: "Form uuid" })
   @JsonApiResponse({ data: FormFullDto })
   @ExceptionResponse(NotFoundException, { description: "Form not found" })
-  @ExceptionResponse(BadRequestException, { description: "Locale for authenticated user missing" })
-  async get(@Param("uuid") uuid: string, @Query() query: FormGetQueryDto) {
+  async get(@Param("uuid") uuid: string) {
     const form = await this.formsService.findOne(uuid);
-    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, query.translated ?? true);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form);
   }
 
   @Delete(":uuid")
@@ -84,7 +91,7 @@ export class FormsController {
     await this.policyService.authorize("create", Form);
 
     const form = await this.formsService.store(payload.data.attributes);
-    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form);
   }
 
   // Using PUT instead of PATCH because if a question or section is left out of the attributes, it
@@ -103,12 +110,12 @@ export class FormsController {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("update", form);
     await this.formsService.store(payload.data.attributes, form);
-    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false);
+    return await this.formsService.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form);
   }
 
   @Post(":uuid/translations")
   @ApiOperation({ operationId: "formPushTranslation", description: "Push translations to Transifex for a form" })
-  @JsonApiResponse(FormTranslationDto)
+  @JsonApiResponse(DelayedJobDto)
   @ExceptionResponse(UnauthorizedException, { description: "Form translation not allowed." })
   @ExceptionResponse(BadRequestException, { description: "Form payload malformed." })
   @ExceptionResponse(NotFoundException, { description: "Form not found." })
@@ -116,12 +123,7 @@ export class FormsController {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("update", form);
     const i18nItemIds = await this.formsService.getI18nIdsForForm(form);
-    await this.localizationService.pushTranslationsForEntity(form.uuid, i18nItemIds);
-    return this.localizationService.addTranslationDto(
-      buildJsonApi<FormTranslationDto>(FormTranslationDto),
-      uuid,
-      i18nItemIds
-    );
+    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, form.uuid, i18nItemIds);
   }
 
   @Get(":uuid/translations")

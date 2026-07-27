@@ -49,7 +49,7 @@ export class FormLightDto extends HybridSupportDto {
   uuid: string;
 
   @IsString()
-  @ApiProperty({ description: "Translated form title", type: String })
+  @ApiProperty({ description: "Form title", type: String })
   title: string;
 
   @IsOptional()
@@ -74,11 +74,6 @@ export class FormFullDto extends FormLightDto {
     super();
     populateDto<FormFullDto, FormWithoutExtras>(this, form, { lightResource: false, ...props });
   }
-
-  @ApiProperty({
-    description: "Indicates whether the text fields in this form response have been translated to the user's locale"
-  })
-  translated: boolean;
 
   @IsOptional()
   @IsString()

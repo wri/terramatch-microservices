@@ -116,7 +116,13 @@ export class Form extends Model<Form> {
     return select.literal;
   }
 
-  static readonly I18N_FIELDS = ["title", "subtitle", "description", "submissionMessage"] as const;
+  static readonly I18N_FIELDS = [
+    "title",
+    "subtitle",
+    "description",
+    "submissionMessage",
+    "documentationLabel"
+  ] as const;
 
   @PrimaryKey
   @AutoIncrement

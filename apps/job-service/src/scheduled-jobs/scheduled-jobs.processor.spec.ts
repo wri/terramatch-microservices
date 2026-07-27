@@ -86,9 +86,52 @@ describe("ScheduledJobsProcessor", () => {
       } as Job);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to create task for some projects:"));
     });
+
+    it("should queue report reminder emails when TaskDue runs for a TF report-reminder framework", async () => {
+      await Project.truncate();
+      const projects = await ProjectFactory.createMany(2, { frameworkKey: "enterprises", status: "approved" });
+      const dueAt = DateTime.utc(2027, 1, 31).toISO();
+      await processor.process({
+        name: TASK_DUE_EVENT,
+        data: { taskDefinition: { frameworkKey: "enterprises", dueAt } }
+      } as Job);
+
+      expect(queue.add).toHaveBeenCalledWith(
+        "terrafundReportReminder",
+        expect.objectContaining({
+          projectIds: expect.arrayContaining(projects.map(({ id }) => id)),
+          dueAt
+        })
+      );
+    });
+
+    it("should not queue report reminder emails for Top 100 terrafund TaskDue", async () => {
+      await Project.truncate();
+      await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      const dueAt = DateTime.utc(2027, 1, 31).toISO();
+      await processor.process({
+        name: TASK_DUE_EVENT,
+        data: { taskDefinition: { frameworkKey: "terrafund", dueAt } }
+      } as Job);
+
+      expect(queue.add).not.toHaveBeenCalled();
+    });
   });
 
   describe("processReportReminder", () => {
+    it("should skip TF report-reminder frameworks handled by TaskDue", async () => {
+      const logSpy = jest.spyOn((processor as any).logger, "debug");
+      const projectSpy = jest.spyOn(Project, "findAll");
+      await processor.process({
+        name: REPORT_REMINDER_EVENT,
+        data: { taskDefinition: { frameworkKey: "enterprises" } }
+      } as Job);
+      expect(logSpy).toHaveBeenCalledWith(
+        "Report reminder for enterprises is sent from TaskDue job processing; skipping duplicate"
+      );
+      expect(projectSpy).not.toHaveBeenCalled();
+    });
+
     it("should log a warning and quit if the framework is not terrafund", async () => {
       const logSpy = jest.spyOn((processor as any).logger, "warn");
       const projectSpy = jest.spyOn(Project, "findAll");
@@ -96,7 +139,7 @@ describe("ScheduledJobsProcessor", () => {
         name: REPORT_REMINDER_EVENT,
         data: { taskDefinition: { frameworkKey: "ppc" } }
       } as Job);
-      expect(logSpy).toHaveBeenCalledWith("Report reminder for framework other than terrafund: ppc, ignoring");
+      expect(logSpy).toHaveBeenCalledWith("Report reminder for unsupported framework: ppc, ignoring");
       expect(projectSpy).not.toHaveBeenCalled();
     });
 

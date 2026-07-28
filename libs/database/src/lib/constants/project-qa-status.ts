@@ -1,9 +1,8 @@
-export const PROJECT_QA_STATUS_DEFAULT = "due";
+export const PROJECT_QA_STATUS_DEFAULT = null;
 
 export const PROJECT_QA_STATUS_VALUES = [
-  PROJECT_QA_STATUS_DEFAULT,
   "no-data-submitted",
-  "not-applicable",
+  "no-data-expected",
   "qa-in-progress",
   "qa-completed"
 ] as const;

@@ -21,6 +21,7 @@ import { addCurrencyColumn } from "./202607151300-add-currency-column";
 import { addFundoFloraProjectReportBioeconomyFields } from "./202607161500-add-fundo-flora-project-report-bioeconomy-fields";
 import { convertSitePolygonSubmissionCycleToSingleSelect } from "./202607141100-convert-site-polygon-submission-cycle-to-single-select";
 import { updateHaritBharatFundReadMoreUrl } from "./202607271530-update-harit-bharat-fund-read-more-url";
+import { updateProjectQaStatusNullable } from "./202607281200-update-project-qa-status-nullable";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -43,5 +44,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addCurrencyColumn,
   addFundoFloraProjectReportBioeconomyFields,
   convertSitePolygonSubmissionCycleToSingleSelect,
-  updateHaritBharatFundReadMoreUrl
+  updateHaritBharatFundReadMoreUrl,
+  updateProjectQaStatusNullable
 ];

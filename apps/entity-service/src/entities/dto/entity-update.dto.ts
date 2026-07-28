@@ -64,46 +64,51 @@ export class ProjectUpdateAttributes extends EntityUpdateAttributes {
   @IsIn(PROJECT_QA_STATUS_VALUES)
   @ApiProperty({
     required: false,
+    nullable: true,
     enum: PROJECT_QA_STATUS_VALUES,
     description: "QA status for polygon dataset stage 1"
   })
-  projectQaStatus1?: string;
+  projectQaStatus1?: string | null;
 
   @IsOptional()
   @IsIn(PROJECT_QA_STATUS_VALUES)
   @ApiProperty({
     required: false,
+    nullable: true,
     enum: PROJECT_QA_STATUS_VALUES,
     description: "QA status for polygon dataset stage 2"
   })
-  projectQaStatus2?: string;
+  projectQaStatus2?: string | null;
 
   @IsOptional()
   @IsIn(PROJECT_QA_STATUS_VALUES)
   @ApiProperty({
     required: false,
+    nullable: true,
     enum: PROJECT_QA_STATUS_VALUES,
     description: "QA status for polygon dataset stage 3"
   })
-  projectQaStatus3?: string;
+  projectQaStatus3?: string | null;
 
   @IsOptional()
   @IsIn(PROJECT_QA_STATUS_VALUES)
   @ApiProperty({
     required: false,
+    nullable: true,
     enum: PROJECT_QA_STATUS_VALUES,
     description: "QA status for polygon dataset stage 4"
   })
-  projectQaStatus4?: string;
+  projectQaStatus4?: string | null;
 
   @IsOptional()
   @IsIn(PROJECT_QA_STATUS_VALUES)
   @ApiProperty({
     required: false,
+    nullable: true,
     enum: PROJECT_QA_STATUS_VALUES,
     description: "QA status for polygon dataset stage 5"
   })
-  projectQaStatus5?: string;
+  projectQaStatus5?: string | null;
 
   @IsOptional()
   @IsString()

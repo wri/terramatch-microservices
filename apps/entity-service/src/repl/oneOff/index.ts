@@ -38,4 +38,5 @@ export { seedAboutSections } from "./2026-07-13-seedAboutSections";
 export { updateDisturbanceReportMonetaryDamageField } from "./2026-07-15-updateDisturbanceReportMonetaryDamagefield";
 export { fundoFloraProjectReportBioeconomyOptionLists } from "./2026-07-16-fundoFloraProjectReportBioeconomyOptionLists";
 export { moveTrackingDataTreesGoal } from "./2026-07-23-moveTrackingDataTreesGoal";
+export { migrateReportTasks } from "./2026-07-29-migrateReportTasks";
 export { importPolygonDataSubmission, importProjectQaStatuses } from "./2026-07-29-importPolygonHandoffStatuses";

@@ -136,6 +136,22 @@ export class ReportUpdateAttributes extends FeedbackFieldsAttributes {
   nothingToReport?: boolean;
 }
 
+export class DisturbanceReportUpdateAttributes extends FeedbackFieldsAttributes {
+  @IsOptional()
+  @IsIn(ENTITY_STATUSES)
+  @ApiProperty({
+    description: "Request to change to the status of the given disturbance report",
+    required: false,
+    enum: ENTITY_STATUSES
+  })
+  status?: EntityStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ description: "Update the nothingToReport flag.", required: false })
+  nothingToReport?: boolean;
+}
+
 export class ProjectUpdateData extends JsonApiDataDto({ type: "projects" }, ProjectUpdateAttributes) {}
 export class SiteUpdateData extends JsonApiDataDto({ type: "sites" }, EntityUpdateAttributes) {}
 export class NurseryUpdateData extends JsonApiDataDto({ type: "nurseries" }, EntityUpdateAttributes) {}
@@ -145,11 +161,15 @@ export class NurseryReportUpdateData extends JsonApiDataDto({ type: "nurseryRepo
 export class FinancialReportUpdateData extends JsonApiDataDto({ type: "financialReports" }, ReportUpdateAttributes) {}
 export class DisturbanceReportUpdateData extends JsonApiDataDto(
   { type: "disturbanceReports" },
-  ReportUpdateAttributes
+  DisturbanceReportUpdateAttributes
 ) {}
 export class SrpReportUpdateData extends JsonApiDataDto({ type: "srpReports" }, ReportUpdateAttributes) {}
 
-export type EntityUpdateData = ProjectUpdateAttributes | ReportUpdateAttributes | EntityUpdateAttributes;
+export type EntityUpdateData =
+  | ProjectUpdateAttributes
+  | ReportUpdateAttributes
+  | DisturbanceReportUpdateAttributes
+  | EntityUpdateAttributes;
 export class EntityUpdateBody extends JsonApiMultiBodyDto([
   ProjectUpdateData,
   SiteUpdateData,

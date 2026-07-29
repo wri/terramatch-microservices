@@ -1,5 +1,15 @@
 import { States, transitions } from "../util/model-column-state-machine";
-import { DelayedJob, FormSubmission, Nursery, Project, ProjectReport, Site, Task, UpdateRequest } from "../entities";
+import {
+  DelayedJob,
+  DisturbanceReport,
+  FormSubmission,
+  Nursery,
+  Project,
+  ProjectReport,
+  Site,
+  Task,
+  UpdateRequest
+} from "../entities";
 import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
@@ -27,7 +37,7 @@ export const statusUpdateSequelizeHook = async (model: Model) => {
 
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);
 
-export const EntityStatusStates: States<Project | Site | Nursery, EntityStatus> = {
+export const EntityStatusStates: States<Project | Site | Nursery | DisturbanceReport, EntityStatus> = {
   default: STARTED,
 
   transitions: transitions()

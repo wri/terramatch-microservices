@@ -417,6 +417,16 @@ describe("PolygonClippingController", () => {
       expect(clippingService.clipAndCreateVersions).toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(result.id).toBe("version-uuid-1");
+      expect(result.attributes).toEqual(
+        expect.objectContaining({
+          uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
+          polyName: "Test Polygon 1",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        })
+      );
     });
 
     it("should throw NotFoundException when single polygon fails to clip", async () => {

@@ -80,6 +80,7 @@ export class ClippingProcessor extends DelayedJobWorker<ClippingJobData> {
         version.uuid,
         populateDto(new ClippedVersionDto(), {
           uuid: version.uuid,
+          polygonUuid: version.polygonUuid,
           polyName: version.polyName,
           originalArea: version.originalArea,
           newArea: version.newArea,

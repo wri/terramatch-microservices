@@ -121,6 +121,26 @@ describe("ClippingProcessor", () => {
       expect(result.processedContent).toBe(2);
       expect(result.progressMessage).toBe("Completed clipping and validation of 2 polygons");
       expect(result.payload).toBeDefined();
+      const payloadData = result.payload.serialize().data;
+      expect(Array.isArray(payloadData)).toBe(true);
+      expect(payloadData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "version-uuid-1",
+            attributes: expect.objectContaining({
+              uuid: "version-uuid-1",
+              polygonUuid: "poly-uuid-1"
+            })
+          }),
+          expect.objectContaining({
+            id: "version-uuid-2",
+            attributes: expect.objectContaining({
+              uuid: "version-uuid-2",
+              polygonUuid: "poly-uuid-2"
+            })
+          })
+        ])
+      );
       expect(mockEmailQueue.add).toHaveBeenCalledWith(
         "polygonClippingComplete",
         expect.objectContaining({

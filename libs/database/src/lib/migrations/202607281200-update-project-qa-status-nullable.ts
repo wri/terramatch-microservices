@@ -14,14 +14,15 @@ export const updateProjectQaStatusNullable: RunnableMigration<QueryInterface> = 
 
   async up({ context }) {
     for (const column of PROJECT_QA_STATUS_COLUMNS) {
-      await context.sequelize.query(
-        `UPDATE v2_projects SET \`${column}\` = NULL WHERE \`${column}\` IN ('due', 'not-applicable')`
-      );
+      // Column must allow NULL before we clear removed option values.
       await context.changeColumn("v2_projects", column, {
         type: STRING(64),
         allowNull: true,
         defaultValue: null
       });
+      await context.sequelize.query(
+        `UPDATE v2_projects SET \`${column}\` = NULL WHERE \`${column}\` IN ('due', 'not-applicable')`
+      );
     }
   },
 

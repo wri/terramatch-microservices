@@ -9,7 +9,7 @@ import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CreationAttributes, Includeable, Op } from "sequelize";
-import { ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { DisturbanceReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
   DisturbanceReportFullDto,
   DisturbanceReportLightDto,
@@ -196,7 +196,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   DisturbanceReport,
   DisturbanceReportLightDto,
   DisturbanceReportFullDto,
-  ReportUpdateAttributes
+  DisturbanceReportUpdateAttributes
 > {
   readonly LIGHT_DTO = DisturbanceReportLightDto;
   readonly FULL_DTO = DisturbanceReportFullDto;
@@ -228,7 +228,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const disturbanceReport = await this.authorizedCreation(DisturbanceReport, {
       frameworkKey: project.frameworkKey,
       projectId: project.id,
-      status: "due",
+      status: "started",
       updateRequestStatus: "no-update",
       title: "Disturbance Report",
       createdBy: this.entitiesService.userId,

@@ -214,8 +214,6 @@ export class ProjectReportProcessor extends ReportProcessor<
 
   async getFullDto(projectReport: ProjectReport) {
     const reportTitle = await this.getReportTitle(projectReport);
-    const landscapeCommunityContribution =
-      projectReport.landscapeCommunityContribution ?? projectReport.communityProgress ?? null;
     const plantingStatus = resolvePlantingStatus(
       projectReport.plantingStatus,
       projectReport.landscapeCommunityContribution,
@@ -235,14 +233,9 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.uuid
       ) as ProjectReportMedia)
     });
-    dto.landscapeCommunityContribution = landscapeCommunityContribution;
     dto.plantingStatus = plantingStatus;
 
     await this.entitiesService.removeHiddenValues(projectReport, dto);
-    // Keep overview compatibility for consumers that still read landscapeCommunityContribution.
-    if (dto.landscapeCommunityContribution == null && projectReport.communityProgress != null) {
-      dto.landscapeCommunityContribution = projectReport.communityProgress;
-    }
     if (dto.plantingStatus == null) {
       dto.plantingStatus = resolvePlantingStatus(
         projectReport.plantingStatus,
@@ -250,7 +243,11 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.communityProgress
       );
     }
-    if (dto.landscapeCommunityContribution == null && dto.plantingStatus === "completed") {
+    if (
+      dto.landscapeCommunityContribution == null &&
+      dto.plantingStatus === "completed" &&
+      projectReport.plantingStatus === "completed"
+    ) {
       dto.landscapeCommunityContribution = "completed";
     }
 

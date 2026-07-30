@@ -191,14 +191,6 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           return;
         }
 
-        if (property === "communityProgress" && isString(answer) && answer.trim() !== "") {
-          Object.assign(model, {
-            communityProgress: answer,
-            landscapeCommunityContribution: answer
-          });
-          return;
-        }
-
         Object.assign(model, { [property]: answer });
         return;
       }

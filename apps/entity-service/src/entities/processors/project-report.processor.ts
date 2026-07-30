@@ -243,7 +243,11 @@ export class ProjectReportProcessor extends ReportProcessor<
         projectReport.communityProgress
       );
     }
-    if (dto.landscapeCommunityContribution == null && dto.plantingStatus === "completed") {
+    if (
+      dto.landscapeCommunityContribution == null &&
+      dto.plantingStatus === "completed" &&
+      projectReport.plantingStatus === "completed"
+    ) {
       dto.landscapeCommunityContribution = "completed";
     }
 

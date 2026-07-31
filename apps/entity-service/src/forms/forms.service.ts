@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { getTrackingEntryConfigLabels } from "@terramatch-microservices/common/localization/tracking-entry-config-i18n";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Application,
@@ -60,7 +61,7 @@ import { EntitiesService } from "../entities/entities.service";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
-const EXTRA_FIELDS: string[] = ["id", "optionsList"];
+const EXTRA_FIELDS: string[] = ["id", "optionsList", "additionalProps"];
 
 type TranslationModelType =
   | typeof Form
@@ -585,13 +586,18 @@ export class FormsService {
       "formOptionListId",
       formOptionsLists.map(list => list.id)
     );
+
+    const trackingEntryConfigLabels = formQuestions.flatMap(question =>
+      getTrackingEntryConfigLabels((question as FormQuestion).additionalProps)
+    );
     return [
       ...formI18nLabels,
       ...formSectionI18nLabels,
       ...formQuestionI18nLabels,
       ...formQuestionOptionI18nLabels,
       ...formTableHeaderI18nLabels,
-      ...formOptionListI18nLabels
+      ...formOptionListI18nLabels,
+      ...trackingEntryConfigLabels
     ];
   }
 

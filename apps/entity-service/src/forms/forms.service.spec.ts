@@ -829,5 +829,38 @@ describe("FormsService", () => {
       const i18nIds = await service.getI18nIdsForForm(form);
       expect(i18nIds).toBeDefined();
     });
+
+    it("includes tracking entryConfig labels from additionalProps", async () => {
+      const form = await FormFactory.create({ title: "Tracking Form" });
+      const section = await FormSectionFactory.form(form).create({ title: "Section" });
+      await FormQuestionFactory.section(section).create({
+        label: "Workdays",
+        inputType: "workdays",
+        additionalProps: {
+          entryConfigs: [
+            {
+              type: "gender",
+              title: "Custom Gender",
+              displayTrackingType: "People",
+              addNameLabel: "Add Ethnic Group",
+              subTypes: [{ subtype: "male", label: "Male" }]
+            }
+          ]
+        }
+      });
+
+      const labels = await service.getI18nIdsForForm(form);
+      expect(labels).toEqual(
+        expect.arrayContaining([
+          "Tracking Form",
+          "Section",
+          "Workdays",
+          "Custom Gender",
+          "People",
+          "Add Ethnic Group",
+          "Male"
+        ])
+      );
+    });
   });
 });

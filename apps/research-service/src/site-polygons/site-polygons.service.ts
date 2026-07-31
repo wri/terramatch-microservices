@@ -36,6 +36,7 @@ import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-
 import {
   INDICATOR_SLUGS,
   PolygonStatus,
+  POLYGON_DRAFT,
   POLYGON_PENDING_APPROVAL,
   VALIDATION_TYPES,
   AuditStatusType
@@ -43,6 +44,7 @@ import {
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -615,7 +617,8 @@ export class SitePolygonsService {
         polygonUuids,
         validationTypes: [...VALIDATION_TYPES],
         delayedJobId: delayedJob.id,
-        siteUuid
+        siteUuid,
+        triggerType
       },
       { jobId }
     );
@@ -623,6 +626,45 @@ export class SitePolygonsService {
     this.logger.log(
       `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, jobId: ${jobId})`
     );
+  }
+
+  async promoteEligibleGhPolygons(rawPolygonUuids: string[]): Promise<number> {
+    const polygonUuids = [...new Set(rawPolygonUuids.filter(uuid => uuid.length > 0))];
+    if (polygonUuids.length === 0) return 0;
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: { [Op.in]: polygonUuids },
+        isActive: true,
+        status: POLYGON_DRAFT,
+        validationStatus: { [Op.in]: ["passed", "partial"] }
+      }
+    });
+    if (sitePolygons.length === 0) return 0;
+
+    const userId = UserContext.authenticatedUserId;
+    const user =
+      userId == null
+        ? null
+        : await User.findByPk(userId, { attributes: ["id", "emailAddress", "firstName", "lastName"] });
+
+    await SitePolygon.update(
+      { status: POLYGON_PENDING_APPROVAL },
+      { where: { id: { [Op.in]: sitePolygons.map(sp => sp.id) } } }
+    );
+
+    const auditStatusRecords = this.createAuditStatusRecords(
+      sitePolygons,
+      POLYGON_PENDING_APPROVAL,
+      "Automatically submitted after GreenHouse push validation",
+      user
+    ) as Array<Attributes<AuditStatus>>;
+    if (auditStatusRecords.length > 0) {
+      await AuditStatus.bulkCreate(auditStatusRecords);
+    }
+
+    this.logger.log(`Promoted ${sitePolygons.length} GH polygons to pending-approval after validation`);
+    return sitePolygons.length;
   }
 
   async triggerProjectValidationJobs(sitePolygons: SitePolygon[], userId: number): Promise<void> {

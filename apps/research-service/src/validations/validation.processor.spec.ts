@@ -10,10 +10,12 @@ import {
   SiteValidationJobData
 } from "./validation.processor";
 import { ValidationService } from "./validation.service";
+import { SitePolygonsService } from "../site-polygons/site-polygons.service";
 
 describe("ValidationProcessor", () => {
   let processor: ValidationProcessor;
   let validationService: DeepMocked<ValidationService>;
+  let sitePolygonsService: DeepMocked<SitePolygonsService>;
 
   beforeEach(async () => {
     jest.spyOn(DelayedJob, "update").mockResolvedValue([0, []] as never);
@@ -24,12 +26,17 @@ describe("ValidationProcessor", () => {
         {
           provide: ValidationService,
           useValue: (validationService = createMock<ValidationService>())
+        },
+        {
+          provide: SitePolygonsService,
+          useValue: (sitePolygonsService = createMock<SitePolygonsService>())
         }
       ]
     }).compile();
 
     processor = module.get(ValidationProcessor);
     validationService.validatePolygonsBatch.mockResolvedValue(undefined);
+    sitePolygonsService.promoteEligibleGhPolygons.mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -65,6 +72,7 @@ describe("ValidationProcessor", () => {
 
       expect(validationService.validatePolygonsBatch).toHaveBeenCalledTimes(1);
       expect(validationService.validatePolygonsBatch).toHaveBeenCalledWith(["a", "b"], ["POLYGON_SIZE"]);
+      expect(sitePolygonsService.promoteEligibleGhPolygons).not.toHaveBeenCalled();
       expect(DelayedJob.update).toHaveBeenCalled();
       expect(result.processedContent).toBe(2);
       expect(result.progressMessage).toBe("Completed validation of 2 polygons");
@@ -109,6 +117,61 @@ describe("ValidationProcessor", () => {
       ]);
       expect(result.processedContent).toBe(51);
     });
+
+    it("promotes eligible GH polygons after each validation batch when triggerType is gh_push", async () => {
+      const polygonUuids = Array.from({ length: 51 }, (_, i) => `gh-${i}`);
+      sitePolygonsService.promoteEligibleGhPolygons.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
+      const job = {
+        data: {
+          polygonUuids,
+          validationTypes: ["POLYGON_SIZE"],
+          delayedJobId: 4,
+          siteUuid: "site-gh",
+          triggerType: "gh_push"
+        }
+      } as Partial<Job<PolygonValidationJobData>> as Job<PolygonValidationJobData>;
+
+      const result = await processor.processDelayedJob(job);
+
+      expect(validationService.validatePolygonsBatch).toHaveBeenCalledTimes(2);
+      expect(sitePolygonsService.promoteEligibleGhPolygons).toHaveBeenCalledTimes(2);
+      expect(sitePolygonsService.promoteEligibleGhPolygons).toHaveBeenNthCalledWith(1, polygonUuids.slice(0, 50));
+      expect(sitePolygonsService.promoteEligibleGhPolygons).toHaveBeenNthCalledWith(2, polygonUuids.slice(50, 51));
+      expect(result.processedContent).toBe(51);
+    });
+
+    it("does not promote when triggerType is pending-approval", async () => {
+      const job = {
+        data: {
+          polygonUuids: ["a"],
+          validationTypes: ["POLYGON_SIZE"],
+          delayedJobId: 5,
+          triggerType: "pending-approval"
+        }
+      } as Partial<Job<PolygonValidationJobData>> as Job<PolygonValidationJobData>;
+
+      await processor.processDelayedJob(job);
+
+      expect(sitePolygonsService.promoteEligibleGhPolygons).not.toHaveBeenCalled();
+    });
+
+    it("continues validation when GH promote fails", async () => {
+      sitePolygonsService.promoteEligibleGhPolygons.mockRejectedValue(new Error("promote failed"));
+      const job = {
+        data: {
+          polygonUuids: ["a", "b"],
+          validationTypes: ["POLYGON_SIZE"],
+          delayedJobId: 6,
+          triggerType: "gh_push"
+        }
+      } as Partial<Job<PolygonValidationJobData>> as Job<PolygonValidationJobData>;
+
+      const result = await processor.processDelayedJob(job);
+
+      expect(sitePolygonsService.promoteEligibleGhPolygons).toHaveBeenCalledWith(["a", "b"]);
+      expect(result.processedContent).toBe(2);
+      expect(result.progressMessage).toBe("Completed validation of 2 polygons");
+    });
   });
 
   describe("processDelayedJob (site validation)", () => {
@@ -141,6 +204,7 @@ describe("ValidationProcessor", () => {
 
       expect(validationService.validatePolygonsBatch).toHaveBeenCalledTimes(1);
       expect(validationService.validatePolygonsBatch).toHaveBeenCalledWith(["u1", "u2"], ["POLYGON_SIZE"]);
+      expect(sitePolygonsService.promoteEligibleGhPolygons).not.toHaveBeenCalled();
       expect(result.processedContent).toBe(2);
       expect(result.progressMessage).toBe("Completed validation of 2 polygons");
       expect(result.payload).toBeDefined();

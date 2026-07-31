@@ -15,7 +15,7 @@ import {
   CriteriaSite
 } from "@terramatch-microservices/database/entities";
 import { IndicatorSlug, PolygonStatus, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
-import { uniq } from "lodash";
+import { omit, uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
@@ -45,7 +45,13 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
   msuCarbon: IndicatorOutputMsuCarbon
 };
 
+export type SitePolygonQueryBuilderOptions = {
+  includeGeometry?: boolean;
+};
+
 export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
+  private readonly includeGeometry: boolean;
+
   private polygonGeometryJoin: IncludeOptions = {
     model: PolygonGeometry,
     attributes: ["polygon"]
@@ -58,20 +64,38 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     required: true
   };
 
-  constructor(pageSize?: number) {
+  private disturbanceJoin: IncludeOptions = {
+    model: Disturbance,
+    attributes: ["disturbanceableId"],
+    required: false
+  };
+
+  constructor(pageSize?: number, options: SitePolygonQueryBuilderOptions = {}) {
     super(SitePolygon, pageSize);
 
+    this.includeGeometry = options.includeGeometry !== false;
+
     this.findOptions.include = [
-      this.polygonGeometryJoin,
-      {
-        model: Disturbance,
-        attributes: ["disturbanceableId"],
-        required: false
-      },
+      ...(this.includeGeometry ? [this.polygonGeometryJoin] : []),
+      this.disturbanceJoin,
       this.siteJoin
     ];
 
     this.where({ isActive: true });
+  }
+
+  async paginationTotal() {
+    const { include, ...rest } = this.findOptions;
+    const includes = (Array.isArray(include) ? include : include != null ? [include] : []).filter(inc => {
+      if (inc == null || typeof inc !== "object" || !("model" in inc)) return true;
+      return (inc as IncludeOptions).model !== PolygonGeometry;
+    });
+
+    return await SitePolygon.count({
+      distinct: true,
+      ...omit(rest, ["limit", "offset", "order"]),
+      include: includes
+    });
   }
 
   includeSoftDeleted(): this {

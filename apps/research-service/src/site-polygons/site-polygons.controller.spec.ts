@@ -1651,7 +1651,7 @@ describe("SitePolygonsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
-      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, false);
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, true);
       expect(result.data).toBeDefined();
       expect(result.meta).toBeDefined();
       expect(result.meta?.indices).toBeDefined();

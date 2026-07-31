@@ -88,6 +88,22 @@ describe("SitePolygonsService", () => {
     expect((result as unknown as { findOptions: { offset: number } }).findOptions.offset).toBe(12);
   });
 
+  it("should omit PolygonGeometry when includeGeometry is false", async () => {
+    const result = await service.buildQuery({ size: 3, number: 1 }, { includeGeometry: false });
+    const includes = (result as unknown as { findOptions: { include: Array<{ model?: { name?: string } }> } })
+      .findOptions.include;
+
+    expect(includes.some(include => include.model?.name === "PolygonGeometry")).toBe(false);
+  });
+
+  it("should include PolygonGeometry by default for full resources", async () => {
+    const result = await service.buildQuery({ size: 3, number: 1 });
+    const includes = (result as unknown as { findOptions: { include: Array<{ model?: { name?: string } }> } })
+      .findOptions.include;
+
+    expect(includes.some(include => include.model?.name === "PolygonGeometry")).toBe(true);
+  });
+
   it("should succeed when there are 0 polygons in the filtered request", async () => {
     const associations = await service.loadAssociationDtos([], false);
     expect(associations).toEqual({});

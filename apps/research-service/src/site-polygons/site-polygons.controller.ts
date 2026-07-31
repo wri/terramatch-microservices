@@ -312,7 +312,7 @@ export class SitePolygonsController {
       throw new BadRequestException("Page number is invalid");
     }
 
-    const queryBuilder = (await this.sitePolygonService.buildQuery(page))
+    const queryBuilder = (await this.sitePolygonService.buildQuery(page, { includeGeometry: lightResource !== true }))
       .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate);
 
@@ -385,30 +385,29 @@ export class SitePolygonsController {
     const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;
 
     const document = buildJsonApi(dtoType, { pagination: isNumberPage(query.page) ? "number" : "cursor" });
-    const sitePolygons = await queryBuilder.execute();
+    const [sitePolygons, total] = await Promise.all([queryBuilder.execute(), queryBuilder.paginationTotal()]);
     const associations = await this.sitePolygonService.loadAssociationDtos(sitePolygons, lightResource ?? false);
-    let cursor: string | undefined = undefined;
-    for (const sitePolygon of sitePolygons) {
-      if (cursor == null) cursor = sitePolygon.uuid;
-      if (lightResource) {
-        document.addData(
-          sitePolygon.uuid,
-          await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
-        );
-      } else {
-        document.addData(
-          sitePolygon.uuid,
-          await this.sitePolygonService.buildFullDto(sitePolygon, associations[sitePolygon.id] ?? {})
-        );
-      }
+
+    const dtoEntries = await Promise.all(
+      sitePolygons.map(async sitePolygon => {
+        const association = associations[sitePolygon.id] ?? {};
+        const dto = lightResource
+          ? await this.sitePolygonService.buildLightDto(sitePolygon, association)
+          : await this.sitePolygonService.buildFullDto(sitePolygon, association);
+        return { uuid: sitePolygon.uuid, dto };
+      })
+    );
+
+    for (const { uuid, dto } of dtoEntries) {
+      document.addData(uuid, dto);
     }
 
     const indexData: Partial<IndexData> & { requestPath: string } = {
       requestPath: `/research/v3/sitePolygons${getStableRequestQuery(query)}`,
-      total: await queryBuilder.paginationTotal()
+      total
     };
     if (isNumberPage(query.page)) indexData.pageNumber = query.page.number;
-    else indexData.cursor = cursor;
+    else indexData.cursor = dtoEntries[0]?.uuid;
     return document.addIndex(indexData);
   }
 
@@ -660,7 +659,7 @@ export class SitePolygonsController {
     }
 
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
-    const associations = await this.sitePolygonService.loadAssociationDtos(versions, false);
+    const associations = await this.sitePolygonService.loadAssociationDtos(versions, true);
 
     const versionIds: string[] = [];
     for (const version of versions) {
@@ -734,7 +733,7 @@ export class SitePolygonsController {
     });
 
     const document = buildJsonApi(SitePolygonLightDto);
-    const associations = await this.sitePolygonService.loadAssociationDtos([activatedVersion], false);
+    const associations = await this.sitePolygonService.loadAssociationDtos([activatedVersion], true);
 
     document.addData(
       activatedVersion.uuid,

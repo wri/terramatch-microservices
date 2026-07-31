@@ -7,7 +7,7 @@ import {
   IndicatorOutputTreeCoverFactory,
   LandscapeGeometryFactory
 } from "@terramatch-microservices/database/factories";
-import { CriteriaSite, SitePolygon, Site } from "@terramatch-microservices/database/entities";
+import { CriteriaSite, SitePolygon, Site, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { BadRequestException } from "@nestjs/common";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -754,6 +754,63 @@ describe("SitePolygonQueryBuilder", () => {
       const siteInclude = includes.find(include => include.model === Site);
 
       expect(siteInclude?.required).toBe(true);
+    });
+
+    it("includes PolygonGeometry by default", () => {
+      const includes = ((builder as unknown as { findOptions: { include: Array<{ model?: unknown }> } }).findOptions
+        .include ?? []) as Array<{ model?: unknown }>;
+
+      expect(includes.some(include => include.model === PolygonGeometry)).toBe(true);
+    });
+
+    it("omits PolygonGeometry when includeGeometry is false", () => {
+      const lightBuilder = new SitePolygonQueryBuilder(undefined, { includeGeometry: false });
+      const includes = ((lightBuilder as unknown as { findOptions: { include: Array<{ model?: unknown }> } })
+        .findOptions.include ?? []) as Array<{ model?: unknown }>;
+
+      expect(includes.some(include => include.model === PolygonGeometry)).toBe(false);
+      expect(includes.some(include => include.model === Site)).toBe(true);
+    });
+  });
+
+  describe("paginationTotal", () => {
+    it("counts without joining PolygonGeometry and without limit/offset/order", async () => {
+      const lightBuilder = new SitePolygonQueryBuilder(10, { includeGeometry: false });
+      lightBuilder.pageNumber(2);
+
+      const countSpy = jest.spyOn(SitePolygon, "count").mockResolvedValue(42);
+
+      const total = await lightBuilder.paginationTotal();
+
+      expect(total).toBe(42);
+      expect(countSpy).toHaveBeenCalledTimes(1);
+      const countOptions = countSpy.mock.calls[0][0] as {
+        distinct?: boolean;
+        limit?: number;
+        offset?: number;
+        order?: unknown;
+        include?: Array<{ model?: unknown }>;
+      };
+      expect(countOptions.distinct).toBe(true);
+      expect(countOptions.limit).toBeUndefined();
+      expect(countOptions.offset).toBeUndefined();
+      expect(countOptions.order).toBeUndefined();
+      expect(countOptions.include?.some(include => include.model === PolygonGeometry)).toBe(false);
+      expect(countOptions.include?.some(include => include.model === Site)).toBe(true);
+
+      countSpy.mockRestore();
+    });
+
+    it("strips PolygonGeometry from count even when included in the find query", async () => {
+      const fullBuilder = new SitePolygonQueryBuilder(10);
+      const countSpy = jest.spyOn(SitePolygon, "count").mockResolvedValue(7);
+
+      await fullBuilder.paginationTotal();
+
+      const countOptions = countSpy.mock.calls[0][0] as { include?: Array<{ model?: unknown }> };
+      expect(countOptions.include?.some(include => include.model === PolygonGeometry)).toBe(false);
+
+      countSpy.mockRestore();
     });
   });
 

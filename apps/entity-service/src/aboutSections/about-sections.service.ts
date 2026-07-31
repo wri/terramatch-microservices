@@ -1,9 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { LocalizationService, Translations } from "@terramatch-microservices/common/localization/localization.service";
 import { cast, col, fn } from "sequelize";
-import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { AboutSectionDto, LinkDto } from "./dto/about-section.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
@@ -12,17 +10,16 @@ import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { groupBy, uniq } from "lodash";
 import { Link } from "@terramatch-microservices/database/entities";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
+import {
+  ENTITY_SERVICE_EXPORT_QUEUE,
+  EntityServiceDelayedJobsProcessor
+} from "../jobs/entity-service-delayed-jobs.processor";
 
 @Injectable()
 export class AboutSectionsService {
-  constructor(private readonly localizationService: LocalizationService) {}
-
-  private get userLocale() {
-    const locale = UserContext.userLocale;
-    if (locale == null) throw new BadRequestException("Locale is required");
-
-    return locale;
-  }
+  constructor(@InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue) {}
 
   async findOne(type: AboutSectionType, framework: FrameworkKey) {
     const aboutSection = await AboutSection.findOne({
@@ -32,14 +29,14 @@ export class AboutSectionsService {
     return aboutSection ?? (await AboutSection.findOne({ where: { type, frameworks: null } }));
   }
 
-  async addIndex(document: DocumentBuilder, query: AboutSectionIndexQueryDto, translate = true) {
+  async addIndex(document: DocumentBuilder, query: AboutSectionIndexQueryDto) {
     if (query.framework != null) {
       if (query.type == null) throw new BadRequestException("Type is required when framework is specified");
       if ((query.page?.number ?? 1) !== 1)
         throw new BadRequestException("Only the first page is available when framework is specified");
 
       const section = await this.findOne(query.type, query.framework);
-      if (section != null) await this.addDto(document, section, translate);
+      if (section != null) await this.addDto(document, section);
 
       return document.addIndex({
         requestPath: `/aboutSections/v3/aboutSections${getStableRequestQuery(query)}`,
@@ -53,18 +50,9 @@ export class AboutSectionsService {
     const sections = await builder.execute();
     const links = sections.length === 0 ? {} : groupBy(await Link.for(sections).findAll(), "linkableId");
 
-    const i18nIds: number[] = [];
     for (const section of sections) {
       section.links = links[section.id] ?? [];
-      i18nIds.push(...(await this.getI18nIds(section)));
-    }
-    const translations = await this.localizationService.translateIds(
-      uniq(i18nIds),
-      translate ? this.userLocale : undefined
-    );
-
-    for (const section of sections) {
-      await this.addDtoWithTranslations(document, section, translations);
+      await this.addDto(document, section);
     }
 
     return document.addIndex({
@@ -74,46 +62,22 @@ export class AboutSectionsService {
     });
   }
 
-  async addDto(document: DocumentBuilder, section: AboutSection, translate = true) {
-    section.links ??= await section.$get("links");
-    const i18nIds = await this.getI18nIds(section);
-    const translations = await this.localizationService.translateIds(i18nIds, translate ? this.userLocale : undefined);
-    return this.addDtoWithTranslations(document, section, translations);
-  }
-
-  async getI18nIds(section: AboutSection) {
-    section.links ??= await section.$get("links");
-    return [
-      section.headerId,
-      section.titleId,
-      section.descriptionId,
-      section.contactSupportMessageId,
-      section.contactSupportSubjectId,
-      ...section.links.map(({ titleId }) => titleId)
-    ].filter(isNotNull);
-  }
-
-  async pushTranslations(section: AboutSection) {
-    const i18nIds = await this.getI18nIds(section);
-    await this.localizationService.pushTranslationsForEntity(section.uuid, i18nIds);
-  }
-
-  private async addDtoWithTranslations(document: DocumentBuilder, section: AboutSection, translations: Translations) {
+  async addDto(document: DocumentBuilder, section: AboutSection) {
     // This should already be loaded, but best to cover our bases
     section.links ??= await section.$get("links");
     document.addData(
       section.uuid,
       new AboutSectionDto(section, {
         id: section.uuid,
-        header: translations[section.headerId] ?? "",
-        title: section.titleId == null ? null : translations[section.titleId],
-        description: translations[section.descriptionId] ?? "",
-        contactSupportMessage: translations[section.contactSupportMessageId] ?? "",
-        contactSupportSubject: translations[section.contactSupportSubjectId] ?? "",
+        header: section.header ?? "",
+        title: section.title,
+        description: section.description ?? "",
+        contactSupportMessage: section.contactSupportMessage ?? "",
+        contactSupportSubject: section.contactSupportSubject ?? "",
         links: section.links.map(link =>
           populateDto<LinkDto>(new LinkDto(), {
             id: link.uuid,
-            title: translations[link.titleId] ?? "",
+            title: link.title ?? "",
             url: link.url
           })
         )
@@ -121,5 +85,24 @@ export class AboutSectionsService {
     );
 
     return document;
+  }
+
+  async getI18nLabels(section: AboutSection) {
+    section.links ??= await section.$get("links");
+    return uniq(
+      [
+        section.header,
+        section.title,
+        section.description,
+        section.contactSupportMessage,
+        section.contactSupportSubject,
+        ...section.links.map(({ title }) => title)
+      ].filter(isNotNull)
+    );
+  }
+
+  async pushTranslations(section: AboutSection) {
+    const i18nLabels = await this.getI18nLabels(section);
+    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, section.uuid, i18nLabels);
   }
 }

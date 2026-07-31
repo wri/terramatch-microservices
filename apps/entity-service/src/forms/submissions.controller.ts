@@ -99,7 +99,7 @@ export class SubmissionsController {
     if (form == null) throw new BadRequestException("Form for stage not found");
 
     const user = await User.findByPk(UserContext.authenticatedUserId, {
-      attributes: ["uuid", "locale"],
+      attributes: ["uuid"],
       include: [{ association: "organisation" }] // pull full org for DTO creation below
     });
     if (user?.organisation == null) {
@@ -144,7 +144,7 @@ export class SubmissionsController {
     submission.organisation = user.organisation;
     submission.projectPitch = pitch;
 
-    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user.locale);
+    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form);
   }
 
   @Put(":uuid")
@@ -166,7 +166,7 @@ export class SubmissionsController {
 
     const user = await User.findOne({
       where: { id: UserContext.authenticatedUserId },
-      attributes: ["uuid", "locale"]
+      attributes: ["uuid"]
     });
 
     const attributes = payload.data.attributes;
@@ -198,6 +198,6 @@ export class SubmissionsController {
       await AuditStatus.ensureRecentAudit(submission, UserContext.authenticatedUserId);
     }
 
-    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form, user?.locale);
+    return await this.formDataService.addSubmissionDto(buildJsonApi(SubmissionDto), submission, form);
   }
 }

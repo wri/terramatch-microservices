@@ -15,10 +15,11 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Attributes, CreationAttributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
-import { createNativeInstance, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
+import { createNativeInstance, generateHashedKey, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
 import { Dictionary, groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { DRAFT, MODIFIED } from "@terramatch-microservices/database/constants/status";
+import { TransifexApiService } from "@terramatch-microservices/transifex-api";
 import { TMLogger } from "../util/tm-logger";
 import { DocumentBuilder } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
@@ -55,7 +56,10 @@ export type TransifexPullTranslationsMap = {
 export class LocalizationService {
   private readonly logger = new TMLogger(LocalizationService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly transifexApiService: TransifexApiService
+  ) {
     tx.init({
       token: configService.get("TRANSIFEX_TOKEN")
     });
@@ -271,13 +275,29 @@ export class LocalizationService {
     this.logger.log(`Finished pushing ${items.length} items`);
   }
 
-  public async pushTranslationsForEntity(uuid: string, i18nIds: number[]) {
-    const tx = this.createNativeInstance();
-    const items = await this.getTranslationsByCondition({ id: { [Op.in]: i18nIds } });
-    const source = this.createSource(items, ["custom-form", uuid]);
-    await tx.pushSource(source);
-    this.logger.log(`Finished pushing ${items.length} items`);
-    return i18nIds;
+  public async pushTranslationsForEntity(
+    _uuid: string,
+    i18nLabels: string[],
+    onProgress?: (processed: number, total: number) => Promise<void>
+  ) {
+    let created = 0;
+    let processed = 0;
+    for (const item of i18nLabels) {
+      const key = generateHashedKey(item);
+      if (key !== "") {
+        const existing = (await this.transifexApiService.getResourceString(key)) as { data: unknown[] };
+        if (existing.data?.length === 0) {
+          await this.transifexApiService.createResourceString(key, item);
+          created++;
+        }
+      }
+      processed++;
+      if (onProgress != null) {
+        await onProgress(processed, i18nLabels.length);
+      }
+    }
+    this.logger.log(`Finished pushing ${i18nLabels.length} items (${created} created)`);
+    return i18nLabels;
   }
 
   private createNativeInstance() {

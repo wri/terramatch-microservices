@@ -7,7 +7,6 @@ import {
   Param,
   Post,
   Put,
-  Query,
   UnauthorizedException
 } from "@nestjs/common";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
@@ -28,13 +27,7 @@ import {
   FundingProgrammeDto,
   UpdateFundingProgrammeBody
 } from "./dto/funding-programme.dto";
-import {
-  buildDeletedResponse,
-  buildJsonApi,
-  getDtoType,
-  getStableRequestQuery
-} from "@terramatch-microservices/common/util";
-import { FundingProgrammeQueryDto } from "./dto/funding-programme-query.dto";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
 import { difference, uniq } from "lodash";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
@@ -65,7 +58,7 @@ export class FundingProgrammesController {
   @ExceptionResponse(UnauthorizedException, {
     description: "User is not authorized to access these funding programmes"
   })
-  async index(@Query() query: FundingProgrammeQueryDto) {
+  async index() {
     let fundingProgrammes: FundingProgramme[];
     if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // non-admins only have access to FPs that match their org types
@@ -93,12 +86,11 @@ export class FundingProgrammesController {
       fundingProgrammes = await FundingProgramme.findAll();
     }
 
-    const locale = query.translated === false ? undefined : UserContext.userLocale;
     await this.policyService.authorize("read", fundingProgrammes);
     const document = buildJsonApi(FundingProgrammeDto, { forceDataArray: true }).addIndex({
-      requestPath: `/fundingProgrammes/v3/fundingProgrammes${getStableRequestQuery(query)}`
+      requestPath: "/fundingProgrammes/v3/fundingProgrammes"
     });
-    return await this.formDataService.addFundingProgrammeDtos(document, fundingProgrammes, locale);
+    return await this.formDataService.addFundingProgrammeDtos(document, fundingProgrammes);
   }
 
   @Get(":uuid")
@@ -109,18 +101,13 @@ export class FundingProgrammesController {
   @JsonApiResponse(FundingProgrammeDto)
   @ExceptionResponse(NotFoundException, { description: "Funding programme not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this funding programme" })
-  async get(@Param() { uuid }: SingleResourceDto, @Query() { translated }: FundingProgrammeQueryDto) {
+  async get(@Param() { uuid }: SingleResourceDto) {
     const fundingProgramme = await FundingProgramme.findOne({ where: { uuid } });
     if (fundingProgramme == null) throw new NotFoundException("Funding programme not found");
 
-    const locale = translated === false ? undefined : UserContext.userLocale;
     await this.policyService.authorize("read", fundingProgramme);
 
-    return await this.formDataService.addFundingProgrammeDtos(
-      buildJsonApi(FundingProgrammeDto),
-      [fundingProgramme],
-      locale
-    );
+    return await this.formDataService.addFundingProgrammeDtos(buildJsonApi(FundingProgrammeDto), [fundingProgramme]);
   }
 
   @Delete(":uuid")

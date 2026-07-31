@@ -16,12 +16,13 @@ import {
 import { faker } from "@faker-js/faker";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, normalizeLocale, t, tx } from "@transifex/native";
-import { createMock } from "@golevelup/ts-jest";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
 import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { TransifexApiService } from "@terramatch-microservices/transifex-api";
 import { buildJsonApi } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
 
@@ -37,6 +38,7 @@ jest.mock("@transifex/native", () => ({
   },
   t: jest.fn(),
   normalizeLocale: jest.fn(),
+  generateHashedKey: jest.fn().mockImplementation((value: string) => value),
   createNativeInstance: jest.fn().mockImplementation(() => ({
     fetchTranslations: jest.fn(),
     cache: {
@@ -50,10 +52,15 @@ jest.mock("@transifex/native", () => ({
 
 describe("LocalizationService", () => {
   let service: LocalizationService;
+  let transifexApiService: DeepMocked<TransifexApiService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LocalizationService, { provide: ConfigService, useValue: createMock<ConfigService>() }]
+      providers: [
+        LocalizationService,
+        { provide: ConfigService, useValue: createMock<ConfigService>() },
+        { provide: TransifexApiService, useValue: (transifexApiService = createMock<TransifexApiService>()) }
+      ]
     }).compile();
 
     service = module.get<LocalizationService>(LocalizationService);
@@ -248,14 +255,25 @@ describe("LocalizationService", () => {
   });
 
   describe("pushTranslationByForm", () => {
-    it("should push translations by form", async () => {
+    it("should create resource strings that do not exist", async () => {
       const form = await FormFactory.create();
-      const pushSouceMock = jest.fn();
-      (createNativeInstance as jest.Mock).mockImplementation(() => ({
-        pushSource: pushSouceMock
-      }));
-      await service.pushTranslationsForEntity(form.uuid, [1, 2, 3]);
-      expect(pushSouceMock).toHaveBeenCalled();
+      const existingItem = await I18nItemFactory.create({ shortValue: "Existing" });
+      const missingItem = await I18nItemFactory.create({ shortValue: "Missing" });
+
+      await service.pushTranslationsForEntity(form.uuid, [existingItem.shortValue ?? "", missingItem.shortValue ?? ""]);
+
+      expect(transifexApiService.getResourceString).toHaveBeenCalledTimes(2);
+    });
+
+    it("should skip creating when the resource string already exists", async () => {
+      const form = await FormFactory.create();
+      const item = await I18nItemFactory.create({ shortValue: "Already there" });
+
+      transifexApiService.getResourceString.mockResolvedValue({ data: [{ id: "existing" }] });
+
+      await service.pushTranslationsForEntity(form.uuid, [item.shortValue ?? ""]);
+
+      expect(transifexApiService.createResourceString).not.toHaveBeenCalled();
     });
   });
 

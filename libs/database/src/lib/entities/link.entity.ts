@@ -1,6 +1,6 @@
 import {
+  AllowNull,
   AutoIncrement,
-  BelongsTo,
   Column,
   DefaultScope,
   Index,
@@ -16,11 +16,11 @@ import {
   InferAttributes,
   InferCreationAttributes,
   STRING,
+  TEXT,
   TINYINT,
   UUID,
   UUIDV4
 } from "sequelize";
-import { I18nItem } from "./i18n-item.entity";
 import { chainScope } from "../util/chain-scope";
 import { LaravelModel, laravelType } from "../types/util";
 
@@ -55,11 +55,12 @@ export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<L
   @Column(TINYINT)
   declare order: number;
 
+  @AllowNull
+  @Column(TEXT)
+  declare title: string | null;
+
   @Column(BIGINT.UNSIGNED)
   declare titleId: number;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "title_id", constraints: false })
-  declare title: I18nItem | null;
 
   @Column(STRING)
   declare url: string;

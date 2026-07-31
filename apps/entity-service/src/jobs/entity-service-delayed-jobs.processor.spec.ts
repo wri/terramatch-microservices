@@ -4,7 +4,9 @@ import {
   EntityServiceDelayedJobsProcessor,
   MEDIA_EXPORT,
   MediaExportJobData,
-  PROJECT_EXPORT
+  PROJECT_EXPORT,
+  PUSH_TRANSLATIONS,
+  PushTranslationsJobData
 } from "./entity-service-delayed-jobs.processor";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { EntitiesService } from "../entities/entities.service";
@@ -16,6 +18,7 @@ import { DelayedJobException } from "@terramatch-microservices/common/workers/de
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util";
 import { PassThrough } from "node:stream";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 describe("EntityServiceDelayedJobsProcessor", () => {
   let module: TestingModule;
@@ -23,6 +26,7 @@ describe("EntityServiceDelayedJobsProcessor", () => {
   const configService = (): DeepMocked<ConfigService> => module.get(ConfigService);
   const entityService = (): DeepMocked<EntitiesService> => module.get(EntitiesService);
   const fileService = (): DeepMocked<FileService> => module.get(FileService);
+  const localizationService = (): DeepMocked<LocalizationService> => module.get(LocalizationService);
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -30,6 +34,7 @@ describe("EntityServiceDelayedJobsProcessor", () => {
         EntityServiceDelayedJobsProcessor,
         { provide: EntitiesService, useValue: createMock<EntitiesService>() },
         { provide: FileService, useValue: createMock<FileService>() },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         {
           provide: ConfigService,
           useValue: createMock<ConfigService>({
@@ -145,6 +150,46 @@ describe("EntityServiceDelayedJobsProcessor", () => {
       expect(fileService().generatePresignedUrl).toHaveBeenCalledWith(
         "test-bucket",
         expect.stringContaining("Restoring Dune")
+      );
+    });
+  });
+
+  describe("processPushTranslations", () => {
+    it("throws if the localization service throws", async () => {
+      localizationService().pushTranslationsForEntity.mockRejectedValue(new Error("Transifex error"));
+      await expect(
+        service().processDelayedJob({
+          name: PUSH_TRANSLATIONS,
+          data: { delayedJobId: 1, uuid: "form-uuid", i18nLabels: ["1", "2"] }
+        } as Job<PushTranslationsJobData>)
+      ).rejects.toThrow(DelayedJobException);
+    });
+
+    it("pushes translations and returns a FormTranslationDto payload", async () => {
+      // @ts-expect-error updateJobProgress is protected
+      jest.spyOn(service(), "updateJobProgress").mockResolvedValue(undefined);
+      localizationService().pushTranslationsForEntity.mockImplementation(async (_uuid, _labels, onProgress) => {
+        await onProgress?.(2, 2);
+        return ["1", "2"];
+      });
+
+      const result = serialize(
+        (
+          await service().processDelayedJob({
+            name: PUSH_TRANSLATIONS,
+            data: { delayedJobId: 1, uuid: "form-uuid", i18nLabels: ["1", "2"] }
+          } as Job<PushTranslationsJobData>)
+        ).payload
+      );
+
+      expect(localizationService().pushTranslationsForEntity).toHaveBeenCalledWith(
+        "form-uuid",
+        ["1", "2"],
+        expect.any(Function)
+      );
+      expect((result.data as Resource).id).toBe("form-uuid");
+      expect((result.data as Resource).attributes).toEqual(
+        expect.objectContaining({ translationKeysNumber: 2, lightResource: true })
       );
     });
   });

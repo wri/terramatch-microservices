@@ -202,8 +202,7 @@ describe("SubmissionsController", () => {
       expect(formDataService.addSubmissionDto).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ uuid: submission.uuid }),
-        expect.objectContaining({ uuid: form.uuid }),
-        user.locale
+        expect.objectContaining({ uuid: form.uuid })
       );
     });
 
@@ -256,8 +255,7 @@ describe("SubmissionsController", () => {
       expect(formDataService.addSubmissionDto).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ uuid: submission.uuid }),
-        expect.objectContaining({ uuid: forms[2].uuid }),
-        user.locale
+        expect.objectContaining({ uuid: forms[2].uuid })
       );
     });
   });

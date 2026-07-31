@@ -61,15 +61,14 @@ describe("FundingProgrammesController", () => {
       setMockedPermissions("framework-terrafund");
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       const programmes = await FundingProgrammeFactory.createMany(3);
-      await controller.index({ translated: false });
+      await controller.index();
       expect(authSpy).toHaveBeenCalledWith(
         "read",
         expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
       );
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.objectContaining({ options: { forceDataArray: true } }),
-        expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid }))),
-        undefined
+        expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
       );
     });
 
@@ -78,9 +77,9 @@ describe("FundingProgrammesController", () => {
       mockContextForUser(user, "manage-own");
       await FundingProgrammeFactory.createMany(3);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
-      await controller.index({ translated: false });
+      await controller.index();
       expect(authSpy).toHaveBeenCalledWith("read", []);
-      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [], undefined);
+      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), []);
     });
 
     it("returns the funding programmes related to the user's org", async () => {
@@ -104,7 +103,7 @@ describe("FundingProgrammesController", () => {
 
       const authSpy = jest.spyOn(policyService, "authorize");
 
-      await controller.index({ translated: false });
+      await controller.index();
 
       expect(authSpy).toHaveBeenCalledWith(
         "read",
@@ -112,52 +111,25 @@ describe("FundingProgrammesController", () => {
       );
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.objectContaining({ options: { forceDataArray: true } }),
-        expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid }))),
-        undefined
-      );
-    });
-
-    it("translates by default", async () => {
-      await FundingProgramme.truncate();
-      const user = await UserFactory.create({ locale: "es-MX" });
-      mockContextForUser(user, "framework-ppc");
-      await controller.index({});
-      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        "es-MX"
+        expect.arrayContaining(programmes.map(({ uuid }) => expect.objectContaining({ uuid })))
       );
     });
   });
 
   describe("getFundingProgramme", () => {
     it("throws if the programme is not found", async () => {
-      await expect(controller.get({ uuid: "fake-uuid" }, {})).rejects.toThrow("Funding programme not found");
+      await expect(controller.get({ uuid: "fake-uuid" })).rejects.toThrow("Funding programme not found");
     });
 
     it("returns the programme UUID", async () => {
       const programme = await FundingProgrammeFactory.create();
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
-      await controller.get({ uuid: programme.uuid }, { translated: false });
+      await controller.get({ uuid: programme.uuid });
       await programme.reload();
       expect(authSpy).toHaveBeenCalledWith("read", programme);
       expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
         expect.anything(),
-        expect.arrayContaining([expect.objectContaining({ uuid: programme.uuid })]),
-        undefined
-      );
-    });
-
-    it("translates by default", async () => {
-      const programme = await FundingProgrammeFactory.create();
-      const user = await UserFactory.create({ locale: "es-MX" });
-      mockContextForUser(user);
-      await controller.get({ uuid: programme.uuid }, {});
-      await programme.reload();
-      expect(formDataService.addFundingProgrammeDtos).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.arrayContaining([expect.objectContaining({ uuid: programme.uuid })]),
-        "es-MX"
+        expect.arrayContaining([expect.objectContaining({ uuid: programme.uuid })])
       );
     });
   });

@@ -22,6 +22,8 @@ import { addFundoFloraProjectReportBioeconomyFields } from "./202607161500-add-f
 import { convertSitePolygonSubmissionCycleToSingleSelect } from "./202607141100-convert-site-polygon-submission-cycle-to-single-select";
 import { updateHaritBharatFundReadMoreUrl } from "./202607271530-update-harit-bharat-fund-read-more-url";
 import { updateProjectQaStatusNullable } from "./202607281200-update-project-qa-status-nullable";
+import { addAboutSectionTextFields } from "./202607301000-add-about-section-text-fields";
+import { addLinkTitleTextField } from "./202607301100-add-link-title-text-field";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -45,5 +47,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addFundoFloraProjectReportBioeconomyFields,
   convertSitePolygonSubmissionCycleToSingleSelect,
   updateHaritBharatFundReadMoreUrl,
-  updateProjectQaStatusNullable
+  updateProjectQaStatusNullable,
+  addAboutSectionTextFields,
+  addLinkTitleTextField
 ];

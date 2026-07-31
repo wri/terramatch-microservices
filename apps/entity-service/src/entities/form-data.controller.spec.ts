@@ -70,14 +70,12 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload(); // this seems to be needed to get the matching object to what is returned from findOne()
-      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       const result = serialize(await controller.get({ entity: "projects", uuid: project.uuid }));
-      expect(localeSpy).toHaveBeenCalled();
-      expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
+      expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form);
       expect(authSpy).toHaveBeenCalledWith("read", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
@@ -115,7 +113,6 @@ describe("FormDataController", () => {
       processor.findOne.mockResolvedValue(project);
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
       await form.reload();
-      const localeSpy = jest.spyOn(entitiesService, "userLocale", "get").mockReturnValue("es-MX");
       const dto = new FormDataDto();
       service.getDtoForEntity.mockResolvedValue(dto);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
@@ -128,8 +125,7 @@ describe("FormDataController", () => {
         )
       );
       expect(service.storeEntityAnswers).toHaveBeenCalledWith(project, form, answers);
-      expect(localeSpy).toHaveBeenCalled();
-      expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form, "es-MX");
+      expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form);
       expect(authSpy).toHaveBeenCalledWith("update", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");

@@ -9,6 +9,7 @@ import { EmailService } from "./email/email.service";
 import { MediaService } from "./media/media.service";
 import { SlackService } from "./slack/slack.service";
 import { DatabaseModule } from "@terramatch-microservices/database";
+import { TransifexApiModule } from "@terramatch-microservices/transifex-api";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { EventService } from "./events/event.service";
 import { BullModule } from "@nestjs/bullmq";
@@ -39,6 +40,7 @@ const IS_REPL = process.env["REPL"] === "true";
       isGlobal: true
     }),
     DatabaseModule,
+    TransifexApiModule,
     // Event Emitter is used for sending lightweight messages about events typically from the DB
     // layer to processes that want to hear about specific types of DB updates.
     EventEmitterModule.forRoot(),

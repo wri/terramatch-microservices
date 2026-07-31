@@ -10,6 +10,9 @@ import {
 import { ValidationSummaryDto } from "./dto/validation-summary.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { SitePolygonsService } from "../site-polygons/site-polygons.service";
+
+export type PolygonValidationTriggerType = "pending-approval" | "gh_push" | "upload";
 
 export interface SiteValidationJobData {
   siteUuid: string;
@@ -28,6 +31,7 @@ export interface PolygonValidationJobData {
   validationTypes: ValidationType[];
   delayedJobId: number;
   siteUuid?: string;
+  triggerType?: PolygonValidationTriggerType;
 }
 
 type ValidationJobData = SiteValidationJobData | ProjectValidationJobData | PolygonValidationJobData;
@@ -41,7 +45,10 @@ const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (ins
 export class ValidationProcessor extends DelayedJobWorker<ValidationJobData> {
   protected readonly logger = new TMLogger(ValidationProcessor.name);
 
-  constructor(private readonly validationService: ValidationService) {
+  constructor(
+    private readonly validationService: ValidationService,
+    private readonly sitePolygonsService: SitePolygonsService
+  ) {
     super();
   }
 
@@ -146,7 +153,7 @@ export class ValidationProcessor extends DelayedJobWorker<ValidationJobData> {
   }
 
   private async processPolygonValidation(job: Job<PolygonValidationJobData>) {
-    const { polygonUuids, validationTypes, siteUuid } = job.data;
+    const { polygonUuids, validationTypes, siteUuid, triggerType } = job.data;
 
     if (polygonUuids.length === 0) {
       throw new DelayedJobException(400, "No polygon UUIDs provided for validation");
@@ -164,6 +171,17 @@ export class ValidationProcessor extends DelayedJobWorker<ValidationJobData> {
     for (let i = 0; i < polygonUuids.length; i += batchSize) {
       const batch = polygonUuids.slice(i, i + batchSize);
       await this.validationService.validatePolygonsBatch(batch, validationTypes);
+
+      if (triggerType === "gh_push") {
+        try {
+          const promoted = await this.sitePolygonsService.promoteEligibleGhPolygons(batch);
+          if (promoted > 0) {
+            this.logger.log(`Promoted ${promoted} GH polygons to pending-approval after validation batch`);
+          }
+        } catch (error) {
+          this.logger.error("Failed to promote eligible GH polygons after validation", error);
+        }
+      }
 
       processed += batch.length;
       const progressPercentage = Math.floor((processed / polygonUuids.length) * 100);

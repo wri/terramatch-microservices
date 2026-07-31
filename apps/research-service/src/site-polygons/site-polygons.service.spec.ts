@@ -1617,7 +1617,8 @@ describe("SitePolygonsService", () => {
         "polygonValidation",
         expect.objectContaining({
           polygonUuids: ["dup", "b"],
-          delayedJobId: 55
+          delayedJobId: 55,
+          triggerType: "gh_push"
         }),
         expect.objectContaining({ jobId: expect.any(String) })
       );
@@ -1653,7 +1654,8 @@ describe("SitePolygonsService", () => {
         "polygonValidation",
         expect.objectContaining({
           polygonUuids: ["geom-a"],
-          delayedJobId: 77
+          delayedJobId: 77,
+          triggerType: "upload"
         }),
         expect.objectContaining({ jobId: expect.any(String) })
       );
@@ -1678,10 +1680,76 @@ describe("SitePolygonsService", () => {
         expect.objectContaining({
           polygonUuids: ["geom-x"],
           delayedJobId: 88,
-          siteUuid: "site-11"
+          siteUuid: "site-11",
+          triggerType: "upload"
         }),
         expect.objectContaining({ jobId: expect.any(String) })
       );
+    });
+  });
+
+  describe("promoteEligibleGhPolygons", () => {
+    it("returns 0 when polygon UUID list is empty after filtering", async () => {
+      const findAllSpy = jest.spyOn(SitePolygon, "findAll");
+
+      const promoted = await service.promoteEligibleGhPolygons(["", ""]);
+
+      expect(promoted).toBe(0);
+      expect(findAllSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("returns 0 when no draft passed/partial polygons are found", async () => {
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      const updateSpy = jest.spyOn(SitePolygon, "update");
+
+      const promoted = await service.promoteEligibleGhPolygons(["geom-1"]);
+
+      expect(promoted).toBe(0);
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(validationQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("promotes draft polygons with passed or partial validationStatus and writes audits", async () => {
+      const eligible = [
+        { id: 1, uuid: "sp-1", polygonUuid: "geom-1", status: "draft", validationStatus: "passed" },
+        { id: 2, uuid: "sp-2", polygonUuid: "geom-2", status: "draft", validationStatus: "partial" }
+      ] as SitePolygon[];
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(eligible);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([2]);
+      const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+      const promoted = await service.promoteEligibleGhPolygons(["geom-1", "geom-2", "geom-1"]);
+
+      expect(SitePolygon.findAll).toHaveBeenCalledWith({
+        where: {
+          polygonUuid: { [Op.in]: ["geom-1", "geom-2"] },
+          isActive: true,
+          status: "draft",
+          validationStatus: { [Op.in]: ["passed", "partial"] }
+        }
+      });
+      expect(SitePolygon.update).toHaveBeenCalledWith(
+        { status: "pending-approval" },
+        { where: { id: { [Op.in]: [1, 2] } } }
+      );
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            auditableId: 1,
+            status: "pending-approval",
+            type: "status",
+            comment: "Automatically submitted after GreenHouse push validation"
+          }),
+          expect.objectContaining({
+            auditableId: 2,
+            status: "pending-approval",
+            type: "status"
+          })
+        ])
+      );
+      expect(validationQueue.add).not.toHaveBeenCalled();
+      expect(promoted).toBe(2);
     });
   });
 

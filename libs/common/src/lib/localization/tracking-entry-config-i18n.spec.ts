@@ -7,7 +7,7 @@ describe("getTrackingEntryConfigLabels", () => {
     expect(getTrackingEntryConfigLabels({ entryConfigs: null })).toEqual([]);
   });
 
-  it("collects only strings stored in entryConfigs", () => {
+  it("collects entryConfig strings and FE composed By/Definition/Number keys", () => {
     expect(
       getTrackingEntryConfigLabels({
         entryConfigs: [
@@ -23,6 +23,15 @@ describe("getTrackingEntryConfigLabels", () => {
           }
         ]
       })
-    ).toEqual(["Custom Gender", "People", "Add Ethnic Group", "Male", "Female"]);
+    ).toEqual([
+      "Custom Gender",
+      "People",
+      "Add Ethnic Group",
+      "Male",
+      "Female",
+      "By: Custom Gender",
+      "Custom Gender Definition",
+      "Number of People"
+    ]);
   });
 });

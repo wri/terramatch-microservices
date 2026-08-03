@@ -24,7 +24,7 @@ describe("TransifexApiService", () => {
           provide: ConfigService,
           useValue: (config = createMock<ConfigService>({
             get: (key: string): PartialFuncReturn<unknown> => {
-              if (key === "TRANSIFEX_TOKEN") return token;
+              if (key === "TRANSIFEX_API_TOKEN") return token;
               return "";
             }
           }))
@@ -41,7 +41,7 @@ describe("TransifexApiService", () => {
     fetchMock.resetMocks();
   });
 
-  it("should throw if TRANSIFEX_TOKEN is not configured", async () => {
+  it("should throw if TRANSIFEX_API_TOKEN is not configured", async () => {
     config.get.mockReturnValue(null);
     await expect(service.getResourceString("abc")).rejects.toThrow(InternalServerErrorException);
   });

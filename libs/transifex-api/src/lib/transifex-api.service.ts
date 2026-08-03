@@ -114,9 +114,9 @@ export class TransifexApiService {
   }
 
   private getHeaders(): Record<string, string> {
-    const token = this.configService.get<string>("TRANSIFEX_TOKEN");
+    const token = this.configService.get<string>("TRANSIFEX_API_TOKEN");
     if (token == null || token === "") {
-      throw new InternalServerErrorException("TRANSIFEX_TOKEN is required");
+      throw new InternalServerErrorException("TRANSIFEX_API_TOKEN is required");
     }
 
     return {

@@ -451,7 +451,8 @@ describe("ProjectReportProcessor", () => {
       const { dto } = await processor.getFullDto(report!);
 
       expect(dto.plantingStatus).toBe("completed");
-      expect(dto.landscapeCommunityContribution).toBe("Yes");
+      expect(dto.landscapeCommunityContribution).toBeNull();
+      expect(dto.communityProgress).toBe("Yes");
     });
 
     it("keeps null planting status for non-completed community progress text", async () => {
@@ -459,7 +460,7 @@ describe("ProjectReportProcessor", () => {
       const { uuid } = await ProjectReportFactory.create({
         projectId: project.id,
         plantingStatus: null,
-        landscapeCommunityContribution: null,
+        landscapeCommunityContribution: "trees progress",
         communityProgress: "Planting still in progress"
       });
 
@@ -467,7 +468,8 @@ describe("ProjectReportProcessor", () => {
       const { dto } = await processor.getFullDto(report!);
 
       expect(dto.plantingStatus).toBeNull();
-      expect(dto.landscapeCommunityContribution).toBe("Planting still in progress");
+      expect(dto.landscapeCommunityContribution).toBe("trees progress");
+      expect(dto.communityProgress).toBe("Planting still in progress");
     });
 
     it("falls back to completed contribution text when hidden values clear contribution", async () => {

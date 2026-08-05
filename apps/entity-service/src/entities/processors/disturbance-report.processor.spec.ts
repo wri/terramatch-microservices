@@ -423,4 +423,21 @@ describe("DisturbanceReportProcessor", () => {
       );
     });
   });
+
+  describe("create", () => {
+    it("creates a disturbance report with started status", async () => {
+      const project = await ProjectFactory.create();
+      setMockedPermissions(`framework-${project.frameworkKey}`);
+
+      const report = await processor.create({ parentUuid: project.uuid });
+
+      expect(report.projectId).toBe(project.id);
+      expect(report.status).toBe("started");
+      expect(report.status).not.toBe("due");
+    });
+
+    it("throws if the project is not found", async () => {
+      await expect(processor.create({ parentUuid: "fake-uuid" })).rejects.toThrow(BadRequestException);
+    });
+  });
 });

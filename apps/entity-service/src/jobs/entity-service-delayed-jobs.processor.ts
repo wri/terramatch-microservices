@@ -24,6 +24,8 @@ import { FileService } from "@terramatch-microservices/common/file/file.service"
 import { ConfigService } from "@nestjs/config";
 import { streamZip } from "@terramatch-microservices/common/util/zip-stream";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { EntityType, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Attributes, ModelStatic, Op, WhereOptions } from "sequelize";
@@ -45,11 +47,18 @@ export type MediaExportJobData = {
   totalContent: number | null;
 };
 
-export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobData;
+export type PushTranslationsJobData = {
+  delayedJobId: number;
+  uuid: string;
+  i18nLabels: string[];
+};
+
+export type EntityServiceDelayedJobData = EntityExportJobData | MediaExportJobData | PushTranslationsJobData;
 
 export const ENTITY_SERVICE_EXPORT_QUEUE = "entityServiceExports";
 export const PROJECT_EXPORT = "projectExport";
 export const MEDIA_EXPORT = "mediaExport";
+export const PUSH_TRANSLATIONS = "pushTranslations";
 
 type ReportDependency<T extends ReportModel> = {
   model: ModelStatic<T>;
@@ -159,10 +168,23 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
+  static async queuePushTranslations(queue: Queue, uuid: string, i18nLabels: string[]) {
+    const delayedJob = await DelayedJob.create({
+      name: "Push Translations to Transifex",
+      createdBy: UserContext.authenticatedUserId,
+      totalContent: i18nLabels.length,
+      isAcknowledged: false
+    });
+    const data: PushTranslationsJobData = { delayedJobId: delayedJob.id, uuid, i18nLabels };
+    await queue.add(PUSH_TRANSLATIONS, data);
+    return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
+  }
+
   constructor(
     private readonly entitiesService: EntitiesService,
     private readonly fileService: FileService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly localizationService: LocalizationService
   ) {
     super();
   }
@@ -179,6 +201,8 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
       return await this.processEntityExport(job.data as EntityExportJobData);
     } else if (job.name === MEDIA_EXPORT) {
       return await this.processMediaExport(job as Job<MediaExportJobData>);
+    } else if (job.name === PUSH_TRANSLATIONS) {
+      return await this.processPushTranslations(job as Job<PushTranslationsJobData>);
     } else {
       throw new InternalServerErrorException(`Unsupported job name: ${job.name}`);
     }
@@ -254,6 +278,25 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
         `mediaExport|${entityType}|${entityUuid}`,
         new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, fileName))
       )
+    };
+  }
+
+  private async processPushTranslations(job: Job<PushTranslationsJobData>) {
+    const {
+      data: { uuid, i18nLabels }
+    } = job;
+
+    try {
+      await this.localizationService.pushTranslationsForEntity(uuid, i18nLabels, async processed => {
+        await this.updateJobProgress(job, { processedContent: processed });
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new DelayedJobException(500, `Failed to push translations: ${message}`);
+    }
+
+    return {
+      payload: buildJsonApi(FormTranslationDto).addData(uuid, new FormTranslationDto(i18nLabels.length))
     };
   }
 }

@@ -50,7 +50,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          area_hectares: 500
+          areaHectares: 500
         }
       });
       expect(mockFindOne).toHaveBeenCalledWith({
@@ -69,7 +69,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: false,
         extraInfo: {
-          area_hectares: 1500
+          areaHectares: 1500
         }
       });
     });
@@ -84,7 +84,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          area_hectares: 1000
+          areaHectares: 1000
         }
       });
     });
@@ -99,7 +99,7 @@ describe("PolygonSizeValidator", () => {
       expect(result).toEqual({
         valid: true,
         extraInfo: {
-          area_hectares: 0
+          areaHectares: 0
         }
       });
     });
@@ -139,21 +139,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            area_hectares: 500
+            areaHectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: false,
           extraInfo: {
-            area_hectares: 1500
+            areaHectares: 1500
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: true,
           extraInfo: {
-            area_hectares: 1000
+            areaHectares: 1000
           }
         }
       ]);
@@ -181,21 +181,21 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            area_hectares: 500
+            areaHectares: 500
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            area_hectares: 0
+            areaHectares: 0
           }
         },
         {
           polygonUuid: "uuid-3",
           valid: false,
           extraInfo: {
-            area_hectares: 1500
+            areaHectares: 1500
           }
         }
       ]);
@@ -232,14 +232,14 @@ describe("PolygonSizeValidator", () => {
           polygonUuid: "uuid-1",
           valid: true,
           extraInfo: {
-            area_hectares: 0
+            areaHectares: 0
           }
         },
         {
           polygonUuid: "uuid-2",
           valid: true,
           extraInfo: {
-            area_hectares: 500
+            areaHectares: 500
           }
         }
       ]);
@@ -268,7 +268,7 @@ describe("PolygonSizeValidator", () => {
       const result = await validator.validateGeometry(geometry);
       expect(result.valid).toBe(true);
       expect(result.extraInfo).not.toBeNull();
-      expect(result.extraInfo?.area_hectares).toBe(0);
+      expect(result.extraInfo?.areaHectares).toBe(0);
     });
 
     it("should return valid=true for Polygon within size limit", async () => {
@@ -296,7 +296,7 @@ describe("PolygonSizeValidator", () => {
       const result = await validator.validateGeometry(geometry);
       expect(result.valid).toBe(true);
       expect(result.extraInfo).not.toBeNull();
-      expect(result.extraInfo?.area_hectares).toBeGreaterThanOrEqual(0);
+      expect(result.extraInfo?.areaHectares).toBeGreaterThanOrEqual(0);
     });
 
     it("should return valid=false for Polygon exceeding size limit", async () => {

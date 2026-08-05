@@ -38,7 +38,8 @@ const COLUMNS: ColumnMapping<DisturbanceReport, DisturbanceReportAssociations>[]
   associatedValueColumn("peopleAffected"),
   associatedValueColumn("financialLoss"),
   associatedValueColumn("propertyAffected"),
-  associatedValueColumn("disturbanceDate")
+  associatedValueColumn("disturbanceDate"),
+  "currency"
 ];
 
 const ENTRY_ASSOCIATION: UpdateAssociation<DisturbanceReport, DisturbanceReportEntry> = {

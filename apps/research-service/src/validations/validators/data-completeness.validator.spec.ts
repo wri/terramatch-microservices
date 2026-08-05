@@ -71,10 +71,10 @@ describe("DataCompletenessValidator", () => {
       expect(result.extraInfo).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ field: "practice", exists: true }),
-          expect.objectContaining({ field: "target_sys", exists: true }),
+          expect.objectContaining({ field: "targetSys", exists: true }),
           expect.objectContaining({ field: "distr", exists: true }),
-          expect.objectContaining({ field: "num_trees", exists: true }),
-          expect.objectContaining({ field: "plantstart", exists: true })
+          expect.objectContaining({ field: "numTrees", exists: true }),
+          expect.objectContaining({ field: "plantStart", exists: true })
         ])
       );
     });
@@ -188,7 +188,7 @@ describe("DataCompletenessValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toHaveLength(1);
       expect(result.extraInfo?.[0]).toEqual({
-        field: "num_trees",
+        field: "numTrees",
         error: "Invalid number of trees. Must be a valid integer and cannot be 0",
         exists: true
       });
@@ -211,7 +211,7 @@ describe("DataCompletenessValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toHaveLength(1);
       expect(result.extraInfo?.[0]).toEqual({
-        field: "num_trees",
+        field: "numTrees",
         error: "Invalid number of trees. Must be a valid integer and cannot be 0",
         exists: true
       });
@@ -255,12 +255,12 @@ describe("DataCompletenessValidator", () => {
       expect(result[1].valid).toBe(false);
       expect(result[1].extraInfo).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ field: "poly_name", exists: false }),
+          expect.objectContaining({ field: "polyName", exists: false }),
           expect.objectContaining({ field: "practice", exists: false }),
-          expect.objectContaining({ field: "target_sys", exists: false }),
+          expect.objectContaining({ field: "targetSys", exists: false }),
           expect.objectContaining({ field: "distr", exists: false }),
-          expect.objectContaining({ field: "num_trees", exists: false }),
-          expect.objectContaining({ field: "plantstart", exists: false })
+          expect.objectContaining({ field: "numTrees", exists: false }),
+          expect.objectContaining({ field: "plantStart", exists: false })
         ])
       );
       expect(result[2]).toEqual({
@@ -448,10 +448,10 @@ describe("DataCompletenessValidator", () => {
       expect(result.extraInfo).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ field: "practice", exists: true }),
-          expect.objectContaining({ field: "target_sys", exists: true }),
+          expect.objectContaining({ field: "targetSys", exists: true }),
           expect.objectContaining({ field: "distr", exists: true }),
-          expect.objectContaining({ field: "num_trees", exists: true }),
-          expect.objectContaining({ field: "plantstart", exists: true })
+          expect.objectContaining({ field: "numTrees", exists: true }),
+          expect.objectContaining({ field: "plantStart", exists: true })
         ])
       );
     });

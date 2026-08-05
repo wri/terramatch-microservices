@@ -282,7 +282,7 @@ export class ProjectProcessor extends EntityProcessor<
     const prevBaseline = project.readyForBaseline;
     const prevQaStatuses = Object.fromEntries(PROJECT_QA_STATUS_FIELDS.map(field => [field, project[field]])) as Record<
       ProjectQaStatusField,
-      string
+      string | null
     >;
     let submissionChanged = false;
     let baselineChanged = false;

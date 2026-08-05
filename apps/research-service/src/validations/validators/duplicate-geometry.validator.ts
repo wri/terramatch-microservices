@@ -5,10 +5,10 @@ import { Transaction, QueryTypes } from "sequelize";
 import { Feature } from "@terramatch-microservices/database/constants";
 import { Geometry } from "geojson";
 
-interface DuplicateInfo {
-  poly_uuid: string;
-  poly_name: string;
-  site_name: string;
+export interface DuplicateInfo {
+  polyUuid: string;
+  polyName: string;
+  siteName: string;
 }
 
 interface DuplicateValidationResult extends ValidationResult {
@@ -241,9 +241,9 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
       await transaction.commit();
 
       return duplicateResults.map(result => ({
-        poly_uuid: result.candidateUuid,
-        poly_name: result.polyName ?? "",
-        site_name: result.siteName ?? ""
+        polyUuid: result.candidateUuid,
+        polyName: result.polyName ?? "",
+        siteName: result.siteName ?? ""
       }));
     } catch (error) {
       await transaction.rollback();
@@ -417,9 +417,9 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
     )) as { candidateUuid: string; polyName: string; siteName: string }[];
 
     return results.map(result => ({
-      poly_uuid: result.candidateUuid,
-      poly_name: result.polyName ?? "",
-      site_name: result.siteName ?? ""
+      polyUuid: result.candidateUuid,
+      polyName: result.polyName ?? "",
+      siteName: result.siteName ?? ""
     }));
   }
 
@@ -446,9 +446,9 @@ export class DuplicateGeometryValidator implements PolygonValidator, GeometryVal
     )) as { candidateUuid: string; polyName: string; siteName: string }[];
 
     return results.map(result => ({
-      poly_uuid: result.candidateUuid,
-      poly_name: result.polyName ?? "",
-      site_name: result.siteName ?? ""
+      polyUuid: result.candidateUuid,
+      polyName: result.polyName ?? "",
+      siteName: result.siteName ?? ""
     }));
   }
   private async getProjectPointUuids(projectId: number): Promise<string[]> {

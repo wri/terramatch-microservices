@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import {
   AuditStatus,
@@ -36,6 +35,7 @@ import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-
 import {
   INDICATOR_SLUGS,
   PolygonStatus,
+  POLYGON_DRAFT,
   POLYGON_PENDING_APPROVAL,
   VALIDATION_TYPES,
   AuditStatusType
@@ -43,6 +43,7 @@ import {
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -59,8 +60,8 @@ export class SitePolygonsService {
     @InjectQueue("validation") private readonly validationQueue: Queue
   ) {}
 
-  async buildQuery(page: CursorPage | NumberPage) {
-    const builder = new SitePolygonQueryBuilder(page.size);
+  async buildQuery(page: CursorPage | NumberPage, options?: { includeGeometry?: boolean }) {
+    const builder = new SitePolygonQueryBuilder(page.size, options);
     if ((page as CursorPage).after != null && (page as NumberPage).number != null) {
       throw new BadRequestException("page[after] or page[number] may be provided, but not both.");
     }
@@ -71,7 +72,7 @@ export class SitePolygonsService {
   }
 
   buildDeletedQuery(page: NumberPage): SitePolygonQueryBuilder {
-    const builder = new SitePolygonQueryBuilder(page.size)
+    const builder = new SitePolygonQueryBuilder(page.size, { includeGeometry: false })
       .includeSoftDeleted()
       .filterSoftDeletedOnly()
       .order([["deletedAt", "DESC"]]);
@@ -369,14 +370,27 @@ export class SitePolygonsService {
 
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {
     const associationDtos: Record<number, AssociationDtos> = {};
-    for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
+    if (sitePolygons.length === 0) return associationDtos;
+
+    if (lightResource) {
+      for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
+        associationDtos[Number(sitePolygonId)] = { indicators };
+      }
+      return associationDtos;
+    }
+
+    const [indicatorsMap, sites] = await Promise.all([this.getIndicators(sitePolygons), this.getSites(sitePolygons)]);
+
+    for (const [sitePolygonId, indicators] of Object.entries(indicatorsMap)) {
       associationDtos[Number(sitePolygonId)] = { indicators };
     }
-    if (lightResource) return associationDtos;
 
-    const sites = await this.getSites(sitePolygons);
-    const reports = await this.getSiteReports(sitePolygons);
-    const { siteTrees, reportTrees } = await this.getTreeSpecies(sitePolygons);
+    const siteIds = uniq(Object.values(sites));
+    const [reports, { siteTrees, reportTrees }] = await Promise.all([
+      this.getSiteReportsBySiteIds(siteIds),
+      this.getTreeSpeciesBySiteIds(siteIds)
+    ]);
+
     for (const { id, siteUuid } of sitePolygons) {
       const siteId = sites[siteUuid];
       if (siteId == null) continue;
@@ -415,9 +429,16 @@ export class SitePolygonsService {
 
     const accessor = new ModelPropertiesAccessor();
     const sitePolygonIds = sitePolygons.map(({ id }) => id);
-    for (const modelClass of uniq(Object.values(INDICATOR_MODEL_CLASSES))) {
+    const plantStartById = new Map(sitePolygons.map(sp => [sp.id, sp.plantStart]));
+    const modelClasses = uniq(Object.values(INDICATOR_MODEL_CLASSES));
+
+    const indicatorBatches = await Promise.all(
+      modelClasses.map(modelClass => modelClass.findAll({ where: { sitePolygonId: { [Op.in]: sitePolygonIds } } }))
+    );
+
+    for (const indicators of indicatorBatches) {
       let fields: string[] | undefined = undefined;
-      for (const indicator of await modelClass.findAll({ where: { sitePolygonId: { [Op.in]: sitePolygonIds } } })) {
+      for (const indicator of indicators) {
         if (fields === undefined) {
           const DTO = INDICATOR_DTOS[indicator.indicatorSlug];
           fields = accessor.getModelProperties(DTO.prototype as unknown as Type<unknown>);
@@ -429,9 +450,9 @@ export class SitePolygonsService {
           (dto.indicatorSlug === "treeCoverLoss" || dto.indicatorSlug === "treeCoverLossFires") &&
           dto.value != null
         ) {
-          const sitePolygon = sitePolygons.find(sp => sp.id === indicator.sitePolygonId);
-          if (sitePolygon?.plantStart != null) {
-            const plantStartYear = new Date(sitePolygon.plantStart).getFullYear();
+          const plantStart = plantStartById.get(indicator.sitePolygonId);
+          if (plantStart != null) {
+            const plantStartYear = new Date(plantStart).getFullYear();
             const startYear = plantStartYear - 10;
             const endYear = plantStartYear;
             dto = {
@@ -462,7 +483,8 @@ export class SitePolygonsService {
 
   /**
    * Since site polygons use Site UUID, but everything else uses Site ID, we need to pull a mapping
-   * between the two to correctly deal with the aggregate data from getTreeSpecies() and getReportingPeriods()
+   * between the two to correctly deal with the aggregate data from getTreeSpeciesBySiteIds() and
+   * getSiteReportsBySiteIds().
    */
   private async getSites(sitePolygons: SitePolygon[]) {
     if (sitePolygons.length === 0) return {};
@@ -483,13 +505,9 @@ export class SitePolygonsService {
   /**
    * Get two mappings of tree species sets: one of reports by report id, and the other of sites by site id.
    */
-  private async getTreeSpecies(sitePolygons: SitePolygon[]) {
-    if (sitePolygons.length === 0) return { siteTrees: {}, reportTrees: {} };
+  private async getTreeSpeciesBySiteIds(siteIds: number[]) {
+    if (siteIds.length === 0) return { siteTrees: {}, reportTrees: {} };
 
-    const siteIds = Subquery.select(Site, "id").in(
-      "uuid",
-      sitePolygons.map(({ siteUuid }) => siteUuid)
-    ).literal;
     const siteReportIds = Subquery.select(SiteReport, "id").in("siteId", siteIds).literal;
     const trees = await TreeSpecies.visible()
       .collection("tree-planted")
@@ -523,13 +541,9 @@ export class SitePolygonsService {
    * Get a mapping of site id to a list of site reports. Only id, siteId, dueAt and submittedAt are loaded
    * on the resulting reports.
    */
-  private async getSiteReports(sitePolygons: SitePolygon[]) {
-    if (sitePolygons.length === 0) return {};
+  private async getSiteReportsBySiteIds(siteIds: number[]) {
+    if (siteIds.length === 0) return {};
 
-    const siteIds = Subquery.select(Site, "id").in(
-      "uuid",
-      sitePolygons.map(({ siteUuid }) => siteUuid)
-    ).literal;
     return groupBy(
       await SiteReport.findAll({
         where: { siteId: { [Op.in]: siteIds } },
@@ -591,9 +605,6 @@ export class SitePolygonsService {
       siteName = site?.name ?? siteUuid;
     }
 
-    const fingerprint = [...polygonUuids].sort().join(",") + `|${triggerType}`;
-    const jobId = createHash("sha256").update(fingerprint).digest("hex").slice(0, 32);
-
     const delayedJob = await DelayedJob.create({
       isAcknowledged: false,
       name: "Polygon Validation",
@@ -609,20 +620,56 @@ export class SitePolygonsService {
       } as Record<string, unknown>
     } as unknown as DelayedJob);
 
-    await this.validationQueue.add(
-      "polygonValidation",
-      {
-        polygonUuids,
-        validationTypes: [...VALIDATION_TYPES],
-        delayedJobId: delayedJob.id,
-        siteUuid
-      },
-      { jobId }
-    );
+    await this.validationQueue.add("polygonValidation", {
+      polygonUuids,
+      validationTypes: [...VALIDATION_TYPES],
+      delayedJobId: delayedJob.id,
+      siteUuid,
+      triggerType
+    });
 
     this.logger.log(
-      `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, jobId: ${jobId})`
+      `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, delayedJobId: ${delayedJob.id})`
     );
+  }
+
+  async promoteEligibleGhPolygons(rawPolygonUuids: string[]): Promise<number> {
+    const polygonUuids = [...new Set(rawPolygonUuids.filter(uuid => uuid.length > 0))];
+    if (polygonUuids.length === 0) return 0;
+
+    const sitePolygons = await SitePolygon.findAll({
+      where: {
+        polygonUuid: { [Op.in]: polygonUuids },
+        isActive: true,
+        status: POLYGON_DRAFT,
+        validationStatus: { [Op.in]: ["passed", "partial"] }
+      }
+    });
+    if (sitePolygons.length === 0) return 0;
+
+    const userId = UserContext.authenticatedUserId;
+    const user =
+      userId == null
+        ? null
+        : await User.findByPk(userId, { attributes: ["id", "emailAddress", "firstName", "lastName"] });
+
+    await SitePolygon.update(
+      { status: POLYGON_PENDING_APPROVAL },
+      { where: { id: { [Op.in]: sitePolygons.map(sp => sp.id) } } }
+    );
+
+    const auditStatusRecords = this.createAuditStatusRecords(
+      sitePolygons,
+      POLYGON_PENDING_APPROVAL,
+      "Automatically submitted after GreenHouse push validation",
+      user
+    ) as Array<Attributes<AuditStatus>>;
+    if (auditStatusRecords.length > 0) {
+      await AuditStatus.bulkCreate(auditStatusRecords);
+    }
+
+    this.logger.log(`Promoted ${sitePolygons.length} GH polygons to pending-approval after validation`);
+    return sitePolygons.length;
   }
 
   async triggerProjectValidationJobs(sitePolygons: SitePolygon[], userId: number): Promise<void> {

@@ -2,13 +2,10 @@
 import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "./json-api-builder";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { LinkedField, LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
-import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { createMock } from "@golevelup/ts-jest";
 import { MediaService } from "../media/media.service";
 import { CollectOptions, FormModels, LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { Dictionary } from "lodash";
-import { LocalizationService, Translations } from "../localization/localization.service";
-import { Model } from "sequelize-typescript";
-import { Attributes } from "sequelize";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { PolicyBuilder } from "../policies/policy.service";
 import { User } from "@terramatch-microservices/database/entities";
@@ -76,17 +73,3 @@ export class CollectorTestHarness {
     expect(await this.getAnswers(models, opts)).toStrictEqual(expected);
   }
 }
-
-export const mockTranslateFieldsWithOriginal = (service: DeepMocked<LocalizationService>) => {
-  // Copied from the original service.
-  service.translateFields.mockImplementation(
-    <M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) =>
-      fields.reduce(
-        (translated, field) => ({
-          ...translated,
-          [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
-        }),
-        {} as Record<(typeof fields)[number], string>
-      )
-  );
-};

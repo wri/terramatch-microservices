@@ -127,13 +127,13 @@ describe("OverlappingValidator - Integration Tests", () => {
       }
       expect(overlapInfo.length).toBeGreaterThanOrEqual(1);
 
-      const polyUuids = overlapInfo.map(info => info.poly_uuid);
+      const polyUuids = overlapInfo.map(info => info.polyUuid);
       expect(polyUuids.some(uuid => [testPolygonUuids[1], testPolygonUuids[2]].includes(uuid))).toBe(true);
 
       overlapInfo.forEach(info => {
         expect(info.percentage).toBeGreaterThan(0);
         expect(info.percentage).toBeLessThan(50);
-        expect(info.site_name).toBe("CAPULIN VMRL CAFE CAPITAN");
+        expect(info.siteName).toBe("CAPULIN VMRL CAFE CAPITAN");
       });
     });
 

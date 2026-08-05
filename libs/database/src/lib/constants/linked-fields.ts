@@ -86,6 +86,7 @@ export const RELATION_INPUT_TYPES = [
   "stratas",
   "trainingBeneficiaries",
   "treesGoal",
+  "treesPlantedGoal",
   "treesHistorical",
   "treeSpecies",
   "volunteers",

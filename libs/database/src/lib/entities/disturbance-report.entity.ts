@@ -26,7 +26,7 @@ import {
   UUIDV4
 } from "sequelize";
 import { User } from "./user.entity";
-import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
+import { EntityStatus, EntityStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
@@ -70,8 +70,8 @@ export class DisturbanceReport extends Model<
   @Column({ type: UUID, defaultValue: UUIDV4 })
   declare uuid: CreationOptional<string>;
 
-  @StateMachineColumn(ReportStatusStates)
-  declare status: ReportStatus;
+  @StateMachineColumn(EntityStatusStates)
+  declare status: EntityStatus;
 
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)

@@ -5,8 +5,8 @@ import { Transaction } from "sequelize";
 
 interface WithinCountryValidationResult extends ValidationResult {
   extraInfo: {
-    inside_percentage: number;
-    country_name: string;
+    insidePercentage: number;
+    countryName: string;
   } | null;
 }
 
@@ -26,8 +26,8 @@ export class WithinCountryValidator implements PolygonValidator {
     return {
       valid,
       extraInfo: {
-        inside_percentage: insidePercentage,
-        country_name: result.country
+        insidePercentage,
+        countryName: result.country
       }
     };
   }
@@ -55,8 +55,8 @@ export class WithinCountryValidator implements PolygonValidator {
           polygonUuid,
           valid: false,
           extraInfo: {
-            inside_percentage: 0,
-            country_name: projectCountry ?? "Unknown"
+            insidePercentage: 0,
+            countryName: projectCountry ?? "Unknown"
           }
         };
       }
@@ -68,8 +68,8 @@ export class WithinCountryValidator implements PolygonValidator {
         polygonUuid,
         valid,
         extraInfo: {
-          inside_percentage: insidePercentage,
-          country_name: result.country
+          insidePercentage,
+          countryName: result.country
         }
       };
     });

@@ -15,6 +15,7 @@ import { IndicatorsService } from "./indicators.service";
 import { ExceptionResponse } from "@terramatch-microservices/common/decorators";
 import { IndicatorExportQueryDto } from "./dto/indicator-export-query.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { getIndicatorDisplayName } from "@terramatch-microservices/database/constants";
 
 @Controller("research/v3/indicators")
 @ApiExtraModels(IndicatorTreeCoverLossDto, IndicatorHectaresDto)
@@ -39,10 +40,11 @@ export class IndicatorsController {
 
     const delayedJob = await DelayedJob.create({
       isAcknowledged: false,
-      name: "Indicator Calculation",
+      name: getIndicatorDisplayName(slug),
       processedContent: 0,
       progressMessage: "Starting indicator calculation...",
       createdBy: UserContext.authenticatedUserId,
+      payload: { data: { slug } },
       metadata: {
         entity_name: `${polygonUuids.length} polygons`
       }

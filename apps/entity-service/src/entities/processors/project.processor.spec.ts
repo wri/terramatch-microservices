@@ -178,8 +178,8 @@ describe("ProjectProcessor", () => {
         projectQaStatus3: "qa-completed"
       });
       await ProjectFactory.create({
-        projectQaStatus1: "due",
-        projectQaStatus3: "due"
+        projectQaStatus1: "no-data-submitted",
+        projectQaStatus3: "no-data-expected"
       });
 
       await expectProjects([matching], { projectQaStatus1: "qa-in-progress" });
@@ -387,8 +387,8 @@ describe("ProjectProcessor", () => {
 
     it("records audits when project QA status fields change", async () => {
       const project = await ProjectFactory.create({
-        projectQaStatus1: "due",
-        projectQaStatus2: "due"
+        projectQaStatus1: null,
+        projectQaStatus2: null
       });
       await AuditStatus.destroy({
         where: { auditableId: project.id, auditableType: Project.LARAVEL_TYPE },

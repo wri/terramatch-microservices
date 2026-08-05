@@ -62,8 +62,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        inside_percentage: 100,
-        country_name: "Cambodia"
+        insidePercentage: 100,
+        countryName: "Cambodia"
       });
       expect(mockTransactionInstance.commit).toHaveBeenCalled();
     });
@@ -87,8 +87,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        inside_percentage: 78,
-        country_name: "Cambodia"
+        insidePercentage: 78,
+        countryName: "Cambodia"
       });
     });
 
@@ -111,8 +111,8 @@ describe("WithinCountryValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        inside_percentage: 50.84,
-        country_name: "Cambodia"
+        insidePercentage: 50.84,
+        countryName: "Cambodia"
       });
     });
 
@@ -165,7 +165,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.inside_percentage).toBe(83.12);
+      expect(result.extraInfo?.insidePercentage).toBe(83.12);
     });
 
     it("should handle exactly 75% threshold correctly", async () => {
@@ -186,7 +186,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.inside_percentage).toBe(75);
+      expect(result.extraInfo?.insidePercentage).toBe(75);
     });
 
     it("should handle different country names correctly", async () => {
@@ -207,7 +207,7 @@ describe("WithinCountryValidator", () => {
       const result = await validator.validatePolygon(testPolygonUuid);
 
       expect(result.valid).toBe(true);
-      expect(result.extraInfo?.country_name).toBe("Australia");
+      expect(result.extraInfo?.countryName).toBe("Australia");
     });
   });
 

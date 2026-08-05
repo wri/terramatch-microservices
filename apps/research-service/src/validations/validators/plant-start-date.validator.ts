@@ -5,19 +5,19 @@ import { DateTime } from "luxon";
 
 interface PlantStartDateValidationResult extends ValidationResult {
   extraInfo: {
-    error_type: string;
-    polygon_uuid: string;
-    polygon_name?: string;
-    site_name?: string;
-    provided_value?: string;
-    min_date?: string;
-    current_date?: string;
-    site_start_date?: string;
-    allowed_range?: {
+    errorType: string;
+    polygonUuid: string;
+    polygonName?: string;
+    siteName?: string;
+    providedValue?: string;
+    minDate?: string;
+    currentDate?: string;
+    siteStartDate?: string;
+    allowedRange?: {
       min: string;
       max: string;
     };
-    error_details?: string;
+    errorDetails?: string;
   } | null;
 }
 
@@ -78,9 +78,9 @@ export class PlantStartDateValidator implements PolygonValidator {
           polygonUuid,
           valid: false,
           extraInfo: {
-            error_type: "NOT_FOUND",
-            polygon_uuid: polygonUuid,
-            error_details: "Site polygon not found"
+            errorType: "NOT_FOUND",
+            polygonUuid,
+            errorDetails: "Site polygon not found"
           }
         };
       }
@@ -111,10 +111,10 @@ export class PlantStartDateValidator implements PolygonValidator {
       return {
         valid: false,
         extraInfo: {
-          error_type: "MISSING_VALUE",
-          polygon_uuid: polygonUuid,
-          polygon_name: sitePolygon.polyName ?? undefined,
-          site_name: sitePolygon.site?.name ?? undefined
+          errorType: "MISSING_VALUE",
+          polygonUuid,
+          polygonName: sitePolygon.polyName ?? undefined,
+          siteName: sitePolygon.site?.name ?? undefined
         }
       };
     }
@@ -123,11 +123,11 @@ export class PlantStartDateValidator implements PolygonValidator {
       return {
         valid: false,
         extraInfo: {
-          error_type: "INVALID_FORMAT",
-          polygon_uuid: polygonUuid,
-          polygon_name: sitePolygon.polyName ?? undefined,
-          site_name: sitePolygon.site?.name ?? undefined,
-          provided_value: plantStartString
+          errorType: "INVALID_FORMAT",
+          polygonUuid,
+          polygonName: sitePolygon.polyName ?? undefined,
+          siteName: sitePolygon.site?.name ?? undefined,
+          providedValue: plantStartString
         }
       };
     }
@@ -141,12 +141,12 @@ export class PlantStartDateValidator implements PolygonValidator {
         return {
           valid: false,
           extraInfo: {
-            error_type: "PARSE_ERROR",
-            polygon_uuid: polygonUuid,
-            polygon_name: sitePolygon.polyName ?? undefined,
-            site_name: sitePolygon.site?.name ?? undefined,
-            provided_value: plantStartString,
-            error_details: plantStartDate.invalidReason ?? "Invalid date format"
+            errorType: "PARSE_ERROR",
+            polygonUuid,
+            polygonName: sitePolygon.polyName ?? undefined,
+            siteName: sitePolygon.site?.name ?? undefined,
+            providedValue: plantStartString,
+            errorDetails: plantStartDate.invalidReason ?? "Invalid date format"
           }
         };
       }
@@ -155,12 +155,12 @@ export class PlantStartDateValidator implements PolygonValidator {
         return {
           valid: false,
           extraInfo: {
-            error_type: "DATE_TOO_EARLY",
-            polygon_uuid: polygonUuid,
-            polygon_name: sitePolygon.polyName ?? undefined,
-            site_name: sitePolygon.site?.name ?? undefined,
-            provided_value: plantStartString,
-            min_date: MIN_DATE
+            errorType: "DATE_TOO_EARLY",
+            polygonUuid,
+            polygonName: sitePolygon.polyName ?? undefined,
+            siteName: sitePolygon.site?.name ?? undefined,
+            providedValue: plantStartString,
+            minDate: MIN_DATE
           }
         };
       }
@@ -169,12 +169,12 @@ export class PlantStartDateValidator implements PolygonValidator {
         return {
           valid: false,
           extraInfo: {
-            error_type: "DATE_IN_FUTURE",
-            polygon_uuid: polygonUuid,
-            polygon_name: sitePolygon.polyName ?? undefined,
-            site_name: sitePolygon.site?.name ?? undefined,
-            provided_value: plantStartString,
-            current_date: currentDate.toISODate()
+            errorType: "DATE_IN_FUTURE",
+            polygonUuid,
+            polygonName: sitePolygon.polyName ?? undefined,
+            siteName: sitePolygon.site?.name ?? undefined,
+            providedValue: plantStartString,
+            currentDate: currentDate.toISODate()
           }
         };
       }
@@ -190,12 +190,12 @@ export class PlantStartDateValidator implements PolygonValidator {
           return {
             valid: false,
             extraInfo: {
-              error_type: "PARSE_ERROR",
-              polygon_uuid: polygonUuid,
-              polygon_name: sitePolygon.polyName ?? undefined,
-              site_name: sitePolygon.site.name ?? undefined,
-              provided_value: plantStartString,
-              error_details: `Invalid site start date: ${siteStartDate.invalidReason}`
+              errorType: "PARSE_ERROR",
+              polygonUuid,
+              polygonName: sitePolygon.polyName ?? undefined,
+              siteName: sitePolygon.site.name ?? undefined,
+              providedValue: plantStartString,
+              errorDetails: `Invalid site start date: ${siteStartDate.invalidReason}`
             }
           };
         }
@@ -207,13 +207,13 @@ export class PlantStartDateValidator implements PolygonValidator {
           return {
             valid: false,
             extraInfo: {
-              error_type: "DATE_OUTSIDE_SITE_RANGE",
-              polygon_uuid: polygonUuid,
-              polygon_name: sitePolygon.polyName ?? undefined,
-              site_name: sitePolygon.site.name ?? undefined,
-              provided_value: plantStartString,
-              site_start_date: siteStartDate.toISODate(),
-              allowed_range: {
+              errorType: "DATE_OUTSIDE_SITE_RANGE",
+              polygonUuid,
+              polygonName: sitePolygon.polyName ?? undefined,
+              siteName: sitePolygon.site.name ?? undefined,
+              providedValue: plantStartString,
+              siteStartDate: siteStartDate.toISODate(),
+              allowedRange: {
                 min: twoYearsBefore.toISODate(),
                 max: threeYearsAfter.toISODate()
               }
@@ -230,12 +230,12 @@ export class PlantStartDateValidator implements PolygonValidator {
       return {
         valid: false,
         extraInfo: {
-          error_type: "PARSE_ERROR",
-          polygon_uuid: polygonUuid,
-          polygon_name: sitePolygon.polyName ?? undefined,
-          site_name: sitePolygon.site?.name ?? undefined,
-          provided_value: plantStartString,
-          error_details: error instanceof Error ? error.message : "Unknown error"
+          errorType: "PARSE_ERROR",
+          polygonUuid,
+          polygonName: sitePolygon.polyName ?? undefined,
+          siteName: sitePolygon.site?.name ?? undefined,
+          providedValue: plantStartString,
+          errorDetails: error instanceof Error ? error.message : "Unknown error"
         }
       };
     }

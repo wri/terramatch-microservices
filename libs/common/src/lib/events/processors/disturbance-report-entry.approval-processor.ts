@@ -80,13 +80,11 @@ export const getEntryData = (entries: DisturbanceReportEntry[]) => {
       }
     } else if (entry.name === "site-affected") {
       const sites = mapJson(entry.value) as AffectedSite[] | null;
-      console.log("sites", sites);
       if (sites != null && sites.length > 0) {
         affectedSiteUuids.push(...sites.map(({ siteUuid }) => siteUuid).filter(isNotEmpty));
       }
     } else if (entry.name === "nursery-affected") {
       const nurseries = mapJson(entry.value) as AffectedNursery[] | null;
-      console.log("nurseries", nurseries);
       if (nurseries != null && nurseries.length > 0) {
         affectedNurseryUuids.push(...nurseries.map(({ nurseryUuid }) => nurseryUuid).filter(isNotEmpty));
       }

@@ -220,10 +220,10 @@ describe("FieldCollector", () => {
     expect(report.plantingStatus).toBeNull();
   });
 
-  it("mirrors community progress into landscapeCommunityContribution when provided", async () => {
+  it("stores community progress independently from landscapeCommunityContribution", async () => {
     const report = await ProjectReportFactory.create({
       plantingStatus: null,
-      landscapeCommunityContribution: null
+      landscapeCommunityContribution: "trees and hectares progress"
     });
     const question = await FormQuestionFactory.section().create({
       inputType: "long-text",
@@ -235,7 +235,7 @@ describe("FieldCollector", () => {
     });
 
     expect(report.communityProgress).toBe("Some progress text");
-    expect(report.landscapeCommunityContribution).toBe("Some progress text");
+    expect(report.landscapeCommunityContribution).toBe("trees and hectares progress");
   });
 
   it("sets plantingStatus completed when completed answer arrives through community progress", async () => {

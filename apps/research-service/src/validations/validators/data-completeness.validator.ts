@@ -29,18 +29,20 @@ const VALIDATION_FIELDS: (keyof Attributes<SitePolygon>)[] = [
   "plantStart"
 ];
 
-const FIELD_NAME_MAP: Record<string, string> = {
+// Uploaded GeoJSON can come from external GIS tools that use snake_case properties. This map is
+// only used to read those legacy input property names - it has no bearing on the (camelCase)
+// shape of the `extraInfo` this validator produces.
+const LEGACY_SNAKE_CASE_PROPERTY_ALIASES: Record<string, string> = {
   polyName: "poly_name",
-  practice: "practice",
   targetSys: "target_sys",
-  distr: "distr",
   numTrees: "num_trees",
   plantStart: "plantstart"
 };
 
-function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: string, snakeCaseKey: string): unknown {
-  // Prefer camelCase if present, otherwise fall back to snake_case
-  return properties[camelCaseKey] != null ? properties[camelCaseKey] : properties[snakeCaseKey];
+function getPropertyValue(properties: Record<string, unknown>, camelCaseKey: string): unknown {
+  if (properties[camelCaseKey] != null) return properties[camelCaseKey];
+  const snakeCaseKey = LEGACY_SNAKE_CASE_PROPERTY_ALIASES[camelCaseKey];
+  return snakeCaseKey == null ? undefined : properties[snakeCaseKey];
 }
 
 const VALID_PRACTICES = [...SITE_POLYGON_PRACTICES];
@@ -62,10 +64,8 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
 
     const validationErrors = this.validateFields(
       VALIDATION_FIELDS,
-      field => sitePolygon[field as keyof typeof sitePolygon],
-      field => FIELD_NAME_MAP[field] ?? field
+      field => sitePolygon[field as keyof typeof sitePolygon]
     );
-
     return this.buildValidationResult(validationErrors);
   }
 
@@ -89,8 +89,7 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
 
       const validationErrors = this.validateFields(
         VALIDATION_FIELDS,
-        field => sitePolygon[field as keyof typeof sitePolygon],
-        field => FIELD_NAME_MAP[field] ?? field
+        field => sitePolygon[field as keyof typeof sitePolygon]
       );
 
       return {
@@ -101,21 +100,15 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
     });
   }
 
-  private validateFields(
-    fields: string[],
-    getValue: (field: string) => unknown,
-    getFieldName: (field: string) => string,
-    getFieldKey?: (field: string) => string
-  ): ValidationError[] {
+  private validateFields(fields: string[], getValue: (field: string) => unknown): ValidationError[] {
     const validationErrors: ValidationError[] = [];
 
     for (const field of fields) {
       const value = getValue(field);
-      const fieldKey = getFieldKey != null ? getFieldKey(field) : field;
-      if (this.isInvalidField(fieldKey, value)) {
+      if (this.isInvalidField(field, value)) {
         validationErrors.push({
-          field: getFieldName(field),
-          error: this.getFieldError(fieldKey, value),
+          field,
+          error: this.getFieldError(field, value),
           exists: this.valueExists(value)
         });
       }
@@ -214,18 +207,8 @@ export class DataCompletenessValidator implements PolygonValidator, GeometryVali
       };
     }
 
-    // Validate using camelCase field names, but check both camelCase and snake_case properties
-    const validationErrors = this.validateFields(
-      VALIDATION_FIELDS,
-      field => {
-        // Map model field to property names
-        const camelCaseKey = field;
-        const snakeCaseKey = FIELD_NAME_MAP[field];
-        return getPropertyValue(properties, camelCaseKey, snakeCaseKey ?? camelCaseKey);
-      },
-      field => FIELD_NAME_MAP[field] ?? field,
-      field => field
-    );
+    // Validate using camelCase field names, falling back to legacy snake_case input properties
+    const validationErrors = this.validateFields(VALIDATION_FIELDS, field => getPropertyValue(properties, field));
 
     return this.buildValidationResult(validationErrors);
   }

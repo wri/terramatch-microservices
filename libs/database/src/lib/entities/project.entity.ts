@@ -525,20 +525,20 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
   declare readyForBaseline: CreationOptional<boolean>;
 
-  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
-  declare projectQaStatus1: CreationOptional<string>;
+  @Column({ type: STRING(64), allowNull: true, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus1: CreationOptional<string | null>;
 
-  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
-  declare projectQaStatus2: CreationOptional<string>;
+  @Column({ type: STRING(64), allowNull: true, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus2: CreationOptional<string | null>;
 
-  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
-  declare projectQaStatus3: CreationOptional<string>;
+  @Column({ type: STRING(64), allowNull: true, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus3: CreationOptional<string | null>;
 
-  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
-  declare projectQaStatus4: CreationOptional<string>;
+  @Column({ type: STRING(64), allowNull: true, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus4: CreationOptional<string | null>;
 
-  @Column({ type: STRING(64), allowNull: false, defaultValue: PROJECT_QA_STATUS_DEFAULT })
-  declare projectQaStatus5: CreationOptional<string>;
+  @Column({ type: STRING(64), allowNull: true, defaultValue: PROJECT_QA_STATUS_DEFAULT })
+  declare projectQaStatus5: CreationOptional<string | null>;
 
   @BelongsTo(() => Organisation)
   declare organisation: Organisation | null;

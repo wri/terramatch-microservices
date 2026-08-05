@@ -26,7 +26,7 @@ import { faker } from "@faker-js/faker";
 import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 import { DateTime } from "luxon";
-import { Media } from "@terramatch-microservices/database/entities";
+import { Media, Organisation, Project, Site, SiteReport } from "@terramatch-microservices/database/entities";
 
 const mockResponse = () => {
   const response = createResponse({ eventEmitter: EventEmitter });
@@ -242,6 +242,38 @@ describe("CsvExportService", () => {
         throw new Error("failed stream");
       };
       await expect(service.writeToStream(new PassThrough(), {}, writeRows)).rejects.toThrow("failed stream");
+    });
+
+    it("serializes Sequelize model getters used in entity export columns", async () => {
+      const { response, streamEnd } = mockResponse();
+      const organisation = Organisation.build(
+        { name: "Export Org", type: "non-profit-organization" },
+        { isNewRecord: false }
+      );
+      const project = Project.build({ id: 10, name: "Export Project" }, { isNewRecord: false });
+      project.organisation = organisation;
+      const site = Site.build({ id: 42, name: "Export Site", projectId: 10 }, { isNewRecord: false });
+      site.project = project;
+      const report = SiteReport.build({ id: 1, siteId: 42, taskId: 1 }, { isNewRecord: false });
+      report.site = site;
+
+      const columns = {
+        organisationName: "organization-name",
+        projectName: "project_name",
+        siteExportId: "site-id",
+        siteName: "site-name"
+      };
+
+      const writeRows: RowWriter = async addRow => {
+        addRow(report);
+      };
+
+      await service.writeToStream(response, columns, writeRows);
+
+      const result = await streamEnd;
+      expect(result).toBe(
+        `organization-name,project_name,site-id,site-name\nExport Org,Export Project,42,Export Site\n`
+      );
     });
 
     it("serializes values", async () => {

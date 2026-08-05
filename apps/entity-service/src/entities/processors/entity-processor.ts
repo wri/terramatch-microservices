@@ -8,13 +8,13 @@ import { BadRequestException, InternalServerErrorException, Type } from "@nestjs
 import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
-import { EntityUpdateData, ReportUpdateAttributes } from "../dto/entity-update.dto";
+import { EntityUpdateData, ReportUpdateAttributes, DisturbanceReportUpdateAttributes } from "../dto/entity-update.dto";
 import {
   APPROVED,
   AWAITING_APPROVAL,
   NEEDS_MORE_INFORMATION
 } from "@terramatch-microservices/database/constants/status";
-import { Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
+import { DisturbanceReport, Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 import { uniq } from "lodash";
@@ -245,7 +245,7 @@ export abstract class ReportProcessor<
   ModelType extends ReportModel,
   LightDto extends EntityDto,
   FullDto extends EntityDto,
-  UpdateDto extends ReportUpdateAttributes,
+  UpdateDto extends ReportUpdateAttributes | DisturbanceReportUpdateAttributes,
   CreateDto extends EntityCreateAttributes = EntityCreateAttributes
 > extends EntityProcessor<ModelType, LightDto, FullDto, UpdateDto, CreateDto> {
   async update(model: ModelType, update: UpdateDto) {
@@ -306,7 +306,8 @@ export abstract class ReportProcessor<
     await UpdateRequest.for(model).destroy();
 
     // @ts-expect-error the typing on setDataValue() makes this expression "not callable"
-    model.setDataValue("status", "due"); // circumvent the status state machine
+    // Disturbance reports do not use "due"; reset them to started instead.
+    model.setDataValue("status", model instanceof DisturbanceReport ? "started" : "due");
     model.submittedAt = null;
     model.completion = 0;
     if (!(model instanceof ProjectReport)) model.nothingToReport = null;

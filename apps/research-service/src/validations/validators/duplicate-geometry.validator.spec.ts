@@ -26,9 +26,9 @@ interface MockSite {
 }
 
 interface MockDuplicateInfo {
-  poly_uuid: string;
-  poly_name: string;
-  site_name: string;
+  polyUuid: string;
+  polyName: string;
+  siteName: string;
 }
 
 interface MockDuplicateCheckResult {
@@ -163,9 +163,9 @@ describe("DuplicateGeometryValidator", () => {
         valid: false,
         extraInfo: [
           {
-            poly_uuid: "related-uuid-1",
-            poly_name: "Duplicate Polygon 1",
-            site_name: "Site 1"
+            polyUuid: "related-uuid-1",
+            polyName: "Duplicate Polygon 1",
+            siteName: "Site 1"
           }
         ]
       });
@@ -458,9 +458,9 @@ describe("DuplicateGeometryValidator", () => {
 
       expect(result).toEqual([
         {
-          poly_uuid: "duplicate-uuid",
-          poly_name: "Duplicate Polygon",
-          site_name: "Site Name"
+          polyUuid: "duplicate-uuid",
+          polyName: "Duplicate Polygon",
+          siteName: "Site Name"
         }
       ]);
       expect(mockTransaction.commit).toHaveBeenCalled();
@@ -487,9 +487,9 @@ describe("DuplicateGeometryValidator", () => {
 
       expect(result).toEqual([
         {
-          poly_uuid: "duplicate-uuid",
-          poly_name: "",
-          site_name: ""
+          polyUuid: "duplicate-uuid",
+          polyName: "",
+          siteName: ""
         }
       ]);
     });
@@ -746,9 +746,9 @@ describe("DuplicateGeometryValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual([
         {
-          poly_uuid: "existing-uuid",
-          poly_name: "Duplicate Polygon",
-          site_name: "Test Site"
+          polyUuid: "existing-uuid",
+          polyName: "Duplicate Polygon",
+          siteName: "Test Site"
         }
       ]);
     });

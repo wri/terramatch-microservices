@@ -1,7 +1,6 @@
 import {
   AllowNull,
   AutoIncrement,
-  BelongsTo,
   Column,
   HasMany,
   Index,
@@ -10,8 +9,16 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, STRING, UUID, UUIDV4 } from "sequelize";
-import { I18nItem } from "./i18n-item.entity";
+import {
+  BIGINT,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  TEXT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { Link } from "./link.entity";
@@ -48,36 +55,41 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @JsonColumn()
   declare frameworks: FrameworkKey[] | null;
 
+  @AllowNull
+  @Column(TEXT)
+  declare header: string | null;
+
   @Column(BIGINT.UNSIGNED)
   declare headerId: number;
 
-  @BelongsTo(() => I18nItem, { foreignKey: "header_id", constraints: false })
-  declare header: I18nItem | null;
+  @AllowNull
+  @Column(TEXT)
+  declare title: string | null;
 
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   declare titleId: number | null;
 
-  @BelongsTo(() => I18nItem, { foreignKey: "title_id", constraints: false })
-  declare title: I18nItem | null;
+  @AllowNull
+  @Column(TEXT)
+  declare description: string | null;
 
   @Column(BIGINT.UNSIGNED)
   declare descriptionId: number;
 
-  @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  declare description: I18nItem | null;
+  @AllowNull
+  @Column(TEXT)
+  declare contactSupportMessage: string | null;
 
   @Column(BIGINT.UNSIGNED)
   declare contactSupportMessageId: number;
 
-  @BelongsTo(() => I18nItem, { foreignKey: "contact_support_message_id", constraints: false })
-  declare contactSupportMessage: I18nItem | null;
+  @AllowNull
+  @Column(TEXT)
+  declare contactSupportSubject: string | null;
 
   @Column(BIGINT.UNSIGNED)
   declare contactSupportSubjectId: number;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "contact_support_subject_id", constraints: false })
-  declare contactSupportSubject: I18nItem | null;
 
   @HasMany(() => Link, {
     foreignKey: "linkableId",

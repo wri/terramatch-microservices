@@ -256,11 +256,9 @@ describe("ApplicationsController", () => {
         expect.anything(),
         expect.objectContaining({ id: submissions[1].id })
       );
-      expect(formDataService().addFundingProgrammeDtos).toHaveBeenCalledWith(
-        expect.anything(),
-        [expect.objectContaining({ id: fundingProgramme.id })],
-        "es-MX"
-      );
+      expect(formDataService().addFundingProgrammeDtos).toHaveBeenCalledWith(expect.anything(), [
+        expect.objectContaining({ id: fundingProgramme.id })
+      ]);
     });
   });
 

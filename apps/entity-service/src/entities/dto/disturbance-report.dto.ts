@@ -7,8 +7,8 @@ import { HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-
 import { DisturbanceReportEntryDto } from "@terramatch-microservices/common/dto/disturbance-report-entry.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import {
-  REPORT_STATUSES,
-  ReportStatus,
+  ENTITY_STATUSES,
+  EntityStatus,
   UPDATE_REQUEST_STATUSES,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
@@ -30,9 +30,9 @@ export class DisturbanceReportLightDto extends EntityDto {
 
   @ApiProperty({
     description: "Entity status for this disturbance report",
-    enum: REPORT_STATUSES
+    enum: ENTITY_STATUSES
   })
-  status: ReportStatus;
+  status: EntityStatus;
 
   @ApiProperty({
     nullable: true,

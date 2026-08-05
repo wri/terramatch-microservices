@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { getTrackingEntryConfigLabels } from "@terramatch-microservices/common/localization/tracking-entry-config-i18n";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Application,
@@ -20,19 +21,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import {
-  Dictionary,
-  difference,
-  filter,
-  flatten,
-  flattenDeep,
-  groupBy,
-  intersection,
-  sortBy,
-  union,
-  uniq,
-  uniqBy
-} from "lodash";
+import { Dictionary, difference, flatten, groupBy, intersection, sortBy, union, uniq, uniqBy } from "lodash";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -72,7 +61,7 @@ import { EntitiesService } from "../entities/entities.service";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
-const EXTRA_FIELDS: string[] = ["id", "optionsList"];
+const EXTRA_FIELDS: string[] = ["id", "optionsList", "additionalProps"];
 
 type TranslationModelType =
   | typeof Form
@@ -270,7 +259,7 @@ export class FormsService {
     });
   }
 
-  async addFullDto(document: DocumentBuilder, form: Form, translated: boolean): Promise<DocumentBuilder> {
+  async addFullDto(document: DocumentBuilder, form: Form): Promise<DocumentBuilder> {
     // Note: Fetching the sections / questions / table headers as their own queries is substantially
     // more efficient than joining these large tables together into the form query above.
     // Note: Form / section / question relations are odd - form_sections.form_id is the form uuid, but
@@ -281,10 +270,6 @@ export class FormsService {
     const options = await FormQuestionOption.findAll({ where: { formQuestionId: questions.map(({ id }) => id) } });
     const optionsImages =
       options.length == 0 ? [] : await Media.for(options).findAll({ where: { collectionName: "image" } });
-
-    const translations = translated
-      ? await this.getTranslationsForFullDto(form, sections, questions, tableHeaders, options)
-      : {};
 
     const tableHeadersByQuestionId = groupBy(tableHeaders, "formQuestionId");
     const optionsByQuestionId = groupBy(options, "formQuestionId");
@@ -320,13 +305,10 @@ export class FormsService {
         name: question.formName,
         model: config?.model ?? null,
         collection,
-        ...this.localizationService.translateFields(translations, question, ["label", "description", "placeholder"]),
-        tableHeaders:
-          tableHeaders == null
-            ? null
-            : sortBy(tableHeaders, "order").map(
-                header => this.localizationService.translateFields(translations, header, ["label"]).label
-              ),
+        label: question.label,
+        description: question.description,
+        placeholder: question.placeholder,
+        tableHeaders: tableHeaders == null ? null : sortBy(tableHeaders, "order").map(header => header.label as string),
         options:
           options == null
             ? null
@@ -334,9 +316,9 @@ export class FormsService {
                 populateDto<FormQuestionOptionDto>(new FormQuestionOptionDto(), {
                   id: option.uuid,
                   slug: option.slug ?? "",
+                  label: option.label,
                   imageUrl: optionMediaByOptionId[option.id]?.url ?? option.imageUrl,
                   thumbUrl: optionMediaByOptionId[option.id]?.thumbUrl ?? null,
-                  ...this.localizationService.translateFields(translations, option, ["label"]),
                   altValue: null
                 })
               ),
@@ -356,7 +338,8 @@ export class FormsService {
 
       return new FormSectionDto(section, {
         id: section.uuid,
-        ...this.localizationService.translateFields(translations, section, ["title", "description"]),
+        title: section.title,
+        description: section.description,
         questions: sectionQuestions
           .filter(({ parentId }) => parentId == null)
           .map(question => questionToDto(question, sectionQuestions))
@@ -370,13 +353,10 @@ export class FormsService {
     document.addData<FormFullDto>(
       form.uuid,
       new FormFullDto(form, {
-        translated,
-        ...this.localizationService.translateFields(translations, form, [
-          "title",
-          "subtitle",
-          "description",
-          "submissionMessage"
-        ]),
+        title: form.title,
+        subtitle: form.subtitle,
+        description: form.description,
+        submissionMessage: form.submissionMessage as string,
         fundingProgrammeId: form.stage?.fundingProgrammeId ?? null,
         banner:
           bannerMedia == null
@@ -542,51 +522,53 @@ export class FormsService {
     );
   }
 
-  private getI18nTranslationEntityFields(translationEntity: TranslationModelType) {
-    return translationEntity.I18N_FIELDS.map(field => `${field}Id`);
+  private getTranslationLabelEntityFields(translationEntity: TranslationModelType) {
+    return translationEntity.I18N_FIELDS;
   }
 
   private async processTranslationEntity<M extends TranslationModelType>(
     model: ModelCtor,
     property: string,
     filterParams: TranslationParamsType | TranslationParamsType[]
-  ): Promise<[number[], InstanceType<M>[]]> {
+  ): Promise<[string[], InstanceType<M>[]]> {
     const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
-    const i18nFields = this.getI18nTranslationEntityFields(model as TranslationModelType);
+    const labelFields = this.getTranslationLabelEntityFields(model as TranslationModelType);
     const entities = await model.findAll({
       where: {
         [property]: {
           [Op.in]: filterParamsArray
         }
       },
-      attributes: intersection(Object.keys(model.getAttributes()), [...i18nFields, ...EXTRA_FIELDS])
+      attributes: intersection(Object.keys(model.getAttributes()), [...labelFields, ...EXTRA_FIELDS])
     });
 
-    const i18nIdsToBePushed = entities.flatMap(entity => this.getI18nIdsFromEntity(entity, i18nFields));
+    const labelsToBePushed = entities.flatMap(entity => this.getI18nLabelsFromEntity(entity, labelFields));
 
-    return [i18nIdsToBePushed, entities as InstanceType<M>[]];
+    return [labelsToBePushed, entities as InstanceType<M>[]];
   }
 
-  private getI18nIdsFromEntity(entity: Model, i18nFields: string[]) {
+  private getI18nLabelsFromEntity(entity: Model, labelFields: readonly string[]) {
     return Object.entries(entity.dataValues)
-      .filter(([key, value]) => i18nFields.includes(key) && value != null)
-      .map(([, value]) => value as number);
+      .filter(([key, value]) => labelFields.includes(key) && value != null)
+      .map(([, value]) => value as string);
   }
 
   async getI18nIdsForForm(form: Form) {
-    const formI18nIds = this.getI18nIdsFromEntity(form, this.getI18nTranslationEntityFields(Form));
-    const [formSectionI18nIds, formSections] = await this.processTranslationEntity(FormSection, "formId", [form.uuid]);
-    const [formQuestionI18nIds, formQuestions] = await this.processTranslationEntity(
+    const formI18nLabels = this.getI18nLabelsFromEntity(form, this.getTranslationLabelEntityFields(Form));
+    const [formSectionI18nLabels, formSections] = await this.processTranslationEntity(FormSection, "formId", [
+      form.uuid
+    ]);
+    const [formQuestionI18nLabels, formQuestions] = await this.processTranslationEntity(
       FormQuestion,
       "formSectionId",
       formSections.map(section => section.id)
     );
-    const [formQuestionOptionI18nIds] = await this.processTranslationEntity(
+    const [formQuestionOptionI18nLabels] = await this.processTranslationEntity(
       FormQuestionOption,
       "formQuestionId",
       formQuestions.map(question => question.id)
     );
-    const [formTableHeaderI18nIds] = await this.processTranslationEntity(
+    const [formTableHeaderI18nLabels] = await this.processTranslationEntity(
       FormTableHeader,
       "formQuestionId",
       formQuestions.map(question => question.id)
@@ -594,7 +576,7 @@ export class FormsService {
     const optionsListParams = formQuestions
       .map(question => (question as FormQuestion).optionsList)
       .filter((optionsList): optionsList is string => optionsList != null && optionsList !== "0");
-    const [formOptionListI18nIds, formOptionsLists] = await this.processTranslationEntity(
+    const [formOptionListI18nLabels, formOptionsLists] = await this.processTranslationEntity(
       FormOptionList,
       "key",
       optionsListParams
@@ -604,49 +586,19 @@ export class FormsService {
       "formOptionListId",
       formOptionsLists.map(list => list.id)
     );
-    return [
-      ...formI18nIds,
-      ...formSectionI18nIds,
-      ...formQuestionI18nIds,
-      ...formQuestionOptionI18nIds,
-      ...formTableHeaderI18nIds,
-      ...formOptionListI18nIds
-    ];
-  }
 
-  private get userLocale() {
-    const locale = UserContext.userLocale;
-    if (locale == null) {
-      throw new BadRequestException("Locale is required");
-    }
-
-    return locale;
-  }
-
-  private async getTranslationsForFullDto(
-    form: Form,
-    sections: FormSection[],
-    questions: FormQuestion[],
-    tableHeaders: FormTableHeader[],
-    options: FormQuestionOption[]
-  ) {
-    // Get all the translations at once.
-    const formI18nIds = [form.titleId, form.subtitleId, form.descriptionId, form.submissionMessageId];
-    const sectionI18nIds = sections.map(({ titleId, descriptionId }) => [titleId, descriptionId]);
-    const questionI18nIds = questions.map(({ labelId, descriptionId, placeholderId }) => [
-      labelId,
-      descriptionId,
-      placeholderId
-    ]);
-    const tableHeaderI18nIds = tableHeaders.map(({ labelId }) => labelId);
-    const optionI18nIds = options.map(({ labelId }) => labelId);
-    return await this.localizationService.translateIds(
-      filter(
-        uniq(flattenDeep([formI18nIds, sectionI18nIds, questionI18nIds, tableHeaderI18nIds, optionI18nIds])),
-        isNotNull
-      ),
-      this.userLocale
+    const trackingEntryConfigLabels = formQuestions.flatMap(question =>
+      getTrackingEntryConfigLabels((question as FormQuestion).additionalProps)
     );
+    return [
+      ...formI18nLabels,
+      ...formSectionI18nLabels,
+      ...formQuestionI18nLabels,
+      ...formQuestionOptionI18nLabels,
+      ...formTableHeaderI18nLabels,
+      ...formOptionListI18nLabels,
+      ...trackingEntryConfigLabels
+    ];
   }
 
   private async storeForm(form: Form, attributes: StoreFormAttributes) {

@@ -158,7 +158,11 @@ export class CsvExportService {
       const getValue = (key: string) => {
         for (const source of reverseSources) {
           if (source instanceof Model) {
-            if (source.get(key) != null) return source.get(key);
+            const fromGet = source.get(key);
+            if (fromGet != null) return fromGet;
+            // Entity exports rely on TypeScript getters (e.g. organisationName) that are not Sequelize attributes.
+            const fromProperty = (source as unknown as Record<string, unknown>)[key];
+            if (fromProperty != null) return fromProperty;
           } else if (source[key] != null) return source[key];
         }
 

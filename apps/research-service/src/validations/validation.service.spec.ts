@@ -106,7 +106,7 @@ describe("ValidationService", () => {
       criteriaId: 12,
       valid: false,
       createdAt: new Date("2025-01-08T22:15:15.000Z"),
-      extraInfo: { percentage_site: 53, percentage_project: 19 }
+      extraInfo: { percentageSite: 53, percentageProject: 19 }
     }
   ];
 
@@ -1020,7 +1020,7 @@ describe("ValidationService", () => {
 
       mockPolygonSizeValidator.validateGeometry.mockResolvedValue({
         valid: true,
-        extraInfo: { area_hectares: 0.1 }
+        extraInfo: { areaHectares: 0.1 }
       });
 
       const result = await service.validateGeometries([validPolygon], ["POLYGON_SIZE"]);
@@ -1480,7 +1480,7 @@ describe("ValidationService", () => {
   });
 
   describe("updateSitePolygonValidityBatch - dynamic exclusion", () => {
-    it("should exclude DATA_COMPLETENESS when only num_trees error exists", async () => {
+    it("should exclude DATA_COMPLETENESS when only numTrees error exists", async () => {
       const mockSitePolygon = { id: 1, polygonUuid: "polygon-1", validationStatus: "failed" };
       (SitePolygon.findAll as jest.Mock).mockResolvedValue([mockSitePolygon]);
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
@@ -1488,7 +1488,7 @@ describe("ValidationService", () => {
           polygonId: "polygon-1",
           criteriaId: 14, // DATA_COMPLETENESS
           valid: false,
-          extraInfo: [{ field: "num_trees" }]
+          extraInfo: [{ field: "numTrees" }]
         }
       ]);
       (SitePolygon.update as jest.Mock).mockResolvedValue(undefined);

@@ -559,6 +559,13 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       resource: "restoration",
       inputType: "treesGoal",
       collection: "all"
+    },
+    "pro-trees-planted-goal": {
+      label: "Trees Planted Goal",
+      exportHeading: "treesPlantedGoal",
+      resource: "restoration",
+      inputType: "treesPlantedGoal",
+      collection: "all"
     }
   }
 };

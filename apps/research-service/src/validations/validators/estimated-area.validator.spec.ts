@@ -71,15 +71,15 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        polygon_status: "approved",
-        polygon_area: 100,
-        is_polygon_approved: true,
-        sum_area_site_approved: 800,
-        sum_area_project_approved: 4000,
-        percentage_site_approved: 80,
-        percentage_project_approved: 80,
-        total_area_site: 1000,
-        total_area_project: 5000
+        polygonStatus: "approved",
+        polygonArea: 100,
+        isPolygonApproved: true,
+        sumAreaSiteApproved: 800,
+        sumAreaProjectApproved: 4000,
+        percentageSiteApproved: 80,
+        percentageProjectApproved: 80,
+        totalAreaSite: 1000,
+        totalAreaProject: 5000
       });
     });
 
@@ -111,15 +111,15 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toEqual({
-        polygon_status: "approved",
-        polygon_area: 50,
-        is_polygon_approved: true,
-        sum_area_site_approved: 500,
-        sum_area_project_approved: 2000,
-        percentage_site_approved: 50,
-        percentage_project_approved: 40,
-        total_area_site: 1000,
-        total_area_project: 5000
+        polygonStatus: "approved",
+        polygonArea: 50,
+        isPolygonApproved: true,
+        sumAreaSiteApproved: 500,
+        sumAreaProjectApproved: 2000,
+        percentageSiteApproved: 50,
+        percentageProjectApproved: 40,
+        totalAreaSite: 1000,
+        totalAreaProject: 5000
       });
     });
 
@@ -206,8 +206,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sum_area_site_approved).toBeNull();
-      expect(result.extraInfo?.total_area_site).toBeNull();
+      expect(result.extraInfo?.sumAreaSiteApproved).toBeNull();
+      expect(result.extraInfo?.totalAreaSite).toBeNull();
     });
 
     it("should handle null project totalHectaresRestoredGoal", async () => {
@@ -234,8 +234,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sum_area_project_approved).toBeNull();
-      expect(result.extraInfo?.total_area_project).toBeNull();
+      expect(result.extraInfo?.sumAreaProjectApproved).toBeNull();
+      expect(result.extraInfo?.totalAreaProject).toBeNull();
     });
 
     it("should throw NotFoundException when site polygon is not found", async () => {
@@ -272,8 +272,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only project validation matters
-      expect(result.extraInfo?.sum_area_site_approved).toBeNull();
-      expect(result.extraInfo?.total_area_site).toBe(0);
+      expect(result.extraInfo?.sumAreaSiteApproved).toBeNull();
+      expect(result.extraInfo?.totalAreaSite).toBe(0);
     });
 
     it("should handle zero totalHectaresRestoredGoal", async () => {
@@ -300,8 +300,8 @@ describe("EstimatedAreaValidator", () => {
       const result = await validator.validatePolygon(polygonUuid);
 
       expect(result.valid).toBe(true); // Only site validation matters
-      expect(result.extraInfo?.sum_area_project_approved).toBeNull();
-      expect(result.extraInfo?.total_area_project).toBe(0);
+      expect(result.extraInfo?.sumAreaProjectApproved).toBeNull();
+      expect(result.extraInfo?.totalAreaProject).toBe(0);
     });
 
     it("should calculate projected values for unapproved polygon (draft status)", async () => {
@@ -332,19 +332,19 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        polygon_status: "draft",
-        polygon_area: 100,
-        is_polygon_approved: false,
-        sum_area_site_approved: 800,
-        sum_area_project_approved: 4000,
-        percentage_site_approved: 80,
-        percentage_project_approved: 80,
-        total_area_site: 1000,
-        total_area_project: 5000,
-        projected_sum_area_site: 900,
-        projected_percentage_site: 90,
-        projected_sum_area_project: 4100,
-        projected_percentage_project: 82
+        polygonStatus: "draft",
+        polygonArea: 100,
+        isPolygonApproved: false,
+        sumAreaSiteApproved: 800,
+        sumAreaProjectApproved: 4000,
+        percentageSiteApproved: 80,
+        percentageProjectApproved: 80,
+        totalAreaSite: 1000,
+        totalAreaProject: 5000,
+        projectedSumAreaSite: 900,
+        projectedPercentageSite: 90,
+        projectedSumAreaProject: 4100,
+        projectedPercentageProject: 82
       });
     });
 
@@ -376,19 +376,19 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        polygon_status: "pending-approval",
-        polygon_area: 250,
-        is_polygon_approved: false,
-        sum_area_site_approved: 1500,
-        sum_area_project_approved: 7500,
-        percentage_site_approved: 75,
-        percentage_project_approved: 75,
-        total_area_site: 2000,
-        total_area_project: 10000,
-        projected_sum_area_site: 1750,
-        projected_percentage_site: 87.5,
-        projected_sum_area_project: 7750,
-        projected_percentage_project: 77.5
+        polygonStatus: "pending-approval",
+        polygonArea: 250,
+        isPolygonApproved: false,
+        sumAreaSiteApproved: 1500,
+        sumAreaProjectApproved: 7500,
+        percentageSiteApproved: 75,
+        percentageProjectApproved: 75,
+        totalAreaSite: 2000,
+        totalAreaProject: 10000,
+        projectedSumAreaSite: 1750,
+        projectedPercentageSite: 87.5,
+        projectedSumAreaProject: 7750,
+        projectedPercentageProject: 77.5
       });
     });
 
@@ -418,10 +418,10 @@ describe("EstimatedAreaValidator", () => {
 
       const result = await validator.validatePolygon(polygonUuid);
 
-      expect(result.extraInfo?.projected_sum_area_site).toBeUndefined();
-      expect(result.extraInfo?.projected_percentage_site).toBeUndefined();
-      expect(result.extraInfo?.projected_sum_area_project).toBeUndefined();
-      expect(result.extraInfo?.projected_percentage_project).toBeUndefined();
+      expect(result.extraInfo?.projectedSumAreaSite).toBeUndefined();
+      expect(result.extraInfo?.projectedPercentageSite).toBeUndefined();
+      expect(result.extraInfo?.projectedSumAreaProject).toBeUndefined();
+      expect(result.extraInfo?.projectedPercentageProject).toBeUndefined();
     });
 
     it("should show projection would push validation outside acceptable range", async () => {
@@ -452,19 +452,19 @@ describe("EstimatedAreaValidator", () => {
 
       expect(result.valid).toBe(true);
       expect(result.extraInfo).toEqual({
-        polygon_status: "draft",
-        polygon_area: 500,
-        is_polygon_approved: false,
-        sum_area_site_approved: 900,
-        sum_area_project_approved: 6000,
-        percentage_site_approved: 90,
-        percentage_project_approved: 120,
-        total_area_site: 1000,
-        total_area_project: 5000,
-        projected_sum_area_site: 1400, // Would be 140% - way over limit
-        projected_percentage_site: 140,
-        projected_sum_area_project: 6500, // Would be 130% - over limit
-        projected_percentage_project: 130
+        polygonStatus: "draft",
+        polygonArea: 500,
+        isPolygonApproved: false,
+        sumAreaSiteApproved: 900,
+        sumAreaProjectApproved: 6000,
+        percentageSiteApproved: 90,
+        percentageProjectApproved: 120,
+        totalAreaSite: 1000,
+        totalAreaProject: 5000,
+        projectedSumAreaSite: 1400, // Would be 140% - way over limit
+        projectedPercentageSite: 140,
+        projectedSumAreaProject: 6500, // Would be 130% - over limit
+        projectedPercentageProject: 130
       });
     });
   });
@@ -525,16 +525,16 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site_approved: 800,
-          sum_area_project_approved: 4000
+          sumAreaSiteApproved: 800,
+          sumAreaProjectApproved: 4000
         })
       });
       expect(result[1]).toEqual({
         polygonUuid: "uuid-2",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site_approved: 1500,
-          sum_area_project_approved: 8000
+          sumAreaSiteApproved: 1500,
+          sumAreaProjectApproved: 8000
         })
       });
     });
@@ -573,8 +573,8 @@ describe("EstimatedAreaValidator", () => {
         polygonUuid: "uuid-1",
         valid: true,
         extraInfo: expect.objectContaining({
-          sum_area_site_approved: 800,
-          sum_area_project_approved: 4000
+          sumAreaSiteApproved: 800,
+          sumAreaProjectApproved: 4000
         })
       });
       expect(result[1]).toEqual({

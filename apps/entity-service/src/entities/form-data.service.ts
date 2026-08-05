@@ -1,12 +1,9 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import {
   Form,
   FormQuestion,
   FormSubmission,
   FundingProgramme,
-  I18nTranslation,
   Media,
   Stage,
   UpdateRequest
@@ -23,7 +20,7 @@ import {
   isEntity,
   isReport
 } from "@terramatch-microservices/database/constants/entities";
-import { Dictionary, flatten, isEmpty, uniq } from "lodash";
+import { Dictionary } from "lodash";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
 import { isField, isRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -34,8 +31,6 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
-import { Op } from "sequelize";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
 import { FundingProgrammeDto, StageDto } from "../fundingProgrammes/dto/funding-programme.dto";
 import { EmbeddedMediaDto } from "@terramatch-microservices/common/dto/media.dto";
@@ -44,7 +39,6 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 @Injectable()
 export class FormDataService {
   constructor(
-    private readonly localizationService: LocalizationService,
     private readonly mediaService: MediaService,
     private readonly policyService: PolicyService
   ) {}
@@ -89,8 +83,8 @@ export class FormDataService {
     await this.updateModelFromForm(submission, form, answers, models);
   }
 
-  async getDtoForEntity(entityType: EntityType, entity: EntityModel, form: Form, locale: ValidLocale) {
-    const formTitle = await this.getFormTitle(form, locale);
+  async getDtoForEntity(entityType: EntityType, entity: EntityModel, form: Form) {
+    const formTitle = await this.getFormTitle(form);
     const currentUpdateRequest = await UpdateRequest.for(entity)
       .current()
       .findOne({ attributes: ["uuid", "content", "feedback", "feedbackFields"] });
@@ -126,14 +120,12 @@ export class FormDataService {
     });
   }
 
-  async addSubmissionDto(document: DocumentBuilder, formSubmission: FormSubmission, form?: Form, locale?: ValidLocale) {
+  async addSubmissionDto(document: DocumentBuilder, formSubmission: FormSubmission, form?: Form) {
     form ??=
       formSubmission.form ??
       (formSubmission.formId == null ? undefined : await Form.findOne({ where: { uuid: formSubmission.formId } })) ??
       undefined;
     if (form == null) throw new BadRequestException("Form not found for submission");
-
-    locale ??= UserContext.userLocale ?? "en-US";
 
     formSubmission.organisation ??= (await formSubmission.$get("organisation")) ?? null;
     formSubmission.projectPitch ??= (await formSubmission.$get("projectPitch")) ?? null;
@@ -150,55 +142,18 @@ export class FormDataService {
       formSubmission
     );
 
-    const i18nLightItems = isEmpty(formSubmission.feedbackFields)
-      ? []
-      : (
-          await I18nTranslation.findAll({
-            where: {
-              [Op.or]: {
-                shortValue: formSubmission.feedbackFields,
-                longValue: formSubmission.feedbackFields
-              }
-            },
-            attributes: ["i18nItemId", "shortValue", "longValue"]
-          })
-        ).map(({ i18nItemId, shortValue, longValue }) => ({ i18nItemId, shortValue, longValue }));
-
-    const notFoundFeedbackFields =
-      formSubmission.feedbackFields?.filter(
-        field => !i18nLightItems.some(item => item.shortValue === field || item.longValue === field)
-      ) ?? [];
-
-    const i18nItemIds = i18nLightItems.map(({ i18nItemId }) => i18nItemId);
-    const translations = uniq(
-      Object.values(await this.localizationService.translateIds(i18nItemIds, locale))
-        .concat(notFoundFeedbackFields)
-        .filter(isNotNull)
-    );
-
     document.addData(
       formSubmission.uuid,
       new SubmissionDto(formSubmission, {
         answers,
-        frameworkKey: form?.frameworkKey,
-        translatedFeedbackFields: translations
+        frameworkKey: form?.frameworkKey
       })
     );
 
     return document;
   }
 
-  async addFundingProgrammeDtos(
-    document: DocumentBuilder,
-    fundingProgrammes: FundingProgramme[],
-    locale?: ValidLocale
-  ) {
-    const translationIds = uniq(
-      flatten(
-        fundingProgrammes.map(({ nameId, descriptionId, locationId }) => [nameId, descriptionId, locationId])
-      ).filter(isNotNull)
-    );
-    const translations = locale == null ? {} : await this.localizationService.translateIds(translationIds, locale);
+  async addFundingProgrammeDtos(document: DocumentBuilder, fundingProgrammes: FundingProgramme[]) {
     const coverMedias = await Media.for(fundingProgrammes).findAll({
       where: { collectionName: "cover" },
       order: [["createdAt", "DESC"]]
@@ -224,11 +179,9 @@ export class FormDataService {
       document.addData(
         fundingProgramme.uuid,
         new FundingProgrammeDto(fundingProgramme, {
-          ...this.localizationService.translateFields(translations, fundingProgramme, [
-            "name",
-            "description",
-            "location"
-          ]),
+          name: fundingProgramme.name,
+          description: fundingProgramme.description,
+          location: fundingProgramme.location,
           cover:
             coverMedia == null
               ? null
@@ -261,11 +214,8 @@ export class FormDataService {
     return await collector.getAnswers(answersModel?.answers ?? {}, questions, models);
   }
 
-  private async getFormTitle(form: Form, locale: ValidLocale) {
-    if (form.titleId == null) return form.title;
-
-    const translations = await this.localizationService.translateIds([form.titleId], locale);
-    return this.localizationService.translateFields(translations, form, ["title"]).title;
+  private async getFormTitle(form: Form) {
+    return form.title;
   }
 
   async updateModelFromForm<T extends AnswersModel>(

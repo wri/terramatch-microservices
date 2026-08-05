@@ -77,7 +77,14 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   },
   "elpDescription",
   associatedValueColumn("nurserySeedlingAmount"),
-  associatedValueColumn("nurserySeedlingNameAndAmount")
+  associatedValueColumn("nurserySeedlingNameAndAmount"),
+  "bioeconomyProductList",
+  "bioeconomyProductBenefit",
+  "bioeconomyProductSold",
+  "bioeconomyQualityCertifications",
+  "bioeconomyBuyers",
+  "bioeconomyOtherCertifications",
+  "womenGovernance"
 ];
 
 export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectReportAssociations> {

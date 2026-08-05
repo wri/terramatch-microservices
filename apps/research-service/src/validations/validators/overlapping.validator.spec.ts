@@ -168,18 +168,18 @@ describe("OverlappingValidator", () => {
       expect(result.valid).toBe(false);
       expect(result.extraInfo).toHaveLength(2);
       expect(result.extraInfo?.[0]).toMatchObject({
-        poly_uuid: testUuids.polygon2,
-        poly_name: "A",
-        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        polyUuid: testUuids.polygon2,
+        polyName: "A",
+        siteName: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.18,
-        intersect_smaller: true
+        intersectSmaller: true
       });
       expect(result.extraInfo?.[1]).toMatchObject({
-        poly_uuid: testUuids.polygon3,
-        poly_name: "B",
-        site_name: "CAPULIN VMRL CAFE CAPITAN",
+        polyUuid: testUuids.polygon3,
+        polyName: "B",
+        siteName: "CAPULIN VMRL CAFE CAPITAN",
         percentage: 0.09,
-        intersect_smaller: false
+        intersectSmaller: false
       });
     });
 
@@ -363,14 +363,14 @@ describe("OverlappingValidator", () => {
         throw new Error("Expected overlap info to be present");
       }
 
-      const polyUuids = overlapInfo.map(info => info.poly_uuid);
+      const polyUuids = overlapInfo.map(info => info.polyUuid);
       expect(polyUuids).toContain(testUuids.polygon2);
       expect(polyUuids).toContain(testUuids.polygon3);
 
       overlapInfo.forEach(info => {
         expect(info.percentage).toBeGreaterThan(0);
         expect(info.percentage).toBeLessThan(50);
-        expect(info.site_name).toBe("CAPULIN VMRL CAFE CAPITAN");
+        expect(info.siteName).toBe("CAPULIN VMRL CAFE CAPITAN");
       });
     });
   });
@@ -394,7 +394,7 @@ describe("OverlappingValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].percentage).toBe(10);
-      expect(result[0].intersect_smaller).toBe(true);
+      expect(result[0].intersectSmaller).toBe(true);
     });
 
     it("should calculate percentage correctly for larger intersecting polygon", () => {
@@ -415,7 +415,7 @@ describe("OverlappingValidator", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].percentage).toBe(10);
-      expect(result[0].intersect_smaller).toBe(false);
+      expect(result[0].intersectSmaller).toBe(false);
     });
 
     it("should filter intersections by target UUID", () => {
@@ -445,7 +445,7 @@ describe("OverlappingValidator", () => {
       const result = validator["buildOverlapInfo"](intersections, testUuids.polygon1);
 
       expect(result).toHaveLength(1);
-      expect(result[0].poly_uuid).toBe(testUuids.polygon2);
+      expect(result[0].polyUuid).toBe(testUuids.polygon2);
     });
   });
 

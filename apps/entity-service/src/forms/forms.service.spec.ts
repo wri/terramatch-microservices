@@ -33,11 +33,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
-import {
-  mockUserContext,
-  mockTranslateFieldsWithOriginal,
-  serialize
-} from "@terramatch-microservices/common/util/testing";
+import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { EntitiesService } from "../entities/entities.service";
@@ -185,28 +181,20 @@ describe("FormsService", () => {
   });
 
   describe("addFullDto", () => {
-    const setupTestForm = async (translated: boolean) => {
+    const setupTestForm = async () => {
       mockUserContext({ userId: (await UserFactory.create()).id });
       mediaService.getUrl.mockReturnValue("fake-url");
-      localizationService.translateIds.mockResolvedValue({
-        1: "First Translation",
-        2: "Second Translation",
-        3: "Third Translation",
-        4: "Fourth Translation"
-      });
-      mockTranslateFieldsWithOriginal(localizationService);
 
-      const form = await FormFactory.create({ titleId: 1 });
+      const form = await FormFactory.create();
       await MediaFactory.form(form).create({ collectionName: "banner" });
       const sections = [
-        await FormSectionFactory.form(form).create({ order: 1, titleId: 2 }),
+        await FormSectionFactory.form(form).create({ order: 1 }),
         await FormSectionFactory.form(form).create({ order: 0 })
       ];
 
       // one text question in the first section
       const textQuestion = await FormQuestionFactory.section(sections[0]).create({
         order: 0,
-        labelId: 3,
         validation: { required: true }
       });
       const textQuestionMatch = {
@@ -215,19 +203,18 @@ describe("FormsService", () => {
         description: textQuestion.description ?? null,
         validation: textQuestion.validation ?? null,
         name: textQuestion.uuid,
-        label: translated ? "Third Translation" : (textQuestion.label ?? null)
+        label: textQuestion.label ?? null
       };
 
       // one select question in the first section
       const selectQuestion = await FormQuestionFactory.section(sections[0]).create({
         order: 1,
-        descriptionId: 4,
         formSectionId: sections[0].id,
         inputType: "select",
         multiChoice: true
       });
       const options = [
-        await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 1, labelId: 2 }),
+        await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 1 }),
         await FormQuestionOptionFactory.forQuestion(selectQuestion).create({ order: 0 })
       ];
       await MediaFactory.formQuestionOption(options[1]).create({ collectionName: "image" });
@@ -235,7 +222,7 @@ describe("FormsService", () => {
         inputType: "select",
         label: selectQuestion.label ?? null,
         placeholder: selectQuestion.placeholder ?? null,
-        description: translated ? "Fourth Translation" : (selectQuestion.description ?? null),
+        description: selectQuestion.description ?? null,
         // The order should swap because of the `order` field
         options: [
           {
@@ -248,7 +235,7 @@ describe("FormsService", () => {
           },
           {
             slug: options[0].slug,
-            label: translated ? "Second Translation" : options[0].label,
+            label: options[0].label,
             imageUrl: options[0].imageUrl,
             thumbUrl: null
           }
@@ -258,7 +245,6 @@ describe("FormsService", () => {
       // one condition question in the second section
       const conditionQuestion = await FormQuestionFactory.section(sections[1]).create({
         order: 1,
-        placeholderId: 1,
         formSectionId: sections[1].id,
         inputType: "conditional"
       });
@@ -268,7 +254,7 @@ describe("FormsService", () => {
       const conditionQuestionMatch = {
         inputType: "conditional",
         label: conditionQuestion.label ?? null,
-        placeholder: translated ? "First Translation" : (conditionQuestion.placeholder ?? null),
+        placeholder: conditionQuestion.placeholder ?? null,
         name: conditionQuestion.uuid,
         children: [
           {
@@ -287,7 +273,7 @@ describe("FormsService", () => {
         inputType: "tableInput"
       });
       const headers = [
-        await FormTableHeaderFactory.forQuestion(tableQuestion).create({ order: 1, labelId: 3 }),
+        await FormTableHeaderFactory.forQuestion(tableQuestion).create({ order: 1 }),
         await FormTableHeaderFactory.forQuestion(tableQuestion).create({ order: 0 })
       ];
       const tableChild = await FormQuestionFactory.section(sections[1]).create({
@@ -305,13 +291,12 @@ describe("FormsService", () => {
             name: tableChild.uuid
           }
         ],
-        tableHeaders: [headers[1].label, translated ? "Third Translation" : headers[0].label]
+        tableHeaders: [headers[1].label, headers[0].label]
       };
 
       const formMatch = {
         ...pick(form, "subtitle", "description", "frameworkKey"),
-        translated,
-        title: translated ? "First Translation" : (form.title ?? null),
+        title: form.title ?? null,
         banner: expect.objectContaining({ url: "fake-url" }),
         sections: [
           {
@@ -323,7 +308,7 @@ describe("FormsService", () => {
           {
             id: sections[0].uuid,
             description: sections[0].description,
-            title: translated ? "Second Translation" : sections[0].title,
+            title: sections[0].title,
             questions: [textQuestionMatch, selectQuestionMatch]
           }
         ]
@@ -333,22 +318,14 @@ describe("FormsService", () => {
     };
 
     it("returns the full DTO", async () => {
-      const { form, formMatch } = await setupTestForm(true);
-      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, true));
-      const dto = (document.data as Resource).attributes;
-      expect(dto).toMatchObject(formMatch);
-    });
-
-    it("avoids translations if translate is false", async () => {
-      const { form, formMatch } = await setupTestForm(false);
-      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false));
+      const { form, formMatch } = await setupTestForm();
+      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form));
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject(formMatch);
     });
 
     it("uses linked field multiChoice when the stored question is single-select", async () => {
       mockUserContext({ userId: (await UserFactory.create()).id });
-      mockTranslateFieldsWithOriginal(localizationService);
 
       const form = await FormFactory.create();
       const section = await FormSectionFactory.form(form).create();
@@ -358,7 +335,7 @@ describe("FormsService", () => {
         multiChoice: false
       });
 
-      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form, false));
+      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form));
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject({
         sections: [{ questions: [{ multiChoice: true }] }]
@@ -851,6 +828,42 @@ describe("FormsService", () => {
       await FormQuestionFactory.section(section2).create();
       const i18nIds = await service.getI18nIdsForForm(form);
       expect(i18nIds).toBeDefined();
+    });
+
+    it("includes tracking entryConfig labels from additionalProps", async () => {
+      const form = await FormFactory.create({ title: "Tracking Form" });
+      const section = await FormSectionFactory.form(form).create({ title: "Section" });
+      await FormQuestionFactory.section(section).create({
+        label: "Workdays",
+        inputType: "workdays",
+        additionalProps: {
+          entryConfigs: [
+            {
+              type: "gender",
+              title: "Custom Gender",
+              displayTrackingType: "People",
+              addNameLabel: "Add Ethnic Group",
+              subTypes: [{ subtype: "male", label: "Male" }]
+            }
+          ]
+        }
+      });
+
+      const labels = await service.getI18nIdsForForm(form);
+      expect(labels).toEqual(
+        expect.arrayContaining([
+          "Tracking Form",
+          "Section",
+          "Workdays",
+          "Custom Gender",
+          "People",
+          "Add Ethnic Group",
+          "Male",
+          "By: Custom Gender",
+          "Custom Gender Definition",
+          "Number of People"
+        ])
+      );
     });
   });
 });

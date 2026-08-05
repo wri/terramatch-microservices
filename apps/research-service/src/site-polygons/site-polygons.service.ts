@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
 import {
   AuditStatus,
@@ -606,9 +605,6 @@ export class SitePolygonsService {
       siteName = site?.name ?? siteUuid;
     }
 
-    const fingerprint = [...polygonUuids].sort().join(",") + `|${triggerType}`;
-    const jobId = createHash("sha256").update(fingerprint).digest("hex").slice(0, 32);
-
     const delayedJob = await DelayedJob.create({
       isAcknowledged: false,
       name: "Polygon Validation",
@@ -624,20 +620,16 @@ export class SitePolygonsService {
       } as Record<string, unknown>
     } as unknown as DelayedJob);
 
-    await this.validationQueue.add(
-      "polygonValidation",
-      {
-        polygonUuids,
-        validationTypes: [...VALIDATION_TYPES],
-        delayedJobId: delayedJob.id,
-        siteUuid,
-        triggerType
-      },
-      { jobId }
-    );
+    await this.validationQueue.add("polygonValidation", {
+      polygonUuids,
+      validationTypes: [...VALIDATION_TYPES],
+      delayedJobId: delayedJob.id,
+      siteUuid,
+      triggerType
+    });
 
     this.logger.log(
-      `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, jobId: ${jobId})`
+      `Queued automated polygon validation for ${polygonUuids.length} polygons (trigger: ${triggerType}, delayedJobId: ${delayedJob.id})`
     );
   }
 

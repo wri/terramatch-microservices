@@ -1,8 +1,9 @@
 import { DateTime } from "luxon";
 import { AppModule } from "./app.module";
-import { bootstrapRepl } from "@terramatch-microservices/common/util/bootstrap-repl";
+import { bootstrapRepl, getService } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { ScheduledJob } from "@terramatch-microservices/database/entities";
 import { REPORT_REMINDER } from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { ScheduledJobsService } from "./scheduled-jobs/scheduled-jobs.service";
 import {
   EPA,
   FRAMEWORK_KEYS_TF,
@@ -54,6 +55,7 @@ bootstrapRepl("Job Service", AppModule, {
       await ScheduledJob.scheduleTaskDue(utcDate(2025, 11, 1), HBF, utcDate(2025, 12, 1));
       await ScheduledJob.scheduleTaskDue(utcDate(2026, 5, 1), HBF, utcDate(2026, 6, 1));
     },
+    // Do not re-run in prod — no duplicate protection.
     seedReportingCalendarScheduledJobs: async () => {
       const utcDate = (year: number, month: number, day: number) => DateTime.utc(year, month, day).toJSDate();
 
@@ -61,7 +63,6 @@ bootstrapRepl("Job Service", AppModule, {
       for (const framework of FRAMEWORK_KEYS_TF) {
         await ScheduledJob.scheduleTaskDue(utcDate(2026, 7, 1), framework, utcDate(2026, 7, 31));
         await ScheduledJob.scheduleTaskDue(utcDate(2027, 1, 1), framework, utcDate(2027, 1, 31));
-        await ScheduledJob.scheduleTaskDue(utcDate(2027, 7, 1), framework, utcDate(2027, 7, 31));
       }
 
       // HBF: May–Oct → gen Nov 1 / due Dec 1 | Nov–Apr → gen May 1 / due Jun 1
@@ -78,8 +79,11 @@ bootstrapRepl("Job Service", AppModule, {
       await ScheduledJob.scheduleTaskDue(utcDate(2026, 9, 1), FUNDO_FLORA_1, utcDate(2026, 9, 30));
       await ScheduledJob.scheduleTaskDue(utcDate(2027, 3, 1), FUNDO_FLORA_1, utcDate(2027, 3, 31));
     },
-    // https://gfw.atlassian.net/browse/TM-3691 — report reminders fire from TaskDue for TF frameworks
-    // (excluding Top 100). Run seedReportingCalendarScheduledJobs to ensure TaskDue jobs exist.
+    // https://gfw.atlassian.net/browse/TM-3691
+    ensureTfTaskDueJobsIfMissing: async () => {
+      await getService(ScheduledJobsService).ensureAnnualTaskDueJobs();
+    },
+    // https://gfw.atlassian.net/browse/TM-3691 — removes REPORT_REMINDER jobs superseded by TaskDue (TF frameworks + misscheduled Top 100).
     removeStaleTerrafundReportReminderJobs: async () => {
       const staleJobs = await ScheduledJob.findAll({
         where: { type: REPORT_REMINDER }

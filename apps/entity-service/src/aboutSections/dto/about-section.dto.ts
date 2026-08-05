@@ -7,6 +7,13 @@ import {
 } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { JsonApiConstants } from "@terramatch-microservices/common/decorators/json-api-constants.decorator";
+
+@JsonApiConstants
+export class AboutSectionConstants {
+  @ApiProperty({ example: ABOUT_SECTION_TYPES })
+  TYPES: string[];
+}
 
 export class LinkDto {
   @ApiProperty()

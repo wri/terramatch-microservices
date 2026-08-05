@@ -1,7 +1,7 @@
 import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
-import { AboutSectionDto } from "./dto/about-section.dto";
+import { AboutSectionConstants, AboutSectionDto } from "./dto/about-section.dto";
 import { AboutSectionsService } from "./about-sections.service";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
@@ -9,6 +9,7 @@ import { AboutSection } from "@terramatch-microservices/database/entities";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 
 @Controller("aboutSections/v3/aboutSections")
+@ApiExtraModels(AboutSectionConstants)
 export class AboutSectionsController {
   constructor(private readonly aboutSectionsService: AboutSectionsService) {}
 

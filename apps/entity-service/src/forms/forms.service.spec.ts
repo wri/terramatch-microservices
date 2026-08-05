@@ -858,7 +858,10 @@ describe("FormsService", () => {
           "Custom Gender",
           "People",
           "Add Ethnic Group",
-          "Male"
+          "Male",
+          "By: Custom Gender",
+          "Custom Gender Definition",
+          "Number of People"
         ])
       );
     });

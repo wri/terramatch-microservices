@@ -1456,8 +1456,7 @@ describe("SitePolygonsService", () => {
           polygonUuids: ["geom-uuid-1"],
           delayedJobId: 99,
           siteUuid: "site-uuid-1"
-        }),
-        expect.objectContaining({ jobId: expect.any(String) })
+        })
       );
     });
 
@@ -1635,8 +1634,7 @@ describe("SitePolygonsService", () => {
           polygonUuids: ["dup", "b"],
           delayedJobId: 55,
           triggerType: "gh_push"
-        }),
-        expect.objectContaining({ jobId: expect.any(String) })
+        })
       );
     });
 
@@ -1672,8 +1670,7 @@ describe("SitePolygonsService", () => {
           polygonUuids: ["geom-a"],
           delayedJobId: 77,
           triggerType: "upload"
-        }),
-        expect.objectContaining({ jobId: expect.any(String) })
+        })
       );
     });
 
@@ -1698,8 +1695,7 @@ describe("SitePolygonsService", () => {
           delayedJobId: 88,
           siteUuid: "site-11",
           triggerType: "upload"
-        }),
-        expect.objectContaining({ jobId: expect.any(String) })
+        })
       );
     });
   });

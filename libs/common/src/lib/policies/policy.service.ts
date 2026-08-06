@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
+  AboutSection,
   AnrPlotGeometry,
   Application,
   AuditStatus,
@@ -63,6 +64,7 @@ import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
 import { UserContext } from "../contexts/user.context";
+import { AboutSectionPolicy } from "./about-section.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,6 +77,7 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [AboutSection, AboutSectionPolicy],
   [AnrPlotGeometry, AnrPlotGeometryPolicy],
   [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],

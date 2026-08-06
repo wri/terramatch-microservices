@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { cast, col, fn } from "sequelize";
+import { cast, col, fn, Op } from "sequelize";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { AboutSectionDto, LinkDto } from "./dto/about-section.dto";
+import { AboutSectionDto, LinkDto, StoreAboutSectionAttributes } from "./dto/about-section.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
@@ -104,5 +104,49 @@ export class AboutSectionsService {
   async pushTranslations(section: AboutSection) {
     const i18nLabels = await this.getI18nLabels(section);
     return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, section.uuid, i18nLabels);
+  }
+
+  async store(attributes: StoreAboutSectionAttributes, section = new AboutSection()) {
+    section.type = attributes.type;
+    section.frameworks = attributes.frameworks ?? null;
+    section.header = attributes.header;
+    section.title = attributes.title ?? null;
+    section.description = attributes.description;
+    section.contactSupportMessage = attributes.contactSupportMessage;
+    section.contactSupportSubject = attributes.contactSupportSubject;
+    await section.save();
+
+    section.links = await Promise.all(
+      attributes.links.map(async (linkAttributes, index) => {
+        if (linkAttributes.id != null) {
+          const link = await Link.findOne({ where: { uuid: linkAttributes.id } });
+          if (link != null && link.linkableType === AboutSection.LARAVEL_TYPE && link.linkableId === section.id) {
+            link.order = index;
+            link.title = linkAttributes.title;
+            link.url = linkAttributes.url;
+            await link.save();
+            return link;
+          }
+        }
+
+        return await Link.create({
+          order: index,
+          title: linkAttributes.title,
+          url: linkAttributes.url,
+          linkableType: AboutSection.LARAVEL_TYPE,
+          linkableId: section.id
+        });
+      })
+    );
+
+    await Link.destroy({
+      where: {
+        linkableType: AboutSection.LARAVEL_TYPE,
+        linkableId: section.id,
+        id: { [Op.notIn]: section.links.map(({ id }) => id) }
+      }
+    });
+
+    return section;
   }
 }

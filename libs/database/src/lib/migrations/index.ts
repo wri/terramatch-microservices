@@ -24,6 +24,7 @@ import { updateHaritBharatFundReadMoreUrl } from "./202607271530-update-harit-bh
 import { updateProjectQaStatusNullable } from "./202607281200-update-project-qa-status-nullable";
 import { addAboutSectionTextFields } from "./202607301000-add-about-section-text-fields";
 import { addLinkTitleTextField } from "./202607301100-add-link-title-text-field";
+import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -49,5 +50,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   updateHaritBharatFundReadMoreUrl,
   updateProjectQaStatusNullable,
   addAboutSectionTextFields,
-  addLinkTitleTextField
+  addLinkTitleTextField,
+  addDisturbanceReportFormUuidToFrameworks
 ];

@@ -2,7 +2,8 @@ import { CalculateIndicator } from "../calculate-indicator.interface";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { INDICATORS, TreeCoverLossData, TreeCoverLossFiresResult } from "@terramatch-microservices/database/constants";
+import { INDICATORS, TreeCoverLossFiresResult } from "@terramatch-microservices/database/constants";
+import { buildTreeCoverLossValue } from "./tree-cover-loss-value.util";
 import { IndicatorOutputTreeCoverLoss, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
@@ -39,15 +40,17 @@ export class TreeCoverLossFiresCalculator implements CalculateIndicator {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);
     }
 
-    const treeCoverLossFiresValue: TreeCoverLossData = results.reduce((acc, result) => {
-      acc[result.umd_tree_cover_loss_from_fires__year + 2000] = result.area__ha;
-      return acc;
-    }, {} as TreeCoverLossData);
+    const yearOfAnalysis = new Date().getFullYear();
+    const treeCoverLossFiresValue = buildTreeCoverLossValue(
+      results,
+      result => result.umd_tree_cover_loss_from_fires__year + 2000,
+      yearOfAnalysis
+    );
 
     const treeCoverLossFiresData: Partial<IndicatorOutputTreeCoverLoss> = {
       sitePolygonId: sitePolygon.id,
       indicatorSlug: INDICATORS[3],
-      yearOfAnalysis: new Date().getFullYear(),
+      yearOfAnalysis,
       value: treeCoverLossFiresValue
     };
 

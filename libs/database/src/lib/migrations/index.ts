@@ -24,6 +24,7 @@ import { updateHaritBharatFundReadMoreUrl } from "./202607271530-update-harit-bh
 import { updateProjectQaStatusNullable } from "./202607281200-update-project-qa-status-nullable";
 import { addAboutSectionTextFields } from "./202607301000-add-about-section-text-fields";
 import { addLinkTitleTextField } from "./202607301100-add-link-title-text-field";
+import { addPolygonGeometryActiveDeletedViews } from "./202608051200-add-polygon-geometry-active-deleted-views";
 import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
@@ -51,5 +52,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   updateProjectQaStatusNullable,
   addAboutSectionTextFields,
   addLinkTitleTextField,
+  addPolygonGeometryActiveDeletedViews,
   addDisturbanceReportFormUuidToFrameworks
 ];

@@ -53,6 +53,9 @@ export class ReportingFrameworkDto {
   @ApiProperty({ nullable: true, type: String })
   financialReportFormUuid: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  disturbanceReportFormUuid: string | null;
+
   @ApiProperty()
   totalProjectsCount: number;
 }
@@ -93,6 +96,11 @@ export class ReportingFrameworkFormUuidAttributes {
   @IsUUID()
   @ApiProperty(FORM_UUID_API_PROPERTY)
   financialReportFormUuid?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  @ApiProperty(FORM_UUID_API_PROPERTY)
+  disturbanceReportFormUuid?: string | null;
 }
 
 export class CreateReportingFrameworkAttributes extends ReportingFrameworkFormUuidAttributes {

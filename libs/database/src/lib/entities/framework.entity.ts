@@ -55,4 +55,8 @@ export class Framework extends Model<InferAttributes<Framework>, InferCreationAt
   @AllowNull
   @Column(UUID)
   declare financialReportFormUuid: string | null;
+
+  @AllowNull
+  @Column(UUID)
+  declare disturbanceReportFormUuid: string | null;
 }

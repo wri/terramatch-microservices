@@ -340,7 +340,8 @@ describe("ReportingFrameworksService", () => {
         siteFormUuid: null as string | null,
         siteReportFormUuid: null as string | null,
         nurseryFormUuid: null as string | null,
-        nurseryReportFormUuid: null as string | null
+        nurseryReportFormUuid: null as string | null,
+        disturbanceReportFormUuid: null as string | null
       };
       const createdFramework = {
         id: 1,
@@ -364,7 +365,8 @@ describe("ReportingFrameworksService", () => {
         siteFormUuid: null,
         siteReportFormUuid: null,
         nurseryFormUuid: null,
-        nurseryReportFormUuid: null
+        nurseryReportFormUuid: null,
+        disturbanceReportFormUuid: null
       });
       expect(result).toEqual(createdFramework);
       expect(formUpdateSpy).toHaveBeenCalled();

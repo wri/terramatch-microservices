@@ -55,41 +55,46 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @JsonColumn()
   declare frameworks: FrameworkKey[] | null;
 
-  @AllowNull
   @Column(TEXT)
-  declare header: string | null;
+  declare header: string;
 
+  // @deprecated
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  declare headerId: number;
+  declare headerId: number | null;
 
   @AllowNull
   @Column(TEXT)
   declare title: string | null;
 
+  // @deprecated
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   declare titleId: number | null;
 
-  @AllowNull
   @Column(TEXT)
   declare description: string | null;
 
-  @Column(BIGINT.UNSIGNED)
-  declare descriptionId: number;
-
+  // @deprecated
   @AllowNull
-  @Column(TEXT)
-  declare contactSupportMessage: string | null;
-
   @Column(BIGINT.UNSIGNED)
-  declare contactSupportMessageId: number;
+  declare descriptionId: number | null;
 
+  @Column(TEXT)
+  declare contactSupportMessage: string;
+
+  // @deprecated
   @AllowNull
-  @Column(TEXT)
-  declare contactSupportSubject: string | null;
-
   @Column(BIGINT.UNSIGNED)
-  declare contactSupportSubjectId: number;
+  declare contactSupportMessageId: number | null;
+
+  @Column(TEXT)
+  declare contactSupportSubject: string;
+
+  // @deprecated
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  declare contactSupportSubjectId: number | null;
 
   @HasMany(() => Link, {
     foreignKey: "linkableId",

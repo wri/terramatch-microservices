@@ -287,7 +287,7 @@ describe("MediaProcessor", () => {
 
       const search = "test";
       const media = await MediaFactory.project(project).create({ fileName: search });
-      await MediaFactory.project(project).create();
+      await MediaFactory.project(project).create({ fileName: "photo.jpg", name: "project cover" });
 
       const query: MediaQueryDto = { search };
 

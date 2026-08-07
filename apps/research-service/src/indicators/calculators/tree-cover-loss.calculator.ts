@@ -2,7 +2,8 @@ import { Polygon } from "geojson";
 import { CalculateIndicator } from "../calculate-indicator.interface";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { INDICATORS, TreeCoverLossData, TreeCoverLossResult } from "@terramatch-microservices/database/constants";
+import { INDICATORS, TreeCoverLossResult } from "@terramatch-microservices/database/constants";
+import { buildTreeCoverLossValue } from "./tree-cover-loss-value.util";
 import { NotFoundException } from "@nestjs/common";
 import { IndicatorOutputTreeCoverLoss, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
@@ -39,15 +40,17 @@ export class TreeCoverLossCalculator implements CalculateIndicator {
       geometry
     );
 
-    const treeCoverLossValue: TreeCoverLossData = results.reduce((acc, result) => {
-      acc[result.umd_tree_cover_loss__year] = result.area__ha;
-      return acc;
-    }, {} as TreeCoverLossData);
+    const yearOfAnalysis = new Date().getFullYear();
+    const treeCoverLossValue = buildTreeCoverLossValue(
+      results,
+      result => result.umd_tree_cover_loss__year,
+      yearOfAnalysis
+    );
 
     const treeCoverLossData: Partial<IndicatorOutputTreeCoverLoss> = {
       sitePolygonId: sitePolygon.id,
       indicatorSlug: INDICATORS[2],
-      yearOfAnalysis: new Date().getFullYear(),
+      yearOfAnalysis,
       value: treeCoverLossValue
     };
 

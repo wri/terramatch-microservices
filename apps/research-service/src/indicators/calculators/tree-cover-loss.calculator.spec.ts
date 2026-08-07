@@ -3,6 +3,7 @@ import { TreeCoverLossCalculator } from "./tree-cover-loss.calculator";
 import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { buildZeroTreeCoverLossValue } from "./tree-cover-loss-value.util";
 
 describe("TreeCoverLossCalculator", () => {
   const currentYear = new Date().getFullYear();
@@ -57,8 +58,32 @@ describe("TreeCoverLossCalculator", () => {
     expect(result).toMatchObject({
       indicatorSlug: "treeCoverLoss",
       sitePolygonId: 1,
-      value: { [currentYear]: 100 },
+      value: { [currentYear.toString()]: 100 },
       yearOfAnalysis: currentYear
     });
+  });
+
+  it("should return zero values for all years when GFW returns no rows", async () => {
+    dataApiServiceMock.getIndicatorsDataset.mockResolvedValue([]);
+    jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
+      id: 1,
+      calcArea: 100
+    } as unknown as SitePolygon);
+    const geometry: Polygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+          [0, 0]
+        ]
+      ]
+    };
+
+    const result = await calculator.calculate("uuid", geometry, dataApiServiceMock as unknown as DataApiService);
+
+    expect(result.value).toEqual(buildZeroTreeCoverLossValue(currentYear));
   });
 });

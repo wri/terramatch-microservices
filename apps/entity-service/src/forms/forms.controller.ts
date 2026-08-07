@@ -123,7 +123,7 @@ export class FormsController {
     const form = await this.formsService.findOne(uuid);
     await this.policyService.authorize("update", form);
     const i18nItemIds = await this.formsService.getI18nIdsForForm(form);
-    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, "Form", i18nItemIds, {
+    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, form.uuid, i18nItemIds, {
       entity_type: "forms",
       entity_name: form.title
     });

@@ -94,6 +94,7 @@ export class AboutSectionsController {
 
     const section = await AboutSection.findOne({ where: { uuid } });
     if (section == null) throw new NotFoundException();
+
     await this.policyService.authorize("update", section);
     await this.aboutSectionsService.store(payload.data.attributes, section);
     return await this.aboutSectionsService.addDto(buildJsonApi<AboutSectionDto>(AboutSectionDto), section);

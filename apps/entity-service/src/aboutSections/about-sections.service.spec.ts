@@ -1,14 +1,16 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { AboutSectionsService } from "./about-sections.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import { AboutSection, DelayedJob } from "@terramatch-microservices/database/entities";
+import { AboutSection, DelayedJob, Link } from "@terramatch-microservices/database/entities";
 import { AboutSectionFactory, LinkFactory } from "@terramatch-microservices/database/factories";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
-import { AboutSectionDto, LinkDto } from "./dto/about-section.dto";
+import { AboutSectionDto, LinkDto, StoreAboutSectionAttributes } from "./dto/about-section.dto";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ENTITY_SERVICE_EXPORT_QUEUE, PUSH_TRANSLATIONS } from "../jobs/entity-service-delayed-jobs.processor";
+import { ABOUT_SECTION_TYPES } from "@terramatch-microservices/database/entities/about-section.entity";
+import { faker } from "@faker-js/faker";
 
 describe("AboutSectionsService", () => {
   let module: TestingModule;
@@ -148,6 +150,98 @@ describe("AboutSectionsService", () => {
         delayedJobId: 99,
         uuid: section.uuid,
         i18nLabels
+      });
+    });
+
+    describe("store", () => {
+      beforeEach(async () => {
+        await AboutSection.truncate();
+      });
+
+      const castAttr = (attr: Partial<StoreAboutSectionAttributes>) => attr as StoreAboutSectionAttributes;
+
+      it("throws if the call attempts to create a second default", async () => {
+        await AboutSectionFactory.create({ type: "project" });
+        await expect(service.store(castAttr({ type: "project", frameworks: [] }))).rejects.toThrow(
+          'The default About Section for type "project" is already set'
+        );
+      });
+
+      it("throws if the call attempts to cover a framework that is already covered", async () => {
+        const section = await AboutSectionFactory.create({ type: "project", frameworks: ["hbf", "ppc"] });
+        await AboutSectionFactory.create({ type: "project", frameworks: ["epa-ghana-pilot"] });
+        await expect(service.store(castAttr({ type: "project", frameworks: ["hbf"] }))).rejects.toThrow(
+          'The About Section for type "project" and framework "hbf" is already set'
+        );
+        await expect(service.store(castAttr({ type: "project", frameworks: ["terrafund", "ppc"] }))).rejects.toThrow(
+          'The About Section for type "project" and framework "ppc" is already set'
+        );
+        await expect(
+          service.store(castAttr({ type: "project", frameworks: ["hbf", "epa-ghana-pilot"] }), section)
+        ).rejects.toThrow('The About Section for type "project" and framework "epa-ghana-pilot" is already set');
+      });
+
+      it("creates a new section", async () => {
+        const attributes: StoreAboutSectionAttributes = {
+          type: faker.helpers.arrayElement(ABOUT_SECTION_TYPES),
+          frameworks: ["ppc"],
+          header: faker.lorem.sentence(),
+          title: faker.lorem.sentence(),
+          description: faker.lorem.paragraph(),
+          contactSupportMessage: faker.lorem.sentence(),
+          contactSupportSubject: faker.lorem.sentence(),
+          links: []
+        };
+        const section = await service.store(attributes);
+
+        expect(section.type).toEqual(attributes.type);
+        expect(section.frameworks).toEqual(attributes.frameworks);
+        expect(section.header).toEqual(attributes.header);
+        expect(section.title).toEqual(attributes.title);
+        expect(section.description).toEqual(attributes.description);
+        expect(section.contactSupportMessage).toEqual(attributes.contactSupportMessage);
+        expect(section.contactSupportSubject).toEqual(attributes.contactSupportSubject);
+      });
+
+      it("updates an existing section", async () => {
+        const section = await AboutSectionFactory.create({ frameworks: ["ppc", "terrafund"] });
+        const links = [
+          await LinkFactory.section(section).create({ order: 0 }),
+          await LinkFactory.section(section).create({ order: 1 })
+        ];
+
+        const attributes: StoreAboutSectionAttributes = {
+          type: section.type,
+          frameworks: ["terrafund", "ppc"],
+          header: faker.lorem.sentence(),
+          title: faker.lorem.sentence(),
+          description: faker.lorem.paragraph(),
+          contactSupportMessage: faker.lorem.sentence(),
+          contactSupportSubject: faker.lorem.sentence(),
+          links: [
+            { id: links[1].uuid, title: links[1].title, url: faker.internet.url() },
+            { title: faker.lorem.sentence(), url: faker.internet.url() }
+          ]
+        };
+
+        await service.store(attributes, section);
+
+        expect(section.type).toEqual(attributes.type);
+        expect(section.frameworks).toEqual(attributes.frameworks);
+        expect(section.header).toEqual(attributes.header);
+        expect(section.title).toEqual(attributes.title);
+        expect(section.description).toEqual(attributes.description);
+        expect(section.contactSupportMessage).toEqual(attributes.contactSupportMessage);
+        expect(section.contactSupportSubject).toEqual(attributes.contactSupportSubject);
+        expect(section.links?.length).toEqual(attributes.links.length);
+        expect(section.links?.[0].id).toEqual(links[1].id);
+        expect(section.links?.[0].title).toEqual(links[1].title);
+        expect(section.links?.[0].url).toEqual(attributes.links[0].url);
+        expect(section.links?.[0].order).toEqual(0);
+        expect(section.links?.[1].title).toEqual(attributes.links[1].title);
+        expect(section.links?.[1].url).toEqual(attributes.links[1].url);
+        expect(section.links?.[1].order).toEqual(1);
+        expect(await Link.for(section).count()).toEqual(2);
       });
     });
   });

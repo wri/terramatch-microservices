@@ -1,0 +1,16 @@
+<layer>
+  <name>polygon_geometry_deleted</name>
+  <id>LayerInfoImpl-6a1c0e11:19fd10000001:-7ffd</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--7559e60b:19c336f1e70:-7ffc</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-6a1c0e11:19fd10000001:-7ffe</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2026-08-05 16:40:00.000 UTC</dateCreated>
+</layer>

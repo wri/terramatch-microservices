@@ -7,7 +7,10 @@ import {
 } from "@terramatch-microservices/common/workers/delayed-job-worker.processor";
 import { IndicatorsService } from "./indicators.service";
 import { Job } from "bullmq";
-import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import {
+  INDICATORS_WHERE_EMPTY_RESPONSE_IS_SUCCESS,
+  IndicatorSlug
+} from "@terramatch-microservices/database/constants";
 import {
   DelayedJob,
   IndicatorOutputHectares,
@@ -193,6 +196,12 @@ export class IndicatorsProcessor extends DelayedJobWorker<IndicatorsJobData> {
       }
 
       if (this.isEmptyIndicatorValue(result.value)) {
+        if (INDICATORS_WHERE_EMPTY_RESPONSE_IS_SUCCESS.includes(slug)) {
+          summary.dataFound++;
+          summary.totalPolygons++;
+          return { outcome: "dataFound", result };
+        }
+
         summary.noData++;
         summary.noDataPolygonUuids.push(polygonUuid);
         summary.totalPolygons++;

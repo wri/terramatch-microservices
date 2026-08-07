@@ -1,14 +1,14 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
-import { cast, col, fn, Op } from "sequelize";
+import { cast, col, fn, Op, where } from "sequelize";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { AboutSectionDto, LinkDto, StoreAboutSectionAttributes } from "./dto/about-section.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { groupBy, uniq } from "lodash";
+import { groupBy, isEmpty, uniq, xor } from "lodash";
 import { Link } from "@terramatch-microservices/database/entities";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
@@ -22,11 +22,7 @@ export class AboutSectionsService {
   constructor(@InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue) {}
 
   async findOne(type: AboutSectionType, framework: FrameworkKey) {
-    const aboutSection = await AboutSection.findOne({
-      where: [{ type }, fn("JSON_CONTAINS", col("frameworks"), cast(`"${framework}"`, "CHAR"))]
-    });
-
-    return aboutSection ?? (await AboutSection.findOne({ where: { type, frameworks: null } }));
+    return (await this.findForFramework(type, framework)) ?? (await this.findDefault(type));
   }
 
   async addIndex(document: DocumentBuilder, query: AboutSectionIndexQueryDto) {
@@ -107,6 +103,8 @@ export class AboutSectionsService {
   }
 
   async store(attributes: StoreAboutSectionAttributes, section = new AboutSection()) {
+    await this.validateFrameworksForStore(attributes, section);
+
     section.type = attributes.type;
     section.frameworks = attributes.frameworks ?? null;
     section.header = attributes.header;
@@ -148,5 +146,51 @@ export class AboutSectionsService {
     });
 
     return section;
+  }
+
+  private async findForFramework(type: AboutSectionType, framework: FrameworkKey) {
+    return await AboutSection.findOne({
+      where: [{ type }, fn("JSON_CONTAINS", col("frameworks"), cast(`"${framework}"`, "CHAR"))]
+    });
+  }
+
+  private async findDefault(type: AboutSectionType) {
+    return await AboutSection.findOne({
+      where: {
+        type,
+        [Op.or]: [where(fn("JSON_LENGTH", col("frameworks")), 0), { frameworks: null }]
+      }
+    });
+  }
+
+  private async validateFrameworksForStore(attributes: StoreAboutSectionAttributes, section: AboutSection) {
+    const attributeFrameworksEmpty = isEmpty(attributes.frameworks);
+    const sectionFrameworksEmpty = isEmpty(section.frameworks);
+    const settingFrameworks =
+      // new section
+      section.id == null ||
+      // one of them was empty and the other is not
+      attributeFrameworksEmpty !== sectionFrameworksEmpty ||
+      // Use lodash xor to check if the contents of the arrays are different, regardless of order
+      (!attributeFrameworksEmpty && xor(attributes.frameworks, section.frameworks).length !== 0);
+    if (!settingFrameworks) return;
+
+    if (attributeFrameworksEmpty) {
+      if ((await this.findDefault(attributes.type)) != null) {
+        throw new BadRequestException(`The default About Section for type "${attributes.type}" is already set`);
+      }
+      return;
+    }
+
+    for (const framework of attributes.frameworks as FrameworkKey[]) {
+      // Skip over frameworks that this section already covers - we only want to check new ones.
+      if ((section.frameworks ?? []).includes(framework)) continue;
+
+      if ((await this.findForFramework(attributes.type, framework)) != null) {
+        throw new BadRequestException(
+          `The About Section for type "${attributes.type}" and framework "${framework}" is already set`
+        );
+      }
+    }
   }
 }

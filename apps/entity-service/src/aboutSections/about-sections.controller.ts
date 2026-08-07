@@ -27,6 +27,8 @@ import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { isEmpty } from "lodash";
+import { DelayedJobDto } from "@terramatch-microservices/common/dto";
+import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 
 @Controller("aboutSections/v3/aboutSections")
 @ApiExtraModels(AboutSectionConstants)
@@ -59,10 +61,10 @@ export class AboutSectionsController {
   @JsonApiResponse(AboutSectionDto)
   @ExceptionResponse(NotFoundException, { description: "About section for this type not found" })
   async get(@Param() { uuid }: SingleResourceDto) {
-    const aboutSection = await AboutSection.findOne({ where: { uuid } });
-    if (aboutSection == null) throw new NotFoundException();
+    const section = await AboutSection.findOne({ where: { uuid } });
+    if (section == null) throw new NotFoundException();
 
-    return this.aboutSectionsService.addDto(buildJsonApi<AboutSectionDto>(AboutSectionDto), aboutSection);
+    return this.aboutSectionsService.addDto(buildJsonApi<AboutSectionDto>(AboutSectionDto), section);
   }
 
   @Post()
@@ -105,16 +107,33 @@ export class AboutSectionsController {
   })
   @ExceptionResponse(NotFoundException, { description: "About section not found." })
   async delete(@Param("uuid") uuid: string) {
-    const aboutSection = await AboutSection.findOne({ where: { uuid } });
-    if (aboutSection == null) throw new NotFoundException();
+    const section = await AboutSection.findOne({ where: { uuid } });
+    if (section == null) throw new NotFoundException();
 
-    await this.policyService.authorize("delete", aboutSection);
+    await this.policyService.authorize("delete", section);
 
-    if (isEmpty(aboutSection.frameworks)) {
+    if (isEmpty(section.frameworks)) {
       throw new BadRequestException("Deletion of default section is not allowed.");
     }
 
-    await aboutSection.destroy();
+    await section.destroy();
     return buildDeletedResponse(getDtoType(AboutSectionDto), uuid);
+  }
+
+  @Post(":uuid/translations")
+  @ApiOperation({
+    operationId: "aboutSectionPushTranslations",
+    description: "Push translations to Transifex for an About Section"
+  })
+  @JsonApiResponse([FormTranslationDto, DelayedJobDto])
+  @ExceptionResponse(UnauthorizedException, { description: "About Section translation not allowed." })
+  @ExceptionResponse(NotFoundException, { description: "About Section not found." })
+  async pushTranslations(@Param("uuid") uuid: string) {
+    const section = await AboutSection.findOne({ where: { uuid } });
+    if (section == null) throw new NotFoundException();
+
+    await this.policyService.authorize("update", section);
+
+    return await this.aboutSectionsService.pushTranslations(section);
   }
 }

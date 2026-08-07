@@ -168,12 +168,13 @@ export class EntityServiceDelayedJobsProcessor extends DelayedJobWorker<EntitySe
     return buildJsonApi(DelayedJobDto).addData(delayedJob.uuid, new DelayedJobDto(delayedJob));
   }
 
-  static async queuePushTranslations(queue: Queue, uuid: string, i18nLabels: string[]) {
+  static async queuePushTranslations(queue: Queue, uuid: string, i18nLabels: string[], delayedJobMetadata = {}) {
     const delayedJob = await DelayedJob.create({
       name: "Push Translations to Transifex",
       createdBy: UserContext.authenticatedUserId,
       totalContent: i18nLabels.length,
-      isAcknowledged: false
+      isAcknowledged: false,
+      metadata: delayedJobMetadata
     });
     const data: PushTranslationsJobData = { delayedJobId: delayedJob.id, uuid, i18nLabels };
     await queue.add(PUSH_TRANSLATIONS, data);

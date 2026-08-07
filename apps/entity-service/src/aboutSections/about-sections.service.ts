@@ -99,7 +99,10 @@ export class AboutSectionsService {
 
   async pushTranslations(section: AboutSection) {
     const i18nLabels = await this.getI18nLabels(section);
-    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, section.uuid, i18nLabels);
+    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, section.uuid, i18nLabels, {
+      entity_type: "aboutSections",
+      entity_name: `type=${section.type}, frameworks=${isEmpty(section.frameworks) ? "default" : section.frameworks?.join(", ")}`
+    });
   }
 
   async store(attributes: StoreAboutSectionAttributes, section = new AboutSection()) {

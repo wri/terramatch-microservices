@@ -18,7 +18,6 @@ import { FormSection } from "./form-section.entity";
 import { FormQuestion } from "./form-question.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { EntityModel } from "../constants/entities";
-import { DisturbanceReport } from "./disturbance-report.entity";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
@@ -55,7 +54,6 @@ type FormAttachment = {
         }
       }
     }
-    if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
     if (entity instanceof SrpReport) return { where: { type: "srp-report" } };
 
     return { where: { model: laravelType(entity), frameworkKey: entity.frameworkKey } };
@@ -102,8 +100,6 @@ export class Form extends Model<Form> {
       } else {
         select.eq("type", "financial-report").andLiteral(literal("LOWER(title) NOT LIKE '%non%profit%'"));
       }
-    } else if (entity instanceof DisturbanceReport) {
-      select.eq("type", "disturbance-report");
     } else if (entity instanceof SrpReport) {
       select.eq("type", "srp-report");
     } else {
@@ -224,9 +220,6 @@ export class Form extends Model<Form> {
       };
     }
 
-    if (this.type === "disturbance-report") {
-      return { name: "Disturbance Report", type: "entity" };
-    }
     if (this.type === "srp-report") {
       return { name: "SRP Report", type: "entity" };
     }

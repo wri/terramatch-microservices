@@ -33,7 +33,16 @@ export const ABOUT_SECTION_TYPES = [
 ] as const;
 export type AboutSectionType = (typeof ABOUT_SECTION_TYPES)[number];
 
-@Table({ tableName: "about_sections", underscored: true, paranoid: true })
+@Table({
+  tableName: "about_sections",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async afterDestroy(section: AboutSection) {
+      await Link.for(section).destroy();
+    }
+  }
+})
 export class AboutSection extends Model<InferAttributes<AboutSection>, InferCreationAttributes<AboutSection>> {
   // Still named laravel type for legacy reasons, but the name doesn't need to follow that convention; just needs to be unique
   static readonly LARAVEL_TYPE = "AboutSection";

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -19,11 +20,12 @@ import {
   UpdateAboutSectionBody
 } from "./dto/about-section.dto";
 import { AboutSectionsService } from "./about-sections.service";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { AboutSection } from "@terramatch-microservices/database/entities";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PolicyService } from "@terramatch-microservices/common";
+import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 
 @Controller("aboutSections/v3/aboutSections")
 @ApiExtraModels(AboutSectionConstants)
@@ -92,5 +94,21 @@ export class AboutSectionsController {
     await this.policyService.authorize("update", section);
     await this.aboutSectionsService.store(payload.data.attributes, section);
     return await this.aboutSectionsService.addDto(buildJsonApi<AboutSectionDto>(AboutSectionDto), section);
+  }
+
+  @Delete(":uuid")
+  @ApiOperation({ operationId: "aboutSectionDelete", summary: "Soft delete about section by UUID" })
+  @JsonApiDeletedResponse(getDtoType(AboutSectionDto), { description: "Associated about section was deleted" })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource is unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "About section not found." })
+  async delete(@Param("uuid") uuid: string) {
+    const aboutSection = await AboutSection.findOne({ where: { uuid } });
+    if (aboutSection == null) throw new NotFoundException();
+    await this.policyService.authorize("delete", aboutSection);
+
+    await aboutSection.destroy();
+    return buildDeletedResponse(getDtoType(AboutSectionDto), uuid);
   }
 }

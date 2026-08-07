@@ -26,6 +26,7 @@ import { AboutSection } from "@terramatch-microservices/database/entities";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PolicyService } from "@terramatch-microservices/common";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
+import { isEmpty } from "lodash";
 
 @Controller("aboutSections/v3/aboutSections")
 @ApiExtraModels(AboutSectionConstants)
@@ -106,7 +107,12 @@ export class AboutSectionsController {
   async delete(@Param("uuid") uuid: string) {
     const aboutSection = await AboutSection.findOne({ where: { uuid } });
     if (aboutSection == null) throw new NotFoundException();
+
     await this.policyService.authorize("delete", aboutSection);
+
+    if (isEmpty(aboutSection.frameworks)) {
+      throw new BadRequestException("Deletion of default section is not allowed.");
+    }
 
     await aboutSection.destroy();
     return buildDeletedResponse(getDtoType(AboutSectionDto), uuid);

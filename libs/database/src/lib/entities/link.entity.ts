@@ -31,7 +31,7 @@ import { LaravelModel, laravelType } from "../types/util";
     return {
       where: {
         linkableType: laravelType(models[0]),
-        linkableId: models[0].id
+        linkableId: models.map(({ id }) => id)
       }
     };
   }

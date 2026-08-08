@@ -31,7 +31,7 @@ import { LaravelModel, laravelType } from "../types/util";
     return {
       where: {
         linkableType: laravelType(models[0]),
-        linkableId: models[0].id
+        linkableId: models.map(({ id }) => id)
       }
     };
   }
@@ -55,12 +55,13 @@ export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<L
   @Column(TINYINT)
   declare order: number;
 
-  @AllowNull
   @Column(TEXT)
-  declare title: string | null;
+  declare title: string;
 
+  // @deprecated
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  declare titleId: number;
+  declare titleId: number | null;
 
   @Column(STRING)
   declare url: string;

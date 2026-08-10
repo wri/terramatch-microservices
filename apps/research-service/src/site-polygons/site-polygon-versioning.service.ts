@@ -6,8 +6,8 @@ import { EventService } from "@terramatch-microservices/common/events/event.serv
 import { buildPolygonVersionChangedParams } from "@terramatch-microservices/common/analytics/polygon-version-changed";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
-import type { LngLatEnvelope } from "@terramatch-microservices/common/gwc/gwc-envelope.util";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 
 export interface VersionCreateEntry {
   basePolygon: SitePolygon;
@@ -138,16 +138,6 @@ export class SitePolygonVersioningService {
     return newVersions;
   }
 
-  /**
-   * Truncates GWC's active-layer cache for the union of each entry's old (leaving-active) and
-   * new (becoming-active) polygon envelope. Only the currently-active <-> newly-active geometry
-   * matters here: both polygon_geometry_active and polygon_geometry_deleted are scoped to
-   * is_active=1, so a version that was never active never contributed to either layer's cache.
-   *
-   * Registered via transaction.afterCommit() rather than called directly, because createVersions()
-   * doesn't own the transaction it's given - Sequelize awaits async afterCommit hooks before the
-   * caller's `sequelize.transaction(...)` resolves, so callers still get truncate-before-success.
-   */
   private queueGwcInvalidation(
     entries: VersionCreateEntry[],
     newVersions: SitePolygon[],
@@ -165,12 +155,13 @@ export class SitePolygonVersioningService {
     if (uniquePolygonUuids.length === 0) return;
 
     transaction.afterCommit(async () => {
-      try {
-        const { bbox } = await this.boundingBoxService.getPolygonsBoundingBox(uniquePolygonUuids);
-        await this.gwcTileInvalidationService.truncate(bbox as LngLatEnvelope, ["active"]);
-      } catch (error) {
-        this.logger.error("Failed to invalidate GWC cache after a polygon version change", error);
-      }
+      await invalidatePolygonTileCache({
+        boundingBoxService: this.boundingBoxService,
+        gwcTileInvalidationService: this.gwcTileInvalidationService,
+        polygonUuids: uniquePolygonUuids,
+        layers: ["active"],
+        onError: error => this.logger.error("Failed to invalidate GWC cache after a polygon version change", error)
+      });
     });
   }
 
@@ -303,8 +294,6 @@ export class SitePolygonVersioningService {
       throw new NotFoundException(`Site polygon version not found: ${targetUuid}`);
     }
 
-    // Captured before the flip so we can invalidate the envelope it's leaving, not just the one
-    // it's entering.
     const previouslyActiveVersion = await SitePolygon.findOne({
       where: { primaryUuid: targetVersion.primaryUuid, isActive: true },
       transaction

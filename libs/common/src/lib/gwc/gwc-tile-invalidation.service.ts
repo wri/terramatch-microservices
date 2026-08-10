@@ -1,7 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { TMLogger } from "../util/tm-logger";
-import { LngLatEnvelope, MercatorEnvelope, padEnvelopeForMetatiles, toWebMercator } from "./gwc-envelope.util";
+import {
+  LngLatEnvelope,
+  MercatorEnvelope,
+  padEnvelopeForMetatiles,
+  parseLngLatEnvelope,
+  toWebMercator
+} from "./gwc-envelope.util";
 
 export type GwcLayer = "active" | "deleted";
 
@@ -12,31 +18,12 @@ const LAYER_NAMES: Record<GwcLayer, string> = {
 
 const GRID_SET_ID = "EPSG:900913";
 const MVT_FORMAT = "application/vnd.mapbox-vector-tile";
-
-// The full zoom range the map layers are seeded/served over. Every zoom level caches tiles
-// independently, so a truncate has to cover the whole range or some zoom levels would keep
-// serving pre-edit tiles indefinitely (expireCache is 0 - tiles never self-expire).
 const ZOOM_MIN = 0;
 const ZOOM_MAX = 22;
-
-// Metatile padding is computed once at a representative "mid" zoom rather than per truncated
-// zoom level - see padEnvelopeForMetatiles() for why this is safe. z12 with a 2 tile-width
-// margin is a comfortable buffer relative to the layers' 4x4 metatile size without padding out
-// to an unreasonably large area.
 const PAD_ZOOM = 12;
 const PAD_TILE_WIDTHS = 2;
-
 const REQUEST_TIMEOUT_MS = 5_000;
 
-/**
- * Truncates (evicts) only the GWC tile cache entries that intersect a given bounding box, for
- * the `polygon_geometry_active` and/or `polygon_geometry_deleted` layers. Used to keep those
- * layers' tiles fresh after a polygon write, without ever flushing the whole layer's cache.
- *
- * GeoServer/GWC connection details come from the existing GEOSERVER_URL / GEOSERVER_USER /
- * GEOSERVER_PASSWORD / GEOSERVER_WORKSPACE env vars. If GEOSERVER_URL isn't configured (e.g. in
- * CI or a developer environment without a local GeoServer), invalidation is silently skipped.
- */
 @Injectable()
 export class GwcTileInvalidationService {
   private readonly logger = new TMLogger(GwcTileInvalidationService.name);
@@ -64,15 +51,16 @@ export class GwcTileInvalidationService {
     return this.baseUrl != null && this.workspace != null;
   }
 
-  /**
-   * Truncates the given layers' GWC cache for the padded, reprojected bounding box, across the
-   * full zoom range. Never throws - a GeoServer/GWC outage is logged (and reported to Sentry via
-   * TMLogger) but should not block a polygon write from succeeding.
-   */
-  async truncate(bboxLngLat: LngLatEnvelope, layers: GwcLayer[]): Promise<void> {
+  async truncate(bboxLngLat: LngLatEnvelope | number[], layers: GwcLayer[]): Promise<void> {
     if (!this.isEnabled() || layers.length === 0) return;
 
-    const envelope = padEnvelopeForMetatiles(toWebMercator(bboxLngLat), {
+    const bbox = parseLngLatEnvelope(bboxLngLat);
+    if (bbox == null) {
+      this.logger.error(`Invalid bbox for GWC truncate: ${JSON.stringify(bboxLngLat)}`);
+      return;
+    }
+
+    const envelope = padEnvelopeForMetatiles(toWebMercator(bbox), {
       padZoom: PAD_ZOOM,
       padTileWidths: PAD_TILE_WIDTHS
     });

@@ -961,7 +961,7 @@ describe("SitePolygonsService", () => {
         expect.anything()
       );
       expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith([polygonGeometry.uuid]);
-      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active"]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active", "deleted"]);
     });
 
     it("should not invalidate GWC when the deleted polygon was not active", async () => {
@@ -1046,7 +1046,7 @@ describe("SitePolygonsService", () => {
       expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith(
         expect.arrayContaining([polygonGeometry1.uuid, polygonGeometry2.uuid])
       );
-      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active"]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active", "deleted"]);
     });
 
     it("should delete all versions when deleting by primaryUuid", async () => {

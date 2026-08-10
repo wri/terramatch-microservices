@@ -46,7 +46,7 @@ import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
-import type { LngLatEnvelope } from "@terramatch-microservices/common/gwc/gwc-envelope.util";
+import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -127,22 +127,17 @@ export class SitePolygonsService {
     }
   }
 
-  /**
-   * Truncates GWC's active layer for the envelope of polygons that were active going into a
-   * delete. Deleted geometry moves from polygon_geometry_active straight into
-   * polygon_geometry_deleted (both views key off site_polygon.is_active=1), so only the active
-   * layer's cache is actually stale here - the deleted layer never cached these tiles before.
-   */
   private queueGwcInvalidationForDelete(activePolygonUuids: string[], transaction: Transaction): void {
     if (activePolygonUuids.length === 0) return;
 
     transaction.afterCommit(async () => {
-      try {
-        const { bbox } = await this.boundingBoxService.getPolygonsBoundingBox(activePolygonUuids);
-        await this.gwcTileInvalidationService.truncate(bbox as LngLatEnvelope, ["active"]);
-      } catch (error) {
-        this.logger.error("Failed to invalidate GWC cache after deleting polygon(s)", error);
-      }
+      await invalidatePolygonTileCache({
+        boundingBoxService: this.boundingBoxService,
+        gwcTileInvalidationService: this.gwcTileInvalidationService,
+        polygonUuids: activePolygonUuids,
+        layers: ["active", "deleted"],
+        onError: error => this.logger.error("Failed to invalidate GWC cache after deleting polygon(s)", error)
+      });
     });
   }
 
@@ -155,8 +150,6 @@ export class SitePolygonsService {
     activePolygonUuids: string[],
     transaction: Transaction
   ): Promise<void> {
-    // Capture before destroy: once these are soft-deleted, is_active is left untouched, so they
-    // move straight from polygon_geometry_active into polygon_geometry_deleted.
     this.queueGwcInvalidationForDelete(activePolygonUuids, transaction);
 
     for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {

@@ -1,6 +1,26 @@
-import { padEnvelopeForMetatiles, tileWidthMetersAtZoom, toWebMercator } from "./gwc-envelope.util";
+import {
+  padEnvelopeForMetatiles,
+  parseLngLatEnvelope,
+  tileWidthMetersAtZoom,
+  toWebMercator
+} from "./gwc-envelope.util";
 
 describe("gwc-envelope.util", () => {
+  describe("parseLngLatEnvelope", () => {
+    it("returns a typed envelope for a valid 4-number bbox", () => {
+      expect(parseLngLatEnvelope([1, 2, 3, 4])).toEqual([1, 2, 3, 4]);
+    });
+
+    it("returns null when length is not 4", () => {
+      expect(parseLngLatEnvelope([1, 2, 3])).toBeNull();
+      expect(parseLngLatEnvelope([1, 2, 3, 4, 5])).toBeNull();
+    });
+
+    it("returns null when any value is NaN", () => {
+      expect(parseLngLatEnvelope([1, 2, Number.NaN, 4])).toBeNull();
+    });
+  });
+
   describe("toWebMercator", () => {
     it("maps [0,0,0,0] to the Web Mercator origin", () => {
       const [minX, minY, maxX, maxY] = toWebMercator([0, 0, 0, 0]);
@@ -11,7 +31,6 @@ describe("gwc-envelope.util", () => {
     });
 
     it("reprojects a known lon/lat envelope to the expected meters envelope", () => {
-      // Known reference values for (lng=-180, lat=0) and (lng=180, lat=0) in EPSG:3857.
       const [minX, minY, maxX, maxY] = toWebMercator([-180, 0, 180, 0]);
       expect(minX).toBeCloseTo(-20037508.342789244, 3);
       expect(maxX).toBeCloseTo(20037508.342789244, 3);

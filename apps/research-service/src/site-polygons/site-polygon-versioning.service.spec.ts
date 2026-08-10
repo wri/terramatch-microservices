@@ -14,9 +14,6 @@ const mockTransaction = {
   LOCK: {}
 } as unknown as Transaction;
 
-// GWC invalidation is registered via an async transaction.afterCommit() hook. The mock above
-// fires that hook synchronously but does not await it, so tests that assert on its effects need
-// to flush the microtask queue first.
 const flushMicrotasks = () => new Promise(resolve => setImmediate(resolve));
 
 describe("SitePolygonVersioningService", () => {

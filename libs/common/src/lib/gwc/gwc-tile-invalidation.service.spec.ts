@@ -103,8 +103,6 @@ describe("GwcTileInvalidationService", () => {
     const match = body.match(/<double>([-\d.]+)<\/double><double>([-\d.]+)<\/double><double>([-\d.]+)<\/double>/);
     expect(match).not.toBeNull();
     const minX = Number(match?.[1]);
-    // Unpadded [0,0] in EPSG:4326 reprojects to [0,0] in EPSG:900913, so any negative minX
-    // proves outward padding was applied.
     expect(minX).toBeLessThan(0);
   });
 

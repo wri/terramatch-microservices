@@ -238,7 +238,13 @@ export class SitePolygonsController {
       document.addData(row.siteUuid, new SiteIndicatorRollupDto(row));
     }
 
-    return document;
+    // Index metadata is not optional for a multi-resource response: the client's index connection
+    // resolves "loaded" from it, and without it the hook refetches forever.
+    return document.addIndex({
+      requestPath: `/research/v3/sitePolygons/indicatorRollup${getStableRequestQuery(query)}`,
+      total: rows.length,
+      pageNumber: 1
+    });
   }
 
   @Get("geojson")

@@ -276,12 +276,12 @@ export class ApplicationsController {
         continue;
       }
 
-      // If our earliest history event is an update and this one is "started", and they occurred within
+      // If our earliest history event is an update and this one is "draft", and they occurred within
       // 12 hours of each other, replace the update with the started
       if (
         earliest?.eventType === "updated" &&
         dto.eventType === "status" &&
-        dto.status === "started" &&
+        dto.status === "draft" &&
         DateTime.fromJSDate(earliest.date).diff(DateTime.fromJSDate(dto.date), "hours").hours < 12
       ) {
         history[history.length - 1] = dto;

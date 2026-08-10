@@ -29,7 +29,7 @@ import {
 import { Nursery } from "./nursery.entity";
 import { TreeSpecies } from "./tree-species.entity";
 import {
-  AWAITING_APPROVAL,
+  PENDING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   ReportStatus,
@@ -237,7 +237,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
    * transition to it.
    */
   get isCompletable(): NonAttribute<boolean> {
-    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL)) ?? false;
+    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL)) ?? false;
   }
 
   @AllowNull

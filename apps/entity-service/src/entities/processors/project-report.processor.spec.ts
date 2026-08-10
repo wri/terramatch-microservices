@@ -117,21 +117,21 @@ describe("ProjectReportProcessor", () => {
       const first = await ProjectReportFactory.create({
         title: "first project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
       const second = await ProjectReportFactory.create({
         title: "second project report",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
       const third = await ProjectReportFactory.create({
         title: "third project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
@@ -143,7 +143,7 @@ describe("ProjectReportProcessor", () => {
         projectId: p2.id
       });
 
-      await expectProjectReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectProjectReports([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectProjectReports([fourth], { projectUuid: p2.uuid });
 
@@ -237,7 +237,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should sort project reports by status", async () => {
-      const projectReportA = await ProjectReportFactory.create({ status: "started" });
+      const projectReportA = await ProjectReportFactory.create({ status: "draft" });
       const projectReportB = await ProjectReportFactory.create({ status: "approved" });
       const projectReportC = await ProjectReportFactory.create({ status: "approved" });
       await expectProjectReports(

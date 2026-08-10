@@ -70,10 +70,10 @@ describe("OrganisationCreationService", () => {
 
   describe("validation", () => {
     it("should create organisation without user/app when pending creation is missing user fields", async () => {
-      const { user, organisation } = await service.createOrganisation({ status: "pending" });
+      const { user, organisation } = await service.createOrganisation({ status: "pending-approval" });
       expect(user).toBeNull();
       expect(organisation).toBeDefined();
-      expect(organisation.status).toBe("pending");
+      expect(organisation.status).toBe("pending-approval");
     });
 
     it("should throw an error if status is unsupported", async () => {
@@ -82,7 +82,7 @@ describe("OrganisationCreationService", () => {
           ...createAttributes(),
           status: "approved" as never
         })
-      ).rejects.toThrow("Only draft and pending statuses are allowed during organisation creation");
+      ).rejects.toThrow("Only draft and pending-approval statuses are allowed during organisation creation");
     });
 
     it("should throw an error if the org name is already taken", async () => {
@@ -143,7 +143,7 @@ describe("OrganisationCreationService", () => {
       expect(user).not.toBeNull();
       const createdUser = user!;
       expect(organisation).toMatchObject({
-        status: "pending",
+        status: "pending-approval",
         private: false,
         isTest: false,
         ...pick(attributes, [
@@ -195,7 +195,7 @@ describe("OrganisationCreationService", () => {
         stageUuid: stage.uuid,
         projectPitchUuid: pitch!.uuid,
         applicationId: application!.id,
-        status: "started",
+        status: "draft",
         answers: {}
       });
 

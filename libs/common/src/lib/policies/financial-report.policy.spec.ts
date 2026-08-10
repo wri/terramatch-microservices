@@ -10,7 +10,7 @@ import {
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { mockUserContext, mockContextForUser } from "../util/testing";
-import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
+import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
 
 describe("FinancialReportPolicy", () => {
@@ -77,7 +77,7 @@ describe("FinancialReportPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockContextForUser(user, "manage-own");
 
-    const started = await FinancialReportFactory.org(org).create({ status: STARTED });
+    const started = await FinancialReportFactory.org(org).create({ status: DRAFT });
     const due = await FinancialReportFactory.org(org).create({ status: DUE });
     await expectAuthority(service, {
       can: [
@@ -93,7 +93,7 @@ describe("FinancialReportPolicy", () => {
     mockContextForUser(user, "manage-own");
 
     const report = await FinancialReportFactory.org(org).create({
-      status: AWAITING_APPROVAL,
+      status: PENDING_APPROVAL,
       nothingToReport: true
     });
     await expectCan(service, "updateAnswers", report);
@@ -105,7 +105,7 @@ describe("FinancialReportPolicy", () => {
     mockContextForUser(user, "manage-own");
 
     const report = await FinancialReportFactory.org(org).create({
-      status: AWAITING_APPROVAL,
+      status: PENDING_APPROVAL,
       nothingToReport: false
     });
     await expectCannot(service, "updateAnswers", report);

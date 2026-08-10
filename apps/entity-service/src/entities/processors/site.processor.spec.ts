@@ -113,19 +113,19 @@ describe("SiteProcessor", () => {
       const first = await SiteFactory.create({
         name: "first site",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const second = await SiteFactory.create({
         name: "second site",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const third = await SiteFactory.create({
         name: "third site",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const fourth = await SiteFactory.create({
@@ -135,7 +135,7 @@ describe("SiteProcessor", () => {
         projectId: p2.id
       });
 
-      await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectSites([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectSites([fourth], { projectUuid: p2.uuid });
     });

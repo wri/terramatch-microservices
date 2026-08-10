@@ -81,7 +81,7 @@ describe("TasksController", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw if the status is not awaiting-approval", async () => {
+    it("should throw if the status is not pending-approval", async () => {
       const task = await TaskFactory.create();
       service.getTask.mockResolvedValue(task);
       jest.spyOn(policyService, "authorize").mockResolvedValue();
@@ -100,7 +100,7 @@ describe("TasksController", () => {
       const spy = jest.spyOn(task, "save");
       await controller.taskUpdate(
         { uuid: task.uuid },
-        { data: { type: "tasks", id: task.uuid, attributes: { status: "awaiting-approval" } } }
+        { data: { type: "tasks", id: task.uuid, attributes: { status: "pending-approval" } } }
       );
       expect(authSpy).toHaveBeenCalledWith("update", task);
       expect(service.submitForApproval).toHaveBeenCalledWith(task);

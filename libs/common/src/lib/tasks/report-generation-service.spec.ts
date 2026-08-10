@@ -295,7 +295,7 @@ describe("ReportGenerationService", () => {
 
     it("should not create reports for projects in started status", async () => {
       const org = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "started" });
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "draft" });
 
       await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
 

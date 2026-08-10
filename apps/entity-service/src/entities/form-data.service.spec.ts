@@ -29,7 +29,7 @@ import {
   Site,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
-import { DRAFT, STARTED } from "@terramatch-microservices/database/constants/status";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 import { mockUserContext, serialize, mockContextForUser } from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
@@ -209,7 +209,7 @@ describe("FormDataService", () => {
 
       expect(siteReport.completion).toBe(67); // Math.round((2 / 3) * 100)
       expect(siteReport.createdBy).toBe(123);
-      expect(siteReport.status).toBe(STARTED);
+      expect(siteReport.status).toBe(DRAFT);
       expect(siteReport.nothingToReport).toBe(false);
     });
   });

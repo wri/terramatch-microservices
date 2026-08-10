@@ -115,12 +115,12 @@ describe("EntityProcessor", () => {
     });
 
     it("authorizes for approval when appropriate", async () => {
-      const project = await ProjectFactory.create({ status: "started", feedback: null, feedbackFields: null });
+      const project = await ProjectFactory.create({ status: "draft", feedback: null, feedbackFields: null });
 
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValueOnce();
       const processor = createProcessor();
       await processor.update(project, {
-        status: "awaiting-approval",
+        status: "pending-approval",
         feedback: "foo",
         feedbackFields: ["bar"]
       });
@@ -151,16 +151,14 @@ describe("EntityProcessor", () => {
       it("throws if the request attempts to set status", async () => {
         let siteReport = await SiteReportFactory.create({ submittedAt: null });
         const processor = createProcessor("siteReports");
-        await expect(processor.update(siteReport, { nothingToReport: true, status: "started" })).rejects.toThrow(
+        await expect(processor.update(siteReport, { nothingToReport: true, status: "draft" })).rejects.toThrow(
           BadRequestException
         );
         siteReport = await SiteReportFactory.create({ submittedAt: null });
-        await expect(
-          processor.update(siteReport, { nothingToReport: false, status: "started" })
-        ).resolves.not.toThrow();
+        await expect(processor.update(siteReport, { nothingToReport: false, status: "draft" })).resolves.not.toThrow();
         siteReport = await SiteReportFactory.create({ submittedAt: null });
         await expect(
-          processor.update(siteReport, { nothingToReport: true, status: "awaiting-approval" })
+          processor.update(siteReport, { nothingToReport: true, status: "pending-approval" })
         ).resolves.not.toThrow();
       });
 
@@ -173,7 +171,7 @@ describe("EntityProcessor", () => {
         const processor = createProcessor("nurseryReports");
         await processor.update(report, { nothingToReport: true });
         expect(report.nothingToReport).toBe(true);
-        expect(report.status).toBe("awaiting-approval");
+        expect(report.status).toBe("pending-approval");
         expect(report.completion).toBe(100);
         expect(report.submittedAt).not.toBeNull();
       });

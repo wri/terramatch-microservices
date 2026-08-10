@@ -89,7 +89,7 @@ describe("SrpReportProcessor", () => {
       });
       await SrpReportFactory.createMany(3, {
         projectId: project.id,
-        status: "started"
+        status: "draft"
       });
 
       await expectSrpReports(approvedReports, { status: "approved" });

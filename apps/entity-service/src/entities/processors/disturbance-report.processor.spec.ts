@@ -89,7 +89,7 @@ describe("DisturbanceReportProcessor", () => {
       });
       await DisturbanceReportFactory.createMany(3, {
         projectId: project.id,
-        status: "started"
+        status: "draft"
       });
 
       await expectDisturbanceReports(approvedReports, { status: "approved" });
@@ -432,7 +432,7 @@ describe("DisturbanceReportProcessor", () => {
       const report = await processor.create({ parentUuid: project.uuid });
 
       expect(report.projectId).toBe(project.id);
-      expect(report.status).toBe("started");
+      expect(report.status).toBe("draft");
       expect(report.status).not.toBe("due");
     });
 

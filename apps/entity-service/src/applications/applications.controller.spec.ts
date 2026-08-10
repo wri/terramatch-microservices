@@ -90,14 +90,14 @@ describe("ApplicationsController", () => {
       const apps = await ApplicationFactory.createMany(2);
       const excluded = await ApplicationFactory.create();
       // included - only submission on this app
-      await FormSubmissionFactory.create({ applicationId: apps[0].id, status: "awaiting-approval" });
+      await FormSubmissionFactory.create({ applicationId: apps[0].id, status: "pending-approval" });
       // included - latest submission is awaiting approval
-      await FormSubmissionFactory.create({ applicationId: apps[1].id, status: "started" });
-      await FormSubmissionFactory.create({ applicationId: apps[1].id, status: "awaiting-approval" });
+      await FormSubmissionFactory.create({ applicationId: apps[1].id, status: "draft" });
+      await FormSubmissionFactory.create({ applicationId: apps[1].id, status: "pending-approval" });
       // excluded - latest submission is started
-      await FormSubmissionFactory.create({ applicationId: excluded.id, status: "awaiting-approval" });
-      await FormSubmissionFactory.create({ applicationId: excluded.id, status: "started" });
-      const result = serialize(await controller.index({ currentSubmissionStatus: "awaiting-approval" }));
+      await FormSubmissionFactory.create({ applicationId: excluded.id, status: "pending-approval" });
+      await FormSubmissionFactory.create({ applicationId: excluded.id, status: "draft" });
+      const result = serialize(await controller.index({ currentSubmissionStatus: "pending-approval" }));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
       expect(dtos.length).toBe(2);
       expect(dtos).toMatchObject(
@@ -244,7 +244,7 @@ describe("ApplicationsController", () => {
           applicationId: app.id,
           stageUuid: stage.uuid,
           userId: user.uuid,
-          status: "started"
+          status: "draft"
         })
       ];
 
@@ -321,7 +321,7 @@ describe("ApplicationsController", () => {
     it("assembles the application history from submission audits", async () => {
       const app = await ApplicationFactory.create();
       const sub1 = await FormSubmissionFactory.create({ applicationId: app.id, status: "approved" });
-      const sub2 = await FormSubmissionFactory.create({ applicationId: app.id, status: "requires-more-information" });
+      const sub2 = await FormSubmissionFactory.create({ applicationId: app.id, status: "information-required" });
 
       let time = DateTime.now().minus({ days: 30 });
       const clock = FakeTimers.install({ shouldAdvanceTime: true });
@@ -331,7 +331,7 @@ describe("ApplicationsController", () => {
 
       try {
         clock.setSystemTime(time.toJSDate());
-        await AuditFactory.formSubmission(sub1).create({ event: "created", newValues: { status: "started" } });
+        await AuditFactory.formSubmission(sub1).create({ event: "created", newValues: { status: "draft" } });
         // ignored; update too soon
         advanceHours(6);
         await AuditFactory.formSubmission(sub1).create({ event: "updated" });
@@ -341,7 +341,7 @@ describe("ApplicationsController", () => {
         advanceHours(1);
         await AuditFactory.formSubmission(sub1).create({
           event: "updated",
-          newValues: { status: "awaiting-approval" }
+          newValues: { status: "pending-approval" }
         });
         advanceHours(1);
         await AuditFactory.formSubmission(sub1).create({
@@ -349,18 +349,18 @@ describe("ApplicationsController", () => {
           newValues: { status: "approved", feedback: "Approval Feedback" }
         });
         advanceHours(6);
-        await AuditFactory.formSubmission(sub2).create({ event: "created", newValues: { status: "started" } });
+        await AuditFactory.formSubmission(sub2).create({ event: "created", newValues: { status: "draft" } });
         advanceHours(6);
         await AuditFactory.formSubmission(sub2).create({ event: "updated" });
         advanceHours(7);
         const sub2Update = time.set({ millisecond: 0 }).toJSDate();
-        await AuditStatusFactory.formSubmission(sub2).create({ type: "updated", status: "started" });
+        await AuditStatusFactory.formSubmission(sub2).create({ type: "updated", status: "draft" });
         advanceHours(1);
-        await AuditStatusFactory.formSubmission(sub2).create({ type: "status", status: "awaiting-approval" });
+        await AuditStatusFactory.formSubmission(sub2).create({ type: "status", status: "pending-approval" });
         advanceHours(1);
         await AuditStatusFactory.formSubmission(sub2).create({
           type: "status",
-          status: "requires-more-information",
+          status: "information-required",
           comment: "Requires More Feedback"
         });
 
@@ -371,16 +371,16 @@ describe("ApplicationsController", () => {
         expect(dto.entries).toEqual([
           expect.objectContaining({
             eventType: "status",
-            status: "requires-more-information",
+            status: "information-required",
             comment: "Requires More Feedback"
           }),
-          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
-          expect.objectContaining({ eventType: "updated", status: "started", date: sub2Update }),
-          expect.objectContaining({ eventType: "status", status: "started" }),
+          expect.objectContaining({ eventType: "status", status: "pending-approval" }),
+          expect.objectContaining({ eventType: "updated", status: "draft", date: sub2Update }),
+          expect.objectContaining({ eventType: "status", status: "draft" }),
           expect.objectContaining({ eventType: "status", status: "approved", comment: "Approval Feedback" }),
-          expect.objectContaining({ eventType: "status", status: "awaiting-approval" }),
+          expect.objectContaining({ eventType: "status", status: "pending-approval" }),
           expect.objectContaining({ eventType: "updated", date: sub1Update }),
-          expect.objectContaining({ eventType: "status", status: "started" })
+          expect.objectContaining({ eventType: "status", status: "draft" })
         ]);
       } finally {
         clock.uninstall();

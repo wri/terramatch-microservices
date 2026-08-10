@@ -136,21 +136,21 @@ describe("NurseryReportProcessor", () => {
       const first = await NurseryReportFactory.create({
         title: "first nursery report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
       const second = await NurseryReportFactory.create({
         title: "second project report",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
       const third = await NurseryReportFactory.create({
         title: "third project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
@@ -167,7 +167,7 @@ describe("NurseryReportProcessor", () => {
       third.nursery = await third.$get("nursery");
       fourth.nursery = await fourth.$get("nursery");
 
-      await expectNurseryReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectNurseryReports([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectNurseryReports([first, third, fourth], { status: "approved" });
 
@@ -177,7 +177,7 @@ describe("NurseryReportProcessor", () => {
 
       await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
 
-      await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
+      await expectNurseryReports([second], { status: "draft", updateRequestStatus: "pending-approval" });
 
       await expectNurseryReports([first, second, third], { projectUuid: p1.uuid });
 
@@ -330,9 +330,9 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should sort nursery reports by update request status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
       await expectNurseryReports(
         [nurseryReportA, nurseryReportB, nurseryReportC],
         { sort: { field: "updateRequestStatus" } },
@@ -351,7 +351,7 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should sort nursery reports by status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ status: "started" });
+      const nurseryReportA = await NurseryReportFactory.create({ status: "draft" });
       const nurseryReportB = await NurseryReportFactory.create({ status: "approved" });
       const nurseryReportC = await NurseryReportFactory.create({ status: "approved" });
       await expectNurseryReports(

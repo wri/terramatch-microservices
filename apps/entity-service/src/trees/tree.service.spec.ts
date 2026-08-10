@@ -290,7 +290,7 @@ describe("TreeService", () => {
       await TreeSpeciesFactory.siteReportTreePlanted(
         await SiteReportFactory.create({
           siteId: sites[0].id,
-          status: "needs-more-information"
+          status: "information-required"
         })
       ).create({ name: "Coffee" });
       await TreeSpeciesFactory.siteReportTreePlanted(task1SiteReports[0]).create({ name: "Coffee", hidden: true });
@@ -325,7 +325,7 @@ describe("TreeService", () => {
       await TreeSpeciesFactory.nurseryReportSeedling(
         await NurseryReportFactory.create({
           nurseryId: nursery.id,
-          status: "awaiting-approval"
+          status: "pending-approval"
         })
       ).create({ name: "Coffee" });
 

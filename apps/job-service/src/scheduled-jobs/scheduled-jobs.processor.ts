@@ -73,7 +73,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
   private async processTaskDue(taskDue: TaskDue) {
     this.logger.log(`processTaskDue ${JSON.stringify(taskDue)}`);
     const { frameworkKey, dueAt: dueAtString } = taskDue;
-    const where = { frameworkKey, status: { [Op.ne]: "started" } };
+    const where = { frameworkKey, status: { [Op.ne]: "draft" } };
     const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);

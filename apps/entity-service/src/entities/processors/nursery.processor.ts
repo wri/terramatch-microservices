@@ -33,7 +33,7 @@ import { NurseryReportProcessor } from "./nursery-report.processor";
 import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { Literal } from "sequelize/types/utils";
 import { ProgressTick } from "../entities.service";
-import { STARTED } from "@terramatch-microservices/database/constants/status";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -247,7 +247,7 @@ export class NurseryProcessor extends EntityProcessor<
       const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
       if (reportCount > 0) {
         // Draft nurseries may have auto-created reports; remove them so the nursery can be deleted.
-        if (nursery.status !== STARTED) {
+        if (nursery.status !== DRAFT) {
           throw new NotAcceptableException("You can only delete nurseries that do not have reports");
         }
         await NurseryReport.destroy({ where: { nurseryId: nursery.id } });

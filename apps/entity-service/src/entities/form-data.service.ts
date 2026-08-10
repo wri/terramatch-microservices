@@ -28,7 +28,7 @@ import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/com
 import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DUE, STARTED } from "@terramatch-microservices/database/constants/status";
+import { DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -277,11 +277,11 @@ export class FormDataService {
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
       // we want the transition to go ahead and take place.
       if (!opts.preserveReportStatus && (answersModel.status === DUE || !isAdmin)) {
-        answersModel.status = STARTED;
+        answersModel.status = DRAFT;
       }
 
-      // This update has to happen after the status set above or moving to STARTED can fail if the
-      // record is currently in AWAITING_APPROVAL.
+      // This update has to happen after the status set above or moving to DRAFT can fail if the
+      // record is currently in PENDING_APPROVAL.
       if (hasNothingToReport(answersModel)) answersModel.nothingToReport = false;
     }
 

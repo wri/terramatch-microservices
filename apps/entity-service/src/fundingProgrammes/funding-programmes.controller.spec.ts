@@ -19,7 +19,6 @@ import {
   serialize,
   setMockedPermissions
 } from "@terramatch-microservices/common/util/testing";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { StoreFundingProgrammeAttributes } from "./dto/funding-programme.dto";
 import { faker } from "@faker-js/faker";
 import { FUNDING_PROGRAMME_STATUSES } from "@terramatch-microservices/database/constants/status";
@@ -33,7 +32,6 @@ describe("FundingProgrammesController", () => {
   let controller: FundingProgrammesController;
   let formDataService: DeepMocked<FormDataService>;
   let policyService: PolicyService;
-  let localizationService: DeepMocked<LocalizationService>;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -42,7 +40,6 @@ describe("FundingProgrammesController", () => {
       providers: [
         PolicyService,
         { provide: FormDataService, useValue: (formDataService = createMock<FormDataService>()) },
-        { provide: LocalizationService, useValue: (localizationService = createMock<LocalizationService>()) },
         { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) }
       ]
     }).compile();
@@ -171,7 +168,6 @@ describe("FundingProgrammesController", () => {
         ]
       };
 
-      localizationService.generateI18nId.mockResolvedValue(1);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       await controller.create({ data: { type: "fundingProgrammes", attributes } });
@@ -183,9 +179,6 @@ describe("FundingProgrammesController", () => {
         "create",
         expect.objectContaining({ name: attributes.name, frameworkKey: attributes.frameworkKey })
       );
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.name);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.description);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.location);
       expect(stages.length).toBe(2);
       expect(stageForms[0].stageId).toBe(stages[0].uuid);
       expect(stageForms[0].frameworkKey).toBe(attributes.frameworkKey);
@@ -256,7 +249,6 @@ describe("FundingProgrammesController", () => {
         ]
       };
 
-      localizationService.generateI18nId.mockResolvedValue(1);
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       await controller.update(
@@ -273,9 +265,6 @@ describe("FundingProgrammesController", () => {
       );
 
       expect(authSpy).toHaveBeenCalledWith("update", expect.objectContaining({ uuid: programme.uuid }));
-      expect(localizationService.generateI18nId).toHaveBeenCalledTimes(2);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.description);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.location);
       expect(updateStages.length).toBe(2);
       expect(updateStages[0].uuid).toBe(currentStages[1].uuid);
       expect(currentStages[0].deletedAt).not.toBeNull();

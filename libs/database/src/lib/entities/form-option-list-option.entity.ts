@@ -1,7 +1,6 @@
 import { AllowNull, AutoIncrement, BelongsTo, Column, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormOptionList } from "./form-option-list.entity";
-import { I18nItem } from "./i18n-item.entity";
 
 @Table({ tableName: "form_option_list_options", underscored: true, paranoid: true })
 export class FormOptionListOption extends Model<FormOptionListOption> {
@@ -33,13 +32,6 @@ export class FormOptionListOption extends Model<FormOptionListOption> {
   @AllowNull
   @Column(STRING)
   declare label: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare labelId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "labelId", constraints: false })
-  declare labelTranslated: I18nItem | null;
 
   @AllowNull
   @Column(STRING)

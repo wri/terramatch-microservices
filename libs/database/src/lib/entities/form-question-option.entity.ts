@@ -74,10 +74,6 @@ export class FormQuestionOption extends Model<FormQuestionOption> {
   @Column(STRING)
   declare label: string;
 
-  @AllowNull
-  @Column(INTEGER)
-  declare labelId: number | null;
-
   @Column(INTEGER)
   declare order: number;
 

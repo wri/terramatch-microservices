@@ -841,6 +841,11 @@ export class SitePolygonsService {
       JOIN site_polygon sp
         ON sp.site_id = s.uuid
        AND sp.is_active = 1
+       -- SitePolygon is paranoid, so every Sequelize path drops soft-deleted rows for free. Raw
+       -- SQL does not, and without this the rollup counted them: ARDE-Nyarushamba_site read 7,293
+       -- approved polygons instead of 3,306, and the project's measured area 1,200 ha instead of
+       -- 533. The map, which goes through the query builder, was drawing the honest set all along.
+       AND sp.deleted_at IS NULL
       LEFT JOIN tc
         ON tc.site_polygon_id = sp.id
        AND tc.rn = 1

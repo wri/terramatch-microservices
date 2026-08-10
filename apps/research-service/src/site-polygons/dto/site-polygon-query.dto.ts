@@ -90,6 +90,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   siteId?: string[];
 
   @ApiProperty({
+    name: "uuid[]",
+    isArray: true,
+    required: false,
+    description:
+      "Filter results by site polygon UUID(s). Note this is the site_polygon uuid, which is what GeoJSON features carry, and is NOT the same value as polygonUuid[]."
+  })
+  @IsOptional()
+  @IsArray()
+  uuid?: string[];
+
+  @ApiProperty({
     name: "polygonUuid[]",
     isArray: true,
     required: false,

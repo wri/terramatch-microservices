@@ -305,6 +305,7 @@ export class SitePolygonsController {
       landscape,
       validationStatus,
       polygonUuid,
+      uuid,
       searchFields,
       plantStartFrom,
       plantStartTo,
@@ -381,6 +382,10 @@ export class SitePolygonsController {
 
     if (polygonUuid != null) {
       await queryBuilder.filterPolygonUuids(polygonUuid);
+    }
+
+    if (uuid != null) {
+      await queryBuilder.filterUuids(uuid);
     }
 
     queryBuilder

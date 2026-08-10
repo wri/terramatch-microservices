@@ -46,6 +46,10 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 
+// Earliest year present in indicator_output_tree_cover_loss.value maps. The span is walked
+// explicitly because the per-year keys cannot be enumerated in SQL without JSON_TABLE.
+const TREE_COVER_LOSS_FIRST_YEAR = 2000;
+
 type AssociationDtos = {
   indicators?: IndicatorDto[];
   establishmentTreeSpecies?: TreeSpeciesDto[];
@@ -768,6 +772,16 @@ export class SitePolygonsService {
    *    the filter changes which row ranks as latest and lowers coverage.
    */
   async getIndicatorRollup(projectUuid: string) {
+    // indicator_output_tree_cover_loss.value is a per-year map, {"2011": 3.53, ...}, so the total
+    // for a polygon is the sum across years. MariaDB 10.3 has no JSON_TABLE (added in 10.6) and
+    // the SEQUENCE engine is MariaDB-only, so the year span is joined as a generated derived
+    // table, which is portable to both MariaDB and MySQL 8.
+    const years = [];
+    for (let year = TREE_COVER_LOSS_FIRST_YEAR; year <= new Date().getFullYear() + 1; year++) {
+      years.push(year);
+    }
+    const yearsUnion = years.map(year => `SELECT ${year} AS y`).join(" UNION ALL ");
+
     const query = `
       WITH tc AS (
         SELECT
@@ -778,6 +792,27 @@ export class SitePolygonsService {
             ORDER BY year_of_analysis DESC, id DESC
           ) AS rn
         FROM indicator_output_tree_cover
+      ),
+      tcl_latest AS (
+        SELECT
+          site_polygon_id,
+          value,
+          ROW_NUMBER() OVER (
+            PARTITION BY site_polygon_id
+            ORDER BY year_of_analysis DESC, id DESC
+          ) AS rn
+        FROM indicator_output_tree_cover_loss
+        WHERE indicator_slug = 'treeCoverLoss'
+      ),
+      years AS (${yearsUnion}),
+      tcl AS (
+        SELECT
+          t.site_polygon_id,
+          SUM(CAST(COALESCE(JSON_VALUE(t.value, CONCAT('$."', y.y, '"')), 0) AS DECIMAL(24,8))) AS lossTotal
+        FROM tcl_latest t
+        CROSS JOIN years y
+        WHERE t.rn = 1
+        GROUP BY t.site_polygon_id
       )
       SELECT
         s.uuid AS siteUuid,
@@ -788,7 +823,8 @@ export class SitePolygonsService {
           / NULLIF(SUM(CASE WHEN tc.percent_cover IS NOT NULL THEN NULLIF(sp.calc_area, 0) END), 0)
           AS treeCoverWeightedMeanPct,
         COUNT(tc.site_polygon_id) AS treeCoverPolygonCount,
-        NULL AS treeCoverLossTotal
+        SUM(tcl.lossTotal) AS treeCoverLossTotal,
+        COUNT(tcl.site_polygon_id) AS treeCoverLossPolygonCount
       FROM v2_projects p
       JOIN v2_sites s
         ON s.project_id = p.id
@@ -801,6 +837,8 @@ export class SitePolygonsService {
       LEFT JOIN tc
         ON tc.site_polygon_id = sp.id
        AND tc.rn = 1
+      LEFT JOIN tcl
+        ON tcl.site_polygon_id = sp.id
       WHERE p.uuid = :projectUuid
         AND p.deleted_at IS NULL
       GROUP BY s.uuid, s.name

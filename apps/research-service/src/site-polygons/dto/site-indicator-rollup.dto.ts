@@ -14,6 +14,7 @@ export type SiteIndicatorRollupRow = {
   treeCoverWeightedMeanPct: number | string | null;
   treeCoverPolygonCount: number | string;
   treeCoverLossTotal: number | string | null;
+  treeCoverLossPolygonCount: number | string;
 };
 
 const toNumber = (value: number | string | null | undefined) => {
@@ -32,10 +33,12 @@ export class SiteIndicatorRollupDto {
     this.treeCoverWeightedMeanPct = toNumber(row.treeCoverWeightedMeanPct);
     this.treeCoverPolygonCount = toNumber(row.treeCoverPolygonCount) ?? 0;
     this.treeCoverLossTotal = toNumber(row.treeCoverLossTotal);
+    this.treeCoverLossPolygonCount = toNumber(row.treeCoverLossPolygonCount) ?? 0;
 
-    // The honesty fraction: what proportion of this site's polygons actually contributed to the
-    // tree cover mean. A summed or averaged measurement without this is not reportable.
+    // The honesty fractions: what proportion of this site's polygons actually contributed to each
+    // aggregate. A summed or averaged measurement without this is not reportable.
     this.treeCoverCoverage = this.polygons > 0 ? this.treeCoverPolygonCount / this.polygons : null;
+    this.treeCoverLossCoverage = this.polygons > 0 ? this.treeCoverLossPolygonCount / this.polygons : null;
   }
 
   @ApiProperty({ description: "UUID of the site this row rolls up." })
@@ -79,7 +82,17 @@ export class SiteIndicatorRollupDto {
     nullable: true,
     type: Number,
     description:
-      "Not yet implemented — always null. Requires a per-year JSON parse over indicator_output_tree_cover_loss.value."
+      "Sum, across this site's polygons, of each polygon's per-year tree cover loss values summed over all years. Covers the 'treeCoverLoss' slug only; 'treeCoverLossFires' is a separate indicator and is not included. Null when no polygon on the site has a tree cover loss row — that means not measured, not zero."
   })
   treeCoverLossTotal: number | null;
+
+  @ApiProperty({ description: "Number of polygons that contributed a tree cover loss value." })
+  treeCoverLossPolygonCount: number;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: "treeCoverLossPolygonCount / polygons. Render alongside treeCoverLossTotal."
+  })
+  treeCoverLossCoverage: number | null;
 }

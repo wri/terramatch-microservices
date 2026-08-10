@@ -27,7 +27,7 @@ import { buildJsonApi, Relationship, Resource } from "@terramatch-microservices/
 import { TaskFullDto } from "./dto/task.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { APPROVED, AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 import { AuditStatus } from "@terramatch-microservices/database/entities/audit-status.entity";
 import { TaskUpdateBody } from "./dto/task-update.dto";
 import { ConfigService } from "@nestjs/config";
@@ -133,13 +133,13 @@ describe("TasksService", () => {
 
     it("should filter", async () => {
       const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
-      const ppcTask = await TaskFactory.create({ projectId: ppcProject.id, status: "awaiting-approval" });
+      const ppcTask = await TaskFactory.create({ projectId: ppcProject.id, status: "pending-approval" });
       const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
-      const tfTask1 = await TaskFactory.create({ projectId: tfProject.id, status: "awaiting-approval" });
+      const tfTask1 = await TaskFactory.create({ projectId: tfProject.id, status: "pending-approval" });
       const tfTask2 = await TaskFactory.create({ projectId: tfProject.id, status: "approved" });
 
       const permissions = ["framework-ppc", "framework-terrafund"];
-      await expectTasks([ppcTask, tfTask1], { status: "awaiting-approval" }, { permissions });
+      await expectTasks([ppcTask, tfTask1], { status: "pending-approval" }, { permissions });
       await expectTasks([tfTask1, tfTask2], { frameworkKey: "terrafund" }, { permissions });
       await expectTasks([tfTask1, tfTask2], { projectUuid: tfProject.uuid }, { permissions });
     });
@@ -158,10 +158,10 @@ describe("TasksService", () => {
         await tasks[0].save();
         clock.tick(1000);
         clock.setSystemTime((newDate = DateTime.fromJSDate(newDate).plus({ hours: 1 }).toJSDate()));
-        await tasks[1].update({ status: "awaiting-approval" });
+        await tasks[1].update({ status: "pending-approval" });
         clock.tick(1000);
         clock.setSystemTime(DateTime.fromJSDate(newDate).plus({ hours: 1 }).toJSDate());
-        tasks[2].setDataValue("status", "needs-more-information");
+        tasks[2].setDataValue("status", "information-required");
         await tasks[2].save();
         clock.tick(1000);
 
@@ -245,7 +245,7 @@ describe("TasksService", () => {
       const siteReports = await SiteReportFactory.createMany(2, {
         taskId: task.id,
         siteId: site.id,
-        status: AWAITING_APPROVAL,
+        status: PENDING_APPROVAL,
         frameworkKey: project.frameworkKey
       });
       siteReports.push(
@@ -293,17 +293,17 @@ describe("TasksService", () => {
   });
 
   describe("submitForApproval", () => {
-    it("should NOOP if status is already awaiting-approval", async () => {
+    it("should NOOP if status is already pending-approval", async () => {
       const spy = jest.spyOn(service as never, "loadReports");
-      const task = await TaskFactory.create({ status: AWAITING_APPROVAL });
+      const task = await TaskFactory.create({ status: PENDING_APPROVAL });
       await service.submitForApproval(task);
       expect(spy).not.toHaveBeenCalled();
     });
 
     it("should throw if the status cannot move to awaiting approval", async () => {
       const task = await TaskFactory.create({ status: APPROVED });
-      // The current state machine definition doesn't have any states that can't transition to awaiting-approval
-      // other than awaiting-approval itself, which is covered in the NOOP test above.
+      // The current state machine definition doesn't have any states that can't transition to pending-approval
+      // other than pending-approval itself, which is covered in the NOOP test above.
       jest.spyOn(task, "statusCanBe").mockReturnValue(false);
       await expect(service.submitForApproval(task)).rejects.toThrow(BadRequestException);
     });
@@ -329,7 +329,7 @@ describe("TasksService", () => {
         taskId: task.id,
         projectId: project.id,
         frameworkKey: project.frameworkKey,
-        status: STARTED,
+        status: DRAFT,
         completion: 50,
         submittedAt: undefined
       });
@@ -349,14 +349,14 @@ describe("TasksService", () => {
       });
 
       await service.submitForApproval(task);
-      expect(task.status).toBe(AWAITING_APPROVAL);
+      expect(task.status).toBe(PENDING_APPROVAL);
 
       await projectReport.reload();
-      expect(projectReport.status).toBe(AWAITING_APPROVAL);
+      expect(projectReport.status).toBe(PENDING_APPROVAL);
       expect(projectReport.completion).toBe(100);
       expect(projectReport.submittedAt).toBeDefined();
       await siteReport.reload();
-      expect(siteReport.status).toBe(AWAITING_APPROVAL);
+      expect(siteReport.status).toBe(PENDING_APPROVAL);
       expect(siteReport.completion).toBe(0);
       expect(siteReport.nothingToReport).toBe(true);
       expect(siteReport.submittedAt).toBeDefined();
@@ -571,7 +571,7 @@ describe("TasksService", () => {
 
       expect(siteReports[0]).toMatchObject({
         nothingToReport: true,
-        status: "awaiting-approval",
+        status: "pending-approval",
         completion: 100,
         submittedAt: expect.any(Date)
       });
@@ -583,7 +583,7 @@ describe("TasksService", () => {
       });
       expect(nurseryReports[0]).toMatchObject({
         nothingToReport: true,
-        status: "awaiting-approval",
+        status: "pending-approval",
         completion: 100,
         submittedAt: expect.any(Date)
       });

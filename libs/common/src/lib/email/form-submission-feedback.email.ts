@@ -69,7 +69,7 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
       link: `/applications/${applicationUuid}`
     };
     switch (status) {
-      case "requires-more-information":
+      case "information-required":
         await this.createNotification(userId, "Application Updated", "You have received feedback on your application");
         withPrefix("feedback-received", feedback, i18nKeys, i18nReplacements);
         i18nKeys.cta = "form-submission-feedback-received.cta";

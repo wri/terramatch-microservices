@@ -249,7 +249,7 @@ export class EntitiesController {
     operationId: "entityDelete",
     summary:
       "Soft delete entity resource by UUID. For non-admins / project managers, only entities with " +
-      '"started" status may be deleted. Additionally, reports may only be deleted by admins.'
+      '"draft" status may be deleted. Additionally, reports may only be deleted by admins.'
   })
   @JsonApiDeletedResponse([getDtoType(ProjectFullDto), getDtoType(SiteFullDto)], {
     description: "Associated entity was deleted"

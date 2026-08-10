@@ -16,7 +16,7 @@ import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey, PlantingStatus } from "../constants";
 import {
-  AWAITING_APPROVAL,
+  PENDING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   DUE,
@@ -378,7 +378,7 @@ export class ProjectReport extends Model<ProjectReport> {
   get isCompletable() {
     if (this.isComplete) return true;
     if (this.status === DUE) return false;
-    return getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL);
+    return getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL);
   }
 
   @AllowNull

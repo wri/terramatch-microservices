@@ -153,7 +153,7 @@ export class ReportGenerationService {
     const project = await Project.findOne({
       where: {
         organisationId,
-        status: { [Op.ne]: "started" },
+        status: { [Op.ne]: "draft" },
         frameworkKey: { [Op.in]: [...FINANCIAL_REPORT_FRAMEWORKS] }
       },
       attributes: ["frameworkKey"],
@@ -249,7 +249,7 @@ export class ReportGenerationService {
     const organisationIds = uniq(
       (
         await Project.findAll({
-          where: { frameworkKey, status: { [Op.ne]: "started" }, organisationId: { [Op.ne]: null } },
+          where: { frameworkKey, status: { [Op.ne]: "draft" }, organisationId: { [Op.ne]: null } },
           attributes: ["organisationId"]
         })
       )

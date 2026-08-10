@@ -24,7 +24,7 @@ import {
 import { Includeable, Op } from "sequelize";
 import { TMLogger } from "../util/tm-logger";
 import { InternalServerErrorException } from "@nestjs/common";
-import { APPROVED, NEEDS_MORE_INFORMATION } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
 export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
@@ -39,10 +39,10 @@ export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
   async send(emailService: EmailService) {
     const entity = await this.getEntity();
     const status =
-      entity.status === NEEDS_MORE_INFORMATION || entity.updateRequestStatus === NEEDS_MORE_INFORMATION
-        ? NEEDS_MORE_INFORMATION
+      entity.status === INFORMATION_REQUIRED || entity.updateRequestStatus === INFORMATION_REQUIRED
+        ? INFORMATION_REQUIRED
         : entity.status;
-    if (![APPROVED, NEEDS_MORE_INFORMATION].includes(status)) return;
+    if (![APPROVED, INFORMATION_REQUIRED].includes(status)) return;
 
     const logExtras = `[type=${this.data.type}, id=${this.data.id}, status=${status}]` as const;
     this.logger.log(`Sending status update email ${logExtras}`);
@@ -114,7 +114,7 @@ export class EntityStatusUpdateEmail extends EmailSender<SpecificEntityData> {
   }
 
   private async getFeedback(entity: EntityModel) {
-    if (![APPROVED, NEEDS_MORE_INFORMATION].includes(entity.updateRequestStatus ?? "")) {
+    if (![APPROVED, INFORMATION_REQUIRED].includes(entity.updateRequestStatus ?? "")) {
       return entity.feedback;
     }
 

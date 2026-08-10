@@ -9,11 +9,7 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes, DisturbanceReportUpdateAttributes } from "../dto/entity-update.dto";
-import {
-  APPROVED,
-  AWAITING_APPROVAL,
-  NEEDS_MORE_INFORMATION
-} from "@terramatch-microservices/database/constants/status";
+import { APPROVED, PENDING_APPROVAL, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { DisturbanceReport, Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
@@ -65,7 +61,7 @@ const getIndexData = (
   return { resource, requestPath, total, pageNumber };
 };
 
-const APPROVAL_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION];
+const APPROVAL_STATUSES = [APPROVED, INFORMATION_REQUIRED];
 
 export type ExportAllOptions = {
   // filter by framework
@@ -182,13 +178,13 @@ export abstract class EntityProcessor<
         model.feedbackFields = update.feedbackFields ?? null;
         if (isReport(model)) model.completion = 100;
         model.status = update.status as ModelType["status"];
-      } else if (update.status === AWAITING_APPROVAL) {
+      } else if (update.status === PENDING_APPROVAL) {
         // If we're submitting for approval, check for an update request and submit that instead if there is one
         const updateRequest = await UpdateRequest.for(model).current().findOne();
         if (updateRequest == null) {
-          model.status = AWAITING_APPROVAL;
+          model.status = PENDING_APPROVAL;
         } else {
-          await updateRequest.update({ status: AWAITING_APPROVAL });
+          await updateRequest.update({ status: PENDING_APPROVAL });
         }
         if (isReport(model)) model.submittedAt = new Date();
       } else {
@@ -268,9 +264,9 @@ export abstract class ReportProcessor<
 
         if (model.nothingToReport) {
           const statusChanged = update.status != null && update.status !== model.status;
-          if (statusChanged && update.status !== "awaiting-approval") {
+          if (statusChanged && update.status !== "pending-approval") {
             throw new BadRequestException(
-              "Cannot set status to anything other than 'awaiting-approval' with nothingToReport: true"
+              "Cannot set status to anything other than 'pending-approval' with nothingToReport: true"
             );
           }
 
@@ -279,7 +275,7 @@ export abstract class ReportProcessor<
             model.submittedAt = new Date();
           }
 
-          model.status = "awaiting-approval";
+          model.status = "pending-approval";
         }
       }
     }
@@ -307,7 +303,7 @@ export abstract class ReportProcessor<
 
     // @ts-expect-error the typing on setDataValue() makes this expression "not callable"
     // Disturbance reports do not use "due"; reset them to started instead.
-    model.setDataValue("status", model instanceof DisturbanceReport ? "started" : "due");
+    model.setDataValue("status", model instanceof DisturbanceReport ? "draft" : "due");
     model.submittedAt = null;
     model.completion = 0;
     if (!(model instanceof ProjectReport)) model.nothingToReport = null;

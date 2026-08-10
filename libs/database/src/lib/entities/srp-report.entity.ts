@@ -174,7 +174,7 @@ export class SrpReport extends Model<SrpReport> {
   }
 
   get isCompletable() {
-    return this.status !== "started";
+    return this.status !== "draft";
   }
 
   get isComplete() {

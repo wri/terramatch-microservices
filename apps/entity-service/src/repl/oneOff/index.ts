@@ -41,3 +41,4 @@ export { moveTrackingDataTreesGoal } from "./2026-07-23-moveTrackingDataTreesGoa
 export { migrateReportTasks } from "./2026-07-29-migrateReportTasks";
 export { importPolygonDataSubmission, importProjectQaStatuses } from "./2026-07-29-importPolygonHandoffStatuses";
 export { backfillAboutSectionAndLinkText } from "./2026-07-31-backfillAboutSectionAndLinkText";
+export { renameEntityStatusSlugs } from "./2026-08-08-renameEntityStatusSlugs";

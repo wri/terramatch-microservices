@@ -228,7 +228,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     const disturbanceReport = await this.authorizedCreation(DisturbanceReport, {
       frameworkKey: project.frameworkKey,
       projectId: project.id,
-      status: "started",
+      status: "draft",
       updateRequestStatus: "no-update",
       title: "Disturbance Report",
       createdBy: this.entitiesService.userId,

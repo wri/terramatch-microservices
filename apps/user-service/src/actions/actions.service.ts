@@ -98,7 +98,7 @@ export class ActionsService {
     }
 
     // Pending report statuses that should generate actions
-    const pendingReportStatuses = ["due", "started", "needs-more-information", "requires-more-information"];
+    const pendingReportStatuses = ["due", "draft", "information-required"];
 
     const [reportActions, entityActions, additionalReportActions] = await Promise.all([
       Action.withTargetableStatus([ProjectReport, SiteReport, NurseryReport], pendingReportStatuses).findAll({
@@ -109,7 +109,7 @@ export class ActionsService {
         order: [["updatedAt", "DESC"]],
         limit: 10
       }),
-      Action.withTargetableStatus([Project, Site, Nursery], ["needs-more-information", "started"]).findAll({
+      Action.withTargetableStatus([Project, Site, Nursery], ["information-required", "draft"]).findAll({
         where: {
           status: "pending",
           projectId: { [Op.in]: projectIds }

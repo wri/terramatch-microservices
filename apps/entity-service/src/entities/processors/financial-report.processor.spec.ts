@@ -19,7 +19,7 @@ import {
   MediaFactory,
   OrganisationFactory
 } from "@terramatch-microservices/database/factories";
-import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { FinancialReportProcessor } from "./financial-report.processor";
 import { FinancialIndicatorDto } from "@terramatch-microservices/common/dto/financial-indicator.dto";
@@ -96,7 +96,7 @@ describe("FinancialReportProcessor", () => {
     it("should filter by status", async () => {
       const organisation = await OrganisationFactory.create();
       const approvedReports = await FinancialReportFactory.org(organisation).createMany(2, { status: "approved" });
-      await FinancialReportFactory.org(organisation).createMany(3, { status: "started" });
+      await FinancialReportFactory.org(organisation).createMany(3, { status: "draft" });
 
       await expectFinancialReports(approvedReports, { status: "approved" });
     });
@@ -173,11 +173,11 @@ describe("FinancialReportProcessor", () => {
     it("should filter by updateRequestStatus", async () => {
       const organisation = await OrganisationFactory.create();
       const awaiting = await FinancialReportFactory.org(organisation).createMany(2, {
-        updateRequestStatus: AWAITING_APPROVAL
+        updateRequestStatus: PENDING_APPROVAL
       });
       await FinancialReportFactory.org(organisation).create({ updateRequestStatus: APPROVED });
 
-      await expectFinancialReports(awaiting, { updateRequestStatus: AWAITING_APPROVAL });
+      await expectFinancialReports(awaiting, { updateRequestStatus: PENDING_APPROVAL });
     });
 
     it("should filter by frameworkKey", async () => {

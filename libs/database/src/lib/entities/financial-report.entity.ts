@@ -158,7 +158,7 @@ export class FinancialReport extends Model<FinancialReport> {
   }
 
   get isCompletable() {
-    return this.status !== "started";
+    return this.status !== "draft";
   }
 
   get isComplete() {

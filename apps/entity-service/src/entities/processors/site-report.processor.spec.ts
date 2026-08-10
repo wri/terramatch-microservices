@@ -137,21 +137,21 @@ describe("SiteReportProcessor", () => {
       const first = await SiteReportFactory.create({
         title: "first site report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         siteId: s1.id
       });
       const second = await SiteReportFactory.create({
         title: "second project report",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         siteId: s1.id
       });
       const third = await SiteReportFactory.create({
         title: "third project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         siteId: s1.id
       });
@@ -168,7 +168,7 @@ describe("SiteReportProcessor", () => {
       third.site = await third.$get("site");
       fourth.site = await fourth.$get("site");
 
-      await expectSiteReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectSiteReports([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectSiteReports([first, third, fourth], { status: "approved" });
 
@@ -317,9 +317,9 @@ describe("SiteReportProcessor", () => {
     });
 
     it("should sort site reports by update request status", async () => {
-      const siteReportA = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const siteReportB = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const siteReportC = await SiteReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const siteReportA = await SiteReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const siteReportB = await SiteReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const siteReportC = await SiteReportFactory.create({ updateRequestStatus: "pending-approval" });
       await expectSiteReports(
         [siteReportA, siteReportB, siteReportC],
         { sort: { field: "updateRequestStatus" } },
@@ -338,7 +338,7 @@ describe("SiteReportProcessor", () => {
     });
 
     it("should sort site reports by status", async () => {
-      const siteReportA = await SiteReportFactory.create({ status: "started" });
+      const siteReportA = await SiteReportFactory.create({ status: "draft" });
       const siteReportB = await SiteReportFactory.create({ status: "approved" });
       const siteReportC = await SiteReportFactory.create({ status: "approved" });
       await expectSiteReports(

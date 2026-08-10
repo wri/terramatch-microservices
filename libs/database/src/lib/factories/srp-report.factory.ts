@@ -6,7 +6,7 @@ import { UserFactory } from "./user.factory";
 
 export const SrpReportFactory = FactoryGirl.define(SrpReport, async () => ({
   title: faker.lorem.slug(),
-  status: "started",
+  status: "draft",
   projectId: ProjectFactory.associate("id"),
   createdBy: UserFactory.associate("id"),
   approvedBy: UserFactory.associate("id"),

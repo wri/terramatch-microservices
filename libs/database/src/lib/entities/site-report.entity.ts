@@ -32,7 +32,7 @@ import { Seeding } from "./seeding.entity";
 import { FrameworkKey, PlantingStatus } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import {
-  AWAITING_APPROVAL,
+  PENDING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   ReportStatus,
@@ -97,7 +97,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees", "invasiveTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
-  static readonly UNSUBMITTED_STATUSES = ["due", "started"];
+  static readonly UNSUBMITTED_STATUSES = ["due", "draft"];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\SiteReport";
 
   static readonly MEDIA: Record<SiteReportMedia, MediaConfiguration> = {
@@ -297,7 +297,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
    * transition to it.
    */
   get isCompletable(): NonAttribute<boolean> {
-    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, AWAITING_APPROVAL)) ?? false;
+    return (this.isComplete || getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL)) ?? false;
   }
 
   @AllowNull

@@ -13,7 +13,7 @@ import {
   Stage,
   User
 } from "@terramatch-microservices/database/entities";
-import { DRAFT, PENDING } from "@terramatch-microservices/database/constants/status";
+import { DRAFT, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { AdminUserCreationEmail } from "@terramatch-microservices/common/email/admin-user-creation.email";
@@ -26,10 +26,12 @@ export class OrganisationCreationService {
   constructor(@InjectQueue("email") private readonly emailQueue: Queue) {}
 
   async createOrganisation(attributes: OrganisationCreateAttributes) {
-    const status = attributes.status ?? PENDING;
+    const status = attributes.status ?? PENDING_APPROVAL;
 
-    if (status !== DRAFT && status !== PENDING) {
-      throw new BadRequestException("Only draft and pending statuses are allowed during organisation creation");
+    if (status !== DRAFT && status !== PENDING_APPROVAL) {
+      throw new BadRequestException(
+        "Only draft and pending-approval statuses are allowed during organisation creation"
+      );
     }
 
     if (status === DRAFT) {
@@ -59,7 +61,9 @@ export class OrganisationCreationService {
       throw new BadRequestException("Organisation already exists");
     }
 
-    const organisation = await Organisation.create(this.buildOrganisationData(attributes, PENDING) as Organisation);
+    const organisation = await Organisation.create(
+      this.buildOrganisationData(attributes, PENDING_APPROVAL) as Organisation
+    );
 
     const hasAllUserFields =
       attributes.userFirstName != null &&
@@ -107,7 +111,7 @@ export class OrganisationCreationService {
       organisationUuid: organisation.uuid,
       projectPitchUuid: pitch.uuid,
       applicationId: application.id,
-      status: "started",
+      status: "draft",
       answers: {}
     });
 

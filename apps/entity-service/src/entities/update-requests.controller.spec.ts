@@ -126,7 +126,7 @@ describe("UpdateRequestsController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       const updateRequest = await UpdateRequestFactory.project(project).create({
-        status: "awaiting-approval",
+        status: "pending-approval",
         content: { color: "red" }
       });
       await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
@@ -136,12 +136,12 @@ describe("UpdateRequestsController", () => {
       const updateSpy = jest.spyOn(updateRequest, "update");
       await controller.update(
         { entity: "projects", uuid: project.uuid },
-        createPayload(`projects|${project.uuid}`, "needs-more-information", "feedback", ["feedback", "fields"])
+        createPayload(`projects|${project.uuid}`, "information-required", "feedback", ["feedback", "fields"])
       );
       await updateRequest.reload();
       expect(updateSpy).toHaveBeenCalled();
       expect(policyService.authorize).toHaveBeenCalledWith("approve", project);
-      expect(updateRequest.status).toBe("needs-more-information");
+      expect(updateRequest.status).toBe("information-required");
       expect(updateRequest.feedback).toBe("feedback");
       expect(updateRequest.feedbackFields).toMatchObject(["feedback", "fields"]);
       expect(service.updateModelFromForm).not.toHaveBeenCalledWith();
@@ -151,7 +151,7 @@ describe("UpdateRequestsController", () => {
       const project = await ProjectFactory.create();
       processor.findOne.mockResolvedValue(project);
       await UpdateRequestFactory.project(project).create({
-        status: "awaiting-approval",
+        status: "pending-approval",
         content: { color: "red" }
       });
       const form = await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });

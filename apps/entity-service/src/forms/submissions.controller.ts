@@ -186,7 +186,7 @@ export class SubmissionsController {
     if (attributes.status != null && attributes.status !== submission.status) {
       await this.policyService.authorize("update", submission);
 
-      if (attributes.status != "awaiting-approval") {
+      if (attributes.status != "pending-approval") {
         submission.feedback = attributes.feedback ?? null;
         submission.feedbackFields = attributes.feedbackFields ?? null;
       }

@@ -1,6 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { FinancialReport, User } from "@terramatch-microservices/database/entities";
-import { AWAITING_APPROVAL, DUE, STARTED } from "@terramatch-microservices/database/constants/status";
+import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class FinancialReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -21,11 +21,11 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       });
       this.builder.can("updateAnswers", FinancialReport, {
         organisationId: user.organisationId,
-        status: { $in: [STARTED, DUE] }
+        status: { $in: [DRAFT, DUE] }
       });
       this.builder.can("updateAnswers", FinancialReport, {
         organisationId: user.organisationId,
-        status: AWAITING_APPROVAL,
+        status: PENDING_APPROVAL,
         nothingToReport: true
       });
     }

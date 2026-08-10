@@ -4,6 +4,8 @@ import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-micros
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction, Op } from "sequelize";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -12,13 +14,26 @@ const mockTransaction = {
   LOCK: {}
 } as unknown as Transaction;
 
+// GWC invalidation is registered via an async transaction.afterCommit() hook. The mock above
+// fires that hook synchronously but does not await it, so tests that assert on its effects need
+// to flush the microtask queue first.
+const flushMicrotasks = () => new Promise(resolve => setImmediate(resolve));
+
 describe("SitePolygonVersioningService", () => {
   let service: SitePolygonVersioningService;
   let eventService: { sendPolygonVersionChangedAnalytics: jest.Mock };
+  let boundingBoxService: { getPolygonsBoundingBox: jest.Mock };
+  let gwcTileInvalidationService: { truncate: jest.Mock };
 
   beforeEach(async () => {
     eventService = {
       sendPolygonVersionChangedAnalytics: jest.fn().mockResolvedValue(undefined)
+    };
+    boundingBoxService = {
+      getPolygonsBoundingBox: jest.fn().mockResolvedValue({ bbox: [0, 0, 1, 1] })
+    };
+    gwcTileInvalidationService = {
+      truncate: jest.fn().mockResolvedValue(undefined)
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -27,6 +42,14 @@ describe("SitePolygonVersioningService", () => {
         {
           provide: EventService,
           useValue: eventService
+        },
+        {
+          provide: BoundingBoxService,
+          useValue: boundingBoxService
+        },
+        {
+          provide: GwcTileInvalidationService,
+          useValue: gwcTileInvalidationService
         }
       ]
     }).compile();
@@ -324,6 +347,103 @@ describe("SitePolygonVersioningService", () => {
         change_source: "attribute_edit"
       });
     });
+
+    it("should truncate GWC for the union of old and new polygon envelopes after commit", async () => {
+      const basePolygon = {
+        uuid: "base-uuid",
+        primaryUuid: "primary-uuid",
+        polygonUuid: "old-polygon-uuid",
+        get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+      } as unknown as SitePolygon;
+
+      jest
+        .spyOn(SitePolygon, "bulkCreate")
+        .mockResolvedValue([{ uuid: "new-version-uuid", polygonUuid: "new-polygon-uuid" } as SitePolygon]);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+      await service.createVersions(
+        [
+          {
+            basePolygon,
+            attributeChanges: {},
+            newPolygonGeometryUuid: "new-polygon-uuid",
+            userId: 1,
+            changeReason: "Moved polygon",
+            userFullName: "User One"
+          }
+        ],
+        mockTransaction
+      );
+      await flushMicrotasks();
+
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith(["old-polygon-uuid", "new-polygon-uuid"]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active"]);
+    });
+
+    it("should not attempt GWC invalidation when no polygon uuids are involved", async () => {
+      const basePolygon = {
+        uuid: "base-uuid",
+        primaryUuid: "primary-uuid",
+        polygonUuid: null,
+        get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+      } as unknown as SitePolygon;
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+      await service.createVersions(
+        [
+          {
+            basePolygon,
+            attributeChanges: {},
+            newPolygonGeometryUuid: null,
+            userId: 1,
+            changeReason: "Attribute only",
+            userFullName: "User One"
+          }
+        ],
+        mockTransaction
+      );
+      await flushMicrotasks();
+
+      expect(boundingBoxService.getPolygonsBoundingBox).not.toHaveBeenCalled();
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
+    });
+
+    it("should log and swallow errors instead of throwing when GWC invalidation fails", async () => {
+      const basePolygon = {
+        uuid: "base-uuid",
+        primaryUuid: "primary-uuid",
+        polygonUuid: "old-polygon-uuid",
+        get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+      } as unknown as SitePolygon;
+
+      jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+      boundingBoxService.getPolygonsBoundingBox.mockRejectedValueOnce(new Error("boom"));
+
+      await expect(
+        service.createVersions(
+          [
+            {
+              basePolygon,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        )
+      ).resolves.toBeDefined();
+      await flushMicrotasks();
+
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
+    });
   });
 
   describe("trackChange", () => {
@@ -446,6 +566,39 @@ describe("SitePolygonVersioningService", () => {
       expect(result.isActive).toBe(true);
       expect(targetVersion.save).toHaveBeenCalledWith({ transaction: mockTransaction });
       expect(SitePolygon.update).toHaveBeenCalled();
+    });
+
+    it("should truncate GWC for the union of the previously and newly active envelopes", async () => {
+      const targetVersion = {
+        uuid: "target-uuid",
+        primaryUuid: "primary-uuid",
+        polygonUuid: "target-polygon-uuid",
+        versionName: "Version_1",
+        isActive: false,
+        save: jest.fn().mockResolvedValue(undefined)
+      } as unknown as SitePolygon;
+      const previouslyActiveVersion = {
+        uuid: "previous-uuid",
+        primaryUuid: "primary-uuid",
+        polygonUuid: "previous-polygon-uuid",
+        isActive: true
+      } as unknown as SitePolygon;
+
+      jest
+        .spyOn(SitePolygon, "findOne")
+        .mockResolvedValueOnce(targetVersion)
+        .mockResolvedValueOnce(previouslyActiveVersion);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+      jest.spyOn(PolygonUpdates, "create").mockResolvedValue({} as PolygonUpdates);
+
+      await service.activateVersion("target-uuid", 999, mockTransaction);
+      await flushMicrotasks();
+
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith([
+        "previous-polygon-uuid",
+        "target-polygon-uuid"
+      ]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active"]);
     });
   });
 

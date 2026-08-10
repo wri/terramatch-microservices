@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException, Logger, NotFoundException } from "@nestjs/common";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 import { buildSitePolygonPushedViaApiParams } from "@terramatch-microservices/common/analytics/polygon-pushed-via-api";
 import {
@@ -41,6 +41,9 @@ import {
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import type { LngLatEnvelope } from "@terramatch-microservices/common/gwc/gwc-envelope.util";
 import "multer";
 
 interface DuplicateCheckResult {
@@ -132,6 +135,8 @@ const LARGE_BATCH_THRESHOLD = 1000;
 
 @Injectable()
 export class SitePolygonCreationService {
+  private readonly logger = new Logger(SitePolygonCreationService.name);
+
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly pointGeometryService: PointGeometryCreationService,
@@ -139,7 +144,9 @@ export class SitePolygonCreationService {
     private readonly voronoiService: VoronoiService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly versioningService: SitePolygonVersioningService,
-    private readonly eventService: EventService
+    private readonly eventService: EventService,
+    private readonly boundingBoxService: BoundingBoxService,
+    private readonly gwcTileInvalidationService: GwcTileInvalidationService
   ) {}
 
   async createSitePolygons(
@@ -186,6 +193,9 @@ export class SitePolygonCreationService {
     const allPolygonUuids: string[] = [];
     const duplicateValidations: ValidationIncludedData[] = [];
     const allPolygonInputIndices = new Map<string, number>();
+    // Tracked per site (rather than as one flat list) so a multi-site batch only invalidates
+    // GWC tiles around each site's own new geometry, not a giant union spanning every site.
+    const newPolygonUuidsBySite = new Map<string, string[]>();
 
     try {
       let globalInputIndex = 0;
@@ -360,9 +370,11 @@ export class SitePolygonCreationService {
             for (const [uuid, idx] of inputIndices.entries()) {
               allPolygonInputIndices.set(uuid, idx);
             }
-            allPolygonUuids.push(
-              ...createdSitePolygons.map(sp => sp.polygonUuid).filter((u): u is string => u != null)
-            );
+            const newPolygonUuids = createdSitePolygons.map(sp => sp.polygonUuid).filter((u): u is string => u != null);
+            allPolygonUuids.push(...newPolygonUuids);
+            if (newPolygonUuids.length > 0) {
+              newPolygonUuidsBySite.set(siteId, [...(newPolygonUuidsBySite.get(siteId) ?? []), ...newPolygonUuids]);
+            }
           }
         }
       }
@@ -379,6 +391,8 @@ export class SitePolygonCreationService {
 
       await transaction.commit();
 
+      await this.invalidateGwcForNewPolygons(newPolygonUuidsBySite);
+
       return {
         createdPolygons: allCreatedSitePolygons,
         duplicatePolygons: allDuplicatePolygons,
@@ -389,6 +403,27 @@ export class SitePolygonCreationService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  /**
+   * Truncates the GWC cache for the union bbox of newly created polygons, per site, on the
+   * active layer only (new geometry always enters polygon_geometry_active, never the deleted
+   * view). Awaited after commit so the client's next tile request is guaranteed a fresh render,
+   * but never throws - a GeoServer/GWC problem should not fail polygon creation.
+   */
+  private async invalidateGwcForNewPolygons(polygonUuidsBySite: Map<string, string[]>): Promise<void> {
+    if (polygonUuidsBySite.size === 0) return;
+
+    await Promise.all(
+      Array.from(polygonUuidsBySite.values()).map(async polygonUuids => {
+        try {
+          const { bbox } = await this.boundingBoxService.getPolygonsBoundingBox(polygonUuids);
+          await this.gwcTileInvalidationService.truncate(bbox as LngLatEnvelope, ["active"]);
+        } catch (error) {
+          this.logger.error("Failed to invalidate GWC cache for newly created polygons", error);
+        }
+      })
+    );
   }
 
   private async transformPointFeaturesToPolygons(

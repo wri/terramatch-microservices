@@ -23,6 +23,7 @@ import { CsvExportService } from "./export/csv-export.service";
 import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-notification.processor";
 import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
 import { UserContextMiddleware } from "./middleware/user-context.middleware";
+import { GwcTileInvalidationService } from "./gwc/gwc-tile-invalidation.service";
 
 export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
 const IS_REPL = process.env["REPL"] === "true";
@@ -76,6 +77,7 @@ const IS_REPL = process.env["REPL"] === "true";
     CsvExportService,
     GreenhouseNotificationService,
     UserContextMiddleware,
+    GwcTileInvalidationService,
 
     ...(IS_REPL ? [] : [GreenhouseNotificationProcessor, EmailProcessor, AnalyticsProcessor])
   ],
@@ -93,7 +95,8 @@ const IS_REPL = process.env["REPL"] === "true";
     EventService,
     CsvExportService,
     GreenhouseNotificationService,
-    TransifexApiModule
+    TransifexApiModule,
+    GwcTileInvalidationService
   ]
 })
 export class CommonModule implements NestModule {

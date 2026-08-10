@@ -4,6 +4,10 @@ import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 import { buildPolygonVersionChangedParams } from "@terramatch-microservices/common/analytics/polygon-version-changed";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import type { LngLatEnvelope } from "@terramatch-microservices/common/gwc/gwc-envelope.util";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 export interface VersionCreateEntry {
   basePolygon: SitePolygon;
@@ -20,7 +24,11 @@ export interface VersionCreateEntry {
 export class SitePolygonVersioningService {
   private readonly logger = new Logger(SitePolygonVersioningService.name);
 
-  constructor(private readonly eventService: EventService) {}
+  constructor(
+    private readonly eventService: EventService,
+    private readonly boundingBoxService: BoundingBoxService,
+    private readonly gwcTileInvalidationService: GwcTileInvalidationService
+  ) {}
 
   buildVersionData(
     basePolygon: SitePolygon,
@@ -125,8 +133,45 @@ export class SitePolygonVersioningService {
     }
 
     this.queuePolygonVersionChangedAnalytics(entries, newVersions, transaction);
+    this.queueGwcInvalidation(entries, newVersions, transaction);
 
     return newVersions;
+  }
+
+  /**
+   * Truncates GWC's active-layer cache for the union of each entry's old (leaving-active) and
+   * new (becoming-active) polygon envelope. Only the currently-active <-> newly-active geometry
+   * matters here: both polygon_geometry_active and polygon_geometry_deleted are scoped to
+   * is_active=1, so a version that was never active never contributed to either layer's cache.
+   *
+   * Registered via transaction.afterCommit() rather than called directly, because createVersions()
+   * doesn't own the transaction it's given - Sequelize awaits async afterCommit hooks before the
+   * caller's `sequelize.transaction(...)` resolves, so callers still get truncate-before-success.
+   */
+  private queueGwcInvalidation(
+    entries: VersionCreateEntry[],
+    newVersions: SitePolygon[],
+    transaction: Transaction
+  ): void {
+    const polygonUuids = entries.flatMap((entry, index) => [
+      entry.basePolygon.polygonUuid,
+      newVersions[index]?.polygonUuid
+    ]);
+    this.queueGwcInvalidationForUuids(polygonUuids, transaction);
+  }
+
+  private queueGwcInvalidationForUuids(polygonUuids: Array<string | null | undefined>, transaction: Transaction): void {
+    const uniquePolygonUuids = [...new Set(polygonUuids.filter(isNotNull))];
+    if (uniquePolygonUuids.length === 0) return;
+
+    transaction.afterCommit(async () => {
+      try {
+        const { bbox } = await this.boundingBoxService.getPolygonsBoundingBox(uniquePolygonUuids);
+        await this.gwcTileInvalidationService.truncate(bbox as LngLatEnvelope, ["active"]);
+      } catch (error) {
+        this.logger.error("Failed to invalidate GWC cache after a polygon version change", error);
+      }
+    });
   }
 
   private queuePolygonVersionChangedAnalytics(
@@ -258,10 +303,19 @@ export class SitePolygonVersioningService {
       throw new NotFoundException(`Site polygon version not found: ${targetUuid}`);
     }
 
+    // Captured before the flip so we can invalidate the envelope it's leaving, not just the one
+    // it's entering.
+    const previouslyActiveVersion = await SitePolygon.findOne({
+      where: { primaryUuid: targetVersion.primaryUuid, isActive: true },
+      transaction
+    });
+
     await this.deactivateOtherVersions(targetVersion.primaryUuid, targetUuid, transaction);
 
     targetVersion.isActive = true;
     await targetVersion.save({ transaction });
+
+    this.queueGwcInvalidationForUuids([previouslyActiveVersion?.polygonUuid, targetVersion.polygonUuid], transaction);
 
     await this.trackChange(
       targetVersion.primaryUuid,

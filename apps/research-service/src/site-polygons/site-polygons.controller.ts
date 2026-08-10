@@ -62,6 +62,8 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { SiteIndicatorRollupDto } from "./dto/site-indicator-rollup.dto";
+import { SiteIndicatorRollupQueryDto } from "./dto/site-indicator-rollup-query.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
@@ -81,6 +83,7 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorMsuCarbonDto,
   ValidationDto,
   GeoJsonExportDto,
+  SiteIndicatorRollupDto,
   GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {
@@ -205,6 +208,34 @@ export class SitePolygonsController {
         });
         document.addData(validation.id, validationDto);
       }
+    }
+
+    return document;
+  }
+
+  @Get("indicatorRollup")
+  @ApiOperation({
+    operationId: "getSiteIndicatorRollup",
+    summary: "Per-site indicator rollup for a project",
+    description: `Returns one row per active, approved site in the project, aggregated in a single
+    GROUP BY query: O(sites), not O(polygons). Intended to replace client-side aggregation over
+    every polygon for large projects.
+
+    Only active, APPROVED polygons are counted. Client-side aggregation includes active polygons
+    in every status, so the two paths will not agree; whichever basis is used must be stated in
+    the UI. treeCoverCoverage reports what fraction of each site's polygons actually contributed
+    to treeCoverWeightedMeanPct. treeCoverLossTotal is not yet implemented and is always null.`
+  })
+  @JsonApiResponse([{ data: SiteIndicatorRollupDto }])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  async getIndicatorRollup(@Query() query: SiteIndicatorRollupQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const rows = await this.sitePolygonService.getIndicatorRollup(query.projectId);
+
+    const document = buildJsonApi(SiteIndicatorRollupDto);
+    for (const row of rows) {
+      document.addData(row.siteUuid, new SiteIndicatorRollupDto(row));
     }
 
     return document;

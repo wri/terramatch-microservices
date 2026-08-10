@@ -30,7 +30,8 @@ import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { Attributes, Op, Transaction } from "sequelize";
+import { Attributes, Op, QueryTypes, Transaction } from "sequelize";
+import { SiteIndicatorRollupRow } from "./dto/site-indicator-rollup.dto";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   INDICATOR_SLUGS,
@@ -751,5 +752,65 @@ export class SitePolygonsService {
         isActive: null
       }));
     });
+  }
+
+  /**
+   * Per-site indicator rollup for a project, in a single GROUP BY: O(sites), not O(polygons).
+   * The client-side path pages every polygon in the project, which is untenable for large
+   * projects (one site in project 448 holds 7,293 polygons).
+   *
+   * Two deliberate choices, both of which make this disagree with the client-side aggregate:
+   *
+   *  - Only active, APPROVED polygons are counted. The client-side path aggregates active
+   *    polygons in every status (draft, pending-approval, information-required included), so
+   *    its hectares run higher. Whichever basis is chosen has to be stated in the UI.
+   *  - deleted_at is not filtered in the latest-year CTE, matching the validated spike. Adding
+   *    the filter changes which row ranks as latest and lowers coverage.
+   */
+  async getIndicatorRollup(projectUuid: string) {
+    const query = `
+      WITH tc AS (
+        SELECT
+          site_polygon_id,
+          percent_cover,
+          ROW_NUMBER() OVER (
+            PARTITION BY site_polygon_id
+            ORDER BY year_of_analysis DESC, id DESC
+          ) AS rn
+        FROM indicator_output_tree_cover
+      )
+      SELECT
+        s.uuid AS siteUuid,
+        s.name AS siteName,
+        COUNT(sp.id) AS polygons,
+        SUM(sp.calc_area) AS hectares,
+        SUM(tc.percent_cover * NULLIF(sp.calc_area, 0))
+          / NULLIF(SUM(CASE WHEN tc.percent_cover IS NOT NULL THEN NULLIF(sp.calc_area, 0) END), 0)
+          AS treeCoverWeightedMeanPct,
+        COUNT(tc.site_polygon_id) AS treeCoverPolygonCount,
+        NULL AS treeCoverLossTotal
+      FROM v2_projects p
+      JOIN v2_sites s
+        ON s.project_id = p.id
+       AND s.deleted_at IS NULL
+       AND s.status = 'approved'
+      JOIN site_polygon sp
+        ON sp.site_id = s.uuid
+       AND sp.is_active = 1
+       AND sp.status = 'approved'
+      LEFT JOIN tc
+        ON tc.site_polygon_id = sp.id
+       AND tc.rn = 1
+      WHERE p.uuid = :projectUuid
+        AND p.deleted_at IS NULL
+      GROUP BY s.uuid, s.name
+      ORDER BY s.name
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return (await SitePolygon.sequelize!.query(query, {
+      replacements: { projectUuid },
+      type: QueryTypes.SELECT
+    })) as SiteIndicatorRollupRow[];
   }
 }

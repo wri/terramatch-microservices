@@ -763,20 +763,14 @@ export class SitePolygonsService {
    * The client-side path pages every polygon in the project, which is untenable for large
    * projects (one site in project 448 holds 7,293 polygons).
    *
-   * Returns TWO bases per site, from one pass:
+   * Measurements cover active, APPROVED polygons only — the basis the rest of TerraMatch reports
+   * on. dashboard-projects.service.ts computes totalHectaresRestoredSum as .active().approved(),
+   * and the two agree to the last decimal. Non-approved active polygons are counted separately
+   * as inReviewCount so their exclusion is visible rather than silent.
    *
-   *  - approved: active, APPROVED polygons. This is what the rest of TerraMatch reports —
-   *    dashboard-projects.service.ts computes totalHectaresRestoredSum the same way, and the
-   *    two agree to the last decimal. This is the destination basis.
-   *  - clientParity: reproduces the existing client-side aggregate exactly, so the frontend can
-   *    move onto this endpoint without any displayed number changing. It includes active
-   *    polygons in every status AND mirrors two client quirks deliberately: the latest tree
-   *    cover year is picked after discarding null percent_cover, and zero/null calc_area is
-   *    weighted 1 instead of excluded. Delete this basis once the UI moves to approved.
-   *
-   * Splitting the bases is what lets the performance fix (paging every polygon -> one query)
-   * ship separately from the semantics change (all-active -> approved-only). Entangled, a moved
-   * number is unattributable to either.
+   * The status predicate lives in the aggregates, not the JOIN, so that a site whose polygons are
+   * all unapproved still returns a row with null measurements. Dropping the row would assert the
+   * site does not exist, which is a stronger and falser claim than "not measured yet".
    *
    * deleted_at is not filtered in the latest-year CTEs, matching the validated spike. Adding the
    * filter changes which row ranks as latest and lowers coverage.
@@ -803,18 +797,6 @@ export class SitePolygonsService {
           ) AS rn
         FROM indicator_output_tree_cover
       ),
-      tc_cp AS (
-        -- Client parity: nulls are discarded BEFORE ranking, so an older non-null year can win.
-        SELECT
-          site_polygon_id,
-          percent_cover,
-          ROW_NUMBER() OVER (
-            PARTITION BY site_polygon_id
-            ORDER BY year_of_analysis DESC, id DESC
-          ) AS rn
-        FROM indicator_output_tree_cover
-        WHERE percent_cover IS NOT NULL
-      ),
       tcl_latest AS (
         SELECT
           site_polygon_id,
@@ -840,31 +822,17 @@ export class SitePolygonsService {
         s.uuid AS siteUuid,
         s.name AS siteName,
         SUM(CASE WHEN sp.status <> 'approved' THEN 1 ELSE 0 END) AS inReviewCount,
-
-        -- approved basis: the product basis, matching dashboard totalHectaresRestoredSum
-        SUM(CASE WHEN sp.status = 'approved' THEN 1 ELSE 0 END) AS approvedPolygons,
-        SUM(CASE WHEN sp.status = 'approved' THEN sp.calc_area END) AS approvedHectares,
+        SUM(CASE WHEN sp.status = 'approved' THEN 1 ELSE 0 END) AS polygons,
+        SUM(CASE WHEN sp.status = 'approved' THEN sp.calc_area END) AS hectares,
         SUM(CASE WHEN sp.status = 'approved' THEN tc.percent_cover * NULLIF(sp.calc_area, 0) END)
           / NULLIF(SUM(CASE WHEN sp.status = 'approved' AND tc.percent_cover IS NOT NULL
                             THEN NULLIF(sp.calc_area, 0) END), 0)
-          AS approvedTreeCoverWeightedMeanPct,
+          AS treeCoverWeightedMeanPct,
         SUM(CASE WHEN sp.status = 'approved' AND tc.site_polygon_id IS NOT NULL THEN 1 ELSE 0 END)
-          AS approvedTreeCoverPolygonCount,
-        SUM(CASE WHEN sp.status = 'approved' THEN tcl.lossTotal END) AS approvedTreeCoverLossTotal,
+          AS treeCoverPolygonCount,
+        SUM(CASE WHEN sp.status = 'approved' THEN tcl.lossTotal END) AS treeCoverLossTotal,
         SUM(CASE WHEN sp.status = 'approved' AND tcl.site_polygon_id IS NOT NULL THEN 1 ELSE 0 END)
-          AS approvedTreeCoverLossPolygonCount,
-
-        -- clientParity basis: every active status, plus the two client quirks (null-skipping
-        -- latest year via tc_cp, and weight 1 for zero/null calc_area instead of exclusion)
-        COUNT(sp.id) AS clientParityPolygons,
-        SUM(sp.calc_area) AS clientParityHectares,
-        SUM(tc_cp.percent_cover * (CASE WHEN COALESCE(sp.calc_area, 0) = 0 THEN 1 ELSE sp.calc_area END))
-          / NULLIF(SUM(CASE WHEN tc_cp.percent_cover IS NOT NULL
-                            THEN (CASE WHEN COALESCE(sp.calc_area, 0) = 0 THEN 1 ELSE sp.calc_area END) END), 0)
-          AS clientParityTreeCoverWeightedMeanPct,
-        COUNT(tc_cp.percent_cover) AS clientParityTreeCoverPolygonCount,
-        SUM(tcl.lossTotal) AS clientParityTreeCoverLossTotal,
-        COUNT(tcl.site_polygon_id) AS clientParityTreeCoverLossPolygonCount
+          AS treeCoverLossPolygonCount
       FROM v2_projects p
       JOIN v2_sites s
         ON s.project_id = p.id
@@ -876,9 +844,6 @@ export class SitePolygonsService {
       LEFT JOIN tc
         ON tc.site_polygon_id = sp.id
        AND tc.rn = 1
-      LEFT JOIN tc_cp
-        ON tc_cp.site_polygon_id = sp.id
-       AND tc_cp.rn = 1
       LEFT JOIN tcl
         ON tcl.site_polygon_id = sp.id
       WHERE p.uuid = :projectUuid

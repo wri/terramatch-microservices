@@ -62,7 +62,7 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
-import { SiteIndicatorBasisDto, SiteIndicatorRollupDto } from "./dto/site-indicator-rollup.dto";
+import { SiteIndicatorRollupDto } from "./dto/site-indicator-rollup.dto";
 import { SiteIndicatorRollupQueryDto } from "./dto/site-indicator-rollup-query.dto";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
@@ -84,7 +84,6 @@ const MAX_PAGE_SIZE = 100 as const;
   ValidationDto,
   GeoJsonExportDto,
   SiteIndicatorRollupDto,
-  SiteIndicatorBasisDto,
   GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {

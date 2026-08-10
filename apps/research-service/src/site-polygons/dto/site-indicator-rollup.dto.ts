@@ -9,29 +9,6 @@ export type SiteIndicatorRollupRow = {
   siteUuid: string;
   siteName: string | null;
   inReviewCount: number | string;
-
-  approvedPolygons: number | string;
-  approvedHectares: number | string | null;
-  approvedTreeCoverWeightedMeanPct: number | string | null;
-  approvedTreeCoverPolygonCount: number | string;
-  approvedTreeCoverLossTotal: number | string | null;
-  approvedTreeCoverLossPolygonCount: number | string;
-
-  clientParityPolygons: number | string;
-  clientParityHectares: number | string | null;
-  clientParityTreeCoverWeightedMeanPct: number | string | null;
-  clientParityTreeCoverPolygonCount: number | string;
-  clientParityTreeCoverLossTotal: number | string | null;
-  clientParityTreeCoverLossPolygonCount: number | string;
-};
-
-const toNumber = (value: number | string | null | undefined) => {
-  if (value == null) return null;
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-type BasisInput = {
   polygons: number | string;
   hectares: number | string | null;
   treeCoverWeightedMeanPct: number | string | null;
@@ -40,87 +17,37 @@ type BasisInput = {
   treeCoverLossPolygonCount: number | string;
 };
 
+const toNumber = (value: number | string | null | undefined) => {
+  if (value == null) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 /**
- * One aggregation basis. Both bases carry the same fields so the frontend can switch between them
- * by key rather than by branching on field names.
+ * Per-site indicator aggregates over active, APPROVED polygons — the basis the rest of TerraMatch
+ * reports on (dashboard-projects.service.ts computes totalHectaresRestoredSum the same way).
+ *
+ * Sites whose polygons are all unapproved still appear, with null measurements and a populated
+ * inReviewCount. Omitting the row would assert the site does not exist, which is a stronger and
+ * falser claim than "not measured yet".
  */
-export class SiteIndicatorBasisDto {
-  constructor(input: BasisInput) {
-    this.polygons = toNumber(input.polygons) ?? 0;
-    this.hectares = toNumber(input.hectares);
-    this.treeCoverWeightedMeanPct = toNumber(input.treeCoverWeightedMeanPct);
-    this.treeCoverPolygonCount = toNumber(input.treeCoverPolygonCount) ?? 0;
-    this.treeCoverLossTotal = toNumber(input.treeCoverLossTotal);
-    this.treeCoverLossPolygonCount = toNumber(input.treeCoverLossPolygonCount) ?? 0;
-
-    // The honesty fractions: what proportion of the polygons in this basis actually contributed to
-    // each aggregate. A summed or averaged measurement without this is not reportable.
-    this.treeCoverCoverage = this.polygons > 0 ? this.treeCoverPolygonCount / this.polygons : null;
-    this.treeCoverLossCoverage = this.polygons > 0 ? this.treeCoverLossPolygonCount / this.polygons : null;
-  }
-
-  @ApiProperty({ description: "Count of polygons included in this basis." })
-  polygons: number;
-
-  @ApiProperty({ nullable: true, type: Number, description: "Sum of calc_area over this basis." })
-  hectares: number | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: Number,
-    description: "Area-weighted mean percent tree cover. Null when no polygon carries a value."
-  })
-  treeCoverWeightedMeanPct: number | null;
-
-  @ApiProperty({ description: "Polygons that contributed to treeCoverWeightedMeanPct." })
-  treeCoverPolygonCount: number;
-
-  @ApiProperty({
-    nullable: true,
-    type: Number,
-    description: "treeCoverPolygonCount / polygons. Render alongside the mean."
-  })
-  treeCoverCoverage: number | null;
-
-  @ApiProperty({
-    nullable: true,
-    type: Number,
-    description:
-      "Per-year tree cover loss summed across years and polygons ('treeCoverLoss' slug only). Null means not measured, not zero."
-  })
-  treeCoverLossTotal: number | null;
-
-  @ApiProperty({ description: "Polygons that contributed a tree cover loss value." })
-  treeCoverLossPolygonCount: number;
-
-  @ApiProperty({ nullable: true, type: Number, description: "treeCoverLossPolygonCount / polygons." })
-  treeCoverLossCoverage: number | null;
-}
-
 @JsonApiDto({ type: "siteIndicatorRollups" })
 export class SiteIndicatorRollupDto {
   constructor(row: SiteIndicatorRollupRow) {
     this.siteUuid = row.siteUuid;
     this.siteName = row.siteName;
     this.inReviewCount = toNumber(row.inReviewCount) ?? 0;
+    this.polygons = toNumber(row.polygons) ?? 0;
+    this.hectares = toNumber(row.hectares);
+    this.treeCoverWeightedMeanPct = toNumber(row.treeCoverWeightedMeanPct);
+    this.treeCoverPolygonCount = toNumber(row.treeCoverPolygonCount) ?? 0;
+    this.treeCoverLossTotal = toNumber(row.treeCoverLossTotal);
+    this.treeCoverLossPolygonCount = toNumber(row.treeCoverLossPolygonCount) ?? 0;
 
-    this.approved = new SiteIndicatorBasisDto({
-      polygons: row.approvedPolygons,
-      hectares: row.approvedHectares,
-      treeCoverWeightedMeanPct: row.approvedTreeCoverWeightedMeanPct,
-      treeCoverPolygonCount: row.approvedTreeCoverPolygonCount,
-      treeCoverLossTotal: row.approvedTreeCoverLossTotal,
-      treeCoverLossPolygonCount: row.approvedTreeCoverLossPolygonCount
-    });
-
-    this.clientParity = new SiteIndicatorBasisDto({
-      polygons: row.clientParityPolygons,
-      hectares: row.clientParityHectares,
-      treeCoverWeightedMeanPct: row.clientParityTreeCoverWeightedMeanPct,
-      treeCoverPolygonCount: row.clientParityTreeCoverPolygonCount,
-      treeCoverLossTotal: row.clientParityTreeCoverLossTotal,
-      treeCoverLossPolygonCount: row.clientParityTreeCoverLossPolygonCount
-    });
+    // The honesty fractions: what proportion of this site's approved polygons actually contributed
+    // to each aggregate. A summed or averaged measurement without this is not reportable.
+    this.treeCoverCoverage = this.polygons > 0 ? this.treeCoverPolygonCount / this.polygons : null;
+    this.treeCoverLossCoverage = this.polygons > 0 ? this.treeCoverLossPolygonCount / this.polygons : null;
   }
 
   @ApiProperty({ description: "UUID of the site this row rolls up." })
@@ -131,25 +58,50 @@ export class SiteIndicatorRollupDto {
 
   @ApiProperty({
     description:
-      "Active polygons on this site that are not approved (draft, pending-approval, information-required). The gap between the two bases."
+      "Active polygons on this site that are not approved (draft, pending-approval, information-required). These are excluded from every measurement below; surface the count so the omission is visible."
   })
   inReviewCount: number;
 
+  @ApiProperty({ description: "Count of active, approved polygons on this site." })
+  polygons: number;
+
   @ApiProperty({
-    type: SiteIndicatorBasisDto,
+    nullable: true,
+    type: Number,
+    description: "Sum of calc_area over this site's active, approved polygons. Null when there are none."
+  })
+  hectares: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
     description:
-      "Active, APPROVED polygons only. This is the basis the rest of TerraMatch reports on — it matches the dashboard's totalHectaresRestoredSum. This is the destination basis."
+      "Area-weighted mean of the latest-year percent_cover across this site's approved polygons. Null when no polygon carries a value."
   })
-  approved: SiteIndicatorBasisDto;
+  treeCoverWeightedMeanPct: number | null;
+
+  @ApiProperty({ description: "Polygons that contributed to treeCoverWeightedMeanPct." })
+  treeCoverPolygonCount: number;
 
   @ApiProperty({
-    type: SiteIndicatorBasisDto,
-    description: `Reproduces the existing client-side aggregate exactly, so the frontend can move onto this
-endpoint without any number changing. Active polygons in EVERY status, and it deliberately mirrors two
-client quirks: the latest tree cover year is chosen after discarding null percent_cover (so an older
-non-null year can win), and polygons with zero or null calc_area are weighted 1 rather than excluded.
-
-This basis exists only to make the data-source swap verifiable. Delete it once the UI moves to 'approved'.`
+    nullable: true,
+    type: Number,
+    description:
+      "treeCoverPolygonCount / polygons. Render alongside the mean; a partial aggregate shown as complete is worse than no number."
   })
-  clientParity: SiteIndicatorBasisDto;
+  treeCoverCoverage: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description:
+      "Per-year tree cover loss summed across years and polygons ('treeCoverLoss' slug only; 'treeCoverLossFires' is a separate indicator). Null means not measured, not zero."
+  })
+  treeCoverLossTotal: number | null;
+
+  @ApiProperty({ description: "Polygons that contributed a tree cover loss value." })
+  treeCoverLossPolygonCount: number;
+
+  @ApiProperty({ nullable: true, type: Number, description: "treeCoverLossPolygonCount / polygons." })
+  treeCoverLossCoverage: number | null;
 }

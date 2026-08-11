@@ -92,7 +92,8 @@ const IS_REPL = process.env["REPL"] === "true";
     AnalyticsEventService,
     EventService,
     CsvExportService,
-    GreenhouseNotificationService
+    GreenhouseNotificationService,
+    TransifexApiModule
   ]
 })
 export class CommonModule implements NestModule {

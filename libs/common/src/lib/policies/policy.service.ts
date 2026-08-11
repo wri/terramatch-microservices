@@ -15,6 +15,7 @@ import {
   Framework,
   FundingProgramme,
   ImpactStory,
+  LocalizationKey,
   Media,
   Nursery,
   NurseryReport,
@@ -65,6 +66,7 @@ import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
 import { UserContext } from "../contexts/user.context";
 import { AboutSectionPolicy } from "./about-section.policy";
+import { LocalizationKeyPolicy } from "./localization-key.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,6 +94,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [FormQuestionOption, FormQuestionOptionPolicy],
   [Framework, FrameworkPolicy],
   [FundingProgramme, FundingProgrammePolicy],
+  [LocalizationKey, LocalizationKeyPolicy],
   [Media, MediaPolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],

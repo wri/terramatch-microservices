@@ -61,6 +61,10 @@ import {
   Site,
   SiteReport
 } from "@terramatch-microservices/database/entities";
+import { EntityTranslationsService } from "./entity-translations.service";
+import { TranslatableEntityParamsDto } from "./dto/translatable-entity-params.dto";
+import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -83,6 +87,8 @@ export class EntitiesController {
     private readonly policyService: PolicyService,
     private readonly entitiesService: EntitiesService,
     private readonly csvExportService: CsvExportService,
+    private readonly entityTranslationsService: EntityTranslationsService,
+    private readonly localizationService: LocalizationService,
     @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
 
@@ -147,6 +153,80 @@ export class EntitiesController {
     // the processor.
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     await processor.exportAll({ target: response, frameworkKey, projectUuid });
+  }
+
+  @Post(":entity/translations")
+  @ApiOperation({
+    operationId: "entityPushTranslations",
+    summary: "Push translations to Transifex for a translatable entity (no UUID, e.g. localizationKeys)"
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Entity translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Entity type is not translatable." })
+  @ExceptionResponse(NotFoundException, { description: "Entity not found." })
+  async entityPushTranslations(@Param() { entity }: TranslatableEntityParamsDto) {
+    return await this.queueEntityPushTranslations(entity);
+  }
+
+  @Post(":entity/:uuid/translations")
+  @ApiOperation({
+    operationId: "entityPushTranslationsByUuid",
+    summary: "Push translations to Transifex for a translatable entity by UUID"
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Entity translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Entity type is not translatable." })
+  @ExceptionResponse(NotFoundException, { description: "Entity not found." })
+  async entityPushTranslationsByUuid(@Param() { entity, uuid }: TranslatableEntityParamsDto) {
+    return await this.queueEntityPushTranslations(entity, uuid);
+  }
+
+  @Get(":entity/translations")
+  @ApiOperation({
+    operationId: "entityPullTranslations",
+    summary: "Pull translations from Transifex for a translatable entity (no UUID, e.g. localizationKeys)"
+  })
+  @JsonApiResponse(FormTranslationDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Entity translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Entity type is not translatable." })
+  @ExceptionResponse(NotFoundException, { description: "Entity not found." })
+  async entityPullTranslations(@Param() { entity }: TranslatableEntityParamsDto) {
+    return await this.pullEntityTranslations(entity, undefined);
+  }
+
+  @Get(":entity/:uuid/translations")
+  @ApiOperation({
+    operationId: "entityPullTranslationsByUuid",
+    summary: "Pull translations from Transifex for a translatable entity by UUID"
+  })
+  @JsonApiResponse(FormTranslationDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Entity translation not allowed." })
+  @ExceptionResponse(BadRequestException, { description: "Entity type is not translatable." })
+  @ExceptionResponse(NotFoundException, { description: "Entity not found." })
+  async entityPullTranslationsByUuid(@Param() { entity, uuid }: TranslatableEntityParamsDto) {
+    return await this.pullEntityTranslations(entity, uuid);
+  }
+
+  private async queueEntityPushTranslations(entity: TranslatableEntityParamsDto["entity"], uuid?: string | null) {
+    const {
+      uuid: entityUuid,
+      i18nLabels,
+      entityType,
+      entityName
+    } = await this.entityTranslationsService.authorizeAndGetPushContext(entity, uuid);
+    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, entityUuid, i18nLabels, {
+      entity_type: entityType,
+      entity_name: entityName
+    });
+  }
+
+  private async pullEntityTranslations(entity: TranslatableEntityParamsDto["entity"], uuid: string | null | undefined) {
+    const i18nItemIds = await this.entityTranslationsService.pullTranslations(entity, uuid);
+    return this.localizationService.addTranslationDto(
+      buildJsonApi<FormTranslationDto>(FormTranslationDto),
+      uuid ?? entity,
+      i18nItemIds
+    );
   }
 
   @Get(":entity/:uuid")

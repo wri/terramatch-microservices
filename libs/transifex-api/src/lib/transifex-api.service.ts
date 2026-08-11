@@ -22,6 +22,10 @@ export class TransifexApiService {
       method: "GET"
     });
 
+    if (response.status === 404) {
+      return null;
+    }
+
     return await this.parseResponse(response, "getTranslation");
   }
 

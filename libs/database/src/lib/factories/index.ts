@@ -32,6 +32,7 @@ export * from "./invasive.factory";
 export * from "./landscape-geometry.factory";
 export * from "./leadership.factory";
 export * from "./link.factory";
+export * from "./localization-key.factory";
 export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";

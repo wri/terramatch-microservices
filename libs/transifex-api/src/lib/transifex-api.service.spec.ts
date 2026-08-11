@@ -187,12 +187,23 @@ describe("TransifexApiService", () => {
     );
   });
 
-  it("should throw when the Transifex API returns an error", async () => {
+  it("should return null when a translation is not found", async () => {
     fetchMock.mockResolvedValue({
       status: 404,
       ok: false,
       statusText: "Not Found",
       text: () => Promise.resolve("missing")
+    } as Response);
+
+    await expect(service.getTranslation("missing", "es_MX")).resolves.toBeNull();
+  });
+
+  it("should throw when the Transifex API returns a non-404 error", async () => {
+    fetchMock.mockResolvedValue({
+      status: 500,
+      ok: false,
+      statusText: "Internal Server Error",
+      text: () => Promise.resolve("error")
     } as Response);
 
     await expect(service.getTranslation("missing", "es_MX")).rejects.toThrow(InternalServerErrorException);

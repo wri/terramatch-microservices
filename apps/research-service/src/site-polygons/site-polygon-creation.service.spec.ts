@@ -458,13 +458,14 @@ describe("SitePolygonCreationService", () => {
           duplicates: [{ index: 0, existing_uuid: "existing-polygon-uuid" }]
         });
 
-        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1", name: "Site Name" } as Site]);
 
         jest.spyOn(SitePolygon, "findAll").mockResolvedValue([
           {
             uuid: "existing-site-polygon-uuid",
             polygonUuid: "existing-polygon-uuid",
-            polyName: "Existing Polygon"
+            polyName: "Existing Polygon",
+            siteUuid: "site-uuid-1"
           } as SitePolygon
         ]);
 
@@ -482,7 +483,9 @@ describe("SitePolygonCreationService", () => {
           polygonUuid: "existing-polygon-uuid",
           message: "This geometry already exists in the project",
           sitePolygonUuid: "existing-site-polygon-uuid",
-          sitePolygonName: "Existing Polygon"
+          sitePolygonName: "Existing Polygon",
+          siteUuid: "site-uuid-1",
+          siteName: "Site Name"
         });
       });
 
@@ -501,7 +504,7 @@ describe("SitePolygonCreationService", () => {
 
         const request = createMockRequest([pointFeature]);
 
-        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+        jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1", name: "Site Name" } as Site]);
 
         // Mock duplicate point detection
         jest.spyOn(duplicateGeometryValidator, "checkNewPointsDuplicates").mockResolvedValue({
@@ -541,7 +544,9 @@ describe("SitePolygonCreationService", () => {
           polygonUuid: "existing-polygon-uuid",
           message: "This geometry already exists in the project",
           sitePolygonUuid: "existing-site-polygon-uuid",
-          sitePolygonName: "Existing Point Polygon"
+          sitePolygonName: "Existing Point Polygon",
+          siteUuid: "site-uuid-1",
+          siteName: "Site Name"
         });
       });
     });

@@ -122,6 +122,8 @@ interface ValidationIncludedData {
         message: string;
         sitePolygonUuid?: string;
         sitePolygonName?: string;
+        siteUuid?: string;
+        siteName?: string;
       };
     }>;
   };
@@ -220,6 +222,10 @@ export class SitePolygonCreationService {
               allPolygonInputIndices.set(sp.uuid, inputIndex);
             }
 
+            const siteNamesByUuid = await this.getSiteNamesByUuid(
+              existingPointSitePolygons.map(sp => sp.siteUuid),
+              transaction
+            );
             const duplicatePointValidationMap = new Map<string, ValidationIncludedData>();
 
             for (const duplicateSitePolygon of existingPointSitePolygons) {
@@ -242,7 +248,8 @@ export class SitePolygonCreationService {
                             polygonUuid: existingUuid,
                             message: "This geometry already exists in the project",
                             sitePolygonUuid: duplicateSitePolygon.uuid,
-                            sitePolygonName: duplicateSitePolygon.polyName ?? undefined
+                            sitePolygonName: duplicateSitePolygon.polyName ?? undefined,
+                            ...this.getDuplicateSiteExtraFields(duplicateSitePolygon, siteNamesByUuid)
                           }
                         }
                       ]
@@ -322,6 +329,11 @@ export class SitePolygonCreationService {
             });
             allDuplicatePolygons.push(...existingDuplicatePolygons);
 
+            const siteNamesByUuid = await this.getSiteNamesByUuid(
+              existingDuplicatePolygons.map(sp => sp.siteUuid),
+              transaction
+            );
+
             for (const duplicatePolygon of existingDuplicatePolygons) {
               const inputIndex =
                 geomUuidToInputIndex.get(duplicatePolygon.polygonUuid ?? "") ?? Number.MAX_SAFE_INTEGER;
@@ -334,7 +346,8 @@ export class SitePolygonCreationService {
                   duplicateCriteria.extraInfo = {
                     ...duplicateCriteria.extraInfo,
                     sitePolygonUuid: duplicatePolygon.uuid,
-                    sitePolygonName: duplicatePolygon.polyName ?? undefined
+                    sitePolygonName: duplicatePolygon.polyName ?? undefined,
+                    ...this.getDuplicateSiteExtraFields(duplicatePolygon, siteNamesByUuid)
                   };
                 }
               }
@@ -577,6 +590,39 @@ export class SitePolygonCreationService {
     } catch {
       return { duplicateIndexToUuid: new Map() };
     }
+  }
+
+  private async getSiteNamesByUuid(
+    siteUuids: Array<string | null | undefined>,
+    transaction: Transaction
+  ): Promise<Map<string, string>> {
+    const uniqueSiteUuids = [...new Set(siteUuids.filter((uuid): uuid is string => uuid != null && uuid !== ""))];
+    if (uniqueSiteUuids.length === 0) {
+      return new Map();
+    }
+
+    const sites = await Site.findAll({
+      where: { uuid: { [Op.in]: uniqueSiteUuids } },
+      attributes: ["uuid", "name"],
+      transaction
+    });
+
+    return new Map(sites.map(site => [site.uuid, site.name ?? ""]));
+  }
+
+  private getDuplicateSiteExtraFields(
+    sitePolygon: SitePolygon,
+    siteNamesByUuid: Map<string, string>
+  ): { siteUuid?: string; siteName?: string } {
+    const siteUuid = sitePolygon.siteUuid;
+    if (siteUuid == null || siteUuid === "") {
+      return {};
+    }
+
+    return {
+      siteUuid,
+      siteName: siteNamesByUuid.get(siteUuid) ?? ""
+    };
   }
 
   private filterDuplicates(

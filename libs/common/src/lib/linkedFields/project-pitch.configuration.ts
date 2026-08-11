@@ -702,6 +702,20 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       inputType: "jobs",
       collection: "part-time"
     },
+    "pro-pit-clt-jobs": {
+      label: "CLT Jobs",
+      exportHeading: "jobsClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "clt"
+    },
+    "pro-pit-non-clt-jobs": {
+      label: "Non-CLT Jobs",
+      exportHeading: "jobsNonClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "non-clt"
+    },
     "pro-pit-volunteers": {
       label: "Volunteers",
       exportHeading: "volunteers",

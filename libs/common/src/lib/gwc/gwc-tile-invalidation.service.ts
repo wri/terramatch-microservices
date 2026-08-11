@@ -18,7 +18,7 @@ const LAYER_NAMES: Record<GwcLayer, string> = {
 
 const GRID_SET_ID = "EPSG:900913";
 const MVT_FORMAT = "application/vnd.mapbox-vector-tile";
-const PAD_TILE_WIDTHS = 2;
+const PAD_TILE_WIDTHS = 4;
 const REQUEST_TIMEOUT_MS = 5_000;
 
 type ZoomBand = { zoomStart: number; zoomStop: number; padZoom: number };

@@ -18,11 +18,15 @@ const LAYER_NAMES: Record<GwcLayer, string> = {
 
 const GRID_SET_ID = "EPSG:900913";
 const MVT_FORMAT = "application/vnd.mapbox-vector-tile";
-const ZOOM_MIN = 0;
-const ZOOM_MAX = 22;
-const PAD_ZOOM = 12;
 const PAD_TILE_WIDTHS = 2;
 const REQUEST_TIMEOUT_MS = 5_000;
+
+type ZoomBand = { zoomStart: number; zoomStop: number; padZoom: number };
+
+const ZOOM_BANDS: ZoomBand[] = [
+  { zoomStart: 4, zoomStop: 11, padZoom: 4 },
+  { zoomStart: 12, zoomStop: 22, padZoom: 12 }
+];
 
 @Injectable()
 export class GwcTileInvalidationService {
@@ -60,18 +64,24 @@ export class GwcTileInvalidationService {
       return;
     }
 
-    const envelope = padEnvelopeForMetatiles(toWebMercator(bbox), {
-      padZoom: PAD_ZOOM,
-      padTileWidths: PAD_TILE_WIDTHS
+    const merc = toWebMercator(bbox);
+    const requests = ZOOM_BANDS.flatMap(band => {
+      const envelope = padEnvelopeForMetatiles(merc, { padZoom: band.padZoom, padTileWidths: PAD_TILE_WIDTHS });
+      return layers.map(layer => this.truncateLayer(layer, envelope, band.zoomStart, band.zoomStop));
     });
 
-    await Promise.all(layers.map(layer => this.truncateLayer(layer, envelope)));
+    await Promise.all(requests);
   }
 
-  private async truncateLayer(layer: GwcLayer, envelope: MercatorEnvelope): Promise<void> {
+  private async truncateLayer(
+    layer: GwcLayer,
+    envelope: MercatorEnvelope,
+    zoomStart: number,
+    zoomStop: number
+  ): Promise<void> {
     const layerName = `${this.workspace}:${LAYER_NAMES[layer]}`;
     const url = `${this.baseUrl}/gwc/rest/seed/${layerName}.xml`;
-    const body = this.buildSeedRequestXml(layerName, envelope);
+    const body = this.buildSeedRequestXml(layerName, envelope, zoomStart, zoomStop);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -84,17 +94,22 @@ export class GwcTileInvalidationService {
 
       if (!response.ok) {
         this.logger.error(
-          `GWC truncate request failed [layer=${layerName}, status=${response.status}]: ${await response.text()}`
+          `GWC truncate request failed [layer=${layerName}, zoom=${zoomStart}-${zoomStop}, status=${response.status}]: ${await response.text()}`
         );
       }
     } catch (error) {
-      this.logger.error(`Exception truncating GWC layer ${layerName}`, error);
+      this.logger.error(`Exception truncating GWC layer ${layerName} [zoom=${zoomStart}-${zoomStop}]`, error);
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  private buildSeedRequestXml(layerName: string, [minX, minY, maxX, maxY]: MercatorEnvelope): string {
+  private buildSeedRequestXml(
+    layerName: string,
+    [minX, minY, maxX, maxY]: MercatorEnvelope,
+    zoomStart: number,
+    zoomStop: number
+  ): string {
     return [
       "<seedRequest>",
       `<name>${layerName}</name>`,
@@ -102,8 +117,8 @@ export class GwcTileInvalidationService {
       `<double>${minX}</double><double>${minY}</double><double>${maxX}</double><double>${maxY}</double>`,
       "</coords></bounds>",
       `<gridSetId>${GRID_SET_ID}</gridSetId>`,
-      `<zoomStart>${ZOOM_MIN}</zoomStart>`,
-      `<zoomStop>${ZOOM_MAX}</zoomStop>`,
+      `<zoomStart>${zoomStart}</zoomStart>`,
+      `<zoomStop>${zoomStop}</zoomStop>`,
       `<format>${MVT_FORMAT}</format>`,
       "<type>truncate</type>",
       "<threadCount>1</threadCount>",

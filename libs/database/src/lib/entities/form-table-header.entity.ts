@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, SMALLINT, STRING, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, SMALLINT, STRING, UUID, UUIDV4 } from "sequelize";
 import { FormQuestion } from "./form-question.entity";
 import { isEmpty, kebabCase } from "lodash";
 
@@ -61,10 +61,6 @@ export class FormTableHeader extends Model<FormTableHeader> {
   @AllowNull
   @Column(STRING)
   declare label: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare labelId: number | null;
 
   @AllowNull
   @Column(SMALLINT)

@@ -27,6 +27,7 @@ import { addLinkTitleTextField } from "./202607301100-add-link-title-text-field"
 import { addPolygonGeometryActiveDeletedViews } from "./202608051200-add-polygon-geometry-active-deleted-views";
 import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
 import { requireAboutSectionText } from "./202608051658-require-about-section-text";
+import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -55,5 +56,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addLinkTitleTextField,
   addPolygonGeometryActiveDeletedViews,
   addDisturbanceReportFormUuidToFrameworks,
-  requireAboutSectionText
+  requireAboutSectionText,
+  removeI18nFieldIdColumns
 ];

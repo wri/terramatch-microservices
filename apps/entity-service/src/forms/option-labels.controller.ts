@@ -14,7 +14,6 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 export type OptionLabelModel = {
   slug: string;
   label: string | null;
-  labelId: number | null;
   imageUrl: string | null;
   altValue?: string | null;
 };
@@ -36,7 +35,7 @@ export class OptionLabelsController {
 
     const listOptions = (await FormOptionListOption.findAll({
       where: { slug: ids },
-      attributes: ["slug", "label", "labelId", "imageUrl", "altValue"]
+      attributes: ["slug", "label", "imageUrl", "altValue"]
     })) as OptionLabelModel[];
 
     const missingSlugs = filter(ids, slug => !listOptions.some(option => option.slug === slug));
@@ -45,7 +44,7 @@ export class OptionLabelsController {
         ? []
         : ((await FormQuestionOption.findAll({
             where: { slug: missingSlugs },
-            attributes: ["slug", "label", "labelId", "imageUrl"]
+            attributes: ["slug", "label", "imageUrl"]
           })) as OptionLabelModel[]);
 
     if (listOptions.length === 0 && formQuestions.length === 0) {
@@ -76,7 +75,7 @@ export class OptionLabelsController {
       include: [
         {
           association: "listOptions",
-          attributes: ["slug", "label", "labelId", "imageUrl", "altValue"]
+          attributes: ["slug", "label", "imageUrl", "altValue"]
         }
       ]
     });
@@ -93,19 +92,21 @@ export class OptionLabelsController {
   }
 
   private async addOptionListDtos(document: DocumentBuilder, listOptions: OptionLabelModel[], locale: ValidLocale) {
-    const i18nItemIds = filter(listOptions.map(({ labelId }) => labelId)) as number[];
-    const translations = await this.localizationService.translateIds(i18nItemIds, locale);
-    listOptions.forEach(labelModel => {
+    for (const labelModel of listOptions) {
+      const label =
+        labelModel.label == null || labelModel.label === ""
+          ? ""
+          : await this.localizationService.localizeText(labelModel.label, locale);
       document.addData(
         labelModel.slug,
         populateDto<OptionLabelDto>(new OptionLabelDto(), {
           slug: labelModel.slug,
           imageUrl: labelModel.imageUrl,
-          label: translations[labelModel.labelId ?? -1] ?? labelModel.label ?? "",
+          label,
           altValue: labelModel.altValue ?? null
         })
       );
-    });
+    }
 
     return document;
   }

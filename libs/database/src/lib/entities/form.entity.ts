@@ -21,6 +21,7 @@ import { EntityModel } from "../constants/entities";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
 import { SrpReport } from "./srp-report.entity";
+import { DisturbanceReport } from "./disturbance-report.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { FinancialReport } from "./financial-report.entity";
 import { Subquery } from "../util/subquery.builder";
@@ -55,6 +56,8 @@ type FormAttachment = {
       }
     }
     if (entity instanceof SrpReport) return { where: { type: "srp-report" } };
+    // Shared across frameworks (same pattern as SRP); framework_key/model may be unset.
+    if (entity instanceof DisturbanceReport) return { where: { type: "disturbance-report" } };
 
     return { where: { model: laravelType(entity), frameworkKey: entity.frameworkKey } };
   }
@@ -102,6 +105,8 @@ export class Form extends Model<Form> {
       }
     } else if (entity instanceof SrpReport) {
       select.eq("type", "srp-report");
+    } else if (entity instanceof DisturbanceReport) {
+      select.eq("type", "disturbance-report");
     } else {
       if (entity.frameworkKey == null) {
         throw new InternalServerErrorException("Cannot determine form for entity without framework key.");
@@ -206,6 +211,9 @@ export class Form extends Model<Form> {
 
     if (this.type === "srp-report") {
       return { name: "SRP Report", type: "entity" };
+    }
+    if (this.type === "disturbance-report") {
+      return { name: "Disturbance Report", type: "entity" };
     }
     if (this.model != null && this.framework != null) {
       return { name: this.framework.name, type: "framework", adminId: this.frameworkKey };

@@ -6,7 +6,7 @@ import { FormDataController } from "./form-data.controller";
 import { FormDataService } from "./form-data.service";
 import { StubProcessor } from "./entities.controller.spec";
 import { Form, Project } from "@terramatch-microservices/database/entities";
-import { FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import { DisturbanceReportFactory, FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
 import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
@@ -78,6 +78,26 @@ describe("FormDataController", () => {
       expect(service.getDtoForEntity).toHaveBeenCalledWith("projects", project, form);
       expect(authSpy).toHaveBeenCalledWith("read", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
+      expect((result.data as Resource).type).toBe("formData");
+    });
+
+    it("finds the shared disturbance report form by type", async () => {
+      const report = await DisturbanceReportFactory.create();
+      processor.findOne.mockResolvedValue(report as never);
+      const form = await FormFactory.create({
+        type: "disturbance-report",
+        frameworkKey: null,
+        model: null
+      });
+      await form.reload();
+      const dto = new FormDataDto();
+      service.getDtoForEntity.mockResolvedValue(dto);
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
+
+      const result = serialize(await controller.get({ entity: "disturbanceReports", uuid: report.uuid }));
+      expect(service.getDtoForEntity).toHaveBeenCalledWith("disturbanceReports", report, form);
+      expect(authSpy).toHaveBeenCalledWith("read", report);
+      expect((result.data as Resource).id).toBe(`disturbanceReports|${report.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });
   });

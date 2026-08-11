@@ -115,18 +115,4 @@ describe("AboutSectionsController", () => {
       expect(section.deletedAt).not.toBeNull();
     });
   });
-
-  describe("pushTranslations", () => {
-    it("throws if the section is not found", async () => {
-      await expect(controller.pushTranslations("fake-uuid")).rejects.toThrow(NotFoundException);
-    });
-
-    it("calls the service", async () => {
-      await AboutSection.truncate();
-      const section = await AboutSectionFactory.create();
-      await controller.pushTranslations(section.uuid);
-      expect(policyService().authorize).toHaveBeenCalledWith("update", expect.objectContaining({ id: section.id }));
-      expect(aboutSectionService().pushTranslations).toHaveBeenCalledWith(expect.objectContaining({ id: section.id }));
-    });
-  });
 });

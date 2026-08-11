@@ -1,12 +1,9 @@
 import { Response } from "express";
 import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { getTrackingEntryConfigLabels } from "@terramatch-microservices/common/localization/tracking-entry-config-i18n";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Application,
   Form,
-  FormOptionList,
-  FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
   FormSection,
@@ -14,13 +11,12 @@ import {
   FormTableHeader,
   Framework,
   FundingProgramme,
-  LocalizationKey,
   Media,
   Stage
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { Dictionary, difference, flatten, groupBy, intersection, sortBy, union, uniq, uniqBy } from "lodash";
+import { Dictionary, difference, flatten, groupBy, sortBy, union, uniq, uniqBy } from "lodash";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -40,11 +36,9 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile, isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
-import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
   FormQuestionExportMapping,
@@ -60,20 +54,6 @@ import { EntitiesService } from "../entities/entities.service";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
-const EXTRA_FIELDS: string[] = ["id", "optionsList", "additionalProps"];
-
-type TranslationModelType =
-  | typeof Form
-  | typeof FormSection
-  | typeof FormQuestion
-  | typeof FormQuestionOption
-  | typeof FormTableHeader
-  | typeof FormOptionList
-  | typeof FundingProgramme
-  | typeof LocalizationKey
-  | typeof FormOptionListOption;
-
-type TranslationParamsType = string | number;
 
 const ADMIN_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   applicationUuid: "Application ID",
@@ -518,85 +498,6 @@ export class FormsService {
         }
       }
     );
-  }
-
-  private getTranslationLabelEntityFields(translationEntity: TranslationModelType) {
-    return translationEntity.I18N_FIELDS;
-  }
-
-  private async processTranslationEntity<M extends TranslationModelType>(
-    model: ModelCtor,
-    property: string,
-    filterParams: TranslationParamsType | TranslationParamsType[]
-  ): Promise<[string[], InstanceType<M>[]]> {
-    const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
-    const labelFields = this.getTranslationLabelEntityFields(model as TranslationModelType);
-    const entities = await model.findAll({
-      where: {
-        [property]: {
-          [Op.in]: filterParamsArray
-        }
-      },
-      attributes: intersection(Object.keys(model.getAttributes()), [...labelFields, ...EXTRA_FIELDS])
-    });
-
-    const labelsToBePushed = entities.flatMap(entity => this.getI18nLabelsFromEntity(entity, labelFields));
-
-    return [labelsToBePushed, entities as InstanceType<M>[]];
-  }
-
-  private getI18nLabelsFromEntity(entity: Model, labelFields: readonly string[]) {
-    return Object.entries(entity.dataValues)
-      .filter(([key, value]) => labelFields.includes(key) && value != null)
-      .map(([, value]) => value as string);
-  }
-
-  async getI18nIdsForForm(form: Form) {
-    const formI18nLabels = this.getI18nLabelsFromEntity(form, this.getTranslationLabelEntityFields(Form));
-    const [formSectionI18nLabels, formSections] = await this.processTranslationEntity(FormSection, "formId", [
-      form.uuid
-    ]);
-    const [formQuestionI18nLabels, formQuestions] = await this.processTranslationEntity(
-      FormQuestion,
-      "formSectionId",
-      formSections.map(section => section.id)
-    );
-    const [formQuestionOptionI18nLabels] = await this.processTranslationEntity(
-      FormQuestionOption,
-      "formQuestionId",
-      formQuestions.map(question => question.id)
-    );
-    const [formTableHeaderI18nLabels] = await this.processTranslationEntity(
-      FormTableHeader,
-      "formQuestionId",
-      formQuestions.map(question => question.id)
-    );
-    const optionsListParams = formQuestions
-      .map(question => (question as FormQuestion).optionsList)
-      .filter((optionsList): optionsList is string => optionsList != null && optionsList !== "0");
-    const [formOptionListI18nLabels, formOptionsLists] = await this.processTranslationEntity(
-      FormOptionList,
-      "key",
-      optionsListParams
-    );
-    await this.processTranslationEntity(
-      FormOptionListOption,
-      "formOptionListId",
-      formOptionsLists.map(list => list.id)
-    );
-
-    const trackingEntryConfigLabels = formQuestions.flatMap(question =>
-      getTrackingEntryConfigLabels((question as FormQuestion).additionalProps)
-    );
-    return [
-      ...formI18nLabels,
-      ...formSectionI18nLabels,
-      ...formQuestionI18nLabels,
-      ...formQuestionOptionI18nLabels,
-      ...formTableHeaderI18nLabels,
-      ...formOptionListI18nLabels,
-      ...trackingEntryConfigLabels
-    ];
   }
 
   private async storeForm(form: Form, attributes: StoreFormAttributes) {

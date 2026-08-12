@@ -41,6 +41,10 @@ import {
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 import "multer";
 
 interface DuplicateCheckResult {
@@ -134,6 +138,8 @@ const LARGE_BATCH_THRESHOLD = 1000;
 
 @Injectable()
 export class SitePolygonCreationService {
+  private readonly logger = new TMLogger(SitePolygonCreationService.name);
+
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly pointGeometryService: PointGeometryCreationService,
@@ -141,7 +147,9 @@ export class SitePolygonCreationService {
     private readonly voronoiService: VoronoiService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly versioningService: SitePolygonVersioningService,
-    private readonly eventService: EventService
+    private readonly eventService: EventService,
+    private readonly boundingBoxService: BoundingBoxService,
+    private readonly gwcTileInvalidationService: GwcTileInvalidationService
   ) {}
 
   async createSitePolygons(
@@ -188,6 +196,7 @@ export class SitePolygonCreationService {
     const allPolygonUuids: string[] = [];
     const duplicateValidations: ValidationIncludedData[] = [];
     const allPolygonInputIndices = new Map<string, number>();
+    const newPolygonUuidsBySite = new Map<string, string[]>();
 
     try {
       let globalInputIndex = 0;
@@ -373,9 +382,11 @@ export class SitePolygonCreationService {
             for (const [uuid, idx] of inputIndices.entries()) {
               allPolygonInputIndices.set(uuid, idx);
             }
-            allPolygonUuids.push(
-              ...createdSitePolygons.map(sp => sp.polygonUuid).filter((u): u is string => u != null)
-            );
+            const newPolygonUuids = createdSitePolygons.map(sp => sp.polygonUuid).filter((u): u is string => u != null);
+            allPolygonUuids.push(...newPolygonUuids);
+            if (newPolygonUuids.length > 0) {
+              newPolygonUuidsBySite.set(siteId, [...(newPolygonUuidsBySite.get(siteId) ?? []), ...newPolygonUuids]);
+            }
           }
         }
       }
@@ -392,6 +403,8 @@ export class SitePolygonCreationService {
 
       await transaction.commit();
 
+      await this.invalidateGwcForNewPolygons(newPolygonUuidsBySite);
+
       return {
         createdPolygons: allCreatedSitePolygons,
         duplicatePolygons: allDuplicatePolygons,
@@ -402,6 +415,22 @@ export class SitePolygonCreationService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  private async invalidateGwcForNewPolygons(polygonUuidsBySite: Map<string, string[]>): Promise<void> {
+    if (polygonUuidsBySite.size === 0) return;
+
+    await Promise.all(
+      Array.from(polygonUuidsBySite.values()).map(polygonUuids =>
+        invalidatePolygonTileCache({
+          boundingBoxService: this.boundingBoxService,
+          gwcTileInvalidationService: this.gwcTileInvalidationService,
+          polygonUuids,
+          layers: ["active"],
+          onError: error => this.logger.error("Failed to invalidate GWC cache for newly created polygons", error)
+        })
+      )
+    );
   }
 
   private async transformPointFeaturesToPolygons(

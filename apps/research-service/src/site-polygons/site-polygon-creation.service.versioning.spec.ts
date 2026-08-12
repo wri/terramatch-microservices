@@ -11,6 +11,8 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AttributeChangesDto } from "./dto/create-site-polygon-request.dto";
 import { Transaction, Op } from "sequelize";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -74,6 +76,18 @@ describe("SitePolygonCreationService - Versioning", () => {
           provide: EventService,
           useValue: {
             sendPolygonPushedViaApiAnalytics: jest.fn()
+          }
+        },
+        {
+          provide: BoundingBoxService,
+          useValue: {
+            getPolygonsBoundingBox: jest.fn().mockResolvedValue({ bbox: [0, 0, 1, 1] })
+          }
+        },
+        {
+          provide: GwcTileInvalidationService,
+          useValue: {
+            truncate: jest.fn().mockResolvedValue(undefined)
           }
         }
       ]

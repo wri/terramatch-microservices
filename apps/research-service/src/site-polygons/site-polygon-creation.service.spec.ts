@@ -24,6 +24,8 @@ import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/databa
 import { FeatureCollection } from "geojson";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 import { Transaction } from "sequelize";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -43,6 +45,8 @@ describe("SitePolygonCreationService", () => {
   let geometryFileProcessingService: GeometryFileProcessingService;
   let eventService: EventService;
   let versioningService: SitePolygonVersioningService;
+  let boundingBoxService: BoundingBoxService;
+  let gwcTileInvalidationService: GwcTileInvalidationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -102,6 +106,18 @@ describe("SitePolygonCreationService", () => {
           useValue: {
             sendPolygonPushedViaApiAnalytics: jest.fn()
           }
+        },
+        {
+          provide: BoundingBoxService,
+          useValue: {
+            getPolygonsBoundingBox: jest.fn().mockResolvedValue({ bbox: [0, 0, 1, 1] })
+          }
+        },
+        {
+          provide: GwcTileInvalidationService,
+          useValue: {
+            truncate: jest.fn().mockResolvedValue(undefined)
+          }
         }
       ]
     }).compile();
@@ -114,6 +130,8 @@ describe("SitePolygonCreationService", () => {
     geometryFileProcessingService = module.get<GeometryFileProcessingService>(GeometryFileProcessingService);
     eventService = module.get<EventService>(EventService);
     versioningService = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
+    boundingBoxService = module.get<BoundingBoxService>(BoundingBoxService);
+    gwcTileInvalidationService = module.get<GwcTileInvalidationService>(GwcTileInvalidationService);
 
     Object.defineProperty(PolygonGeometry, "sequelize", {
       get: jest.fn(() => mockSequelize),
@@ -187,6 +205,50 @@ describe("SitePolygonCreationService", () => {
       expect(result.data[0].siteUuid).toBe("site-uuid-1");
       expect(result.data[0].polygonUuid).toBe("polygon-uuid-1");
       expect(eventService.sendPolygonPushedViaApiAnalytics).not.toHaveBeenCalled();
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith(["polygon-uuid-1"]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active"]);
+    });
+
+    it("should not invalidate GWC when no new polygons were created (all duplicates)", async () => {
+      const mockFeature: Feature = {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0],
+              [0, 0]
+            ]
+          ]
+        },
+        properties: {
+          site_id: "site-uuid-1",
+          poly_name: "Test Polygon"
+        }
+      };
+
+      const request = createMockRequest([mockFeature]);
+
+      jest.spyOn(Site, "findAll").mockResolvedValue([{ uuid: "site-uuid-1" } as Site]);
+      jest.spyOn(duplicateGeometryValidator, "checkNewFeaturesDuplicates").mockResolvedValue({
+        valid: false,
+        duplicates: [{ index: 0, existing_uuid: "existing-polygon-uuid" }]
+      });
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([
+        {
+          uuid: "existing-site-polygon-uuid",
+          polygonUuid: "existing-polygon-uuid",
+          isActive: true
+        } as SitePolygon
+      ]);
+
+      await service.createSitePolygons(request, mockUserId, "test", null);
+
+      expect(boundingBoxService.getPolygonsBoundingBox).not.toHaveBeenCalled();
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
     });
 
     it("should send GA4 polygon_pushed_via_api analytics for API partner sources", async () => {

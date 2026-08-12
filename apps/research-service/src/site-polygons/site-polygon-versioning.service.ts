@@ -4,6 +4,10 @@ import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 import { buildPolygonVersionChangedParams } from "@terramatch-microservices/common/analytics/polygon-version-changed";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 
 export interface VersionCreateEntry {
   basePolygon: SitePolygon;
@@ -20,7 +24,11 @@ export interface VersionCreateEntry {
 export class SitePolygonVersioningService {
   private readonly logger = new Logger(SitePolygonVersioningService.name);
 
-  constructor(private readonly eventService: EventService) {}
+  constructor(
+    private readonly eventService: EventService,
+    private readonly boundingBoxService: BoundingBoxService,
+    private readonly gwcTileInvalidationService: GwcTileInvalidationService
+  ) {}
 
   buildVersionData(
     basePolygon: SitePolygon,
@@ -125,8 +133,36 @@ export class SitePolygonVersioningService {
     }
 
     this.queuePolygonVersionChangedAnalytics(entries, newVersions, transaction);
+    this.queueGwcInvalidation(entries, newVersions, transaction);
 
     return newVersions;
+  }
+
+  private queueGwcInvalidation(
+    entries: VersionCreateEntry[],
+    newVersions: SitePolygon[],
+    transaction: Transaction
+  ): void {
+    const polygonUuids = entries.flatMap((entry, index) => [
+      entry.basePolygon.polygonUuid,
+      newVersions[index]?.polygonUuid
+    ]);
+    this.queueGwcInvalidationForUuids(polygonUuids, transaction);
+  }
+
+  private queueGwcInvalidationForUuids(polygonUuids: Array<string | null | undefined>, transaction: Transaction): void {
+    const uniquePolygonUuids = [...new Set(polygonUuids.filter(isNotNull))];
+    if (uniquePolygonUuids.length === 0) return;
+
+    transaction.afterCommit(async () => {
+      await invalidatePolygonTileCache({
+        boundingBoxService: this.boundingBoxService,
+        gwcTileInvalidationService: this.gwcTileInvalidationService,
+        polygonUuids: uniquePolygonUuids,
+        layers: ["active"],
+        onError: error => this.logger.error("Failed to invalidate GWC cache after a polygon version change", error)
+      });
+    });
   }
 
   private queuePolygonVersionChangedAnalytics(
@@ -258,10 +294,17 @@ export class SitePolygonVersioningService {
       throw new NotFoundException(`Site polygon version not found: ${targetUuid}`);
     }
 
+    const previouslyActiveVersion = await SitePolygon.findOne({
+      where: { primaryUuid: targetVersion.primaryUuid, isActive: true },
+      transaction
+    });
+
     await this.deactivateOtherVersions(targetVersion.primaryUuid, targetUuid, transaction);
 
     targetVersion.isActive = true;
     await targetVersion.save({ transaction });
+
+    this.queueGwcInvalidationForUuids([previouslyActiveVersion?.polygonUuid, targetVersion.polygonUuid], transaction);
 
     await this.trackChange(
       targetVersion.primaryUuid,

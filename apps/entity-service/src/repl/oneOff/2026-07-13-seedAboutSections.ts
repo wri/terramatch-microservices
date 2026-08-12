@@ -1,8 +1,6 @@
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
-import { getService } from "@terramatch-microservices/common/util/bootstrap-repl";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { Link } from "@terramatch-microservices/database/entities";
 import { Op } from "sequelize";
 
@@ -23,7 +21,6 @@ type LinkSeed = {
 };
 
 export const seedAboutSections = withoutSqlLogs(async () => {
-  const localizationService = getService(LocalizationService);
   for (const seed of SEED_DATA) {
     const { type, frameworks, header } = seed;
     if (
@@ -40,18 +37,18 @@ export const seedAboutSections = withoutSqlLogs(async () => {
     const aboutSection = await AboutSection.create({
       type: seed.type,
       frameworks: seed.frameworks,
-      headerId: (await localizationService.generateI18nId(seed.header)) as number,
-      titleId: await localizationService.generateI18nId(seed.title),
-      descriptionId: (await localizationService.generateI18nId(seed.description)) as number,
-      contactSupportMessageId: (await localizationService.generateI18nId(seed.contactSupportMessage)) as number,
-      contactSupportSubjectId: (await localizationService.generateI18nId(seed.contactSupportSubject)) as number
+      header: seed.header,
+      title: seed.title,
+      description: seed.description,
+      contactSupportMessage: seed.contactSupportMessage,
+      contactSupportSubject: seed.contactSupportSubject
     });
 
     await Link.bulkCreate(
       await Promise.all(
         seed.links.map(async (link, index) => ({
           order: index,
-          titleId: (await localizationService.generateI18nId(link.title)) as number,
+          title: link.title,
           url: link.url,
           linkableType: AboutSection.LARAVEL_TYPE,
           linkableId: aboutSection.id

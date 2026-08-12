@@ -1,2 +1,5 @@
-npx prettier --write .
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+if [ -n "$STAGED" ]; then
+  echo "$STAGED" | xargs npx prettier --write --ignore-unknown
+fi
 git update-index --again

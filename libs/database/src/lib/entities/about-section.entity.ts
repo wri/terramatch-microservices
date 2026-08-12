@@ -33,7 +33,16 @@ export const ABOUT_SECTION_TYPES = [
 ] as const;
 export type AboutSectionType = (typeof ABOUT_SECTION_TYPES)[number];
 
-@Table({ tableName: "about_sections", underscored: true, paranoid: true })
+@Table({
+  tableName: "about_sections",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async afterDestroy(section: AboutSection) {
+      await Link.for(section).destroy();
+    }
+  }
+})
 export class AboutSection extends Model<InferAttributes<AboutSection>, InferCreationAttributes<AboutSection>> {
   // Still named laravel type for legacy reasons, but the name doesn't need to follow that convention; just needs to be unique
   static readonly LARAVEL_TYPE = "AboutSection";
@@ -55,41 +64,46 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @JsonColumn()
   declare frameworks: FrameworkKey[] | null;
 
-  @AllowNull
   @Column(TEXT)
-  declare header: string | null;
+  declare header: string;
 
+  // @deprecated
+  @AllowNull
   @Column(BIGINT.UNSIGNED)
-  declare headerId: number;
+  declare headerId: number | null;
 
   @AllowNull
   @Column(TEXT)
   declare title: string | null;
 
+  // @deprecated
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   declare titleId: number | null;
 
-  @AllowNull
   @Column(TEXT)
   declare description: string | null;
 
-  @Column(BIGINT.UNSIGNED)
-  declare descriptionId: number;
-
+  // @deprecated
   @AllowNull
-  @Column(TEXT)
-  declare contactSupportMessage: string | null;
-
   @Column(BIGINT.UNSIGNED)
-  declare contactSupportMessageId: number;
+  declare descriptionId: number | null;
 
+  @Column(TEXT)
+  declare contactSupportMessage: string;
+
+  // @deprecated
   @AllowNull
-  @Column(TEXT)
-  declare contactSupportSubject: string | null;
-
   @Column(BIGINT.UNSIGNED)
-  declare contactSupportSubjectId: number;
+  declare contactSupportMessageId: number | null;
+
+  @Column(TEXT)
+  declare contactSupportSubject: string;
+
+  // @deprecated
+  @AllowNull
+  @Column(BIGINT.UNSIGNED)
+  declare contactSupportSubjectId: number | null;
 
   @HasMany(() => Link, {
     foreignKey: "linkableId",

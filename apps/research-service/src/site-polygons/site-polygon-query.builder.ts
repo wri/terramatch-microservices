@@ -118,6 +118,10 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
+  async filterUuids(uuids: string[]) {
+    return this.where({ uuid: { [Op.in]: uuids } });
+  }
+
   async filterPolygonUuids(polygonUuids: string[]) {
     return this.where({ polygonUuid: { [Op.in]: polygonUuids } });
   }

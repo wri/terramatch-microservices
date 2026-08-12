@@ -30,7 +30,8 @@ import { INDICATOR_DTOS } from "./dto/indicators.dto";
 import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
-import { Attributes, Op, Transaction } from "sequelize";
+import { Attributes, Op, QueryTypes, Transaction } from "sequelize";
+import { SiteIndicatorRollupRow } from "./dto/site-indicator-rollup.dto";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
   INDICATOR_SLUGS,
@@ -44,6 +45,10 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+
+// Earliest year present in indicator_output_tree_cover_loss.value maps. The span is walked
+// explicitly because the per-year keys cannot be enumerated in SQL without JSON_TABLE.
+const TREE_COVER_LOSS_FIRST_YEAR = 2000;
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -751,5 +756,111 @@ export class SitePolygonsService {
         isActive: null
       }));
     });
+  }
+
+  /**
+   * Per-site indicator rollup for a project, in a single GROUP BY: O(sites), not O(polygons).
+   * The client-side path pages every polygon in the project, which is untenable for large
+   * projects (one site in project 448 holds 7,293 polygons).
+   *
+   * Measurements cover active, APPROVED polygons only — the basis the rest of TerraMatch reports
+   * on. dashboard-projects.service.ts computes totalHectaresRestoredSum as .active().approved(),
+   * and the two agree to the last decimal. Non-approved active polygons are counted separately
+   * as inReviewCount so their exclusion is visible rather than silent.
+   *
+   * The status predicate lives in the aggregates, not the JOIN, so that a site whose polygons are
+   * all unapproved still returns a row with null measurements. Dropping the row would assert the
+   * site does not exist, which is a stronger and falser claim than "not measured yet".
+   *
+   * deleted_at is not filtered in the latest-year CTEs, matching the validated spike. Adding the
+   * filter changes which row ranks as latest and lowers coverage.
+   */
+  async getIndicatorRollup(projectUuid: string) {
+    // indicator_output_tree_cover_loss.value is a per-year map, {"2011": 3.53, ...}, so the total
+    // for a polygon is the sum across years. MariaDB 10.3 has no JSON_TABLE (added in 10.6) and
+    // the SEQUENCE engine is MariaDB-only, so the year span is joined as a generated derived
+    // table, which is portable to both MariaDB and MySQL 8.
+    const years = [];
+    for (let year = TREE_COVER_LOSS_FIRST_YEAR; year <= new Date().getFullYear() + 1; year++) {
+      years.push(year);
+    }
+    const yearsUnion = years.map(year => `SELECT ${year} AS y`).join(" UNION ALL ");
+
+    const query = `
+      WITH tc AS (
+        SELECT
+          site_polygon_id,
+          percent_cover,
+          ROW_NUMBER() OVER (
+            PARTITION BY site_polygon_id
+            ORDER BY year_of_analysis DESC, id DESC
+          ) AS rn
+        FROM indicator_output_tree_cover
+      ),
+      tcl_latest AS (
+        SELECT
+          site_polygon_id,
+          value,
+          ROW_NUMBER() OVER (
+            PARTITION BY site_polygon_id
+            ORDER BY year_of_analysis DESC, id DESC
+          ) AS rn
+        FROM indicator_output_tree_cover_loss
+        WHERE indicator_slug = 'treeCoverLoss'
+      ),
+      years AS (${yearsUnion}),
+      tcl AS (
+        SELECT
+          t.site_polygon_id,
+          SUM(CAST(COALESCE(JSON_VALUE(t.value, CONCAT('$."', y.y, '"')), 0) AS DECIMAL(24,8))) AS lossTotal
+        FROM tcl_latest t
+        CROSS JOIN years y
+        WHERE t.rn = 1
+        GROUP BY t.site_polygon_id
+      )
+      SELECT
+        s.uuid AS siteUuid,
+        s.name AS siteName,
+        SUM(CASE WHEN sp.status <> 'approved' THEN 1 ELSE 0 END) AS inReviewCount,
+        SUM(CASE WHEN sp.status = 'approved' THEN 1 ELSE 0 END) AS polygons,
+        SUM(CASE WHEN sp.status = 'approved' THEN sp.calc_area END) AS hectares,
+        SUM(CASE WHEN sp.status = 'approved' THEN tc.percent_cover * NULLIF(sp.calc_area, 0) END)
+          / NULLIF(SUM(CASE WHEN sp.status = 'approved' AND tc.percent_cover IS NOT NULL
+                            THEN NULLIF(sp.calc_area, 0) END), 0)
+          AS treeCoverWeightedMeanPct,
+        SUM(CASE WHEN sp.status = 'approved' AND tc.site_polygon_id IS NOT NULL THEN 1 ELSE 0 END)
+          AS treeCoverPolygonCount,
+        SUM(CASE WHEN sp.status = 'approved' THEN tcl.lossTotal END) AS treeCoverLossTotal,
+        SUM(CASE WHEN sp.status = 'approved' AND tcl.site_polygon_id IS NOT NULL THEN 1 ELSE 0 END)
+          AS treeCoverLossPolygonCount
+      FROM v2_projects p
+      JOIN v2_sites s
+        ON s.project_id = p.id
+       AND s.deleted_at IS NULL
+       AND s.status = 'approved'
+      JOIN site_polygon sp
+        ON sp.site_id = s.uuid
+       AND sp.is_active = 1
+       -- SitePolygon is paranoid, so every Sequelize path drops soft-deleted rows for free. Raw
+       -- SQL does not, and without this the rollup counted them: ARDE-Nyarushamba_site read 7,293
+       -- approved polygons instead of 3,306, and the project's measured area 1,200 ha instead of
+       -- 533. The map, which goes through the query builder, was drawing the honest set all along.
+       AND sp.deleted_at IS NULL
+      LEFT JOIN tc
+        ON tc.site_polygon_id = sp.id
+       AND tc.rn = 1
+      LEFT JOIN tcl
+        ON tcl.site_polygon_id = sp.id
+      WHERE p.uuid = :projectUuid
+        AND p.deleted_at IS NULL
+      GROUP BY s.uuid, s.name
+      ORDER BY s.name
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return (await SitePolygon.sequelize!.query(query, {
+      replacements: { projectUuid },
+      type: QueryTypes.SELECT
+    })) as SiteIndicatorRollupRow[];
   }
 }

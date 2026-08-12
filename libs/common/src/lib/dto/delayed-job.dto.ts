@@ -3,7 +3,6 @@ import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "../decorators";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { populateDto } from "./json-api-attributes";
-import { ENTITY_TYPES, EntityType } from "@terramatch-microservices/database/constants/entities";
 
 const STATUSES = ["pending", "failed", "succeeded"];
 type Status = (typeof STATUSES)[number];
@@ -11,11 +10,9 @@ type Status = (typeof STATUSES)[number];
 @JsonApiDto({ type: "delayedJobs" })
 export class DelayedJobDto {
   constructor(job: DelayedJob) {
-    const entityType = job.metadata?.entity_type;
     populateDto<DelayedJobDto, DelayedJob>(this, job, {
       entityName: job.metadata?.entity_name,
-      entityType:
-        entityType != null && ENTITY_TYPES.includes(entityType as EntityType) ? (entityType as EntityType) : null
+      entityType: job.metadata?.entity_type
     });
   }
 
@@ -90,7 +87,7 @@ export class DelayedJobDto {
     description: "The type of the related entity (e.g., projects, sites, etc).",
     nullable: true,
     required: false,
-    enum: ENTITY_TYPES
+    type: String
   })
-  entityType?: EntityType | null;
+  entityType?: string | null;
 }

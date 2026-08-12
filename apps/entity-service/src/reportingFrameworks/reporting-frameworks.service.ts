@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import {
+  DisturbanceReport,
   FinancialReport,
   Form,
   Framework,
@@ -28,6 +29,7 @@ export type FrameworkFormUuids = {
   nurseryFormUuid?: string | null;
   nurseryReportFormUuid?: string | null;
   financialReportFormUuid?: string | null;
+  disturbanceReportFormUuid?: string | null;
 };
 
 const FRAMEWORK_FORM_MAP: ReadonlyArray<{
@@ -40,7 +42,8 @@ const FRAMEWORK_FORM_MAP: ReadonlyArray<{
   { key: "siteReportFormUuid", model: SiteReport.LARAVEL_TYPE },
   { key: "nurseryFormUuid", model: Nursery.LARAVEL_TYPE },
   { key: "nurseryReportFormUuid", model: NurseryReport.LARAVEL_TYPE },
-  { key: "financialReportFormUuid", model: FinancialReport.LARAVEL_TYPE }
+  { key: "financialReportFormUuid", model: FinancialReport.LARAVEL_TYPE },
+  { key: "disturbanceReportFormUuid", model: DisturbanceReport.LARAVEL_TYPE }
 ];
 
 @Injectable()
@@ -84,7 +87,8 @@ export class ReportingFrameworksService {
       siteReportFormUuid: attributes.siteReportFormUuid ?? null,
       nurseryFormUuid: attributes.nurseryFormUuid ?? null,
       nurseryReportFormUuid: attributes.nurseryReportFormUuid ?? null,
-      financialReportFormUuid: attributes.financialReportFormUuid ?? null
+      financialReportFormUuid: attributes.financialReportFormUuid ?? null,
+      disturbanceReportFormUuid: attributes.disturbanceReportFormUuid ?? null
     });
     await this.syncFormsForFramework(slug, attributes);
     return framework;
@@ -108,6 +112,8 @@ export class ReportingFrameworksService {
       payload.nurseryReportFormUuid = attributes.nurseryReportFormUuid ?? null;
     if (attributes.financialReportFormUuid !== undefined)
       payload.financialReportFormUuid = attributes.financialReportFormUuid ?? null;
+    if (attributes.disturbanceReportFormUuid !== undefined)
+      payload.disturbanceReportFormUuid = attributes.disturbanceReportFormUuid ?? null;
     if (Object.keys(payload).length > 0) {
       await framework.update(payload);
     }
@@ -180,7 +186,8 @@ export class ReportingFrameworksService {
       siteReportFormUuid,
       nurseryFormUuid,
       nurseryReportFormUuid,
-      financialReportFormUuid
+      financialReportFormUuid,
+      disturbanceReportFormUuid
     }: FrameworkFormUuids,
     frameworkKey?: FrameworkKey
   ): Promise<void> {
@@ -191,7 +198,8 @@ export class ReportingFrameworksService {
       siteReportFormUuid,
       nurseryFormUuid,
       nurseryReportFormUuid,
-      financialReportFormUuid
+      financialReportFormUuid,
+      disturbanceReportFormUuid
     ].filter(isNotNull);
     const frameworkKeyClause =
       frameworkKey == null
@@ -210,7 +218,8 @@ export class ReportingFrameworksService {
       [siteReportFormUuid ?? ""]: "Site Report",
       [nurseryFormUuid ?? ""]: "Nursery",
       [nurseryReportFormUuid ?? ""]: "Nursery Report",
-      [financialReportFormUuid ?? ""]: "Financial Report"
+      [financialReportFormUuid ?? ""]: "Financial Report",
+      [disturbanceReportFormUuid ?? ""]: "Disturbance Report"
     };
     // Iterate over the mapping instead of the inUse array so the order reported is the same as
     // in the mapping, which matches the UI and will feel more natural for the user.

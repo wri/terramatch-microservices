@@ -17,6 +17,9 @@ import {
   SiteReportFactory,
   TaskFactory,
   TreeSpeciesFactory,
+  SeedingFactory,
+  TrackingFactory,
+  TrackingEntryFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import FakeTimers from "@sinonjs/fake-timers";
@@ -265,6 +268,10 @@ describe("TasksService", () => {
       // Unapproved report, should not be included in planted count.
       await TreeSpeciesFactory.siteReportTreePlanted(siteReports[0]).create();
       const trees = await TreeSpeciesFactory.siteReportTreePlanted(siteReports[2]).createMany(2);
+      const seedings = await SeedingFactory.siteReport(siteReports[2]).createMany(2);
+      await SeedingFactory.siteReport(siteReports[0]).create();
+      const jobsTracking = await TrackingFactory.projectReportJobs(projectReport).create();
+      const jobEntries = await TrackingEntryFactory.gender(jobsTracking).createMany(3);
 
       const result = (await service.addFullTaskDto(buildJsonApi(TaskFullDto), task)).serialize();
       const taskResource = result.data as Resource;
@@ -289,6 +296,9 @@ describe("TasksService", () => {
       expect(nurseryReportRelationshipIds).toEqual(nurseryReports.map(({ uuid }) => uuid).sort());
 
       expect(taskResource.attributes.treesPlantedCount).toBe(sumBy(trees, "amount"));
+      expect(taskResource.attributes.seedsPlantedCount).toBe(sumBy(seedings, "amount"));
+      expect(taskResource.attributes.regeneratedTreesCount).toBe(siteReports[2].numTreesRegenerating);
+      expect(taskResource.attributes.jobsCreated).toBe(sumBy(jobEntries, "amount"));
     });
   });
 

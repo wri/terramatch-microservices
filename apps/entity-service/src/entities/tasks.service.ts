@@ -5,9 +5,12 @@ import {
   NurseryReport,
   ProjectReport,
   ProjectUser,
+  Seeding,
   SiteReport,
   SrpReport,
   Task,
+  Tracking,
+  TrackingEntry,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
@@ -25,6 +28,8 @@ import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
 import { filter } from "lodash";
+import { HBF } from "@terramatch-microservices/database/constants/framework";
+import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
 
 const FILTER_PROPS = {
   status: "status",
@@ -110,14 +115,10 @@ export class TasksService {
   }
 
   async addFullTaskDto(document: DocumentBuilder, task: Task) {
-    const treesPlantedCount =
-      (await TreeSpecies.visible()
-        .collection("tree-planted")
-        .siteReports(SiteReport.approvedIdsForTaskSubquery(task.id))
-        .sum("amount")) ?? 0;
-
-    const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
     await this.loadReports(task);
+    const metrics = await this.getReportingPeriodMetrics(task);
+    const taskResource = document.addData(task.uuid, new TaskFullDto(task, metrics));
+
     for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports") {
@@ -134,6 +135,58 @@ export class TasksService {
     }
 
     return document;
+  }
+
+  private async getReportingPeriodMetrics(task: Task) {
+    const approvedSiteReportIds = SiteReport.approvedIdsForTaskSubquery(task.id);
+    const [treesPlantedCount, seedsPlantedCount, regeneratedTreesCount, jobsCreated] = await Promise.all([
+      TreeSpecies.visible().collection("tree-planted").siteReports(approvedSiteReportIds).sum("amount"),
+      Seeding.visible().siteReports(approvedSiteReportIds).sum("amount"),
+      SiteReport.approved().task(task.id).sum("numTreesRegenerating"),
+      this.getJobsCreatedForTask(task)
+    ]);
+
+    return {
+      treesPlantedCount: treesPlantedCount ?? 0,
+      seedsPlantedCount: seedsPlantedCount ?? 0,
+      regeneratedTreesCount: regeneratedTreesCount ?? 0,
+      jobsCreated
+    };
+  }
+
+  private async getJobsCreatedForTask(task: Task) {
+    const projectReport = task.projectReport;
+    if (projectReport == null) return 0;
+
+    const frameworkKey = projectReport.frameworkKey ?? task.frameworkKey;
+    if (frameworkKey === HBF) {
+      return (
+        (await TrackingEntry.gender().sum("amount", {
+          where: {
+            trackingId: {
+              [Op.in]: Tracking.idsSubquery([projectReport.id], ProjectReport.LARAVEL_TYPE, {
+                domain: "demographics",
+                type: Tracking.WORKDAYS_TYPE,
+                collection: DIRECT
+              })
+            }
+          }
+        })) ?? 0
+      );
+    }
+
+    return (
+      (await TrackingEntry.gender().sum("amount", {
+        where: {
+          trackingId: {
+            [Op.in]: Tracking.idsSubquery([projectReport.id], ProjectReport.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE
+            })
+          }
+        }
+      })) ?? 0
+    );
   }
 
   async submitForApproval(task: Task) {

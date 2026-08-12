@@ -41,6 +41,17 @@ export class TaskFullDto extends TaskLightDto {
     populateDto<TaskFullDto, Task>(this, task, { lightResource: false, ...props });
   }
 
-  @ApiProperty()
+  @ApiProperty({ description: "Trees planted across approved site reports for this reporting period" })
   treesPlantedCount: number;
+
+  @ApiProperty({ description: "Seeds planted across approved site reports for this reporting period" })
+  seedsPlantedCount: number;
+
+  @ApiProperty({ description: "Naturally regenerated trees across approved site reports for this reporting period" })
+  regeneratedTreesCount: number;
+
+  @ApiProperty({
+    description: "Jobs created (or HBF direct workdays) reported on the project report for this reporting period"
+  })
+  jobsCreated: number;
 }

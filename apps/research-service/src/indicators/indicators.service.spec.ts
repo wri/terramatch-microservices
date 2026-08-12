@@ -65,7 +65,8 @@ describe("IndicatorsService", () => {
   it("should process the indicators", async () => {
     jest.spyOn(SitePolygon, "findOne").mockResolvedValue({
       id: 1,
-      calcArea: 100
+      calcArea: 100,
+      plantStart: new Date("2024-08-15")
     } as unknown as SitePolygon);
     jest.spyOn(PolygonGeometry, "getGeoJSONParsed").mockResolvedValue({
       type: "Polygon",

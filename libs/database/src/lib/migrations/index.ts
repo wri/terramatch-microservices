@@ -29,6 +29,7 @@ import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-dis
 import { requireAboutSectionText } from "./202608051658-require-about-section-text";
 import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
 import { defaultFinancialReportsUpdateRequestStatus } from "./202608131200-default-financial-reports-update-request-status";
+import { addPolygonAttributeTables } from "./202608131700-add-polygon-attribute-tables";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -59,5 +60,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addDisturbanceReportFormUuidToFrameworks,
   requireAboutSectionText,
   removeI18nFieldIdColumns,
-  defaultFinancialReportsUpdateRequestStatus
+  defaultFinancialReportsUpdateRequestStatus,
+  addPolygonAttributeTables
 ];

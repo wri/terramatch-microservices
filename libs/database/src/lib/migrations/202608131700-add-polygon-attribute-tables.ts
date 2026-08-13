@@ -1,4 +1,4 @@
-import { BIGINT, BOOLEAN, DATE, INTEGER, JSON, QueryInterface, STRING, UUID } from "sequelize";
+import { BIGINT, BOOLEAN, DATE, INTEGER, JSON, QueryInterface, STRING, TEXT, UUID } from "sequelize";
 import { RunnableMigration } from "umzug";
 
 export const addPolygonAttributeTables: RunnableMigration<QueryInterface> = {
@@ -14,7 +14,7 @@ export const addPolygonAttributeTables: RunnableMigration<QueryInterface> = {
           id: { type: BIGINT.UNSIGNED, allowNull: false, primaryKey: true, autoIncrement: true },
           uuid: { type: UUID, allowNull: false },
           key: { type: STRING, allowNull: false },
-          label: { type: STRING, allowNull: false },
+          label: { type: TEXT, allowNull: false },
           input_type: { type: STRING, allowNull: false },
           framework_key: { type: STRING, allowNull: false },
           is_required: { type: BOOLEAN, allowNull: false, defaultValue: false },
@@ -26,14 +26,8 @@ export const addPolygonAttributeTables: RunnableMigration<QueryInterface> = {
         { transaction }
       );
 
-      await context.addIndex("polygon_attribute_definitions", ["uuid"], {
-        name: "polygon_attribute_definitions_uuid_unique",
-        unique: true,
-        transaction
-      });
-
       await context.addIndex("polygon_attribute_definitions", ["framework_key", "key"], {
-        name: "polygon_attribute_definitions_framework_key_key_unique",
+        name: "pad_definitions_framework_key_key_unique",
         unique: true,
         transaction
       });
@@ -54,21 +48,9 @@ export const addPolygonAttributeTables: RunnableMigration<QueryInterface> = {
         { transaction }
       );
 
-      await context.addIndex("polygon_attribute_definition_options", ["uuid"], {
-        name: "polygon_attribute_definition_options_uuid",
-        unique: false,
-        transaction
-      });
-
       await context.addIndex("polygon_attribute_definition_options", ["polygon_attribute_definition_id"], {
         name: "pad_options_definition_id",
         unique: false,
-        transaction
-      });
-
-      await context.addIndex("polygon_attribute_definition_options", ["polygon_attribute_definition_id", "value"], {
-        name: "pad_options_definition_id_value_unique",
-        unique: true,
         transaction
       });
 
@@ -84,18 +66,6 @@ export const addPolygonAttributeTables: RunnableMigration<QueryInterface> = {
         },
         { transaction }
       );
-
-      await context.addIndex("site_polygon_attribute_values", ["site_polygon_uuid"], {
-        name: "spav_site_polygon_uuid",
-        unique: false,
-        transaction
-      });
-
-      await context.addIndex("site_polygon_attribute_values", ["polygon_attribute_definition_id"], {
-        name: "spav_definition_id",
-        unique: false,
-        transaction
-      });
 
       await context.addIndex(
         "site_polygon_attribute_values",

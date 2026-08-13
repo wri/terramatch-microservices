@@ -4,7 +4,6 @@ import {
   BelongsTo,
   Column,
   ForeignKey,
-  Index,
   Model,
   PrimaryKey,
   Table
@@ -30,7 +29,6 @@ export class SitePolygonAttributeValue extends Model<
   declare id: CreationOptional<number>;
 
   @ForeignKey(() => SitePolygon)
-  @Index
   @Column({ type: UUID, field: "site_polygon_uuid" })
   declare sitePolygonUuid: string;
 
@@ -38,7 +36,6 @@ export class SitePolygonAttributeValue extends Model<
   declare sitePolygon: SitePolygon | null;
 
   @ForeignKey(() => PolygonAttributeDefinition)
-  @Index
   @Column(BIGINT.UNSIGNED)
   declare polygonAttributeDefinitionId: number;
 

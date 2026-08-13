@@ -1,8 +1,8 @@
 import { FactoryGirl } from "factory-girl-ts";
 import { faker } from "@faker-js/faker";
 import { FRAMEWORK_KEYS } from "../constants";
-import { POLYGON_ATTRIBUTE_INPUT_TYPES } from "../constants/polygon-attribute-input-types";
 import { PolygonAttributeDefinition } from "../entities";
+import { POLYGON_ATTRIBUTE_INPUT_TYPES } from "../entities/polygon-attribute-definition.entity";
 
 export const PolygonAttributeDefinitionFactory = FactoryGirl.define(PolygonAttributeDefinition, async () => ({
   key: faker.lorem.slug(),

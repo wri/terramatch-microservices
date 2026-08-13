@@ -4,7 +4,7 @@ import { PolygonAttributeDefinition, PolygonAttributeDefinitionOption } from "..
 import { PolygonAttributeDefinitionFactory } from "./polygon-attribute-definition.factory";
 
 export const PolygonAttributeDefinitionOptionFactory = {
-  forDefinition: (definition?: PolygonAttributeDefinition) =>
+  definition: (definition?: PolygonAttributeDefinition) =>
     FactoryGirl.define(PolygonAttributeDefinitionOption, async () => ({
       polygonAttributeDefinitionId: (definition?.id as number) ?? PolygonAttributeDefinitionFactory.associate("id"),
       value: faker.lorem.slug(),

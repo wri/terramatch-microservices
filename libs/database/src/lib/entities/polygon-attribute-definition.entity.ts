@@ -2,7 +2,6 @@ import {
   AutoIncrement,
   BelongsTo,
   Column,
-  Default,
   HasMany,
   Index,
   Model,
@@ -17,14 +16,16 @@ import {
   InferAttributes,
   InferCreationAttributes,
   STRING,
+  TEXT,
   UUID,
   UUIDV4
 } from "sequelize";
 import { FrameworkKey } from "../constants";
-import { PolygonAttributeInputType } from "../constants/polygon-attribute-input-types";
 import { Framework } from "./framework.entity";
 import { PolygonAttributeDefinitionOption } from "./polygon-attribute-definition-option.entity";
-import { SitePolygonAttributeValue } from "./site-polygon-attribute-value.entity";
+
+export const POLYGON_ATTRIBUTE_INPUT_TYPES = ["single_select", "multi_select"] as const;
+export type PolygonAttributeInputType = (typeof POLYGON_ATTRIBUTE_INPUT_TYPES)[number];
 
 @Table({
   tableName: "polygon_attribute_definitions",
@@ -55,7 +56,7 @@ export class PolygonAttributeDefinition extends Model<
   @Column(STRING)
   declare key: string;
 
-  @Column(STRING)
+  @Column(TEXT)
   declare label: string;
 
   @Column(STRING)
@@ -67,12 +68,10 @@ export class PolygonAttributeDefinition extends Model<
   @BelongsTo(() => Framework, { foreignKey: "frameworkKey", targetKey: "slug", constraints: false })
   declare framework: Framework | null;
 
-  @Default(false)
-  @Column(BOOLEAN)
+  @Column({ type: BOOLEAN, defaultValue: false })
   declare isRequired: CreationOptional<boolean>;
 
-  @Default(true)
-  @Column(BOOLEAN)
+  @Column({ type: BOOLEAN, defaultValue: true })
   declare isActive: CreationOptional<boolean>;
 
   @HasMany(() => PolygonAttributeDefinitionOption, {
@@ -80,10 +79,4 @@ export class PolygonAttributeDefinition extends Model<
     constraints: false
   })
   declare options: PolygonAttributeDefinitionOption[] | null;
-
-  @HasMany(() => SitePolygonAttributeValue, {
-    foreignKey: "polygonAttributeDefinitionId",
-    constraints: false
-  })
-  declare values: SitePolygonAttributeValue[] | null;
 }

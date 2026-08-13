@@ -5,7 +5,7 @@ import { PolygonAttributeDefinitionFactory } from "./polygon-attribute-definitio
 import { SitePolygonFactory } from "./site-polygon.factory";
 
 export const SitePolygonAttributeValueFactory = {
-  forDefinition: (definition?: PolygonAttributeDefinition) =>
+  definition: (definition?: PolygonAttributeDefinition) =>
     FactoryGirl.define(SitePolygonAttributeValue, async () => ({
       sitePolygonUuid: SitePolygonFactory.associate("uuid"),
       polygonAttributeDefinitionId: (definition?.id as number) ?? PolygonAttributeDefinitionFactory.associate("id"),

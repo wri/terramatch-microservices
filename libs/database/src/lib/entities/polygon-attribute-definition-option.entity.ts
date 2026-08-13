@@ -30,7 +30,6 @@ export class PolygonAttributeDefinitionOption extends Model<
   declare uuid: CreationOptional<string>;
 
   @ForeignKey(() => PolygonAttributeDefinition)
-  @Index
   @Column(BIGINT.UNSIGNED)
   declare polygonAttributeDefinitionId: number;
 

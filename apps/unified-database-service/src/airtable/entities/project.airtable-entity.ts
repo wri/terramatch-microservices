@@ -145,7 +145,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   associatedValueColumn("nonTreeAmount"),
   associatedValueColumn("nonTreeNameAndAmount"),
   "projectSummary",
-  "incomeGeneratingActivities"
+  "incomeGeneratingActivities",
+  "lat",
+  { airtableColumn: "lng", dbColumn: "long", valueMap: async ({ long }) => long }
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

@@ -5,9 +5,8 @@ import { ConfigService } from "@nestjs/config";
 import Airtable from "airtable";
 import {
   ApplicationEntity,
-  TrackingEntity,
-  TrackingEntryEntity,
   DisturbanceEntity,
+  DisturbanceReportEntity,
   FinancialIndicatorEntity,
   FinancialReportEntity,
   FundingProgrammeEntity,
@@ -28,9 +27,11 @@ import {
   SiteReportEntity,
   SrpReportEntity,
   StrataEntity,
+  TaskEntity,
+  TrackingEntity,
+  TrackingEntryEntity,
   TreeSpeciesEntity,
-  UserEntity,
-  DisturbanceReportEntity
+  UserEntity
 } from "./entities";
 import * as Sentry from "@sentry/node";
 import { SlackService } from "@terramatch-microservices/common/slack/slack.service";
@@ -61,6 +62,7 @@ export const AIRTABLE_ENTITIES = {
   siteReports: SiteReportEntity,
   srpReports: SrpReportEntity,
   stratas: StrataEntity,
+  tasks: TaskEntity,
   trackings: TrackingEntity,
   trackingEntries: TrackingEntryEntity,
   treeSpecies: TreeSpeciesEntity,

@@ -60,7 +60,7 @@ describe("OrganisationPolicy", () => {
 
     it("disallows listing non-approved organisations", async () => {
       const org = await OrganisationFactory.create({
-        status: "pending",
+        status: "pending-approval",
         private: false,
         isTest: false
       });
@@ -202,7 +202,7 @@ describe("OrganisationPolicy", () => {
     });
 
     it("disallows deleting non-draft organisations for user's primary org", async () => {
-      const pendingOrg = await OrganisationFactory.create({ status: "pending" });
+      const pendingOrg = await OrganisationFactory.create({ status: "pending-approval" });
       const user = await UserFactory.create({ organisationId: pendingOrg.id });
       mockContextForUser(user, "manage-own");
       await expectCannot(service, "delete", pendingOrg);

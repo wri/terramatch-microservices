@@ -18,11 +18,13 @@ type TableStatusUpdate = {
  * 1) Entity / report / task / form / organisation status columns
  * 2) audit_statuses.status          — column slug rename
  * 3) audit_statuses.comment         — "Awaiting Review:" → "Pending Approval:"
- * 4) audits.old_values / new_values — embedded JSON status slug rename via JSON_SET
+ * 4) audits.old_values / new_values — embedded JSON status slug rename via string REPLACE
  *      e.g. {"status":"started"} → {"status":"draft"}
  *           {"status":"awaiting-approval"} → {"status":"pending-approval"}
  *           {"status":"needs-more-information"} → {"status":"information-required"}
  *           {"status":"requires-more-information"} → {"status":"information-required"}
+ * 5) NULL update_request_status     → "no-update" (all entity/report tables with the column)
+ * 6) NULL organisations.status      → "draft"
  *
  * Run in entity-service REPL (restart REPL first so this file is reloaded):
  *   await oneOff.renameEntityStatusSlugs()
@@ -154,6 +156,31 @@ const renameAuditStatusesTableComments = async (
   counts["audit_statuses.comment:Awaiting Review:->Pending Approval:"] = affectedRows(metadata);
 };
 
+/**
+ * Null cleanup that is not a simple slug rename:
+ * - update_request_status NULL → no-update
+ * - organisations.status NULL → draft
+ */
+const normalizeNullStatuses = async (
+  sequelize: NonNullable<typeof Task.sequelize>,
+  transaction: Transaction,
+  counts: Record<string, number>
+) => {
+  for (const table of STATUS_AND_UPDATE_REQUEST_TABLES) {
+    const [, nullMeta] = await sequelize.query(
+      `UPDATE \`${table}\` SET \`update_request_status\` = 'no-update' WHERE \`update_request_status\` IS NULL`,
+      { type: QueryTypes.UPDATE, transaction }
+    );
+    counts[`${table}.update_request_status:NULL->no-update`] = affectedRows(nullMeta);
+  }
+
+  const [, orgNullMeta] = await sequelize.query(
+    `UPDATE \`organisations\` SET \`status\` = 'draft' WHERE \`status\` IS NULL`,
+    { type: QueryTypes.UPDATE, transaction }
+  );
+  counts["organisations.status:NULL->draft"] = affectedRows(orgNullMeta);
+};
+
 export const renameEntityStatusSlugs = withoutSqlLogs(async (): Promise<Record<string, number>> => {
   const sequelize = Task.sequelize;
   if (sequelize == null) throw new Error("Sequelize instance not available");
@@ -176,6 +203,7 @@ export const renameEntityStatusSlugs = withoutSqlLogs(async (): Promise<Record<s
 
     await renameAuditsTableJsonStatuses(sequelize, transaction, counts);
     await renameAuditStatusesTableComments(sequelize, transaction, counts);
+    await normalizeNullStatuses(sequelize, transaction, counts);
 
     return counts;
   });
@@ -184,6 +212,8 @@ export const renameEntityStatusSlugs = withoutSqlLogs(async (): Promise<Record<s
   console.log("  - entity/report/task/form/org status columns");
   console.log("  - audit_statuses.status + audit_statuses.comment");
   console.log("  - audits.old_values + audits.new_values (REPLACE on JSON text)");
+  console.log("  - NULL update_request_status → no-update");
+  console.log("  - NULL organisations.status → draft");
   console.table(summary);
   return summary;
 });

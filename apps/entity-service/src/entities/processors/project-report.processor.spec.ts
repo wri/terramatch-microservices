@@ -660,6 +660,32 @@ describe("ProjectReportProcessor", () => {
       });
     });
 
+    it("writes only the selected project reports to the CSV", async () => {
+      await ProjectReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" });
+      const reports = await ProjectReportFactory.createMany(3, { projectId: project.id, frameworkKey: "ppc" });
+      await EntityFormFactory.projectReport(reports[0]).create();
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ uuids: [reports[0].uuid, reports[2].uuid] });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as ProjectReport).uuid).sort()).toEqual(
+        [reports[0].uuid, reports[2].uuid].sort()
+      );
+    });
+
+    it("returns early when selected project report uuids match nothing", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportAll({ uuids: ["00000000-0000-4000-8000-000000000000"] });
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
     it("filters for own projects", async () => {
       await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
         "$project.is_test$": false,

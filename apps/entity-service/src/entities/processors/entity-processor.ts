@@ -9,12 +9,7 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes, DisturbanceReportUpdateAttributes } from "../dto/entity-update.dto";
-import {
-  APPROVED,
-  PENDING_APPROVAL,
-  INFORMATION_REQUIRED,
-  NO_UPDATE
-} from "@terramatch-microservices/database/constants/status";
+import { APPROVED, PENDING_APPROVAL, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { DisturbanceReport, Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
@@ -73,6 +68,8 @@ export type ExportAllOptions = {
   frameworkKey?: FrameworkKey;
   // filter by project
   projectUuid?: string;
+  // filter by specific entity UUIDs
+  uuids?: string[];
   // If undefined, the export will go to S3 instead.
   target?: Response | Archiver;
   // If undefined, the filename will be generated
@@ -313,7 +310,7 @@ export abstract class ReportProcessor<
     model.completion = 0;
     if (!(model instanceof ProjectReport)) model.nothingToReport = null;
     model.approvedBy = null;
-    model.updateRequestStatus = NO_UPDATE;
+    model.updateRequestStatus = null;
     model.answers = null;
     model.feedback = null;
     model.feedbackFields = null;

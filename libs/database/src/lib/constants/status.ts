@@ -94,8 +94,11 @@ export const TaskStatusStates: States<Task, TaskStatus> = {
 };
 
 export const NO_UPDATE = "no-update";
-export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, PENDING_APPROVAL, APPROVED, INFORMATION_REQUIRED] as const;
+/** Active update-request statuses. Absence of a change request is represented as NULL (not no-update). */
+export const UPDATE_REQUEST_STATUSES = [DRAFT, PENDING_APPROVAL, APPROVED, INFORMATION_REQUIRED] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
+/** @deprecated Prefer NULL on entity update_request_status; kept for legacy comparisons during migration. */
+export type UpdateRequestStatusOrLegacyNoUpdate = UpdateRequestStatus | typeof NO_UPDATE;
 
 export const UpdateRequestStatusStates: States<UpdateRequest, UpdateRequestStatus> = {
   default: DRAFT,
@@ -154,8 +157,7 @@ export const STATUS_DISPLAY_STRINGS: Record<AnyStatus, string> = {
   [PENDING_APPROVAL]: "Pending Approval",
   [INFORMATION_REQUIRED]: "Information Required",
   [APPROVED]: "Approved",
-  [REJECTED]: "Rejected",
-  [NO_UPDATE]: "No Update"
+  [REJECTED]: "Rejected"
 };
 
 export const FAILED = "failed";

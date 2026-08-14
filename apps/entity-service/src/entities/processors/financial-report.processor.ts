@@ -179,7 +179,26 @@ export class FinancialReportProcessor extends ReportProcessor<
     });
   }
 
-  async exportAll({ target, frameworkKey }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, uuids, fileNamePrefix }: ExportAllOptions = {}) {
+    if (uuids != null && uuids.length > 0) {
+      const reports = await FinancialReport.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        include: CSV_EXPORT_INCLUDES
+      });
+      if (reports.length === 0) return;
+      await this.entitiesService.authorize("read", reports);
+      frameworkKey ??= reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined;
+      if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+      const reportsLabel = await this.entitiesService.localizeText("financial reports");
+      await this.entitiesService.entityExport("financialReports", PD_CSV_COLUMNS, reports, {
+        frameworkKey,
+        fileName: fileNamePrefix == null ? undefined : `${fileNamePrefix} - ${reportsLabel}.csv`,
+        target,
+        ability: "read"
+      });
+      return;
+    }
+
     if (target == null) throw new InternalServerErrorException("Target is required for financial report export");
     if (frameworkKey == null) throw new BadRequestException("Framework key is required");
 

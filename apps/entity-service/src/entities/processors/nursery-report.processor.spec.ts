@@ -636,6 +636,33 @@ describe("NurseryReportProcessor", () => {
       expect(result1.organisationName).toEqual(org.name);
     });
 
+    it("writes only the selected nursery reports to the CSV", async () => {
+      await NurseryReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" });
+      const nursery = await NurseryFactory.create({ projectId: project.id, frameworkKey: "terrafund" });
+      const reports = await NurseryReportFactory.createMany(3, { nurseryId: nursery.id, frameworkKey: "terrafund" });
+      await EntityFormFactory.nurseryReport(reports[0]).create();
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ uuids: [reports[0].uuid, reports[2].uuid] });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as NurseryReport).uuid).sort()).toEqual(
+        [reports[0].uuid, reports[2].uuid].sort()
+      );
+    });
+
+    it("returns early when selected nursery report uuids match nothing", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportAll({ uuids: ["00000000-0000-4000-8000-000000000000"] });
+      expect(localizeSpy).not.toHaveBeenCalled();
+    });
+
     it("filters for own projects", async () => {
       await expectExportAllFiltersOwn(entitiesService(), processor, projectIdResult => ({
         "$nursery.project.is_test$": false,

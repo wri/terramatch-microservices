@@ -121,7 +121,24 @@ describe("EntitiesController", () => {
     it("should call exportAll on the processor", async () => {
       const target = {} as Response;
       await controller.entityExportAll({ entity: "projects" }, {}, target);
-      expect(processor.exportAll).toHaveBeenCalledWith({ target });
+      expect(processor.exportAll).toHaveBeenCalledWith({
+        target,
+        frameworkKey: undefined,
+        projectUuid: undefined,
+        uuids: undefined
+      });
+    });
+
+    it("should pass uuids to exportAll", async () => {
+      const target = {} as Response;
+      const uuids = ["uuid-1", "uuid-2"];
+      await controller.entityExportAll({ entity: "siteReports" }, { uuids }, target);
+      expect(processor.exportAll).toHaveBeenCalledWith({
+        target,
+        frameworkKey: undefined,
+        projectUuid: undefined,
+        uuids
+      });
     });
 
     it("should return a presigned url", async () => {

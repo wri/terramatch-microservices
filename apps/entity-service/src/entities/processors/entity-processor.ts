@@ -68,6 +68,8 @@ export type ExportAllOptions = {
   frameworkKey?: FrameworkKey;
   // filter by project
   projectUuid?: string;
+  // filter by specific entity UUIDs
+  uuids?: string[];
   // If undefined, the export will go to S3 instead.
   target?: Response | Archiver;
   // If undefined, the filename will be generated

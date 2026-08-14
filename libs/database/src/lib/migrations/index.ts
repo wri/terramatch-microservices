@@ -29,6 +29,7 @@ import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-dis
 import { requireAboutSectionText } from "./202608051658-require-about-section-text";
 import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
 import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
+import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -59,5 +60,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addDisturbanceReportFormUuidToFrameworks,
   requireAboutSectionText,
   removeI18nFieldIdColumns,
-  nullUpdateRequestStatusDefault
+  nullUpdateRequestStatusDefault,
+  convertBioeconomyProductColumnsToText
 ];

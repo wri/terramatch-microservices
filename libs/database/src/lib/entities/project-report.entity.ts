@@ -779,12 +779,12 @@ export class ProjectReport extends Model<ProjectReport> {
   declare bioeconomyProductList: string[] | null;
 
   @AllowNull
-  @JsonColumn()
-  declare bioeconomyProductBenefit: string[] | null;
+  @Column(TEXT)
+  declare bioeconomyProductBenefit: string | null;
 
   @AllowNull
-  @JsonColumn()
-  declare bioeconomyProductSold: string[] | null;
+  @Column(TEXT)
+  declare bioeconomyProductSold: string | null;
 
   @AllowNull
   @JsonColumn()

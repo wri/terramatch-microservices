@@ -37,3 +37,4 @@ export { migrateReportTasks } from "./2026-07-29-migrateReportTasks";
 export { importPolygonDataSubmission, importProjectQaStatuses } from "./2026-07-29-importPolygonHandoffStatuses";
 export { renameEntityStatusSlugs } from "./2026-08-08-renameEntityStatusSlugs";
 export { cleanupOrphanedI18nItems } from "./2026-08-10-cleanupOrphanedI18nItems";
+export { convertBioeconomyProductQuestionsToText } from "./2026-08-14-convertBioeconomyProductQuestionsToText";

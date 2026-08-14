@@ -310,16 +310,12 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     "pro-rep-bioeconomy-product-benefit": {
       property: "bioeconomyProductBenefit",
       label: "Bioeconomy product benefit (Project Report)",
-      inputType: "select",
-      multiChoice: true,
-      optionListKey: "bioeconomy-product-list"
+      inputType: "text"
     },
     "pro-rep-bioeconomy-product-sold": {
       property: "bioeconomyProductSold",
       label: "Bioeconomy product sold (Project Report)",
-      inputType: "select",
-      multiChoice: true,
-      optionListKey: "bioeconomy-product-list"
+      inputType: "text"
     },
     "pro-rep-bioeconomy-quality-certifications": {
       property: "bioeconomyQualityCertifications",

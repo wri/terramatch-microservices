@@ -370,5 +370,34 @@ describe("FinancialReportProcessor", () => {
         expect.anything()
       );
     });
+
+    it("exports only the selected financial reports by uuids", async () => {
+      await FinancialReport.truncate();
+      const organisation = await OrganisationFactory.create({ isTest: false });
+      const reports = [
+        await FinancialReportFactory.org(organisation).create({ frameworkKey: "ppc" }),
+        await FinancialReportFactory.org(organisation).create({ frameworkKey: "ppc" })
+      ];
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+
+      await processor.exportAll({ target: {} as Response, uuids: [reports[0].uuid] });
+
+      expect(exportSpy).toHaveBeenCalledWith(
+        "financialReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: reports[0].uuid })],
+        expect.objectContaining({ ability: "read" })
+      );
+    });
+
+    it("returns early when selected financial report uuids match nothing", async () => {
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.exportAll({
+        target: {} as Response,
+        uuids: ["00000000-0000-4000-8000-000000000000"]
+      });
+      expect(exportSpy).not.toHaveBeenCalled();
+    });
   });
 });

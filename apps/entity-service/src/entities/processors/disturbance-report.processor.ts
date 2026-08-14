@@ -389,8 +389,10 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     });
   }
 
-  async exportAll({ target }: ExportAllOptions = {}) {
-    const fileName = timestampFileName(await this.entitiesService.localizeText("Disturbance Reports Export"));
+  async exportAll({ target, uuids, fileNamePrefix }: ExportAllOptions = {}) {
+    const reportsLabel = await this.entitiesService.localizeText("Disturbance Reports Export");
+    const fileName =
+      fileNamePrefix == null ? timestampFileName(reportsLabel) : `${fileNamePrefix} - ${reportsLabel}.csv`;
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {
@@ -398,9 +400,12 @@ export class DisturbanceReportProcessor extends ReportProcessor<
           attributes: ["uuid", "name"]
         }
       ]);
+      if (uuids != null && uuids.length > 0) {
+        builder.where({ uuid: { [Op.in]: uuids } });
+      }
 
       for await (const page of batchFindAll(builder)) {
-        await this.entitiesService.authorize("export", page);
+        await this.entitiesService.authorize(uuids != null && uuids.length > 0 ? "read" : "export", page);
         const entries = await DisturbanceReportEntry.findAll({
           where: { disturbanceReportId: page.map(({ id }) => id) }
         });

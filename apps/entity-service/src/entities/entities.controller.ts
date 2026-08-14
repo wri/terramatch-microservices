@@ -130,12 +130,13 @@ export class EntitiesController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async entityExportAll<T extends EntityModel>(
     @Param() { entity }: EntityIndexParamsDto,
-    @Query() { frameworkKey, projectUuid }: EntityExportQueryDto,
+    @Query() { frameworkKey, projectUuid, uuids }: EntityExportQueryDto,
     @Res({ passthrough: true }) response: Response
   ) {
     // if we're some kind of admin and we have a framework key set, the intention is to access the
     // automatically generated reports that are sent to S3.
     if (
+      (uuids == null || uuids.length === 0) &&
       CACHED_EXPORT_ENTITY_TYPES.includes(entity) &&
       frameworkKey != null &&
       this.policyService.permissions.find(p => p.startsWith("framework-")) != null
@@ -152,7 +153,7 @@ export class EntitiesController {
     // to. Either way, it writes directly to the response, and the permissions are checked in
     // the processor.
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
-    await processor.exportAll({ target: response, frameworkKey, projectUuid });
+    await processor.exportAll({ target: response, frameworkKey, projectUuid, uuids });
   }
 
   @Post(":entity/translations")

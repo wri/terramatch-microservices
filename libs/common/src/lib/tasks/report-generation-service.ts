@@ -22,12 +22,16 @@ import { DateTime } from "luxon";
 import { Op } from "sequelize";
 import { uniq } from "lodash";
 import { MediaService } from "../media/media.service";
+import { ProductEventService } from "../product-events/product-event.service";
 
 @Injectable()
 export class ReportGenerationService {
   private logger = new TMLogger(ReportGenerationService.name);
 
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly productEventService: ProductEventService
+  ) {}
 
   /**
    * Creates a task for the given project with the given due date, including all required
@@ -137,6 +141,8 @@ export class ReportGenerationService {
       projectId: project.id,
       organisationId: project.organisationId
     } as Action);
+
+    await this.productEventService.taskCreated(task);
   }
 
   /**

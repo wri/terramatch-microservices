@@ -78,13 +78,11 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
 
-    const projectIds: number[] = [];
     const failed: PromiseSettledResult<void>[] = [];
     const builder = new PaginatedQueryBuilder(Project, 100)
       .attributes(["id"])
       .where({ frameworkKey, status: { [Op.ne]: "draft" } });
     for await (const page of batchFindAll(builder)) {
-      projectIds.push(...page.map(({ id }) => id));
       failed.push(
         ...(await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))).filter(
           ({ status }) => status === "rejected"
@@ -94,10 +92,6 @@ export class ScheduledJobsProcessor extends WorkerHost {
 
     if (failed.length > 0) {
       this.logger.error(`Failed to create task for some projects: ${JSON.stringify(failed)}`);
-    }
-
-    if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey) && projectIds.length > 0) {
-      await new TerrafundReportReminderEmail({ projectIds, dueAt: dueAtString }).sendLater(this.emailQueue);
     }
   }
 

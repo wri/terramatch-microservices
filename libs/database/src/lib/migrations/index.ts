@@ -28,7 +28,7 @@ import { addPolygonGeometryActiveDeletedViews } from "./202608051200-add-polygon
 import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
 import { requireAboutSectionText } from "./202608051658-require-about-section-text";
 import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
-import { defaultFinancialReportsUpdateRequestStatus } from "./202608131200-default-financial-reports-update-request-status";
+import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -59,5 +59,5 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addDisturbanceReportFormUuidToFrameworks,
   requireAboutSectionText,
   removeI18nFieldIdColumns,
-  defaultFinancialReportsUpdateRequestStatus
+  nullUpdateRequestStatusDefault
 ];

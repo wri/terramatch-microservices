@@ -17,7 +17,7 @@ import {
   Task
 } from "@terramatch-microservices/database/entities";
 import { FINANCIAL_REPORT_FRAMEWORKS, FrameworkKey } from "@terramatch-microservices/database/constants";
-import { DUE, NO_UPDATE, PENDING } from "@terramatch-microservices/database/constants/status";
+import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
 import { Op } from "sequelize";
 import { uniq } from "lodash";
@@ -178,7 +178,7 @@ export class ReportGenerationService {
       title: `Financial Report ${yearOfReport}`,
       yearOfReport,
       status: DUE,
-      updateRequestStatus: NO_UPDATE,
+      updateRequestStatus: null,
       frameworkKey: project.frameworkKey,
       dueAt,
       finStartMonth: organisation.finStartMonth ?? null,

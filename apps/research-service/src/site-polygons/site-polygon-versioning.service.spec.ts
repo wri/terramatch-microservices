@@ -1,6 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
-import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import {
+  SitePolygon,
+  PolygonUpdates,
+  PolygonGeometry,
+  SitePolygonAttributeValue
+} from "@terramatch-microservices/database/entities";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction, Op } from "sequelize";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
@@ -52,6 +57,10 @@ describe("SitePolygonVersioningService", () => {
     }).compile();
 
     service = module.get<SitePolygonVersioningService>(SitePolygonVersioningService);
+
+    // Default: no custom attribute values to copy. Individual tests override this as needed.
+    jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([]);
+    jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -440,6 +449,233 @@ describe("SitePolygonVersioningService", () => {
       await flushMicrotasks();
 
       expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
+    });
+
+    describe("custom attribute value copying", () => {
+      it("should copy existing custom attribute values from the base polygon to the new version", async () => {
+        const basePolygon = {
+          uuid: "base-uuid",
+          primaryUuid: "primary-uuid",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+        } as unknown as SitePolygon;
+
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+        const findAllSpy = jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([
+          {
+            sitePolygonUuid: "base-uuid",
+            polygonAttributeDefinitionId: 1,
+            value: "farmer-managed"
+          },
+          {
+            sitePolygonUuid: "base-uuid",
+            polygonAttributeDefinitionId: 2,
+            value: ["strata-a", "strata-b"]
+          }
+        ] as SitePolygonAttributeValue[]);
+        const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+        await service.createVersions(
+          [
+            {
+              basePolygon,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(findAllSpy).toHaveBeenCalledWith({
+          where: { sitePolygonUuid: { [Op.in]: ["base-uuid"] } },
+          transaction: mockTransaction
+        });
+        expect(bulkCreateSpy).toHaveBeenCalledWith(
+          [
+            { sitePolygonUuid: "new-version-uuid", polygonAttributeDefinitionId: 1, value: "farmer-managed" },
+            { sitePolygonUuid: "new-version-uuid", polygonAttributeDefinitionId: 2, value: ["strata-a", "strata-b"] }
+          ],
+          { transaction: mockTransaction }
+        );
+      });
+
+      it("should copy values for each polygon independently when creating multiple versions", async () => {
+        const basePolygonOne = {
+          uuid: "base-uuid-1",
+          primaryUuid: "primary-uuid-1",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid-1", primaryUuid: "primary-uuid-1" })
+        } as unknown as SitePolygon;
+        const basePolygonTwo = {
+          uuid: "base-uuid-2",
+          primaryUuid: "primary-uuid-2",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid-2", primaryUuid: "primary-uuid-2" })
+        } as unknown as SitePolygon;
+
+        jest
+          .spyOn(SitePolygon, "bulkCreate")
+          .mockResolvedValue([
+            { uuid: "new-version-uuid-1" } as SitePolygon,
+            { uuid: "new-version-uuid-2" } as SitePolygon
+          ]);
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([2] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+        jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([
+          { sitePolygonUuid: "base-uuid-1", polygonAttributeDefinitionId: 1, value: "value-1" },
+          { sitePolygonUuid: "base-uuid-2", polygonAttributeDefinitionId: 1, value: "value-2" }
+        ] as SitePolygonAttributeValue[]);
+        const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+        await service.createVersions(
+          [
+            {
+              basePolygon: basePolygonOne,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Update 1",
+              userFullName: "User One"
+            },
+            {
+              basePolygon: basePolygonTwo,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Update 2",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(bulkCreateSpy).toHaveBeenCalledWith(
+          [
+            { sitePolygonUuid: "new-version-uuid-1", polygonAttributeDefinitionId: 1, value: "value-1" },
+            { sitePolygonUuid: "new-version-uuid-2", polygonAttributeDefinitionId: 1, value: "value-2" }
+          ],
+          { transaction: mockTransaction }
+        );
+      });
+
+      it("should preserve null values when copying", async () => {
+        const basePolygon = {
+          uuid: "base-uuid",
+          primaryUuid: "primary-uuid",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+        } as unknown as SitePolygon;
+
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+        jest
+          .spyOn(SitePolygonAttributeValue, "findAll")
+          .mockResolvedValue([
+            { sitePolygonUuid: "base-uuid", polygonAttributeDefinitionId: 1, value: null }
+          ] as SitePolygonAttributeValue[]);
+        const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+        await service.createVersions(
+          [
+            {
+              basePolygon,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(bulkCreateSpy).toHaveBeenCalledWith(
+          [{ sitePolygonUuid: "new-version-uuid", polygonAttributeDefinitionId: 1, value: null }],
+          { transaction: mockTransaction }
+        );
+      });
+
+      it("should not call bulkCreate when the base polygon has no custom attribute values", async () => {
+        const basePolygon = {
+          uuid: "base-uuid",
+          primaryUuid: "primary-uuid",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+        } as unknown as SitePolygon;
+
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+        jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([]);
+        const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+        await service.createVersions(
+          [
+            {
+              basePolygon,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(bulkCreateSpy).not.toHaveBeenCalled();
+      });
+
+      it("should copy values before deactivating other versions, within the same transaction", async () => {
+        const basePolygon = {
+          uuid: "base-uuid",
+          primaryUuid: "primary-uuid",
+          get: jest.fn().mockReturnValue({ uuid: "base-uuid", primaryUuid: "primary-uuid" })
+        } as unknown as SitePolygon;
+
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+        const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+
+        jest
+          .spyOn(SitePolygonAttributeValue, "findAll")
+          .mockResolvedValue([
+            { sitePolygonUuid: "base-uuid", polygonAttributeDefinitionId: 1, value: "value" }
+          ] as SitePolygonAttributeValue[]);
+        const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+        const callOrder: string[] = [];
+        bulkCreateSpy.mockImplementation(async () => {
+          callOrder.push("copyAttributeValues");
+          return [];
+        });
+        updateSpy.mockImplementation(async () => {
+          callOrder.push("deactivateOtherVersions");
+          return [1];
+        });
+
+        await service.createVersions(
+          [
+            {
+              basePolygon,
+              attributeChanges: {},
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(callOrder).toEqual(["copyAttributeValues", "deactivateOtherVersions"]);
+        expect(bulkCreateSpy).toHaveBeenCalledWith(expect.anything(), { transaction: mockTransaction });
+      });
     });
   });
 

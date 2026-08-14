@@ -16,10 +16,6 @@ type DefinitionWithOptions = PolygonAttributeDefinition & {
 
 @Injectable()
 export class PolygonAttributeValuesService {
-  /**
-   * Batch-load stored custom attribute values keyed by site polygon UUID.
-   * Returns a sparse map (only definitions that have a value row).
-   */
   async getMapsByPolygonUuids(uuids: string[]): Promise<Map<string, CustomAttributeMap>> {
     const result = new Map<string, CustomAttributeMap>();
     if (uuids.length === 0) return result;
@@ -54,11 +50,6 @@ export class PolygonAttributeValuesService {
     return result;
   }
 
-  /**
-   * Validate and upsert custom attribute values for one polygon version.
-   * `null` (or `[]` for multi_select) clears the stored value (row deleted).
-   * Omitted keys are left untouched.
-   */
   async upsert(
     sitePolygonUuid: string,
     frameworkKey: FrameworkKey | null | undefined,
@@ -118,10 +109,6 @@ export class PolygonAttributeValuesService {
     }
   }
 
-  /**
-   * Pick GeoJSON feature properties that match active definition keys for the framework,
-   * validate them, and return the map to upsert. Non-matching properties are ignored.
-   */
   async pickMatchingFromProperties(
     properties: Record<string, unknown>,
     frameworkKey: FrameworkKey | null | undefined,
@@ -202,7 +189,6 @@ export class PolygonAttributeValuesService {
       return rawValue;
     }
 
-    // multi_select
     if (!Array.isArray(rawValue) || rawValue.some(item => typeof item !== "string")) {
       throw new BadRequestException(`Custom attribute "${definition.key}" must be a string array or null`);
     }

@@ -576,7 +576,6 @@ describe("SitePolygonCreationService - Versioning", () => {
         { anrSubcategory: "farmer-managed" },
         mockTransaction
       );
-      // customAttributes must not be passed into SitePolygon attributeChanges
       const appliedAttributes = (versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges;
       expect(appliedAttributes.customAttributes).toBeUndefined();
     });

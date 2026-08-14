@@ -28,6 +28,7 @@ import { addPolygonGeometryActiveDeletedViews } from "./202608051200-add-polygon
 import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
 import { requireAboutSectionText } from "./202608051658-require-about-section-text";
 import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
+import { addPolygonAttributeTables } from "./202608131700-add-polygon-attribute-tables";
 import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
 import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
 
@@ -60,6 +61,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addDisturbanceReportFormUuidToFrameworks,
   requireAboutSectionText,
   removeI18nFieldIdColumns,
+  addPolygonAttributeTables,
   nullUpdateRequestStatusDefault,
   convertBioeconomyProductColumnsToText
 ];

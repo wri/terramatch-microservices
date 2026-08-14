@@ -26,6 +26,7 @@ import { EventService } from "@terramatch-microservices/common/events/event.serv
 import { Transaction } from "sequelize";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -96,6 +97,15 @@ describe("SitePolygonCreationService", () => {
           }
         },
         {
+          provide: PolygonAttributeValuesService,
+          useValue: {
+            pickMatchingFromProperties: jest.fn().mockResolvedValue({}),
+            pickMatchingFromPropertiesBatch: jest.fn().mockResolvedValue([]),
+            upsert: jest.fn().mockResolvedValue(undefined),
+            ingestFromProperties: jest.fn().mockResolvedValue({})
+          }
+        },
+        {
           provide: GeometryFileProcessingService,
           useValue: {
             parseGeometryFile: jest.fn()
@@ -139,6 +149,7 @@ describe("SitePolygonCreationService", () => {
     });
 
     jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
+    jest.spyOn(Site, "findOne").mockResolvedValue({ uuid: "site-uuid-1", frameworkKey: "terrafund" } as Site);
   });
 
   afterEach(() => {

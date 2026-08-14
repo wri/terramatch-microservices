@@ -13,6 +13,7 @@ import { Transaction, Op } from "sequelize";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 const mockTransaction = {
   commit: jest.fn(),
@@ -25,8 +26,13 @@ describe("SitePolygonCreationService - Versioning", () => {
   let service: SitePolygonCreationService;
   let polygonGeometryService: PolygonGeometryCreationService;
   let versioningService: SitePolygonVersioningService;
+  let polygonAttributeValuesService: { upsert: jest.Mock };
 
   beforeEach(async () => {
+    polygonAttributeValuesService = {
+      upsert: jest.fn().mockResolvedValue(undefined)
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SitePolygonCreationService,
@@ -64,6 +70,15 @@ describe("SitePolygonCreationService - Versioning", () => {
             validateBulkVersioningEligibility: jest.fn(),
             createVersion: jest.fn(),
             createVersions: jest.fn()
+          }
+        },
+        {
+          provide: PolygonAttributeValuesService,
+          useValue: {
+            pickMatchingFromProperties: jest.fn().mockResolvedValue({}),
+            pickMatchingFromPropertiesBatch: jest.fn().mockResolvedValue([]),
+            upsert: polygonAttributeValuesService.upsert,
+            ingestFromProperties: jest.fn().mockResolvedValue({})
           }
         },
         {
@@ -530,6 +545,66 @@ describe("SitePolygonCreationService - Versioning", () => {
       const appliedAttributes = createVersionsCall[0][0].attributeChanges;
 
       expect(appliedAttributes.status).toBe("draft");
+    });
+
+    it("should upsert customAttributes onto the new version after createVersions", async () => {
+      const basePolygon = {
+        uuid: baseSitePolygonUuid,
+        primaryUuid: "primary-uuid",
+        polyName: "Original Name",
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+      } as unknown as SitePolygon;
+
+      const newVersion = { uuid: "new-version-uuid" } as SitePolygon;
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([newVersion]);
+
+      await service.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        undefined,
+        { customAttributes: { anrSubcategory: "farmer-managed" } },
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+
+      expect(polygonAttributeValuesService.upsert).toHaveBeenCalledWith(
+        "new-version-uuid",
+        "terrafund",
+        { anrSubcategory: "farmer-managed" },
+        mockTransaction
+      );
+      // customAttributes must not be passed into SitePolygon attributeChanges
+      const appliedAttributes = (versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges;
+      expect(appliedAttributes.customAttributes).toBeUndefined();
+    });
+
+    it("should not call upsert when customAttributes is omitted", async () => {
+      const basePolygon = {
+        uuid: baseSitePolygonUuid,
+        primaryUuid: "primary-uuid",
+        polyName: "Original Name",
+        loadSite: jest.fn()
+      } as unknown as SitePolygon;
+
+      jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(basePolygon);
+      jest.spyOn(versioningService, "createVersions").mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+
+      await service.createSitePolygonVersion(
+        baseSitePolygonUuid,
+        undefined,
+        { polyName: "Renamed" },
+        changeReason,
+        userId,
+        userFullName,
+        source,
+        mockTransaction
+      );
+
+      expect(polygonAttributeValuesService.upsert).not.toHaveBeenCalled();
+      expect(basePolygon.loadSite).not.toHaveBeenCalled();
     });
   });
 

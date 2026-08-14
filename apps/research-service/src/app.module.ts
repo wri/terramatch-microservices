@@ -4,6 +4,7 @@ import { SitePolygonsController } from "./site-polygons/site-polygons.controller
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
 import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
+import { PolygonAttributeValuesService } from "./site-polygons/polygon-attribute-values.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
@@ -78,6 +79,7 @@ const IS_REPL = process.env["REPL"] === "true";
     SitePolygonsService,
     SitePolygonCreationService,
     SitePolygonVersioningService,
+    PolygonAttributeValuesService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     GeometryFileProcessingService,

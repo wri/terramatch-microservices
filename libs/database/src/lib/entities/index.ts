@@ -69,6 +69,7 @@ export * from "./seeding.entity";
 export * from "./site.entity";
 export * from "./site-polygon.entity";
 export { SitePolygonAttributeValue } from "./site-polygon-attribute-value.entity";
+export type { SitePolygonAttributeValueData } from "./site-polygon-attribute-value.entity";
 export * from "./site-polygon-data.entity";
 export * from "./site-report.entity";
 export * from "./stage.entity";

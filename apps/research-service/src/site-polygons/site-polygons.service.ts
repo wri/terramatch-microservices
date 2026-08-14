@@ -8,6 +8,7 @@ import {
   ProjectPolygon,
   Site,
   SitePolygon,
+  SitePolygonAttributeValue,
   SitePolygonData,
   SiteReport,
   TreeSpecies,
@@ -20,6 +21,7 @@ import { Queue } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
+  CustomAttributesDto,
   IndicatorDto,
   ReportingPeriodDto,
   SitePolygonFullDto,
@@ -47,11 +49,13 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
   establishmentTreeSpecies?: TreeSpeciesDto[];
   reportingPeriods?: ReportingPeriodDto[];
+  customAttributes?: CustomAttributesDto;
 };
 
 @Injectable()
@@ -62,6 +66,7 @@ export class SitePolygonsService {
     private readonly polygonGeometryService: PolygonGeometryCreationService,
     private readonly boundingBoxService: BoundingBoxService,
     private readonly gwcTileInvalidationService: GwcTileInvalidationService,
+    private readonly polygonAttributeValuesService: PolygonAttributeValuesService,
     @InjectQueue("validation") private readonly validationQueue: Queue
   ) {}
 
@@ -171,6 +176,11 @@ export class SitePolygonsService {
     }
 
     await SitePolygonData.destroy({
+      where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      transaction
+    });
+
+    await SitePolygonAttributeValue.destroy({
       where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
       transaction
     });
@@ -352,6 +362,11 @@ export class SitePolygonsService {
         transaction
       });
 
+      await SitePolygonAttributeValue.destroy({
+        where: { sitePolygonUuid: uuid },
+        transaction
+      });
+
       await AuditStatus.destroy({
         where: {
           auditableType: SitePolygon.LARAVEL_TYPE,
@@ -404,9 +419,17 @@ export class SitePolygonsService {
     const associationDtos: Record<number, AssociationDtos> = {};
     if (sitePolygons.length === 0) return associationDtos;
 
+    const customAttributesByUuid = await this.polygonAttributeValuesService.getMapsByPolygonUuids(
+      sitePolygons.map(sitePolygon => sitePolygon.uuid)
+    );
+
     if (lightResource) {
       for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
         associationDtos[Number(sitePolygonId)] = { indicators };
+      }
+      for (const sitePolygon of sitePolygons) {
+        associationDtos[sitePolygon.id] ??= {};
+        associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
       }
       return associationDtos;
     }
@@ -415,6 +438,11 @@ export class SitePolygonsService {
 
     for (const [sitePolygonId, indicators] of Object.entries(indicatorsMap)) {
       associationDtos[Number(sitePolygonId)] = { indicators };
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      associationDtos[sitePolygon.id] ??= {};
+      associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
     }
 
     const siteIds = uniq(Object.values(sites));
@@ -441,15 +469,24 @@ export class SitePolygonsService {
     return associationDtos;
   }
 
-  async buildLightDto(sitePolygon: SitePolygon, { indicators }: AssociationDtos): Promise<SitePolygonLightDto> {
-    return new SitePolygonLightDto(sitePolygon, indicators);
+  async buildLightDto(
+    sitePolygon: SitePolygon,
+    { indicators, customAttributes }: AssociationDtos
+  ): Promise<SitePolygonLightDto> {
+    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes);
   }
 
   async buildFullDto(
     sitePolygon: SitePolygon,
-    { indicators, establishmentTreeSpecies, reportingPeriods }: AssociationDtos
+    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes }: AssociationDtos
   ): Promise<SitePolygonFullDto> {
-    return new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods);
+    return new SitePolygonFullDto(
+      sitePolygon,
+      indicators,
+      establishmentTreeSpecies,
+      reportingPeriods,
+      customAttributes
+    );
   }
 
   /**

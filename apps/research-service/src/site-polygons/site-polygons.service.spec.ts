@@ -42,6 +42,7 @@ import { Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -49,6 +50,7 @@ describe("SitePolygonsService", () => {
   let validationQueue: jest.Mocked<Queue>;
   let boundingBoxService: { getPolygonsBoundingBox: jest.Mock };
   let gwcTileInvalidationService: { truncate: jest.Mock };
+  let polygonAttributeValuesService: { getMapsByPolygonUuids: jest.Mock };
 
   beforeEach(async () => {
     const mockPolygonGeometryService = {
@@ -64,6 +66,9 @@ describe("SitePolygonsService", () => {
     };
     gwcTileInvalidationService = {
       truncate: jest.fn().mockResolvedValue(undefined)
+    };
+    polygonAttributeValuesService = {
+      getMapsByPolygonUuids: jest.fn().mockResolvedValue(new Map())
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -84,6 +89,10 @@ describe("SitePolygonsService", () => {
         {
           provide: GwcTileInvalidationService,
           useValue: gwcTileInvalidationService
+        },
+        {
+          provide: PolygonAttributeValuesService,
+          useValue: polygonAttributeValuesService
         }
       ]
     }).compile();

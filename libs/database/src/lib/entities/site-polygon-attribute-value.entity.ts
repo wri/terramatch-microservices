@@ -8,8 +8,7 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, UUID } from "sequelize";
-import { JsonColumn } from "../decorators/json-column.decorator";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, JSON, UUID } from "sequelize";
 import { PolygonAttributeDefinition } from "./polygon-attribute-definition.entity";
 import { SitePolygon } from "./site-polygon.entity";
 
@@ -45,7 +44,9 @@ export class SitePolygonAttributeValue extends Model<
   })
   declare definition: PolygonAttributeDefinition | null;
 
+  // Use Column(JSON), not JsonColumn: values are string | string[], and JsonColumn's
+  // JSON.parse on already-deserialized string primitives throws (e.g. "farmer-managed").
   @AllowNull
-  @JsonColumn()
+  @Column(JSON)
   declare value: SitePolygonAttributeValueData | null;
 }

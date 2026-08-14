@@ -22,6 +22,7 @@ const BULK_ATTRIBUTE_UPDATE_CHANGE_REASON = "Bulk attribute update via API" as c
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./point-geometry-creation.service";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 import {
   validateSitePolygonProperties,
   extractAdditionalData,
@@ -147,6 +148,7 @@ export class SitePolygonCreationService {
     private readonly voronoiService: VoronoiService,
     private readonly geometryFileProcessingService: GeometryFileProcessingService,
     private readonly versioningService: SitePolygonVersioningService,
+    private readonly polygonAttributeValuesService: PolygonAttributeValuesService,
     private readonly eventService: EventService,
     private readonly boundingBoxService: BoundingBoxService,
     private readonly gwcTileInvalidationService: GwcTileInvalidationService
@@ -741,20 +743,44 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction
   ): Promise<{ sitePolygons: SitePolygon[]; inputIndices: Map<string, number> }> {
+    const site = await Site.findOne({
+      where: { uuid: siteId },
+      attributes: ["uuid", "frameworkKey"],
+      transaction
+    });
+    const frameworkKey = site?.frameworkKey ?? null;
+
+    const featureUserProperties: Record<string, unknown>[] = features.map(feature => {
+      const properties = (feature.properties ?? {}) as Record<string, unknown> & { __inputIndex?: number };
+      const { __inputIndex: _ignored, ...userProperties } = properties;
+      void _ignored;
+      return userProperties;
+    });
+    const matchedByFeature = await this.polygonAttributeValuesService.pickMatchingFromPropertiesBatch(
+      featureUserProperties,
+      frameworkKey,
+      transaction
+    );
+
     const sitePolygons: Partial<SitePolygon>[] = [];
     const sitePolygonInputIndices: number[] = [];
     const additionalDataRecords: Partial<SitePolygonData>[] = [];
+    const pendingCustomAttributes: Array<{
+      sitePolygonUuid: string;
+      attributes: Record<string, string | string[] | null>;
+    }> = [];
     let polygonIndex = 0;
 
     for (let i = 0; i < features.length; i++) {
       const feature = features[i];
       const geometry = feature.geometry;
-      const properties = feature.properties;
       const numPolygons = geometry.type === "MultiPolygon" ? (geometry.coordinates as number[][][][]).length : 1;
-      const { __inputIndex, ...userProperties } = (properties ?? {}) as Record<string, unknown> & {
-        __inputIndex?: number;
-      };
-      const inputIndex = __inputIndex ?? Number.MAX_SAFE_INTEGER;
+      const userProperties = featureUserProperties[i];
+      const inputIndex =
+        ((feature.properties ?? {}) as { __inputIndex?: number }).__inputIndex ?? Number.MAX_SAFE_INTEGER;
+
+      const matchedCustomAttributes = matchedByFeature[i] ?? {};
+      const matchedKeys = new Set(Object.keys(matchedCustomAttributes));
 
       for (let j = 0; j < numPolygons; j++) {
         const sitePolygonUuid = uuidv4();
@@ -767,6 +793,9 @@ export class SitePolygonCreationService {
 
         const validatedProperties = validateSitePolygonProperties(allProperties);
         const additionalData = extractAdditionalData(allProperties);
+        for (const key of matchedKeys) {
+          delete additionalData[key];
+        }
 
         validatedProperties.calcArea = areas[polygonIndex] ?? null;
 
@@ -797,6 +826,10 @@ export class SitePolygonCreationService {
           });
         }
 
+        if (matchedKeys.size > 0) {
+          pendingCustomAttributes.push({ sitePolygonUuid, attributes: matchedCustomAttributes });
+        }
+
         polygonIndex++;
       }
     }
@@ -805,6 +838,10 @@ export class SitePolygonCreationService {
 
     if (additionalDataRecords.length > 0) {
       await SitePolygonData.bulkCreate(additionalDataRecords as SitePolygonData[], { transaction });
+    }
+
+    for (const { sitePolygonUuid, attributes } of pendingCustomAttributes) {
+      await this.polygonAttributeValuesService.upsert(sitePolygonUuid, frameworkKey, attributes, transaction);
     }
 
     if (polygonUuids.length > 0) {
@@ -974,6 +1011,16 @@ export class SitePolygonCreationService {
       ],
       transaction
     );
+
+    if (attributeChanges?.customAttributes != null) {
+      const site = await basePolygon.loadSite();
+      await this.polygonAttributeValuesService.upsert(
+        newVersion.uuid,
+        site?.frameworkKey,
+        attributeChanges.customAttributes,
+        transaction
+      );
+    }
 
     return newVersion;
   }

@@ -23,7 +23,7 @@ type TableStatusUpdate = {
  *           {"status":"awaiting-approval"} → {"status":"pending-approval"}
  *           {"status":"needs-more-information"} → {"status":"information-required"}
  *           {"status":"requires-more-information"} → {"status":"information-required"}
- * 5) NULL update_request_status     → "no-update" (all entity/report tables with the column)
+ * 5) update_request_status "no-update" → NULL (NULL is the product default)
  * 6) NULL organisations.status      → "draft"
  *
  * Run in entity-service REPL (restart REPL first so this file is reloaded):
@@ -158,7 +158,7 @@ const renameAuditStatusesTableComments = async (
 
 /**
  * Null cleanup that is not a simple slug rename:
- * - update_request_status NULL → no-update
+ * - update_request_status "no-update" → NULL
  * - organisations.status NULL → draft
  */
 const normalizeNullStatuses = async (
@@ -167,11 +167,11 @@ const normalizeNullStatuses = async (
   counts: Record<string, number>
 ) => {
   for (const table of STATUS_AND_UPDATE_REQUEST_TABLES) {
-    const [, nullMeta] = await sequelize.query(
-      `UPDATE \`${table}\` SET \`update_request_status\` = 'no-update' WHERE \`update_request_status\` IS NULL`,
+    const [, noUpdateMeta] = await sequelize.query(
+      `UPDATE \`${table}\` SET \`update_request_status\` = NULL WHERE \`update_request_status\` = 'no-update'`,
       { type: QueryTypes.UPDATE, transaction }
     );
-    counts[`${table}.update_request_status:NULL->no-update`] = affectedRows(nullMeta);
+    counts[`${table}.update_request_status:no-update->NULL`] = affectedRows(noUpdateMeta);
   }
 
   const [, orgNullMeta] = await sequelize.query(
@@ -212,7 +212,7 @@ export const renameEntityStatusSlugs = withoutSqlLogs(async (): Promise<Record<s
   console.log("  - entity/report/task/form/org status columns");
   console.log("  - audit_statuses.status + audit_statuses.comment");
   console.log("  - audits.old_values + audits.new_values (REPLACE on JSON text)");
-  console.log("  - NULL update_request_status → no-update");
+  console.log("  - update_request_status no-update → NULL");
   console.log("  - NULL organisations.status → draft");
   console.table(summary);
   return summary;

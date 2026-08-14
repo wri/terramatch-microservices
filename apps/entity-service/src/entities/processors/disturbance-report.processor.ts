@@ -229,7 +229,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       frameworkKey: project.frameworkKey,
       projectId: project.id,
       status: "draft",
-      updateRequestStatus: "no-update",
+      updateRequestStatus: null,
       title: "Disturbance Report",
       createdBy: this.entitiesService.userId,
       currency: project.organisation?.currency ?? null

@@ -23,6 +23,7 @@ import { NurseryReport } from "./nursery-report.entity";
 import { SrpReport } from "./srp-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { InternalServerErrorException } from "@nestjs/common";
+import { EventCategory } from "../constants/product-events";
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
@@ -88,10 +89,12 @@ export class Task extends Model<Task> {
     return this.project?.frameworkKey ?? "";
   }
 
-  /** @deprecated this field is null for all rows in the production DB. */
   @AllowNull
   @Column(STRING)
-  declare title: string | null;
+  declare summary: string | null;
+
+  @Column(STRING)
+  declare category: EventCategory;
 
   @StateMachineColumn(TaskStatusStates)
   declare status: TaskStatus;
@@ -100,15 +103,9 @@ export class Task extends Model<Task> {
     return getStateMachine(this, "status")?.canBe(this.status, status) ?? false;
   }
 
-  // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
-  // make that a real constraint when the schema is controlled by v3 code.
-  @Column(STRING)
-  declare periodKey: string;
-
-  // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
-  // make that a real constraint when the schema is controlled by v3 code.
+  @AllowNull
   @Column(DATE)
-  declare dueAt: Date;
+  declare dueAt: Date | null;
 
   @HasOne(() => ProjectReport)
   declare projectReport: ProjectReport | null;

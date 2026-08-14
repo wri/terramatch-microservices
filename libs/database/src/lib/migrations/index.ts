@@ -30,6 +30,7 @@ import { requireAboutSectionText } from "./202608051658-require-about-section-te
 import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
 import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
 import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
+import { updateTasks } from "./202608111527-update-tasks";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -61,5 +62,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   requireAboutSectionText,
   removeI18nFieldIdColumns,
   nullUpdateRequestStatusDefault,
-  convertBioeconomyProductColumnsToText
+  convertBioeconomyProductColumnsToText,
+  updateTasks
 ];

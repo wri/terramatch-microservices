@@ -47,14 +47,10 @@ export class ReportGenerationService {
       throw new NotFoundException(`Project not found [${projectId}]`);
     }
 
-    const dueDateTime = DateTime.fromJSDate(dueAt);
-    const periodKey = `${dueDateTime.year}-${dueDateTime.month}`;
-
     const task = await Task.create({
       organisationId: project.organisationId,
       projectId: project.id,
       status: DUE,
-      periodKey,
       dueAt
     } as Task);
 
@@ -106,6 +102,7 @@ export class ReportGenerationService {
     }
 
     // Annual SRP reports sit on the same task as project/site/nursery for the January PPC due date
+    const dueDateTime = DateTime.fromJSDate(dueAt);
     if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
       const srpReport = await SrpReport.create({
         taskId: task.id,

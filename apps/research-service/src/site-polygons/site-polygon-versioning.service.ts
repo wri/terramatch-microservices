@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
-import { SitePolygon, PolygonUpdates, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import {
+  SitePolygon,
+  PolygonUpdates,
+  PolygonGeometry,
+  SitePolygonAttributeValue
+} from "@terramatch-microservices/database/entities";
 import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
@@ -107,6 +112,8 @@ export class SitePolygonVersioningService {
 
     const newVersions = await SitePolygon.bulkCreate(versionRecords as SitePolygon[], { transaction });
 
+    await this.copyAttributeValues(entries, newVersions, transaction);
+
     const keepActiveUuids = [...lastNewVersionPerPrimary.values()];
     const primaryUuids = [...lastNewVersionPerPrimary.keys()];
 
@@ -136,6 +143,31 @@ export class SitePolygonVersioningService {
     this.queueGwcInvalidation(entries, newVersions, transaction);
 
     return newVersions;
+  }
+  private async copyAttributeValues(
+    entries: VersionCreateEntry[],
+    newVersions: SitePolygon[],
+    transaction: Transaction
+  ): Promise<void> {
+    const oldToNewUuid = new Map<string, string>();
+    for (let i = 0; i < entries.length; i++) {
+      oldToNewUuid.set(entries[i].basePolygon.uuid, newVersions[i].uuid);
+    }
+
+    const previousValues = await SitePolygonAttributeValue.findAll({
+      where: { sitePolygonUuid: { [Op.in]: [...oldToNewUuid.keys()] } },
+      transaction
+    });
+
+    if (previousValues.length === 0) return;
+
+    const copiedValues = previousValues.map(({ sitePolygonUuid, polygonAttributeDefinitionId, value }) => ({
+      sitePolygonUuid: oldToNewUuid.get(sitePolygonUuid) as string,
+      polygonAttributeDefinitionId,
+      value
+    }));
+
+    await SitePolygonAttributeValue.bulkCreate(copiedValues as SitePolygonAttributeValue[], { transaction });
   }
 
   private queueGwcInvalidation(

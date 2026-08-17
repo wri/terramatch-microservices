@@ -171,8 +171,12 @@ describe("FundingProgrammesController", () => {
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
 
       await controller.create({ data: { type: "fundingProgrammes", attributes } });
-      const fp = await FundingProgramme.findOne({ order: [["createdAt", "DESC"]], attributes: ["uuid"] });
-      const stages = await Stage.findAll({ where: { fundingProgrammeId: fp?.uuid }, order: [["order", "ASC"]] });
+      const fp = await FundingProgramme.findOne({
+        where: { name: attributes.name, description: attributes.description },
+        attributes: ["uuid"]
+      });
+      if (fp == null) throw new Error("Funding programme was not created");
+      const stages = await Stage.findAll({ where: { fundingProgrammeId: fp.uuid }, order: [["order", "ASC"]] });
       await Promise.all(stageForms.map(form => form.reload()));
 
       expect(authSpy).toHaveBeenCalledWith(

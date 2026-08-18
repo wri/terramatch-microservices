@@ -14,11 +14,13 @@ import {
   FundingTypeFactory,
   InvasiveFactory,
   MediaFactory,
+  NurseryReportFactory,
   OrganisationFactory,
   ProjectFactory,
   SeedingFactory,
   SiteFactory,
   SitePolygonFactory,
+  SiteReportFactory,
   StratasFactory,
   TreeSpeciesFactory,
   NurseryFactory
@@ -31,6 +33,7 @@ import { HiddenRelationsApprovalProcessor } from "./hidden-relations.approval-pr
 import { FundingTypeApprovalProcessor } from "./funding-type.approval-processor";
 import { FinancialIndicatorApprovalProcessor } from "./financial-indicator.approval-processor";
 import { DisturbanceReportEntryApprovalProcessor } from "./disturbance-report-entry.approval-processor";
+import { NothingToReportApprovalProcessor } from "./nothing-to-report.approval-processor";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 
@@ -290,6 +293,121 @@ describe("EntityApprovalProcessor", () => {
 
       await polygon.reload();
       expect(polygon.disturbanceId).toBe(disturbances[0].id);
+    });
+  });
+
+  describe("nothing to report processor", () => {
+    const process = (entity: EntityModel) =>
+      NothingToReportApprovalProcessor.processEntityApproval(entity, mediaService);
+
+    it("NOOPs if the entity is not a site or nursery report", async () => {
+      const project = await ProjectFactory.create();
+      await expect(process(project)).resolves.toBeUndefined();
+    });
+
+    it("NOOPs if nothingToReport is not true", async () => {
+      const siteReport = await SiteReportFactory.create({
+        status: APPROVED,
+        nothingToReport: false,
+        technicalNarrative: "keep me",
+        workdaysPaid: 12
+      });
+
+      await process(siteReport);
+      await siteReport.reload();
+      expect(siteReport.technicalNarrative).toBe("keep me");
+      expect(siteReport.workdaysPaid).toBe(12);
+    });
+
+    it("clears site report fields, answers, media and relations", async () => {
+      const siteReport = await SiteReportFactory.create({
+        status: APPROVED,
+        nothingToReport: true,
+        title: "Site Report Title",
+        technicalNarrative: "narrative",
+        publicNarrative: "public",
+        workdaysPaid: 20,
+        workdaysVolunteer: 8,
+        plantingStatus: "completed",
+        pctSurvivalToDate: 75,
+        answers: { foo: "bar" }
+      });
+      const tree = await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create();
+      const seeding = await SeedingFactory.siteReport(siteReport).create();
+      const disturbance = await DisturbanceFactory.siteReport(siteReport).create();
+      const tracking = await TrackingFactory.siteReportWorkday(siteReport).create();
+      const entry = await TrackingEntryFactory.any(tracking).create();
+      const media = await MediaFactory.siteReport(siteReport).create();
+
+      await process(siteReport);
+      await siteReport.reload();
+      await Promise.all(
+        [tree, seeding, disturbance, tracking, entry, media].map(model => model.reload({ paranoid: false }))
+      );
+
+      expect(siteReport.nothingToReport).toBe(true);
+      expect(siteReport.status).toBe(APPROVED);
+      expect(siteReport.title).toBe("Site Report Title");
+      expect(siteReport.technicalNarrative).toBeNull();
+      expect(siteReport.publicNarrative).toBeNull();
+      expect(siteReport.workdaysPaid).toBeNull();
+      expect(siteReport.workdaysVolunteer).toBeNull();
+      expect(siteReport.plantingStatus).toBeNull();
+      expect(siteReport.pctSurvivalToDate).toBeNull();
+      expect(siteReport.answers).toBeNull();
+      expect(tree.deletedAt).not.toBeNull();
+      expect(seeding.deletedAt).not.toBeNull();
+      expect(disturbance.deletedAt).not.toBeNull();
+      expect(tracking.deletedAt).not.toBeNull();
+      expect(entry.deletedAt).not.toBeNull();
+      expect(media.deletedAt).not.toBeNull();
+    });
+
+    it("clears nursery report fields and tree species", async () => {
+      const nurseryReport = await NurseryReportFactory.create({
+        status: APPROVED,
+        nothingToReport: true,
+        title: "Nursery Report Title",
+        seedlingsYoungTrees: 40,
+        interestingFacts: "facts",
+        sitePrep: "prep",
+        answers: { baz: "qux" }
+      });
+      const seedling = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReport).create();
+
+      await process(nurseryReport);
+      await nurseryReport.reload();
+      await seedling.reload({ paranoid: false });
+
+      expect(nurseryReport.nothingToReport).toBe(true);
+      expect(nurseryReport.status).toBe(APPROVED);
+      expect(nurseryReport.title).toBe("Nursery Report Title");
+      expect(nurseryReport.seedlingsYoungTrees).toBeNull();
+      expect(nurseryReport.interestingFacts).toBeNull();
+      expect(nurseryReport.sitePrep).toBeNull();
+      expect(nurseryReport.answers).toBeNull();
+      expect(seedling.deletedAt).not.toBeNull();
+    });
+
+    it("does not clear data on a sibling report", async () => {
+      const siteReport = await SiteReportFactory.create({
+        status: APPROVED,
+        nothingToReport: true,
+        technicalNarrative: "clear me"
+      });
+      const sibling = await SiteReportFactory.create({
+        status: APPROVED,
+        nothingToReport: false,
+        technicalNarrative: "keep me"
+      });
+      const siblingTree = await TreeSpeciesFactory.siteReportTreePlanted(sibling).create();
+
+      await process(siteReport);
+      await sibling.reload();
+      await siblingTree.reload({ paranoid: false });
+
+      expect(sibling.technicalNarrative).toBe("keep me");
+      expect(siblingTree.deletedAt).toBeNull();
     });
   });
 });

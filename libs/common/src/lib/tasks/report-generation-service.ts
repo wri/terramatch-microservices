@@ -52,11 +52,12 @@ export class ReportGenerationService {
     }
 
     const task = await Task.create({
+      category: "project-reporting",
       organisationId: project.organisationId,
       projectId: project.id,
       status: DUE,
       dueAt
-    } as Task);
+    });
 
     const labels = ["Project"];
     const projectReport = await ProjectReport.create({
@@ -65,7 +66,7 @@ export class ReportGenerationService {
       projectId: project.id,
       status: DUE,
       dueAt
-    } as ProjectReport);
+    });
 
     const sites = await Site.nonDraft()
       .project(projectId)
@@ -73,16 +74,13 @@ export class ReportGenerationService {
     if (sites.length > 0) {
       labels.push("site");
       await SiteReport.bulkCreate(
-        sites.map(
-          ({ id }) =>
-            ({
-              taskId: task.id,
-              frameworkKey: project.frameworkKey,
-              siteId: id,
-              status: DUE,
-              dueAt
-            }) as SiteReport
-        )
+        sites.map(({ id }) => ({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          siteId: id,
+          status: DUE,
+          dueAt
+        }))
       );
     }
 
@@ -92,16 +90,13 @@ export class ReportGenerationService {
     if (nurseries.length > 0) {
       labels.push("nursery");
       await NurseryReport.bulkCreate(
-        nurseries.map(
-          ({ id }) =>
-            ({
-              taskId: task.id,
-              frameworkKey: project.frameworkKey,
-              nurseryId: id,
-              status: DUE,
-              dueAt
-            }) as NurseryReport
-        )
+        nurseries.map(({ id }) => ({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          nurseryId: id,
+          status: DUE,
+          dueAt
+        }))
       );
     }
 
@@ -115,7 +110,7 @@ export class ReportGenerationService {
         status: DUE,
         dueAt,
         year: dueDateTime.year
-      } as SrpReport);
+      });
 
       await Action.create({
         status: PENDING,
@@ -127,7 +122,7 @@ export class ReportGenerationService {
         text: "Annual Socioeconomic Restoration Partners Report available",
         projectId: project.id,
         organisationId: project.organisationId
-      } as Action);
+      });
     }
 
     await Action.create({
@@ -140,7 +135,7 @@ export class ReportGenerationService {
       text: `${labels.join(", ")} ${labels.length > 1 ? "reports" : "report"} available`,
       projectId: project.id,
       organisationId: project.organisationId
-    } as Action);
+    });
 
     await this.productEventService.taskCreated(task);
   }
@@ -186,7 +181,7 @@ export class ReportGenerationService {
       dueAt,
       finStartMonth: organisation.finStartMonth ?? null,
       currency: organisation.currency ?? null
-    } as FinancialReport);
+    });
 
     await this.cloneOrgFinancialDataToReport(organisation, report);
 

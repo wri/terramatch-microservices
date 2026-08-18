@@ -324,6 +324,7 @@ export abstract class ReportProcessor<
     for (const field of Object.values(linkedFields.fields)) {
       if (isPropertyField(field)) {
         if (attributes[field.property] == null) continue;
+        // @ts-expect-error Generic access to ReportModel is confusing the TS compiler here
         model[field.property] = attributes[field.property].defaultValue ?? null;
       } else if (field.virtual.type === "trackingAggregate" || field.virtual.type === "trackingDescription") {
         resources.push(field.virtual.domain);

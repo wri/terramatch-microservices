@@ -168,7 +168,7 @@ describe("TasksService", () => {
         const frameworks: string[] = [];
         for (const task of tasks) {
           task.project = await task.$get("project");
-          frameworks.push(task.frameworkKey);
+          frameworks.push(task.frameworkKey as string);
           task.organisation = await task.$get("organisation");
         }
 

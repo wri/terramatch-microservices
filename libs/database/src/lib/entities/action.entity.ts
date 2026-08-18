@@ -10,7 +10,16 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, STRING, UUID, UUIDV4, Op } from "sequelize";
+import {
+  BIGINT,
+  STRING,
+  UUID,
+  UUIDV4,
+  Op,
+  InferCreationAttributes,
+  InferAttributes,
+  CreationOptional
+} from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { Subquery } from "../util/subquery.builder";
@@ -46,7 +55,7 @@ import { LaravelModel, LaravelModelCtor, laravelType } from "../types/util";
   // @Index doesn't work with underscored column names
   indexes: [{ name: "v2_actions_targetable_type_targetable_id_index", fields: ["targetable_type", "targetable_id"] }]
 })
-export class Action extends Model<Action> {
+export class Action extends Model<InferAttributes<Action>, InferCreationAttributes<Action>> {
   static for(targetable: LaravelModel) {
     return chainScope(this, "targetable", targetable) as typeof Action;
   }
@@ -58,11 +67,11 @@ export class Action extends Model<Action> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  declare id: number;
+  declare id: CreationOptional<number>;
 
   @Unique
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  declare uuid: string;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @Column(STRING)

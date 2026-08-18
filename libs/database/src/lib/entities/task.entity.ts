@@ -12,7 +12,16 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { TaskStatus, TaskStatusStates } from "../constants/status";
@@ -30,7 +39,7 @@ import { EventCategory } from "../constants/product-events";
   dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
 }))
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
-export class Task extends Model<Task> {
+export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<Task>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Tasks\\Task";
 
   static forProject(projectId: number) {
@@ -51,11 +60,11 @@ export class Task extends Model<Task> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  declare id: number;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  declare uuid: string;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @ForeignKey(() => Organisation)
@@ -66,7 +75,7 @@ export class Task extends Model<Task> {
   declare organisation: Organisation | null;
 
   get organisationName() {
-    return this.organisation?.name ?? "";
+    return this.organisation?.name;
   }
 
   @AllowNull
@@ -77,16 +86,16 @@ export class Task extends Model<Task> {
   @BelongsTo(() => Project, { constraints: false })
   declare project: Project | null;
 
-  get projectUuid(): string {
-    return this.project?.uuid ?? "";
+  get projectUuid(): string | undefined {
+    return this.project?.uuid;
   }
 
   get projectName() {
-    return this.project?.name ?? "";
+    return this.project?.name;
   }
 
   get frameworkKey() {
-    return this.project?.frameworkKey ?? "";
+    return this.project?.frameworkKey;
   }
 
   @AllowNull

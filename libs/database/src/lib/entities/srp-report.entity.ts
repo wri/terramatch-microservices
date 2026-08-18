@@ -10,13 +10,34 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TEXT, DATE, UUID, UUIDV4, BOOLEAN } from "sequelize";
+import {
+  BIGINT,
+  INTEGER,
+  STRING,
+  TEXT,
+  DATE,
+  UUID,
+  UUIDV4,
+  BOOLEAN,
+  InferAttributes,
+  InferCreationAttributes,
+  CreationOptional
+} from "sequelize";
 import { User } from "./user.entity";
-import { ReportStatus, ReportStatusStates, statusUpdateSequelizeHook, UpdateRequestStatus } from "../constants/status";
+import {
+  COMPLETE_REPORT_STATUSES,
+  CompleteReportStatus,
+  DUE,
+  PENDING_APPROVAL,
+  ReportStatus,
+  ReportStatusStates,
+  statusUpdateSequelizeHook,
+  UpdateRequestStatus
+} from "../constants/status";
 import { chainScope } from "../util/chain-scope";
 import { FrameworkKey } from "../constants";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { StateMachineColumn } from "../util/model-column-state-machine";
+import { getStateMachine, StateMachineColumn } from "../util/model-column-state-machine";
 import { Project } from "./project.entity";
 import { Task } from "./task.entity";
 import { MediaConfiguration } from "../constants/media-owners";
@@ -35,7 +56,7 @@ type SrpReportMedia = "media";
   paranoid: true,
   hooks: { afterCreate: statusUpdateSequelizeHook, afterDestroy: removeActions }
 })
-export class SrpReport extends Model<SrpReport> {
+export class SrpReport extends Model<InferAttributes<SrpReport>, InferCreationAttributes<SrpReport>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\SrpReport";
   static readonly MEDIA: Record<SrpReportMedia, MediaConfiguration> = {
     media: { dbCollection: "media", multiple: true, validation: "general-documents" }
@@ -52,11 +73,11 @@ export class SrpReport extends Model<SrpReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  declare id: number;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  declare uuid: string;
+  declare uuid: CreationOptional<string>;
 
   @StateMachineColumn(ReportStatusStates)
   declare status: ReportStatus;
@@ -81,9 +102,10 @@ export class SrpReport extends Model<SrpReport> {
   @Column(DATE)
   declare approvedAt: Date | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  declare approvedBy: number;
+  declare approvedBy: number | null;
 
   @AllowNull
   @ForeignKey(() => User)
@@ -111,7 +133,7 @@ export class SrpReport extends Model<SrpReport> {
   declare dueAt: Date | null;
 
   @Column({ type: INTEGER, defaultValue: 0 })
-  declare completion: number;
+  declare completion: CreationOptional<number>;
 
   @AllowNull
   @Column(TEXT)
@@ -130,7 +152,7 @@ export class SrpReport extends Model<SrpReport> {
   declare restorationPartnersDescription: string | null;
 
   @Column({ type: INTEGER.UNSIGNED, defaultValue: 0 })
-  declare totalUniqueRestorationPartners: number;
+  declare totalUniqueRestorationPartners: CreationOptional<number>;
 
   @Column(INTEGER)
   declare year: number;
@@ -161,7 +183,7 @@ export class SrpReport extends Model<SrpReport> {
     return this.project?.status;
   }
 
-  get taskUuid() {
+  get taskUuid(): string | undefined {
     return this.task?.uuid;
   }
 
@@ -173,11 +195,13 @@ export class SrpReport extends Model<SrpReport> {
     return this.createdByUser?.lastName;
   }
 
-  get isCompletable() {
-    return this.status !== "draft";
+  get isCompletable(): CreationOptional<boolean> {
+    return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
   }
 
-  get isComplete() {
-    return this.status === "approved";
+  get isComplete(): CreationOptional<boolean> {
+    if (this.isComplete) return true;
+    if (this.status === DUE) return false;
+    return getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL) ?? false;
   }
 }

@@ -40,3 +40,4 @@ export { cleanupOrphanedI18nItems } from "./2026-08-10-cleanupOrphanedI18nItems"
 export { convertBioeconomyProductQuestionsToText } from "./2026-08-14-convertBioeconomyProductQuestionsToText";
 export { alignTaskReportDueAt } from "./2026-08-17-alignTaskReportDueAt";
 export { clearNothingToReportReports } from "./2026-08-17-clearNothingToReportReports";
+export { backfillPpcProjectLandUseAndStrategy } from "./2026-08-18-backfillPpcProjectLandUseAndStrategy";

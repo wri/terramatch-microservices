@@ -1,6 +1,7 @@
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
-import { Project, Site } from "@terramatch-microservices/database/entities";
-import { isEmpty, uniq } from "lodash";
+import { Form, FormQuestion, Project, Site, UpdateRequest } from "@terramatch-microservices/database/entities";
+import { Dictionary, isEmpty, uniq } from "lodash";
+import { Op } from "sequelize";
 
 type BackfillPpcProjectLandUseAndStrategyOptions = {
   dryRun?: boolean;
@@ -8,10 +9,14 @@ type BackfillPpcProjectLandUseAndStrategyOptions = {
 };
 
 type BackfillCounts = {
-  updated: number;
+  projectsUpdated: number;
+  updateRequestsUpdated: number;
   skipped: number;
   missing: number;
 };
+
+const LAND_USE_LINKED_FIELD = "pro-land-use-types";
+const STRATEGY_LINKED_FIELD = "pro-restoration_strategy";
 
 const TICKET_PROJECT_UUIDS = [
   "d2c2a1fe-c5e8-435a-b865-00dce7a9809f",
@@ -55,7 +60,9 @@ const TICKET_PROJECT_UUIDS = [
 const uniqueSlugs = (values: (string[] | null | undefined)[]) =>
   uniq(values.flatMap(value => value ?? []).filter(slug => slug !== "")).sort();
 
-const isMissing = (value: string[] | null | undefined) => value == null || isEmpty(value);
+const isMissing = (value: unknown) => value == null || (Array.isArray(value) && isEmpty(value)) || value === "";
+
+const questionName = (question: FormQuestion) => question.name ?? question.uuid;
 
 export const backfillPpcProjectLandUseAndStrategy = withoutSqlLogs(
   async (opts: BackfillPpcProjectLandUseAndStrategyOptions = {}) => {
@@ -65,7 +72,23 @@ export const backfillPpcProjectLandUseAndStrategy = withoutSqlLogs(
     console.log(`\nbackfill:ppc-project-land-use-and-strategy ${dryRun ? "[DRY RUN]" : "[EXECUTE]"}`);
     console.log(`Projects to process: ${projectUuids.length}`);
 
-    const counts: BackfillCounts = { updated: 0, skipped: 0, missing: 0 };
+    const form = await Form.findOne({
+      where: { frameworkKey: "ppc", type: "project" },
+      attributes: ["uuid"]
+    });
+    if (form == null) throw new Error("PPC project form not found");
+
+    const questions = await FormQuestion.forForm(form.uuid).findAll({
+      where: { linkedFieldKey: { [Op.in]: [LAND_USE_LINKED_FIELD, STRATEGY_LINKED_FIELD] } },
+      attributes: ["uuid", "name", "linkedFieldKey"]
+    });
+    const landUseQuestion = questions.find(question => question.linkedFieldKey === LAND_USE_LINKED_FIELD);
+    const strategyQuestion = questions.find(question => question.linkedFieldKey === STRATEGY_LINKED_FIELD);
+    if (landUseQuestion == null || strategyQuestion == null) {
+      throw new Error("PPC project form is missing land use or restoration strategy questions");
+    }
+
+    const counts: BackfillCounts = { projectsUpdated: 0, updateRequestsUpdated: 0, skipped: 0, missing: 0 };
 
     for (const uuid of projectUuids) {
       const project = await Project.findOne({
@@ -91,33 +114,51 @@ export const backfillPpcProjectLandUseAndStrategy = withoutSqlLogs(
         continue;
       }
 
-      const updates: { landUseTypes?: string[]; restorationStrategy?: string[] } = {};
+      const projectUpdates: { landUseTypes?: string[]; restorationStrategy?: string[] } = {};
       if (isMissing(project.landUseTypes) && nextLandUseTypes.length > 0) {
-        updates.landUseTypes = nextLandUseTypes;
+        projectUpdates.landUseTypes = nextLandUseTypes;
       }
       if (isMissing(project.restorationStrategy) && nextRestorationStrategy.length > 0) {
-        updates.restorationStrategy = nextRestorationStrategy;
+        projectUpdates.restorationStrategy = nextRestorationStrategy;
       }
 
-      if (isEmpty(updates)) {
+      const updateRequest = await UpdateRequest.for(project).current().findOne();
+      const content: Dictionary<unknown> = { ...(updateRequest?.content ?? {}) };
+      const urUpdates: Dictionary<unknown> = {};
+      if (updateRequest != null) {
+        if (nextLandUseTypes.length > 0 && isMissing(content[questionName(landUseQuestion)])) {
+          urUpdates[questionName(landUseQuestion)] = nextLandUseTypes;
+        }
+        if (nextRestorationStrategy.length > 0 && isMissing(content[questionName(strategyQuestion)])) {
+          urUpdates[questionName(strategyQuestion)] = nextRestorationStrategy;
+        }
+      }
+
+      if (isEmpty(projectUpdates) && isEmpty(urUpdates)) {
         console.log(`Project ${project.uuid} (${project.name ?? "unnamed"}): already populated — skipping`);
         counts.skipped++;
         continue;
       }
 
       console.log(
-        `Project ${project.uuid} (${project.name ?? "unnamed"}): ${JSON.stringify(project.landUseTypes)} / ${JSON.stringify(project.restorationStrategy)} -> ${JSON.stringify(updates.landUseTypes ?? project.landUseTypes)} / ${JSON.stringify(updates.restorationStrategy ?? project.restorationStrategy)}`
+        `Project ${project.uuid} (${project.name ?? "unnamed"}): project ${JSON.stringify(project.landUseTypes)} / ${JSON.stringify(project.restorationStrategy)} -> ${JSON.stringify(projectUpdates.landUseTypes ?? project.landUseTypes)} / ${JSON.stringify(projectUpdates.restorationStrategy ?? project.restorationStrategy)}${isEmpty(urUpdates) ? "" : `; update request ${updateRequest?.uuid} ${JSON.stringify(urUpdates)}`}`
       );
 
       if (!dryRun) {
-        await project.update(updates);
+        if (!isEmpty(projectUpdates)) await project.update(projectUpdates);
+        if (updateRequest != null && !isEmpty(urUpdates)) {
+          await updateRequest.update({ content: { ...content, ...urUpdates } });
+        }
       }
 
-      counts.updated++;
+      if (!isEmpty(projectUpdates)) counts.projectsUpdated++;
+      if (!isEmpty(urUpdates)) counts.updateRequestsUpdated++;
     }
 
     console.log("\nResults:");
-    console.log(`  updated: ${counts.updated}, skipped: ${counts.skipped}, missing: ${counts.missing}`);
+    console.log(
+      `  projectsUpdated: ${counts.projectsUpdated}, updateRequestsUpdated: ${counts.updateRequestsUpdated}, skipped: ${counts.skipped}, missing: ${counts.missing}`
+    );
 
     return counts;
   }

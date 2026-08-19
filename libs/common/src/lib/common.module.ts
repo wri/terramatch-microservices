@@ -24,6 +24,7 @@ import { GreenhouseNotificationProcessor } from "./notifications/greenhouse-noti
 import { GreenhouseNotificationService } from "./notifications/greenhouse-notification.service";
 import { UserContextMiddleware } from "./middleware/user-context.middleware";
 import { GwcTileInvalidationService } from "./gwc/gwc-tile-invalidation.service";
+import { ProductEventService } from "./product-events/product-event.service";
 
 export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
 const IS_REPL = process.env["REPL"] === "true";
@@ -78,6 +79,7 @@ const IS_REPL = process.env["REPL"] === "true";
     GreenhouseNotificationService,
     UserContextMiddleware,
     GwcTileInvalidationService,
+    ProductEventService,
 
     ...(IS_REPL ? [] : [GreenhouseNotificationProcessor, EmailProcessor, AnalyticsProcessor])
   ],

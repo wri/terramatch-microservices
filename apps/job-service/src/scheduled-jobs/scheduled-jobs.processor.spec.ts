@@ -87,24 +87,6 @@ describe("ScheduledJobsProcessor", () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to create task for some projects:"));
     });
 
-    it("should queue report reminder emails when TaskDue runs for a TF report-reminder framework", async () => {
-      await Project.truncate();
-      const projects = await ProjectFactory.createMany(2, { frameworkKey: "enterprises", status: "approved" });
-      const dueAt = DateTime.utc(2027, 1, 31).toISO();
-      await processor.process({
-        name: TASK_DUE_EVENT,
-        data: { taskDefinition: { frameworkKey: "enterprises", dueAt } }
-      } as Job);
-
-      expect(queue.add).toHaveBeenCalledWith(
-        "terrafundReportReminder",
-        expect.objectContaining({
-          projectIds: expect.arrayContaining(projects.map(({ id }) => id)),
-          dueAt
-        })
-      );
-    });
-
     it("should not queue report reminder emails for Top 100 terrafund TaskDue", async () => {
       await Project.truncate();
       await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });

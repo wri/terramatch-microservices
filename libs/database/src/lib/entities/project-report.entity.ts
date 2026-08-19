@@ -11,15 +11,29 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, DATE, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  BOOLEAN,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  INTEGER,
+  Op,
+  STRING,
+  TEXT,
+  TINYINT,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { TreeSpecies } from "./tree-species.entity";
 import { Project } from "./project.entity";
 import { FrameworkKey, PlantingStatus } from "../constants";
 import {
-  PENDING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
   DUE,
+  PENDING_APPROVAL,
   ReportStatus,
   ReportStatusStates,
   statusUpdateSequelizeHook,
@@ -94,7 +108,7 @@ type ProjectReportMedia =
     }
   }
 })
-export class ProjectReport extends Model<ProjectReport> {
+export class ProjectReport extends Model<InferAttributes<ProjectReport>, InferCreationAttributes<ProjectReport>> {
   static readonly TREE_ASSOCIATIONS = ["nurserySeedlings"];
   static readonly PARENT_ID = "projectId";
   static readonly APPROVED_STATUSES = ["approved"];
@@ -273,11 +287,11 @@ export class ProjectReport extends Model<ProjectReport> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  declare id: number;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  declare uuid: string;
+  declare uuid: CreationOptional<string>;
 
   linkToTerramatch(frontendUrl: string) {
     return `${frontendUrl}/admin#/projectReport/${this.uuid}/show`;
@@ -306,9 +320,10 @@ export class ProjectReport extends Model<ProjectReport> {
   @BelongsTo(() => User, { foreignKey: "createdBy", as: "createdByUser" })
   declare createdByUser: User | null;
 
+  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
-  declare approvedBy: number;
+  declare approvedBy: number | null;
 
   get createdByFirstName() {
     return this.createdByUser?.firstName;
@@ -348,7 +363,7 @@ export class ProjectReport extends Model<ProjectReport> {
     return this.project?.organisationReadableType as string | undefined;
   }
 
-  get taskUuid() {
+  get taskUuid(): string | undefined {
     return this.task?.uuid;
   }
 
@@ -367,7 +382,7 @@ export class ProjectReport extends Model<ProjectReport> {
   @StateMachineColumn(ReportStatusStates)
   declare status: ReportStatus;
 
-  get isComplete() {
+  get isComplete(): CreationOptional<boolean> {
     return COMPLETE_REPORT_STATUSES.includes(this.status as CompleteReportStatus);
   }
 
@@ -375,10 +390,10 @@ export class ProjectReport extends Model<ProjectReport> {
    * Returns true if the status is already one of `COMPLETE_REPORT_STATUSES`, or if it is legal to
    * transition to it.
    */
-  get isCompletable() {
+  get isCompletable(): CreationOptional<boolean> {
     if (this.isComplete) return true;
     if (this.status === DUE) return false;
-    return getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL);
+    return getStateMachine(this, "status")?.canBe(this.status, PENDING_APPROVAL) ?? false;
   }
 
   @AllowNull
@@ -699,17 +714,17 @@ export class ProjectReport extends Model<ProjectReport> {
 
   @AllowNull
   @Column(STRING)
-  declare oldModel: string;
+  declare oldModel: string | null;
 
   @AllowNull
   @Column(INTEGER.UNSIGNED)
   declare oldId: number | null;
 
   @Column({ type: BOOLEAN, defaultValue: false })
-  declare siteAddition: boolean;
+  declare siteAddition: CreationOptional<boolean>;
 
   @Column({ type: TEXT, defaultValue: "" })
-  declare paidOtherActivityDescription: string;
+  declare paidOtherActivityDescription: CreationOptional<string>;
 
   @AllowNull
   @JsonColumn({ type: TEXT("long") })

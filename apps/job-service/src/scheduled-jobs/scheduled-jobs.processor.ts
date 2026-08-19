@@ -20,6 +20,8 @@ import {
   FrameworkKey,
   TERRAFUND
 } from "@terramatch-microservices/database/constants/framework";
+import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
@@ -73,29 +75,23 @@ export class ScheduledJobsProcessor extends WorkerHost {
   private async processTaskDue(taskDue: TaskDue) {
     this.logger.log(`processTaskDue ${JSON.stringify(taskDue)}`);
     const { frameworkKey, dueAt: dueAtString } = taskDue;
-    const where = { frameworkKey, status: { [Op.ne]: "draft" } };
-    const count = await Project.count({ where });
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
 
-    const projectIds: number[] = [];
     const failed: PromiseSettledResult<void>[] = [];
-    for (let ii = 0; ii < count; ii += 100) {
-      const projects = await Project.findAll({ where, limit: 100, offset: ii, attributes: ["id"] });
-      projectIds.push(...projects.map(({ id }) => id));
+    const builder = new PaginatedQueryBuilder(Project, 100)
+      .attributes(["id"])
+      .where({ frameworkKey, status: { [Op.ne]: "draft" } });
+    for await (const page of batchFindAll(builder)) {
       failed.push(
-        ...(
-          await Promise.allSettled(projects.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))
-        ).filter(({ status }) => status === "rejected")
+        ...(await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))).filter(
+          ({ status }) => status === "rejected"
+        )
       );
     }
 
     if (failed.length > 0) {
       this.logger.error(`Failed to create task for some projects: ${JSON.stringify(failed)}`);
-    }
-
-    if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey) && projectIds.length > 0) {
-      await new TerrafundReportReminderEmail({ projectIds, dueAt: dueAtString }).sendLater(this.emailQueue);
     }
   }
 

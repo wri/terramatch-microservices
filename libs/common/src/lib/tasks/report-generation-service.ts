@@ -22,12 +22,16 @@ import { DateTime } from "luxon";
 import { Op } from "sequelize";
 import { uniq } from "lodash";
 import { MediaService } from "../media/media.service";
+import { ProductEventService } from "../product-events/product-event.service";
 
 @Injectable()
 export class ReportGenerationService {
   private logger = new TMLogger(ReportGenerationService.name);
 
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly productEventService: ProductEventService
+  ) {}
 
   /**
    * Creates a task for the given project with the given due date, including all required
@@ -47,16 +51,13 @@ export class ReportGenerationService {
       throw new NotFoundException(`Project not found [${projectId}]`);
     }
 
-    const dueDateTime = DateTime.fromJSDate(dueAt);
-    const periodKey = `${dueDateTime.year}-${dueDateTime.month}`;
-
     const task = await Task.create({
+      category: "project-reporting",
       organisationId: project.organisationId,
       projectId: project.id,
       status: DUE,
-      periodKey,
       dueAt
-    } as Task);
+    });
 
     const labels = ["Project"];
     const projectReport = await ProjectReport.create({
@@ -65,7 +66,7 @@ export class ReportGenerationService {
       projectId: project.id,
       status: DUE,
       dueAt
-    } as ProjectReport);
+    });
 
     const sites = await Site.nonDraft()
       .project(projectId)
@@ -73,16 +74,13 @@ export class ReportGenerationService {
     if (sites.length > 0) {
       labels.push("site");
       await SiteReport.bulkCreate(
-        sites.map(
-          ({ id }) =>
-            ({
-              taskId: task.id,
-              frameworkKey: project.frameworkKey,
-              siteId: id,
-              status: DUE,
-              dueAt
-            }) as SiteReport
-        )
+        sites.map(({ id }) => ({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          siteId: id,
+          status: DUE,
+          dueAt
+        }))
       );
     }
 
@@ -92,20 +90,18 @@ export class ReportGenerationService {
     if (nurseries.length > 0) {
       labels.push("nursery");
       await NurseryReport.bulkCreate(
-        nurseries.map(
-          ({ id }) =>
-            ({
-              taskId: task.id,
-              frameworkKey: project.frameworkKey,
-              nurseryId: id,
-              status: DUE,
-              dueAt
-            }) as NurseryReport
-        )
+        nurseries.map(({ id }) => ({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          nurseryId: id,
+          status: DUE,
+          dueAt
+        }))
       );
     }
 
     // Annual SRP reports sit on the same task as project/site/nursery for the January PPC due date
+    const dueDateTime = DateTime.fromJSDate(dueAt);
     if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
       const srpReport = await SrpReport.create({
         taskId: task.id,
@@ -114,7 +110,7 @@ export class ReportGenerationService {
         status: DUE,
         dueAt,
         year: dueDateTime.year
-      } as SrpReport);
+      });
 
       await Action.create({
         status: PENDING,
@@ -126,7 +122,7 @@ export class ReportGenerationService {
         text: "Annual Socioeconomic Restoration Partners Report available",
         projectId: project.id,
         organisationId: project.organisationId
-      } as Action);
+      });
     }
 
     await Action.create({
@@ -139,7 +135,9 @@ export class ReportGenerationService {
       text: `${labels.join(", ")} ${labels.length > 1 ? "reports" : "report"} available`,
       projectId: project.id,
       organisationId: project.organisationId
-    } as Action);
+    });
+
+    await this.productEventService.taskCreated(task);
   }
 
   /**
@@ -183,7 +181,7 @@ export class ReportGenerationService {
       dueAt,
       finStartMonth: organisation.finStartMonth ?? null,
       currency: organisation.currency ?? null
-    } as FinancialReport);
+    });
 
     await this.cloneOrgFinancialDataToReport(organisation, report);
 

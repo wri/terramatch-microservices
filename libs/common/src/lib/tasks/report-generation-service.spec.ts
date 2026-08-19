@@ -11,7 +11,7 @@ import {
   TaskFactory
 } from "@terramatch-microservices/database/factories";
 import { ReportGenerationService } from "./report-generation-service";
-import { Test } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import {
   Action,
@@ -25,16 +25,21 @@ import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { uniq } from "lodash";
 import { MediaService } from "../media/media.service";
+import { ProductEventService } from "../product-events/product-event.service";
 
 describe("ReportGenerationService", () => {
+  let module: TestingModule;
   let service: ReportGenerationService;
-  let mediaService: DeepMocked<MediaService>;
+
+  const mediaService = (): DeepMocked<MediaService> => module.get(MediaService);
+  const productEventService = (): DeepMocked<ProductEventService> => module.get(ProductEventService);
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         ReportGenerationService,
-        { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) }
+        { provide: MediaService, useValue: createMock<MediaService>() },
+        { provide: ProductEventService, useValue: createMock<ProductEventService>() }
       ]
     }).compile();
 
@@ -49,7 +54,7 @@ describe("ReportGenerationService", () => {
     it("should return early if the described task already exists", async () => {
       const { projectId, dueAt } = await TaskFactory.create();
       const createSpy = jest.spyOn(Task, "create");
-      await service.createTask(projectId!, dueAt);
+      await service.createTask(projectId!, dueAt!);
       expect(createSpy).not.toHaveBeenCalled();
     });
 
@@ -111,6 +116,13 @@ describe("ReportGenerationService", () => {
         projectId,
         organisationId
       });
+    });
+
+    it("should call into the product event service", async () => {
+      const { id: projectId } = await ProjectFactory.create();
+      await service.createTask(projectId, new Date());
+      const task = await Task.findOne({ where: { projectId } });
+      expect(productEventService().taskCreated).toHaveBeenCalledWith(expect.objectContaining({ id: task?.id }));
     });
 
     it("should create an SRP report on the same task as project and site reports for January PPC dues", async () => {
@@ -214,7 +226,7 @@ describe("ReportGenerationService", () => {
         organisationId: org.uuid
       });
 
-      expect(mediaService.duplicateMedia).toHaveBeenCalledTimes(1);
+      expect(mediaService().duplicateMedia).toHaveBeenCalledTimes(1);
     });
 
     it("should throw if the organisation has no eligible project", async () => {

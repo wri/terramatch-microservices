@@ -11,6 +11,7 @@ export const TaskFactory = FactoryGirl.define(Task, async () => {
   return {
     projectId: ProjectFactory.associate("id"),
     organisationId: OrganisationFactory.associate("id"),
+    category: "project-reporting",
     status: DUE,
     dueAt
   };

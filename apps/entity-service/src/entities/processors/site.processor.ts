@@ -484,7 +484,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
 
     const task = await Task.forProject(project.id).dueAtDesc().findOne();
-    if (task != null) {
+    if (task?.dueAt != null) {
       // If we have a task due in the future, create a report
       let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);
 

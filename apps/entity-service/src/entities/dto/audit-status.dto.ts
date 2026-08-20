@@ -64,16 +64,10 @@ export class AuditStatusDto {
   }
 
   static fromAuditStatus(auditStatus: AuditStatus, attachments: MediaDto[] = []): AuditStatusDto {
-    // Transform status from V2: 'started' -> 'Draft'
-    let transformedStatus = auditStatus.status;
-    if (transformedStatus === "started") {
-      transformedStatus = "Draft";
-    }
-
     return new AuditStatusDto(
       auditStatus.id,
       auditStatus.uuid,
-      transformedStatus,
+      auditStatus.status,
       auditStatus.firstName,
       auditStatus.lastName,
       auditStatus.comment,

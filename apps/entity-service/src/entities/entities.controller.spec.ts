@@ -11,6 +11,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
+  NotImplementedException,
   UnauthorizedException
 } from "@nestjs/common";
 import { EntityQueryDto } from "./dto/entity-query.dto";
@@ -25,9 +26,12 @@ import { getQueueToken } from "@nestjs/bullmq";
 import {
   ENTITY_SERVICE_EXPORT_QUEUE,
   MEDIA_EXPORT,
-  PROJECT_EXPORT
+  PROJECT_EXPORT,
+  PUSH_TRANSLATIONS
 } from "../jobs/entity-service-delayed-jobs.processor";
 import { Queue } from "bullmq";
+import { EntityTranslationsService } from "./entity-translations.service";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -59,6 +63,8 @@ describe("EntitiesController", () => {
   const policyService = () => module.get(PolicyService);
   const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
   const exportQueue = (): DeepMocked<Queue> => module.get(getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE));
+  const entityTranslationsService = (): DeepMocked<EntityTranslationsService> => module.get(EntityTranslationsService);
+  const localizationService = (): DeepMocked<LocalizationService> => module.get(LocalizationService);
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -67,6 +73,8 @@ describe("EntitiesController", () => {
         PolicyService,
         { provide: EntitiesService, useValue: createMock<EntitiesService>() },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
+        { provide: EntityTranslationsService, useValue: createMock<EntityTranslationsService>() },
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         { provide: getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE), useValue: createMock<Queue>() }
       ]
     }).compile();
@@ -113,7 +121,24 @@ describe("EntitiesController", () => {
     it("should call exportAll on the processor", async () => {
       const target = {} as Response;
       await controller.entityExportAll({ entity: "projects" }, {}, target);
-      expect(processor.exportAll).toHaveBeenCalledWith({ target });
+      expect(processor.exportAll).toHaveBeenCalledWith({
+        target,
+        frameworkKey: undefined,
+        projectUuid: undefined,
+        uuids: undefined
+      });
+    });
+
+    it("should pass uuids to exportAll", async () => {
+      const target = {} as Response;
+      const uuids = ["uuid-1", "uuid-2"];
+      await controller.entityExportAll({ entity: "siteReports" }, { uuids }, target);
+      expect(processor.exportAll).toHaveBeenCalledWith({
+        target,
+        frameworkKey: undefined,
+        projectUuid: undefined,
+        uuids
+      });
     });
 
     it("should return a presigned url", async () => {
@@ -382,6 +407,79 @@ describe("EntitiesController", () => {
       expect(processor.create).toHaveBeenCalledWith(attributes);
       expect(processor.getFullDto).toHaveBeenCalledWith(project);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("entityPushTranslations", () => {
+    it("queues a delayed job to push translations without uuid", async () => {
+      const labels = ["label-1", "label-2"];
+      entityTranslationsService().authorizeAndGetPushContext.mockResolvedValue({
+        uuid: "localizationKeys",
+        i18nLabels: labels,
+        entityType: "localizationKeys",
+        entityName: "localizationKeys"
+      });
+      const delayedJob = { id: 42, uuid: "job-uuid" } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+
+      await controller.entityPushTranslations({ entity: "localizationKeys" });
+
+      expect(entityTranslationsService().authorizeAndGetPushContext).toHaveBeenCalledWith(
+        "localizationKeys",
+        undefined
+      );
+      expect(exportQueue().add).toHaveBeenCalledWith(PUSH_TRANSLATIONS, {
+        delayedJobId: 42,
+        uuid: "localizationKeys",
+        i18nLabels: labels
+      });
+    });
+
+    it("queues a delayed job to push translations by uuid", async () => {
+      const uuid = faker.string.uuid();
+      const labels = ["label-1", "label-2"];
+      entityTranslationsService().authorizeAndGetPushContext.mockResolvedValue({
+        uuid,
+        i18nLabels: labels,
+        entityType: "forms",
+        entityName: "Form Title"
+      });
+      const delayedJob = { id: 42, uuid: "job-uuid" } as DelayedJob;
+      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
+
+      await controller.entityPushTranslationsByUuid({ entity: "forms", uuid });
+
+      expect(entityTranslationsService().authorizeAndGetPushContext).toHaveBeenCalledWith("forms", uuid);
+      expect(exportQueue().add).toHaveBeenCalledWith(PUSH_TRANSLATIONS, {
+        delayedJobId: 42,
+        uuid,
+        i18nLabels: labels
+      });
+    });
+  });
+
+  describe("entityPullTranslations", () => {
+    it("delegates to the translations service without uuid", async () => {
+      entityTranslationsService().pullTranslations.mockResolvedValue([1, 2]);
+      localizationService().addTranslationDto.mockImplementation(document => document);
+
+      await controller.entityPullTranslations({ entity: "localizationKeys" });
+
+      expect(entityTranslationsService().pullTranslations).toHaveBeenCalledWith("localizationKeys", undefined);
+      expect(localizationService().addTranslationDto).toHaveBeenCalled();
+    });
+
+    it("delegates to the translations service by uuid", async () => {
+      const uuid = faker.string.uuid();
+      entityTranslationsService().pullTranslations.mockRejectedValue(
+        new NotImplementedException("Entity translation pull is not implemented yet")
+      );
+
+      await expect(controller.entityPullTranslationsByUuid({ entity: "forms", uuid })).rejects.toThrow(
+        NotImplementedException
+      );
+      expect(entityTranslationsService().pullTranslations).toHaveBeenCalledWith("forms", uuid);
+      expect(localizationService().addTranslationDto).not.toHaveBeenCalled();
     });
   });
 });

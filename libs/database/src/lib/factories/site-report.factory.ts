@@ -3,7 +3,6 @@ import { FactoryGirl } from "factory-girl-ts";
 import { SiteFactory } from "./site.factory";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
-import { NO_UPDATE } from "../constants/status";
 import { TaskFactory } from "./task.factory";
 
 export const SiteReportFactory = FactoryGirl.define(SiteReport, async () => {
@@ -15,7 +14,7 @@ export const SiteReportFactory = FactoryGirl.define(SiteReport, async () => {
     frameworkKey: "ppc",
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
-    updateRequestStatus: NO_UPDATE,
+    updateRequestStatus: null,
     numTreesRegenerating: faker.number.int({ min: 10, max: 500 }),
     workdaysPaid: faker.number.int({ min: 10, max: 50 }),
     workdaysVolunteer: faker.number.int({ min: 10, max: 50 })

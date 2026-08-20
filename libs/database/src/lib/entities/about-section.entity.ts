@@ -33,10 +33,27 @@ export const ABOUT_SECTION_TYPES = [
 ] as const;
 export type AboutSectionType = (typeof ABOUT_SECTION_TYPES)[number];
 
-@Table({ tableName: "about_sections", underscored: true, paranoid: true })
+@Table({
+  tableName: "about_sections",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    async afterDestroy(section: AboutSection) {
+      await Link.for(section).destroy();
+    }
+  }
+})
 export class AboutSection extends Model<InferAttributes<AboutSection>, InferCreationAttributes<AboutSection>> {
   // Still named laravel type for legacy reasons, but the name doesn't need to follow that convention; just needs to be unique
   static readonly LARAVEL_TYPE = "AboutSection";
+
+  static readonly I18N_FIELDS = [
+    "header",
+    "title",
+    "description",
+    "contactSupportMessage",
+    "contactSupportSubject"
+  ] as const;
 
   @PrimaryKey
   @AutoIncrement
@@ -55,41 +72,21 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @JsonColumn()
   declare frameworks: FrameworkKey[] | null;
 
-  @AllowNull
   @Column(TEXT)
-  declare header: string | null;
-
-  @Column(BIGINT.UNSIGNED)
-  declare headerId: number;
+  declare header: string;
 
   @AllowNull
   @Column(TEXT)
   declare title: string | null;
 
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare titleId: number | null;
-
-  @AllowNull
   @Column(TEXT)
   declare description: string | null;
 
-  @Column(BIGINT.UNSIGNED)
-  declare descriptionId: number;
-
-  @AllowNull
   @Column(TEXT)
-  declare contactSupportMessage: string | null;
+  declare contactSupportMessage: string;
 
-  @Column(BIGINT.UNSIGNED)
-  declare contactSupportMessageId: number;
-
-  @AllowNull
   @Column(TEXT)
-  declare contactSupportSubject: string | null;
-
-  @Column(BIGINT.UNSIGNED)
-  declare contactSupportSubjectId: number;
+  declare contactSupportSubject: string;
 
   @HasMany(() => Link, {
     foreignKey: "linkableId",

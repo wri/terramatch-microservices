@@ -62,6 +62,9 @@ export class DisturbanceReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: String })
   createdByLastName: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  frameworkKey: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -117,9 +120,6 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  frameworkKey: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;

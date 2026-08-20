@@ -29,3 +29,16 @@ export const INDICATOR_DISPLAY_NAMES: Record<IndicatorSlug, string> = {
 
 export const getIndicatorDisplayName = (slug: IndicatorSlug): string =>
   INDICATOR_DISPLAY_NAMES[slug] ?? "Indicator Calculation";
+
+/** Empty API responses are valid successful results (e.g. confirmed zero tree cover loss). */
+export const INDICATORS_WHERE_EMPTY_RESPONSE_IS_SUCCESS: readonly IndicatorSlug[] = [
+  "treeCoverLoss",
+  "treeCoverLossFires"
+];
+
+/** Summary popups show a separate "No Data Returned" line for these indicators. */
+export const INDICATORS_WITH_NO_DATA_SUMMARY_LINE: readonly IndicatorSlug[] = [
+  "restorationByEcoRegion",
+  "restorationByStrategy",
+  "restorationByLandUse"
+];

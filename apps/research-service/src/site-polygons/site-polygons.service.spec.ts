@@ -40,11 +40,17 @@ import { Op } from "sequelize";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
   let polygonGeometryService: jest.Mocked<PolygonGeometryCreationService>;
   let validationQueue: jest.Mocked<Queue>;
+  let boundingBoxService: { getPolygonsBoundingBox: jest.Mock };
+  let gwcTileInvalidationService: { truncate: jest.Mock };
+  let polygonAttributeValuesService: { getMapsByPolygonUuids: jest.Mock };
 
   beforeEach(async () => {
     const mockPolygonGeometryService = {
@@ -53,6 +59,16 @@ describe("SitePolygonsService", () => {
 
     const mockValidationQueue = {
       add: jest.fn().mockResolvedValue(undefined)
+    };
+
+    boundingBoxService = {
+      getPolygonsBoundingBox: jest.fn().mockResolvedValue({ bbox: [0, 0, 1, 1] })
+    };
+    gwcTileInvalidationService = {
+      truncate: jest.fn().mockResolvedValue(undefined)
+    };
+    polygonAttributeValuesService = {
+      getMapsByPolygonUuids: jest.fn().mockResolvedValue(new Map())
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -65,6 +81,18 @@ describe("SitePolygonsService", () => {
         {
           provide: getQueueToken("validation"),
           useValue: mockValidationQueue
+        },
+        {
+          provide: BoundingBoxService,
+          useValue: boundingBoxService
+        },
+        {
+          provide: GwcTileInvalidationService,
+          useValue: gwcTileInvalidationService
+        },
+        {
+          provide: PolygonAttributeValuesService,
+          useValue: polygonAttributeValuesService
         }
       ]
     }).compile();
@@ -941,6 +969,25 @@ describe("SitePolygonsService", () => {
         expect.arrayContaining([polygonGeometry.uuid]),
         expect.anything()
       );
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith([polygonGeometry.uuid]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active", "deleted"]);
+    });
+
+    it("should not invalidate GWC when the deleted polygon was not active", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygonGeometry = await PolygonGeometryFactory.create();
+
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        isActive: false
+      });
+
+      await service.deleteSitePolygon(sitePolygon.uuid);
+
+      expect(boundingBoxService.getPolygonsBoundingBox).not.toHaveBeenCalled();
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
     });
 
     it("should successfully delete a site polygon with minimal associations", async () => {
@@ -1004,6 +1051,11 @@ describe("SitePolygonsService", () => {
       await sitePolygon2.reload({ paranoid: false });
       expect(sitePolygon1.deletedAt).not.toBeNull();
       expect(sitePolygon2.deletedAt).not.toBeNull();
+
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry1.uuid, polygonGeometry2.uuid])
+      );
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledWith([0, 0, 1, 1], ["active", "deleted"]);
     });
 
     it("should delete all versions when deleting by primaryUuid", async () => {

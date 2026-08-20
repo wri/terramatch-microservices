@@ -17,7 +17,7 @@ import {
   Task
 } from "@terramatch-microservices/database/entities";
 import { FINANCIAL_REPORT_FRAMEWORKS, FrameworkKey } from "@terramatch-microservices/database/constants";
-import { DUE, NO_UPDATE, PENDING } from "@terramatch-microservices/database/constants/status";
+import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
 import { Op } from "sequelize";
 import { uniq } from "lodash";
@@ -153,7 +153,7 @@ export class ReportGenerationService {
     const project = await Project.findOne({
       where: {
         organisationId,
-        status: { [Op.ne]: "started" },
+        status: { [Op.ne]: "draft" },
         frameworkKey: { [Op.in]: [...FINANCIAL_REPORT_FRAMEWORKS] }
       },
       attributes: ["frameworkKey"],
@@ -178,7 +178,7 @@ export class ReportGenerationService {
       title: `Financial Report ${yearOfReport}`,
       yearOfReport,
       status: DUE,
-      updateRequestStatus: NO_UPDATE,
+      updateRequestStatus: null,
       frameworkKey: project.frameworkKey,
       dueAt,
       finStartMonth: organisation.finStartMonth ?? null,
@@ -249,7 +249,7 @@ export class ReportGenerationService {
     const organisationIds = uniq(
       (
         await Project.findAll({
-          where: { frameworkKey, status: { [Op.ne]: "started" }, organisationId: { [Op.ne]: null } },
+          where: { frameworkKey, status: { [Op.ne]: "draft" }, organisationId: { [Op.ne]: null } },
           attributes: ["organisationId"]
         })
       )

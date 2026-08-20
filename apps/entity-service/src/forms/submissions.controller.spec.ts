@@ -89,7 +89,7 @@ describe("SubmissionsController", () => {
       const programme = await FundingProgrammeFactory.create();
       const stage = await StageFactory.create({ fundingProgrammeId: programme.uuid });
       const form = await FormFactory.create({ stageId: stage.uuid });
-      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "awaiting-approval" });
+      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "pending-approval" });
       await expect(
         controller.create({
           data: {
@@ -312,7 +312,7 @@ describe("SubmissionsController", () => {
       mockUserContext({ userId: user.id });
 
       const form = await FormFactory.create();
-      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "awaiting-approval" });
+      const submission = await FormSubmissionFactory.create({ formId: form.uuid, status: "pending-approval" });
       const attributes: UpdateSubmissionAttributes = {
         status: "rejected",
         feedback: "Some feedback",

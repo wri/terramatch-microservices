@@ -1,11 +1,13 @@
 import { AirtableEntity } from "./airtable-entity";
-import { Nursery, NurseryReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { Nursery, NurseryReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { groupBy, uniq } from "lodash";
 import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
 import { ColumnMapping, UpdateAssociation } from "../util/types";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type NurseryReportAssociations = {
   nurseryUuid?: string;
+  taskUuid?: string;
   nurserySeedlingAmount: number | null;
   nurserySeedlingNameAndAmount: string;
 };
@@ -13,6 +15,7 @@ type NurseryReportAssociations = {
 const COLUMNS: ColumnMapping<NurseryReport, NurseryReportAssociations>[] = [
   ...commonEntityColumns<NurseryReport, NurseryReportAssociations>("nurseryReport"),
   associatedValueColumn("nurseryUuid", "nurseryId"),
+  associatedValueColumn("taskUuid", "taskId"),
   "status",
   "updateRequestStatus",
   "dueAt",
@@ -44,12 +47,15 @@ export class NurseryReportEntity extends AirtableEntity<NurseryReport, NurseryRe
       attributes: ["id", "uuid"]
     });
     const treesByReport = groupBy(await TreeSpecies.visible().for(nurseryReports).findAll(), "speciesableId");
+    const taskIds = uniq(nurseryReports.map(({ taskId }) => taskId)).filter(isNotNull);
+    const tasks = await Task.findAll({ where: { id: taskIds }, attributes: ["id", "uuid"] });
 
     return nurseryReports.reduce(
-      (associations, { id, nurseryId }) => ({
+      (associations, { id, nurseryId, taskId }) => ({
         ...associations,
         [id]: {
           nurseryUuid: nurseries.find(({ id }) => id === nurseryId)?.uuid,
+          taskUuid: tasks.find(({ id }) => id === taskId)?.uuid,
           nurserySeedlingAmount: treeAmountRollup(treesByReport[id], "nursery-seedling"),
           nurserySeedlingNameAndAmount: treeDescriptionRollup(treesByReport[id], "nursery-seedling")
         }

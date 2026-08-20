@@ -5,7 +5,7 @@ import { populateDto } from "./json-api-attributes";
 import { Organisation } from "@terramatch-microservices/database/entities";
 import { HybridSupportDto, HybridSupportProps } from "./hybrid-support.dto";
 
-const STATUSES = ["draft", "pending", "approved", "rejected"];
+const STATUSES = ["draft", "pending-approval", "approved", "rejected"];
 type Status = (typeof STATUSES)[number];
 
 @JsonApiDto({ type: "organisations" })

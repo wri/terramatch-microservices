@@ -208,7 +208,21 @@ export class SrpReportProcessor extends ReportProcessor<
     });
   }
 
-  async exportAll({ target }: ExportAllOptions = {}) {
+  async exportAll({ target, uuids, fileNamePrefix }: ExportAllOptions = {}) {
+    if (uuids != null && uuids.length > 0) {
+      const reports = await SrpReport.findAll({ where: { uuid: { [Op.in]: uuids } }, include: CSV_EXPORT_INCLUDES });
+      if (reports.length === 0) return;
+      await this.entitiesService.authorize("read", reports);
+      const reportsLabel = await this.entitiesService.localizeText("SRP reports");
+      await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, reports, {
+        target,
+        frameworkKey: reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined,
+        fileName: fileNamePrefix == null ? undefined : `${fileNamePrefix} - ${reportsLabel}.csv`,
+        ability: "read"
+      });
+      return;
+    }
+
     const fileName = timestampFileName(
       await this.entitiesService.localizeText("Annual Socio Economic Restoration Reports Export")
     );

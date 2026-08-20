@@ -7,7 +7,7 @@ import { Sequelize } from "sequelize-typescript";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { buildJsonApi } from "./json-api-builder";
-import { Model, Op } from "sequelize";
+import sequelize from "sequelize";
 import { DateTime } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import { SequelizeStorage, Umzug } from "umzug";
@@ -43,11 +43,11 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
     logger: console
   });
 
-  const dataValues = (models: Model[]) => models.map(model => model.dataValues);
+  const dataValues = (models: sequelize.Model[]) => models.map(model => model.dataValues);
 
   replGet = replServer.context["get"] as ReplGet;
 
-  // By default, we make lodash, luxon, the JSON API Builder, and the Sequelize models available
+  // By default, we make a few commonly used utilities available.
   context = {
     umzug,
     dataValues,
@@ -55,7 +55,8 @@ export async function bootstrapRepl(serviceName: string, module: Type | DynamicM
     uuidv4,
     DateTime,
     buildJsonApi,
-    Op,
+    sequelize,
+    Op: sequelize.Op,
     Reflect,
     Subquery,
     PaginatedQueryBuilder,

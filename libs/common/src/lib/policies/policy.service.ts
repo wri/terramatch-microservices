@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { UserPolicy } from "./user.policy";
 import {
+  AboutSection,
   AnrPlotGeometry,
   Application,
   AuditStatus,
@@ -14,6 +15,7 @@ import {
   Framework,
   FundingProgramme,
   ImpactStory,
+  LocalizationKey,
   Media,
   Nursery,
   NurseryReport,
@@ -63,6 +65,8 @@ import { FormSubmissionPolicy } from "./form-submission.policy";
 import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
 import { UserContext } from "../contexts/user.context";
+import { AboutSectionPolicy } from "./about-section.policy";
+import { LocalizationKeyPolicy } from "./localization-key.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,6 +79,7 @@ type PolicyClass = {
 };
 
 const POLICIES: [EntityClass, PolicyClass][] = [
+  [AboutSection, AboutSectionPolicy],
   [AnrPlotGeometry, AnrPlotGeometryPolicy],
   [Application, ApplicationPolicy],
   [AuditStatus, AuditStatusPolicy],
@@ -89,6 +94,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [FormQuestionOption, FormQuestionOptionPolicy],
   [Framework, FrameworkPolicy],
   [FundingProgramme, FundingProgrammePolicy],
+  [LocalizationKey, LocalizationKeyPolicy],
   [Media, MediaPolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],

@@ -14,12 +14,12 @@ import { Model } from "sequelize-typescript";
 import { DatabaseModule } from "../database.module";
 import { ReportModel } from "./entities";
 
-export const STARTED = "started";
-export const AWAITING_APPROVAL = "awaiting-approval";
+export const DRAFT = "draft";
+export const PENDING_APPROVAL = "pending-approval";
 export const APPROVED = "approved";
-export const NEEDS_MORE_INFORMATION = "needs-more-information";
+export const INFORMATION_REQUIRED = "information-required";
 export const MODIFIED = "modified";
-export const ENTITY_STATUSES = [STARTED, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
+export const ENTITY_STATUSES = [DRAFT, PENDING_APPROVAL, APPROVED, INFORMATION_REQUIRED] as const;
 export const PLANTING_STATUSES = [
   "no-restoration-expected",
   "not-started",
@@ -38,18 +38,18 @@ export const statusUpdateSequelizeHook = async (model: Model) => {
 const emitStatusUpdateHook = (from: string, model: Model) => statusUpdateSequelizeHook(model);
 
 export const EntityStatusStates: States<Project | Site | Nursery | DisturbanceReport, EntityStatus> = {
-  default: STARTED,
+  default: DRAFT,
 
   transitions: transitions()
-    .from(STARTED, () => [AWAITING_APPROVAL])
-    .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
-    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL])
-    .from(APPROVED, () => [NEEDS_MORE_INFORMATION]).transitions,
+    .from(DRAFT, () => [PENDING_APPROVAL])
+    .from(PENDING_APPROVAL, () => [APPROVED, INFORMATION_REQUIRED])
+    .from(INFORMATION_REQUIRED, () => [APPROVED, PENDING_APPROVAL])
+    .from(APPROVED, () => [INFORMATION_REQUIRED]).transitions,
 
   afterTransitionHooks: {
     [APPROVED]: emitStatusUpdateHook,
-    [AWAITING_APPROVAL]: emitStatusUpdateHook,
-    [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
+    [PENDING_APPROVAL]: emitStatusUpdateHook,
+    [INFORMATION_REQUIRED]: emitStatusUpdateHook
   }
 };
 
@@ -63,12 +63,12 @@ export const ReportStatusStates: States<ReportModel, ReportStatus> = {
   default: DUE,
 
   transitions: transitions<ReportStatus>(EntityStatusStates.transitions)
-    .from(DUE, () => [STARTED, AWAITING_APPROVAL])
-    // reports can go from awaiting approval to started in the nothing_to_report case (see validation below)
-    .from(AWAITING_APPROVAL, to => [...to, STARTED]).transitions,
+    .from(DUE, () => [DRAFT, PENDING_APPROVAL])
+    // reports can go from pending approval to draft in the nothing_to_report case (see validation below)
+    .from(PENDING_APPROVAL, to => [...to, DRAFT]).transitions,
 
   transitionValidForModel: (from: ReportStatus, to: ReportStatus, report: ReportModel) => {
-    if ((from === DUE && to === AWAITING_APPROVAL) || (from === AWAITING_APPROVAL && to === STARTED)) {
+    if ((from === DUE && to === PENDING_APPROVAL) || (from === PENDING_APPROVAL && to === DRAFT)) {
       // these two transitions are only allowed for site / nursery reports when the nothingToReport flag is true;
       return !(report instanceof ProjectReport) && report.nothingToReport === true;
     }
@@ -77,71 +77,66 @@ export const ReportStatusStates: States<ReportModel, ReportStatus> = {
   }
 };
 
-export const COMPLETE_REPORT_STATUSES = [APPROVED, AWAITING_APPROVAL] as const;
+export const COMPLETE_REPORT_STATUSES = [APPROVED, PENDING_APPROVAL] as const;
 export type CompleteReportStatus = (typeof COMPLETE_REPORT_STATUSES)[number];
 
-export const TASK_STATUSES = [DUE, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL, APPROVED] as const;
+export const TASK_STATUSES = [DUE, INFORMATION_REQUIRED, PENDING_APPROVAL, APPROVED] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const TaskStatusStates: States<Task, TaskStatus> = {
   default: DUE,
 
   transitions: transitions<TaskStatus>()
-    .from(DUE, () => [AWAITING_APPROVAL])
-    .from(AWAITING_APPROVAL, () => [NEEDS_MORE_INFORMATION, APPROVED])
-    .from(NEEDS_MORE_INFORMATION, () => [AWAITING_APPROVAL, APPROVED])
-    .from(APPROVED, () => [AWAITING_APPROVAL, NEEDS_MORE_INFORMATION]).transitions
+    .from(DUE, () => [PENDING_APPROVAL])
+    .from(PENDING_APPROVAL, () => [INFORMATION_REQUIRED, APPROVED])
+    .from(INFORMATION_REQUIRED, () => [PENDING_APPROVAL, APPROVED])
+    .from(APPROVED, () => [PENDING_APPROVAL, INFORMATION_REQUIRED]).transitions
 };
 
-export const DRAFT = "draft";
 export const NO_UPDATE = "no-update";
-export const UPDATE_REQUEST_STATUSES = [NO_UPDATE, DRAFT, AWAITING_APPROVAL, APPROVED, NEEDS_MORE_INFORMATION] as const;
+/** Active update-request statuses. Absence of a change request is represented as NULL (not no-update). */
+export const UPDATE_REQUEST_STATUSES = [DRAFT, PENDING_APPROVAL, APPROVED, INFORMATION_REQUIRED] as const;
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
+/** @deprecated Prefer NULL on entity update_request_status; kept for legacy comparisons during migration. */
+export type UpdateRequestStatusOrLegacyNoUpdate = UpdateRequestStatus | typeof NO_UPDATE;
 
 export const UpdateRequestStatusStates: States<UpdateRequest, UpdateRequestStatus> = {
   default: DRAFT,
 
   transitions: transitions<UpdateRequestStatus>()
-    .from(DRAFT, () => [AWAITING_APPROVAL])
-    .from(AWAITING_APPROVAL, () => [APPROVED, NEEDS_MORE_INFORMATION])
-    .from(NEEDS_MORE_INFORMATION, () => [APPROVED, AWAITING_APPROVAL]).transitions,
+    .from(DRAFT, () => [PENDING_APPROVAL])
+    .from(PENDING_APPROVAL, () => [APPROVED, INFORMATION_REQUIRED])
+    .from(INFORMATION_REQUIRED, () => [APPROVED, PENDING_APPROVAL]).transitions,
 
   afterTransitionHooks: {
     [APPROVED]: emitStatusUpdateHook,
-    [AWAITING_APPROVAL]: emitStatusUpdateHook,
-    [NEEDS_MORE_INFORMATION]: emitStatusUpdateHook
+    [PENDING_APPROVAL]: emitStatusUpdateHook,
+    [INFORMATION_REQUIRED]: emitStatusUpdateHook
   }
 };
 
 export const REJECTED = "rejected";
-export const REQUIRES_MORE_INFORMATION = "requires-more-information";
-export const FORM_SUBMISSION_STATUSES = [
-  APPROVED,
-  AWAITING_APPROVAL,
-  REJECTED,
-  REQUIRES_MORE_INFORMATION,
-  STARTED
-] as const;
+export const FORM_SUBMISSION_STATUSES = [APPROVED, PENDING_APPROVAL, REJECTED, INFORMATION_REQUIRED, DRAFT] as const;
 export type FormSubmissionStatus = (typeof FORM_SUBMISSION_STATUSES)[number];
 
 export const FormSubmissionStatusStates: States<FormSubmission, FormSubmissionStatus> = {
-  default: STARTED,
+  default: DRAFT,
 
   transitions: transitions<FormSubmissionStatus>()
-    .from(STARTED, () => [AWAITING_APPROVAL])
-    .from(REQUIRES_MORE_INFORMATION, () => [AWAITING_APPROVAL])
-    .from(AWAITING_APPROVAL, () => [APPROVED, REQUIRES_MORE_INFORMATION, REJECTED]).transitions,
+    .from(DRAFT, () => [PENDING_APPROVAL])
+    .from(INFORMATION_REQUIRED, () => [PENDING_APPROVAL])
+    .from(PENDING_APPROVAL, () => [APPROVED, INFORMATION_REQUIRED, REJECTED]).transitions,
 
   afterTransitionHooks: {
     [APPROVED]: emitStatusUpdateHook,
-    [AWAITING_APPROVAL]: emitStatusUpdateHook,
-    [REQUIRES_MORE_INFORMATION]: emitStatusUpdateHook,
+    [PENDING_APPROVAL]: emitStatusUpdateHook,
+    [INFORMATION_REQUIRED]: emitStatusUpdateHook,
     [REJECTED]: emitStatusUpdateHook
   }
 };
 
 export const PENDING = "pending";
-export const ORGANISATION_STATUSES = [APPROVED, PENDING, REJECTED, DRAFT] as const;
+export const ORGANISATION_STATUSES = [APPROVED, PENDING_APPROVAL, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
 
 export type AnyStatus = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
@@ -159,14 +154,10 @@ export type AnyStatus = EntityStatus | ReportStatus | UpdateRequestStatus | Form
 export const STATUS_DISPLAY_STRINGS: Record<AnyStatus, string> = {
   [DRAFT]: "Draft",
   [DUE]: "Due",
-  [PENDING]: "Pending",
-  [STARTED]: "Started",
-  [AWAITING_APPROVAL]: "Awaiting approval",
-  [NEEDS_MORE_INFORMATION]: "Needs more information",
+  [PENDING_APPROVAL]: "Pending Approval",
+  [INFORMATION_REQUIRED]: "Information Required",
   [APPROVED]: "Approved",
-  [REJECTED]: "Rejected",
-  [NO_UPDATE]: "No update",
-  [REQUIRES_MORE_INFORMATION]: "Requires more information"
+  [REJECTED]: "Rejected"
 };
 
 export const FAILED = "failed";

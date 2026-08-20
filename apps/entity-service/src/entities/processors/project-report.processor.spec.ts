@@ -117,21 +117,21 @@ describe("ProjectReportProcessor", () => {
       const first = await ProjectReportFactory.create({
         title: "first project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
       const second = await ProjectReportFactory.create({
         title: "second project report",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
       const third = await ProjectReportFactory.create({
         title: "third project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         projectId: p1.id
       });
@@ -143,7 +143,7 @@ describe("ProjectReportProcessor", () => {
         projectId: p2.id
       });
 
-      await expectProjectReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectProjectReports([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectProjectReports([fourth], { projectUuid: p2.uuid });
 
@@ -237,7 +237,7 @@ describe("ProjectReportProcessor", () => {
     });
 
     it("should sort project reports by status", async () => {
-      const projectReportA = await ProjectReportFactory.create({ status: "started" });
+      const projectReportA = await ProjectReportFactory.create({ status: "draft" });
       const projectReportB = await ProjectReportFactory.create({ status: "approved" });
       const projectReportC = await ProjectReportFactory.create({ status: "approved" });
       await expectProjectReports(
@@ -658,6 +658,32 @@ describe("ProjectReportProcessor", () => {
         totalSeedlingsGrownReport: secondReportSum,
         totalSeedlingsGrown: firstReportSum + secondReportSum
       });
+    });
+
+    it("writes only the selected project reports to the CSV", async () => {
+      await ProjectReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "ppc" });
+      const reports = await ProjectReportFactory.createMany(3, { projectId: project.id, frameworkKey: "ppc" });
+      await EntityFormFactory.projectReport(reports[0]).create();
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ uuids: [reports[0].uuid, reports[2].uuid] });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as ProjectReport).uuid).sort()).toEqual(
+        [reports[0].uuid, reports[2].uuid].sort()
+      );
+    });
+
+    it("returns early when selected project report uuids match nothing", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportAll({ uuids: ["00000000-0000-4000-8000-000000000000"] });
+      expect(localizeSpy).not.toHaveBeenCalled();
     });
 
     it("filters for own projects", async () => {

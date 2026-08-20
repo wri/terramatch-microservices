@@ -183,10 +183,10 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @StateMachineColumn(EntityStatusStates)
   declare status: CreationOptional<EntityStatus>;
 
-  // Note: this is marked as nullable in the current schema, but has a default value. The
-  // nullability should be removed when v3 is responsible for the DB schema.
-  @Column({ type: STRING, defaultValue: "no-update" })
-  declare updateRequestStatus: CreationOptional<UpdateRequestStatus>;
+  // Absence of a change request is NULL (product default). DB column default is also NULL.
+  @AllowNull
+  @Column(STRING)
+  declare updateRequestStatus: UpdateRequestStatus | null;
 
   @AllowNull
   @Column(TEXT)

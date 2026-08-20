@@ -34,7 +34,7 @@ import {
   APPROVED,
   EntityStatus,
   EntityStatusStates,
-  STARTED,
+  DRAFT,
   statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
@@ -65,7 +65,7 @@ type SiteMedia =
 
 @Scopes(() => ({
   approved: { where: { status: { [Op.in]: Site.APPROVED_STATUSES } } },
-  nonDraft: { where: { status: { [Op.ne]: STARTED } } },
+  nonDraft: { where: { status: { [Op.ne]: DRAFT } } },
   project: (id: number) => ({ where: { projectId: id } })
 }))
 @Table({

@@ -89,7 +89,7 @@ describe("DisturbanceReportProcessor", () => {
       });
       await DisturbanceReportFactory.createMany(3, {
         projectId: project.id,
-        status: "started"
+        status: "draft"
       });
 
       await expectDisturbanceReports(approvedReports, { status: "approved" });
@@ -422,6 +422,27 @@ describe("DisturbanceReportProcessor", () => {
         })
       );
     });
+
+    it("writes only the selected disturbance reports to the CSV", async () => {
+      await DisturbanceReport.truncate();
+      const reports = [
+        await DisturbanceReportFactory.create({ frameworkKey: "ppc" }),
+        await DisturbanceReportFactory.create({ frameworkKey: "ppc" }),
+        await DisturbanceReportFactory.create({ frameworkKey: "ppc" })
+      ];
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      setMockedPermissions("framework-ppc");
+      await processor.exportAll({ uuids: [reports[0].uuid, reports[2].uuid] });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as DisturbanceReport).uuid).sort()).toEqual(
+        [reports[0].uuid, reports[2].uuid].sort()
+      );
+    });
   });
 
   describe("create", () => {
@@ -432,7 +453,7 @@ describe("DisturbanceReportProcessor", () => {
       const report = await processor.create({ parentUuid: project.uuid });
 
       expect(report.projectId).toBe(project.id);
-      expect(report.status).toBe("started");
+      expect(report.status).toBe("draft");
       expect(report.status).not.toBe("due");
     });
 

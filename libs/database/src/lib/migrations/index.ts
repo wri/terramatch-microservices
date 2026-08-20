@@ -24,6 +24,13 @@ import { updateHaritBharatFundReadMoreUrl } from "./202607271530-update-harit-bh
 import { updateProjectQaStatusNullable } from "./202607281200-update-project-qa-status-nullable";
 import { addAboutSectionTextFields } from "./202607301000-add-about-section-text-fields";
 import { addLinkTitleTextField } from "./202607301100-add-link-title-text-field";
+import { addPolygonGeometryActiveDeletedViews } from "./202608051200-add-polygon-geometry-active-deleted-views";
+import { addDisturbanceReportFormUuidToFrameworks } from "./202608041500-add-disturbance-report-form-uuid-to-frameworks";
+import { requireAboutSectionText } from "./202608051658-require-about-section-text";
+import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-columns";
+import { addPolygonAttributeTables } from "./202608131700-add-polygon-attribute-tables";
+import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
+import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -49,5 +56,12 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   updateHaritBharatFundReadMoreUrl,
   updateProjectQaStatusNullable,
   addAboutSectionTextFields,
-  addLinkTitleTextField
+  addLinkTitleTextField,
+  addPolygonGeometryActiveDeletedViews,
+  addDisturbanceReportFormUuidToFrameworks,
+  requireAboutSectionText,
+  removeI18nFieldIdColumns,
+  addPolygonAttributeTables,
+  nullUpdateRequestStatusDefault,
+  convertBioeconomyProductColumnsToText
 ];

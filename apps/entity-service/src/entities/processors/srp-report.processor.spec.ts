@@ -89,7 +89,7 @@ describe("SrpReportProcessor", () => {
       });
       await SrpReportFactory.createMany(3, {
         projectId: project.id,
-        status: "started"
+        status: "draft"
       });
 
       await expectSrpReports(approvedReports, { status: "approved" });
@@ -267,6 +267,32 @@ describe("SrpReportProcessor", () => {
         }),
         expect.anything()
       );
+    });
+
+    it("exports only the selected SRP reports by uuids", async () => {
+      await SrpReport.truncate();
+      const project = await ProjectFactory.create({ frameworkKey: "ppc" });
+      const reports = [
+        await SrpReportFactory.create({ projectId: project.id, frameworkKey: "ppc" }),
+        await SrpReportFactory.create({ projectId: project.id, frameworkKey: "ppc" })
+      ];
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+
+      await processor.exportAll({ uuids: [reports[0].uuid] });
+
+      expect(exportSpy).toHaveBeenCalledWith(
+        "srpReports",
+        expect.anything(),
+        [expect.objectContaining({ uuid: reports[0].uuid })],
+        expect.objectContaining({ ability: "read" })
+      );
+    });
+
+    it("returns early when selected SRP report uuids match nothing", async () => {
+      const exportSpy = jest.spyOn(entitiesService(), "entityExport").mockResolvedValue();
+      await processor.exportAll({ uuids: ["00000000-0000-4000-8000-000000000000"] });
+      expect(exportSpy).not.toHaveBeenCalled();
     });
 
     it("filters for own projects", async () => {

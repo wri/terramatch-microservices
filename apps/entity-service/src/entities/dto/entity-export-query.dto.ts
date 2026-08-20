@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional } from "class-validator";
+import { IsArray, IsOptional, IsUUID } from "class-validator";
 import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
 
 export class EntityExportQueryDto {
@@ -14,4 +14,14 @@ export class EntityExportQueryDto {
   @ApiProperty({ required: false, type: String, description: "Filter by project" })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: "Filter by specific entity UUIDs. When provided, frameworkKey and projectUuid are ignored."
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  uuids?: string[];
 }

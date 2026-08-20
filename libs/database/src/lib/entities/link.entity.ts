@@ -1,5 +1,4 @@
 import {
-  AllowNull,
   AutoIncrement,
   Column,
   DefaultScope,
@@ -31,13 +30,15 @@ import { LaravelModel, laravelType } from "../types/util";
     return {
       where: {
         linkableType: laravelType(models[0]),
-        linkableId: models[0].id
+        linkableId: models.map(({ id }) => id)
       }
     };
   }
 }))
 @Table({ tableName: "links", underscored: true, paranoid: true })
 export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<Link>> {
+  static readonly I18N_FIELDS = ["title"] as const;
+
   static for<T extends LaravelModel>(models: T | T[]) {
     return chainScope(this, "associations", models) as typeof Link;
   }
@@ -55,12 +56,8 @@ export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<L
   @Column(TINYINT)
   declare order: number;
 
-  @AllowNull
   @Column(TEXT)
-  declare title: string | null;
-
-  @Column(BIGINT.UNSIGNED)
-  declare titleId: number;
+  declare title: string;
 
   @Column(STRING)
   declare url: string;

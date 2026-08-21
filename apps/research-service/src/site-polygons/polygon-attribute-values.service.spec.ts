@@ -200,5 +200,55 @@ describe("PolygonAttributeValuesService", () => {
 
       expect(result).toEqual([{}]);
     });
+
+    it("drops invalid single_select options without throwing", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([singleSelectDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ anrSubcategory: "not-an-option" }],
+        "terrafund",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ anrSubcategory: null });
+    });
+
+    it("keeps only allowlisted multi_select options", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([multiSelectDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ strata: ["b", "invalid", "a", "also-bad"] }],
+        "ppc",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ strata: ["a", "b"] });
+    });
+
+    it("returns null for multi_select when all options are invalid", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([multiSelectDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ strata: ["invalid", "also-bad"] }],
+        "ppc",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ strata: null });
+    });
+
+    it("drops wrong types without throwing", async () => {
+      jest
+        .spyOn(PolygonAttributeDefinition, "findAll")
+        .mockResolvedValue([singleSelectDefinition, multiSelectDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ anrSubcategory: 123, strata: "a" }],
+        "ppc",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ anrSubcategory: null, strata: null });
+    });
   });
 });

@@ -172,6 +172,62 @@ describe("ProjectProcessor", () => {
       await expectProjects([ready], { readyForBaseline: true });
     });
 
+    it("filters by the latest approved non-null plantingStatus", async () => {
+      const inProgress = await ProjectFactory.create();
+      const completed = await ProjectFactory.create();
+      const unapprovedNewer = await ProjectFactory.create();
+      const nullLatestApproved = await ProjectFactory.create();
+
+      await ProjectReportFactory.create({
+        projectId: inProgress.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: inProgress.id,
+        status: "draft",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: completed.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: unapprovedNewer.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: unapprovedNewer.id,
+        status: "information-required",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: null
+      });
+
+      await expectProjects([inProgress, unapprovedNewer, nullLatestApproved], { plantingStatus: "in-progress" });
+      await expectProjects([completed], { plantingStatus: "completed" });
+    });
+
     it("filters by projectQaStatus fields", async () => {
       const matching = await ProjectFactory.create({
         projectQaStatus1: "qa-in-progress",
@@ -442,7 +498,7 @@ describe("ProjectProcessor", () => {
     });
 
     describe("plantingStatus", () => {
-      it("uses plantingStatus from the most recent report with planting progress data (by dueAt)", async () => {
+      it("uses plantingStatus from the most recent approved report with planting progress data (by dueAt)", async () => {
         const { id: projectId, uuid } = await ProjectFactory.create();
 
         await ProjectReportFactory.create({
@@ -472,12 +528,38 @@ describe("ProjectProcessor", () => {
 
         const project = await processor.findOne(uuid);
         const { dto: fullDto } = await processor.getFullDto(project!);
-        expect(fullDto.plantingStatus).toBe("replacement-planting");
+        expect(fullDto.plantingStatus).toBe("in-progress");
 
         setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0]);
-        expect(lightDto.plantingStatus).toBe("replacement-planting");
+        expect(lightDto.plantingStatus).toBe("in-progress");
+      });
+
+      it("ignores a newer approved report with null plantingStatus", async () => {
+        const { id: projectId, uuid } = await ProjectFactory.create();
+
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: null
+        });
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        setMockedPermissions("projects-read");
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0]);
+        expect(lightDto.plantingStatus).toBe("in-progress");
       });
 
       it("returns null when no approved reports and project has no plantingStatus", async () => {

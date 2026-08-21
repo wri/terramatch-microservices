@@ -505,6 +505,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
             WHERE sr2.site_id = s.id
               AND sr2.deleted_at IS NULL
               AND sr2.status = 'approved'
+              AND sr2.planting_status IS NOT NULL
             ORDER BY sr2.due_at DESC
             LIMIT 1
           ) = ${sql.escape(plantingStatus)}

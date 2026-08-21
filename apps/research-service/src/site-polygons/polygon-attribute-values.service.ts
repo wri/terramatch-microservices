@@ -133,7 +133,7 @@ export class PolygonAttributeValuesService {
       const matched: CustomAttributeMap = {};
       for (const definition of definitions) {
         if (!(definition.key in properties)) continue;
-        matched[definition.key] = this.validateValue(definition, properties[definition.key]);
+        matched[definition.key] = this.filterValueForUpload(definition, properties[definition.key]);
       }
       return matched;
     });
@@ -146,9 +146,12 @@ export class PolygonAttributeValuesService {
     transaction: Transaction
   ): Promise<CustomAttributeMap> {
     const matched = await this.pickMatchingFromProperties(properties, frameworkKey, transaction);
-    if (Object.keys(matched).length === 0) return matched;
+    const toPersist = Object.fromEntries(
+      Object.entries(matched).filter(([, value]) => value != null)
+    ) as CustomAttributeMap;
+    if (Object.keys(toPersist).length === 0) return matched;
 
-    await this.upsert(sitePolygonUuid, frameworkKey, matched, transaction);
+    await this.upsert(sitePolygonUuid, frameworkKey, toPersist, transaction);
     return matched;
   }
 
@@ -209,5 +212,30 @@ export class PolygonAttributeValuesService {
     }
 
     return [...values].sort();
+  }
+
+  private filterValueForUpload(
+    definition: DefinitionWithOptions,
+    rawValue: unknown
+  ): SitePolygonAttributeValueData | null {
+    if (rawValue === null || rawValue === undefined) return null;
+
+    const allowedValues = new Set((definition.options ?? []).map(option => option.value));
+
+    if (definition.inputType === "single_select") {
+      if (typeof rawValue !== "string") return null;
+      const trimmed = rawValue.trim();
+      if (trimmed.length === 0) return null;
+      return allowedValues.has(trimmed) ? trimmed : null;
+    }
+
+    if (!Array.isArray(rawValue)) return null;
+
+    const filtered = rawValue
+      .filter((item): item is string => typeof item === "string")
+      .map(item => item.trim())
+      .filter(item => item.length > 0 && allowedValues.has(item));
+
+    return filtered.length > 0 ? [...filtered].sort() : null;
   }
 }

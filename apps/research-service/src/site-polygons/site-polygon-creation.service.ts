@@ -841,7 +841,12 @@ export class SitePolygonCreationService {
     }
 
     for (const { sitePolygonUuid, attributes } of pendingCustomAttributes) {
-      await this.polygonAttributeValuesService.upsert(sitePolygonUuid, frameworkKey, attributes, transaction);
+      const toPersist = Object.fromEntries(Object.entries(attributes).filter(([, value]) => value != null)) as Record<
+        string,
+        string | string[]
+      >;
+      if (Object.keys(toPersist).length === 0) continue;
+      await this.polygonAttributeValuesService.upsert(sitePolygonUuid, frameworkKey, toPersist, transaction);
     }
 
     if (polygonUuids.length > 0) {

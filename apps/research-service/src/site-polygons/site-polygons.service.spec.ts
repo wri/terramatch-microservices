@@ -1380,7 +1380,9 @@ describe("SitePolygonsService", () => {
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest
         .spyOn(SitePolygon, "findAll")
-        .mockResolvedValue([{ id: 1, uuid: "1234", siteUuid: "site-1" } as SitePolygon]);
+        .mockResolvedValue([
+          { id: 1, uuid: "1234", siteUuid: "site-1", status: "draft", validationStatus: "passed" } as SitePolygon
+        ]);
       jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
       await service.updateBulkStatus(status, data, comment, user);
       expect(SitePolygon.update).toHaveBeenCalledWith(
@@ -1389,6 +1391,103 @@ describe("SitePolygonsService", () => {
       );
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
+
+    it("should reject submission when a requested site polygon is missing", async () => {
+      const data = [{ type: "sitePolygons", id: "missing-polygon" }];
+      const status = "pending-approval";
+      const user = { id: 1 } as User;
+
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+
+      await expect(service.updateBulkStatus(status, data, null, user)).rejects.toThrow(BadRequestException);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reject submission for a Draft polygon whose validation has not started", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "pending-approval";
+      const user = { id: 1 } as User;
+
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([{ id: 1, uuid: "polygon-1", status: "draft", validationStatus: null } as SitePolygon]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+
+      await expect(service.updateBulkStatus(status, data, null, user)).rejects.toThrow(BadRequestException);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reject submission for a polygon that failed validation", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "pending-approval";
+      const user = { id: 1 } as User;
+
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([{ id: 1, uuid: "polygon-1", status: "draft", validationStatus: "failed" } as SitePolygon]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+
+      await expect(service.updateBulkStatus(status, data, null, user)).rejects.toThrow(BadRequestException);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reject submission for a polygon that is already approved even if validation passed", async () => {
+      const data = [{ type: "sitePolygons", id: "polygon-1" }];
+      const status = "pending-approval";
+      const user = { id: 1 } as User;
+
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([
+          { id: 1, uuid: "polygon-1", status: "approved", validationStatus: "passed" } as SitePolygon
+        ]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+
+      await expect(service.updateBulkStatus(status, data, null, user)).rejects.toThrow(BadRequestException);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reject the entire batch when only one of several polygons is ineligible", async () => {
+      const data = [
+        { type: "sitePolygons", id: "polygon-1" },
+        { type: "sitePolygons", id: "polygon-2" }
+      ];
+      const status = "pending-approval";
+      const user = { id: 1 } as User;
+
+      jest
+        .spyOn(SitePolygon, "findAll")
+        .mockResolvedValue([
+          { id: 1, uuid: "polygon-1", status: "draft", validationStatus: "passed" } as SitePolygon,
+          { id: 2, uuid: "polygon-2", status: "draft", validationStatus: null } as SitePolygon
+        ]);
+      const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([0]);
+
+      await expect(service.updateBulkStatus(status, data, null, user)).rejects.toThrow(BadRequestException);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it.each(["draft", "information-required"] as const)(
+      "should allow submission for %s status with partially passed validation",
+      async submittableStatus => {
+        const data = [{ type: "sitePolygons", id: "polygon-1" }];
+        const status = "pending-approval";
+        const user = { id: 1 } as User;
+
+        jest
+          .spyOn(SitePolygon, "findAll")
+          .mockResolvedValue([
+            { id: 1, uuid: "polygon-1", status: submittableStatus, validationStatus: "partial" } as SitePolygon
+          ]);
+        const updateSpy = jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+        jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
+
+        await service.updateBulkStatus(status, data, null, user);
+
+        expect(updateSpy).toHaveBeenCalledWith({ status }, { where: { uuid: { [Op.in]: data.map(d => d.id) } } });
+      }
+    );
 
     it("should trigger project validation when approving polygons", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
@@ -1440,7 +1539,13 @@ describe("SitePolygonsService", () => {
       const status = "pending-approval";
       const comment = "comment";
       const user = { id: 1 } as User;
-      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+      const sitePolygon = {
+        id: 1,
+        uuid: "polygon-1",
+        siteUuid: "site-1",
+        status: "draft",
+        validationStatus: "passed"
+      } as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
@@ -1462,7 +1567,9 @@ describe("SitePolygonsService", () => {
         id: 1,
         uuid: "polygon-1",
         siteUuid: "site-uuid-1",
-        polygonUuid: "geom-uuid-1"
+        polygonUuid: "geom-uuid-1",
+        status: "draft",
+        validationStatus: "passed"
       } as SitePolygon;
       const site = { id: 10, uuid: "site-uuid-1", name: "River Valley Site" } as Site;
 
@@ -1521,7 +1628,9 @@ describe("SitePolygonsService", () => {
         id: 1,
         uuid: "polygon-1",
         siteUuid: "site-uuid-missing",
-        polygonUuid: "geom-uuid-2"
+        polygonUuid: "geom-uuid-2",
+        status: "draft",
+        validationStatus: "passed"
       } as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
@@ -1559,7 +1668,9 @@ describe("SitePolygonsService", () => {
         id: 1,
         uuid: "polygon-1",
         siteUuid: "site-1",
-        polygonUuid: "geom-uuid-1"
+        polygonUuid: "geom-uuid-1",
+        status: "draft",
+        validationStatus: "passed"
       } as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);

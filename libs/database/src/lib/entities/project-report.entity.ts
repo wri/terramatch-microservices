@@ -277,6 +277,7 @@ export class ProjectReport extends Model<InferAttributes<ProjectReport>, InferCr
             WHERE pr.project_id = p.id
               AND pr.deleted_at IS NULL
               AND pr.status = 'approved'
+              AND pr.planting_status IS NOT NULL
             ORDER BY pr.due_at DESC
             LIMIT 1
           ) = ${ProjectReport.sql.escape(plantingStatus)}

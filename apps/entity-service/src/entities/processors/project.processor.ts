@@ -657,7 +657,8 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   protected async getLastReport(projectId: number) {
-    return await ProjectReport.project(projectId)
+    return await ProjectReport.approved()
+      .project(projectId)
       .lastReport()
       .findOne({
         where: {

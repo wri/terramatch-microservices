@@ -17,7 +17,13 @@ import { Site } from "./site.entity";
 import { PointGeometry } from "./point-geometry.entity";
 import { PolygonGeometry } from "./polygon-geometry.entity";
 import { User } from "./user.entity";
-import { INDICATOR_SLUGS, POLYGON_STATUSES, PolygonStatus } from "../constants";
+import {
+  INDICATOR_SLUGS,
+  POLYGON_STATUSES,
+  POLYGON_VALIDATION_STATUSES,
+  PolygonStatus,
+  PolygonValidationStatus
+} from "../constants";
 import { IndicatorOutputFieldMonitoring } from "./indicator-output-field-monitoring.entity";
 import { IndicatorOutputHectares } from "./indicator-output-hectares.entity";
 import { IndicatorOutputMsuCarbon } from "./indicator-output-msu-carbon.entity";
@@ -190,8 +196,8 @@ export class SitePolygon extends Model<SitePolygon> {
   declare versionName: string | null;
 
   @AllowNull
-  @Column({ type: STRING })
-  declare validationStatus: string | null;
+  @Column({ type: STRING, values: POLYGON_VALIDATION_STATUSES })
+  declare validationStatus: PolygonValidationStatus | null;
 
   @ForeignKey(() => Disturbance)
   @AllowNull

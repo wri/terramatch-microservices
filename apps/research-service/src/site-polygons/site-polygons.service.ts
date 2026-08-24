@@ -38,7 +38,10 @@ import {
   INDICATOR_SLUGS,
   PolygonStatus,
   POLYGON_DRAFT,
+  POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
+  isPassingPolygonValidationStatus,
+  POLYGON_VALIDATION_PASSING_STATUSES,
   VALIDATION_TYPES,
   AuditStatusType
 } from "@terramatch-microservices/database/constants";
@@ -628,8 +631,15 @@ export class SitePolygonsService {
     comment: string | null | undefined,
     user: User | null
   ) {
-    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
-    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
+    const uuids = sitePolygonsUpdate.map(d => d.id);
+
+    if (status === POLYGON_PENDING_APPROVAL) {
+      const requestedSitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
+      this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
+    }
+
+    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: uuids } } });
+    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
 
     const auditStatusRecords = this.createAuditStatusRecords(sitePolygons, status, comment, user) as Array<
       Attributes<AuditStatus>
@@ -656,6 +666,27 @@ export class SitePolygonsService {
     }
 
     return sitePolygons;
+  }
+
+  private assertSitePolygonsEligibleForSubmission(uuids: string[], sitePolygons: SitePolygon[]): void {
+    const sitePolygonsByUuid = new Map(sitePolygons.map(sitePolygon => [sitePolygon.uuid, sitePolygon]));
+
+    const ineligibleUuids = uuids.filter(uuid => {
+      const sitePolygon = sitePolygonsByUuid.get(uuid);
+      if (sitePolygon == null) return true;
+
+      const hasSubmittableStatus =
+        sitePolygon.status === POLYGON_DRAFT || sitePolygon.status === POLYGON_INFORMATION_REQUIRED;
+      const hasPassingValidation = isPassingPolygonValidationStatus(sitePolygon.validationStatus);
+      return !hasSubmittableStatus || !hasPassingValidation;
+    });
+
+    if (ineligibleUuids.length > 0) {
+      throw new BadRequestException(
+        "Site polygons must be Draft or Information Required with a Passed or Partially Passed validation " +
+          `result before they can be submitted. Ineligible UUIDs: ${ineligibleUuids.join(", ")}`
+      );
+    }
   }
 
   async enqueuePolygonValidation(
@@ -711,7 +742,7 @@ export class SitePolygonsService {
         polygonUuid: { [Op.in]: polygonUuids },
         isActive: true,
         status: POLYGON_DRAFT,
-        validationStatus: { [Op.in]: ["passed", "partial"] }
+        validationStatus: { [Op.in]: [...POLYGON_VALIDATION_PASSING_STATUSES] }
       }
     });
     if (sitePolygons.length === 0) return 0;

@@ -12,7 +12,9 @@ import {
 } from "./indicators.dto";
 import {
   POLYGON_STATUSES,
+  POLYGON_VALIDATION_STATUSES,
   PolygonStatus,
+  PolygonValidationStatus,
   SITE_POLYGON_SUBMISSION_CYCLES
 } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
@@ -179,11 +181,10 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({
     nullable: true,
-    type: String,
-    description: "Validation status of the site polygon",
-    maxLength: 255
+    enum: POLYGON_VALIDATION_STATUSES,
+    description: "Validation status of the site polygon. Null means validation has not started."
   })
-  validationStatus: string | null;
+  validationStatus: PolygonValidationStatus | null;
 
   @ApiProperty({
     nullable: true,

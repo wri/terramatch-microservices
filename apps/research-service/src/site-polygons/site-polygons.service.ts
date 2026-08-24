@@ -40,6 +40,8 @@ import {
   POLYGON_DRAFT,
   POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
+  isPassingPolygonValidationStatus,
+  POLYGON_VALIDATION_PASSING_STATUSES,
   VALIDATION_TYPES,
   AuditStatusType
 } from "@terramatch-microservices/database/constants";
@@ -675,8 +677,7 @@ export class SitePolygonsService {
 
       const hasSubmittableStatus =
         sitePolygon.status === POLYGON_DRAFT || sitePolygon.status === POLYGON_INFORMATION_REQUIRED;
-      const hasPassingValidation =
-        sitePolygon.validationStatus === "passed" || sitePolygon.validationStatus === "partial";
+      const hasPassingValidation = isPassingPolygonValidationStatus(sitePolygon.validationStatus);
       return !hasSubmittableStatus || !hasPassingValidation;
     });
 
@@ -741,7 +742,7 @@ export class SitePolygonsService {
         polygonUuid: { [Op.in]: polygonUuids },
         isActive: true,
         status: POLYGON_DRAFT,
-        validationStatus: { [Op.in]: ["passed", "partial"] }
+        validationStatus: { [Op.in]: [...POLYGON_VALIDATION_PASSING_STATUSES] }
       }
     });
     if (sitePolygons.length === 0) return 0;

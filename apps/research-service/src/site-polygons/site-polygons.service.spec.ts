@@ -31,7 +31,7 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { IndicatorSlug } from "@terramatch-microservices/database/constants";
+import { IndicatorSlug, POLYGON_VALIDATION_PASSING_STATUSES } from "@terramatch-microservices/database/constants";
 import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto } from "./dto/indicators.dto";
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -1901,7 +1901,7 @@ describe("SitePolygonsService", () => {
           polygonUuid: { [Op.in]: ["geom-1", "geom-2"] },
           isActive: true,
           status: "draft",
-          validationStatus: { [Op.in]: ["passed", "partial"] }
+          validationStatus: { [Op.in]: [...POLYGON_VALIDATION_PASSING_STATUSES] }
         }
       });
       expect(SitePolygon.update).toHaveBeenCalledWith(

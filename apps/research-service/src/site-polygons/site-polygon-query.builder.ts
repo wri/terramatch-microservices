@@ -14,7 +14,12 @@ import {
   SitePolygon,
   CriteriaSite
 } from "@terramatch-microservices/database/entities";
-import { IndicatorSlug, PolygonStatus, VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import {
+  IndicatorSlug,
+  PolygonStatus,
+  VALIDATION_CRITERIA_IDS,
+  POLYGON_VALIDATION_NOT_CHECKED
+} from "@terramatch-microservices/database/constants";
 import { omit, uniq } from "lodash";
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -174,7 +179,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
   }
 
   async filterValidationStatus(validationStatuses: string[]) {
-    const otherStatuses = validationStatuses.filter(status => status !== "not_checked");
+    const otherStatuses = validationStatuses.filter(status => status !== POLYGON_VALIDATION_NOT_CHECKED);
     const hasNotChecked = otherStatuses.length !== validationStatuses.length;
 
     if (hasNotChecked && otherStatuses.length > 0) {

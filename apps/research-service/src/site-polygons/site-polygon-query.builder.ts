@@ -1,6 +1,8 @@
 import { IncludeOptions, literal, Op, WhereOptions } from "sequelize";
 import {
   Disturbance,
+  DisturbanceReport,
+  DisturbanceReportEntry,
   IndicatorOutputFieldMonitoring,
   IndicatorOutputHectares,
   IndicatorOutputMsuCarbon,
@@ -21,6 +23,8 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
+import { POLYGON_AFFECTED_ENTRY_NAME } from "@terramatch-microservices/database/util/disturbance-report-entries";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 
 type IndicatorModel =
@@ -66,7 +70,7 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
 
   private disturbanceJoin: IncludeOptions = {
     model: Disturbance,
-    attributes: ["disturbanceableId"],
+    attributes: ["id", "disturbanceableId", "disturbanceableType"],
     required: false
   };
 
@@ -279,6 +283,27 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
         `EXISTS (SELECT 1 FROM ${criteriaTable} WHERE ${criteriaTable}.polygon_id = SitePolygon.poly_id AND ` +
           `${criteriaTable}.criteria_id = ${SitePolygon.sql.escape(VALIDATION_CRITERIA_IDS.OVERLAPPING)} AND ` +
           `${criteriaTable}.valid = 0)`
+      )
+    );
+    return this;
+  }
+
+  filterHasDisturbance(hasDisturbance?: boolean) {
+    if (hasDisturbance !== true) return this;
+
+    const entryTable = DisturbanceReportEntry.tableName;
+    const reportTable = DisturbanceReport.tableName;
+    // LIKE is used instead of JSON_SEARCH so the query does not contain `$` path tokens,
+    // which Sequelize treats as bind parameters.
+    this.where(
+      literal(
+        `(SitePolygon.disturbance_id IS NOT NULL OR EXISTS (SELECT 1 FROM \`${entryTable}\` ` +
+          `INNER JOIN \`${reportTable}\` ON \`${reportTable}\`.\`id\` = \`${entryTable}\`.\`disturbance_report_id\` ` +
+          `AND \`${reportTable}\`.\`deleted_at\` IS NULL ` +
+          `WHERE \`${entryTable}\`.\`name\` = ${SitePolygon.sql.escape(POLYGON_AFFECTED_ENTRY_NAME)} ` +
+          `AND \`${entryTable}\`.\`deleted_at\` IS NULL ` +
+          `AND \`${reportTable}\`.\`status\` <> ${SitePolygon.sql.escape(APPROVED)} ` +
+          `AND \`${entryTable}\`.\`value\` LIKE CONCAT('%"polyUuid":"', SitePolygon.uuid, '"%')))`
       )
     );
     return this;

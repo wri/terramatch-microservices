@@ -53,7 +53,12 @@ export type CustomAttributesDto = Record<string, string | string[] | null>;
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonLightDto extends HybridSupportDto {
-  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[], customAttributes?: CustomAttributesDto) {
+  constructor(
+    sitePolygon?: SitePolygon,
+    indicators?: IndicatorDto[],
+    customAttributes?: CustomAttributesDto,
+    disturbanceReportUuid?: string | null
+  ) {
     super();
     if (sitePolygon != null) {
       populateDto<SitePolygonLightDto, SitePolygon>(this, sitePolygon, {
@@ -68,6 +73,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         customAttributes: customAttributes ?? {},
         siteName: sitePolygon.site?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
+        disturbanceReportUuid: disturbanceReportUuid ?? null,
         lightResource: true
       });
     }
@@ -200,9 +206,17 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({
     type: Number,
-    nullable: true
+    nullable: true,
+    description: "Numeric ID of the disturbance parent entity (typically a disturbance report)."
   })
   disturbanceableId: number | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "UUID of the disturbance report linked to this polygon, including reports that are not yet approved."
+  })
+  disturbanceReportUuid: string | null;
 
   @ApiProperty({
     type: Boolean,
@@ -236,7 +250,8 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     indicators?: IndicatorDto[],
     establishmentTreeSpecies?: TreeSpeciesDto[],
     reportingPeriods?: ReportingPeriodDto[],
-    customAttributes?: CustomAttributesDto
+    customAttributes?: CustomAttributesDto,
+    disturbanceReportUuid?: string | null
   ) {
     super();
 
@@ -255,6 +270,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],
       disturbanceableId: sitePolygon.disturbance?.disturbanceableId ?? null,
+      disturbanceReportUuid: disturbanceReportUuid ?? null,
       lightResource: false
     });
   }

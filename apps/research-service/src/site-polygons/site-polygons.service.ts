@@ -3,6 +3,9 @@ import {
   AuditStatus,
   CriteriaSite,
   CriteriaSiteHistoric,
+  Disturbance,
+  DisturbanceReport,
+  DisturbanceReportEntry,
   PointGeometry,
   PolygonGeometry,
   ProjectPolygon,
@@ -44,6 +47,11 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
+import {
+  parsePolygonAffectedUuids,
+  POLYGON_AFFECTED_ENTRY_NAME
+} from "@terramatch-microservices/database/util/disturbance-report-entries";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
@@ -56,6 +64,7 @@ type AssociationDtos = {
   establishmentTreeSpecies?: TreeSpeciesDto[];
   reportingPeriods?: ReportingPeriodDto[];
   customAttributes?: CustomAttributesDto;
+  disturbanceReportUuid?: string | null;
 };
 
 @Injectable()
@@ -422,6 +431,7 @@ export class SitePolygonsService {
     const customAttributesByUuid = await this.polygonAttributeValuesService.getMapsByPolygonUuids(
       sitePolygons.map(sitePolygon => sitePolygon.uuid)
     );
+    const disturbanceReportUuidBySitePolygonId = await this.getDisturbanceReportUuids(sitePolygons);
 
     if (lightResource) {
       for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
@@ -430,6 +440,8 @@ export class SitePolygonsService {
       for (const sitePolygon of sitePolygons) {
         associationDtos[sitePolygon.id] ??= {};
         associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
+        associationDtos[sitePolygon.id].disturbanceReportUuid =
+          disturbanceReportUuidBySitePolygonId.get(sitePolygon.id) ?? null;
       }
       return associationDtos;
     }
@@ -443,6 +455,8 @@ export class SitePolygonsService {
     for (const sitePolygon of sitePolygons) {
       associationDtos[sitePolygon.id] ??= {};
       associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
+      associationDtos[sitePolygon.id].disturbanceReportUuid =
+        disturbanceReportUuidBySitePolygonId.get(sitePolygon.id) ?? null;
     }
 
     const siteIds = uniq(Object.values(sites));
@@ -471,22 +485,142 @@ export class SitePolygonsService {
 
   async buildLightDto(
     sitePolygon: SitePolygon,
-    { indicators, customAttributes }: AssociationDtos
+    { indicators, customAttributes, disturbanceReportUuid }: AssociationDtos
   ): Promise<SitePolygonLightDto> {
-    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes);
+    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes, disturbanceReportUuid);
   }
 
   async buildFullDto(
     sitePolygon: SitePolygon,
-    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes }: AssociationDtos
+    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes, disturbanceReportUuid }: AssociationDtos
   ): Promise<SitePolygonFullDto> {
     return new SitePolygonFullDto(
       sitePolygon,
       indicators,
       establishmentTreeSpecies,
       reportingPeriods,
-      customAttributes
+      customAttributes,
+      disturbanceReportUuid
     );
+  }
+
+  /**
+   * Maps site polygon IDs to the UUID of the linked disturbance report.
+   * Approved reports are resolved through site_polygon.disturbance_id (written by
+   * approval processors). Reports that are not yet approved are resolved from
+   * polygon-affected entries instead — processors do not run for those statuses.
+   */
+  private async getDisturbanceReportUuids(sitePolygons: SitePolygon[]): Promise<Map<number, string>> {
+    const uuidBySitePolygonId = await this.getApprovedDisturbanceReportUuids(sitePolygons);
+    await this.assignPendingDisturbanceReportUuids(sitePolygons, uuidBySitePolygonId);
+    return uuidBySitePolygonId;
+  }
+
+  private async getApprovedDisturbanceReportUuids(sitePolygons: SitePolygon[]): Promise<Map<number, string>> {
+    const uuidBySitePolygonId = new Map<number, string>();
+    const disturbanceIds = uniq(sitePolygons.map(sitePolygon => sitePolygon.disturbanceId).filter(isNotNull));
+    if (disturbanceIds.length === 0) return uuidBySitePolygonId;
+
+    const disturbances = await Disturbance.findAll({
+      where: { id: { [Op.in]: disturbanceIds } },
+      attributes: ["id", "disturbanceableId", "disturbanceableType"]
+    });
+    const reportIds = uniq(
+      disturbances
+        .filter(
+          disturbance =>
+            disturbance.disturbanceableType === DisturbanceReport.LARAVEL_TYPE && disturbance.disturbanceableId != null
+        )
+        .map(disturbance => disturbance.disturbanceableId as number)
+    );
+    if (reportIds.length === 0) return uuidBySitePolygonId;
+
+    const reports = await DisturbanceReport.findAll({
+      where: { id: { [Op.in]: reportIds } },
+      attributes: ["id", "uuid"]
+    });
+    const reportUuidById = new Map(reports.map(report => [report.id, report.uuid]));
+    const reportUuidByDisturbanceId = new Map<number, string>();
+    for (const disturbance of disturbances) {
+      if (disturbance.disturbanceableType !== DisturbanceReport.LARAVEL_TYPE || disturbance.disturbanceableId == null) {
+        continue;
+      }
+      const reportUuid = reportUuidById.get(disturbance.disturbanceableId);
+      if (reportUuid != null) {
+        reportUuidByDisturbanceId.set(disturbance.id, reportUuid);
+      }
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      if (sitePolygon.disturbanceId == null) continue;
+      const reportUuid = reportUuidByDisturbanceId.get(sitePolygon.disturbanceId);
+      if (reportUuid != null) {
+        uuidBySitePolygonId.set(sitePolygon.id, reportUuid);
+      }
+    }
+
+    return uuidBySitePolygonId;
+  }
+
+  private async assignPendingDisturbanceReportUuids(
+    sitePolygons: SitePolygon[],
+    uuidBySitePolygonId: Map<number, string>
+  ): Promise<void> {
+    const missing = sitePolygons.filter(sitePolygon => !uuidBySitePolygonId.has(sitePolygon.id));
+    if (missing.length === 0) return;
+
+    const projectIds = await this.getProjectIdsForSitePolygons(missing);
+    if (projectIds.length === 0) return;
+
+    const entries = await DisturbanceReportEntry.findAll({
+      where: { name: POLYGON_AFFECTED_ENTRY_NAME },
+      attributes: ["id", "value"],
+      include: [
+        {
+          model: DisturbanceReport,
+          required: true,
+          where: {
+            status: { [Op.ne]: APPROVED },
+            projectId: { [Op.in]: projectIds }
+          },
+          attributes: ["uuid"]
+        }
+      ]
+    });
+    if (entries.length === 0) return;
+
+    const polygonIdByUuid = new Map(missing.map(sitePolygon => [sitePolygon.uuid, sitePolygon.id]));
+    const matchedEntryIdBySitePolygonId = new Map<number, number>();
+
+    for (const entry of entries) {
+      const reportUuid = entry.disturbanceReport?.uuid;
+      if (reportUuid == null) continue;
+
+      for (const polyUuid of parsePolygonAffectedUuids(entry.value)) {
+        const sitePolygonId = polygonIdByUuid.get(polyUuid);
+        if (sitePolygonId == null) continue;
+
+        const previousEntryId = matchedEntryIdBySitePolygonId.get(sitePolygonId);
+        if (previousEntryId != null && previousEntryId >= entry.id) continue;
+
+        uuidBySitePolygonId.set(sitePolygonId, reportUuid);
+        matchedEntryIdBySitePolygonId.set(sitePolygonId, entry.id);
+      }
+    }
+  }
+
+  private async getProjectIdsForSitePolygons(sitePolygons: SitePolygon[]): Promise<number[]> {
+    const projectIds = uniq(sitePolygons.map(sitePolygon => sitePolygon.site?.projectId).filter(isNotNull));
+    if (projectIds.length > 0) return projectIds;
+
+    const siteUuids = uniq(sitePolygons.map(sitePolygon => sitePolygon.siteUuid).filter(isNotNull));
+    if (siteUuids.length === 0) return [];
+
+    const sites = await Site.findAll({
+      where: { uuid: { [Op.in]: siteUuids } },
+      attributes: ["projectId"]
+    });
+    return uniq(sites.map(site => site.projectId).filter(isNotNull));
   }
 
   /**

@@ -122,12 +122,24 @@ describe("PolygonAttributeValuesService", () => {
 
       expect(destroySpy).toHaveBeenCalledWith({
         where: {
-          sitePolygonUuid: "poly-uuid",
-          polygonAttributeDefinitionId: { [Op.in]: [1] }
+          [Op.or]: [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 1 }]
         },
         transaction: mockTransaction
       });
       expect(bulkCreateSpy).not.toHaveBeenCalled();
+    });
+
+    it("trims single_select values like multi_select / GIS padding", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([singleSelectDefinition] as never);
+      jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.upsert("poly-uuid", "terrafund", { anrSubcategory: " assisted " }, mockTransaction);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 1, value: "assisted" }],
+        { transaction: mockTransaction, updateOnDuplicate: ["value"] }
+      );
     });
 
     it("rejects unknown keys", async () => {
@@ -149,8 +161,21 @@ describe("PolygonAttributeValuesService", () => {
     it("rejects wrong types for multi_select", async () => {
       jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([multiSelectDefinition] as never);
 
-      await expect(service.upsert("poly-uuid", "ppc", { strata: "a" }, mockTransaction)).rejects.toThrow(
+      await expect(service.upsert("poly-uuid", "ppc", { strata: 123 as never }, mockTransaction)).rejects.toThrow(
         BadRequestException
+      );
+    });
+
+    it("accepts comma-separated multi_select strings like practice/distr upload via coerce then upsert", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([multiSelectDefinition] as never);
+      jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.upsert("poly-uuid", "ppc", { strata: "b, a" as never }, mockTransaction);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 2, value: ["a", "b"] }],
+        { transaction: mockTransaction, updateOnDuplicate: ["value"] }
       );
     });
 
@@ -171,6 +196,49 @@ describe("PolygonAttributeValuesService", () => {
       await expect(service.upsert("poly-uuid", null, { anrSubcategory: "x" }, mockTransaction)).rejects.toThrow(
         BadRequestException
       );
+    });
+  });
+
+  describe("bulkUpsert", () => {
+    it("loads definitions once and writes rows for multiple polygons", async () => {
+      const findAllSpy = jest
+        .spyOn(PolygonAttributeDefinition, "findAll")
+        .mockResolvedValue([singleSelectDefinition] as never);
+      jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.bulkUpsert(
+        "terrafund",
+        [
+          { sitePolygonUuid: "poly-1", attributes: { anrSubcategory: "farmer-managed" } },
+          { sitePolygonUuid: "poly-2", attributes: { anrSubcategory: "assisted" } }
+        ],
+        mockTransaction
+      );
+
+      expect(findAllSpy).toHaveBeenCalledTimes(1);
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [
+          { sitePolygonUuid: "poly-1", polygonAttributeDefinitionId: 1, value: "farmer-managed" },
+          { sitePolygonUuid: "poly-2", polygonAttributeDefinitionId: 1, value: "assisted" }
+        ],
+        { transaction: mockTransaction, updateOnDuplicate: ["value"] }
+      );
+    });
+
+    it("no-ops when all attribute maps are empty", async () => {
+      const findAllSpy = jest.spyOn(PolygonAttributeDefinition, "findAll");
+
+      await service.bulkUpsert(
+        "terrafund",
+        [
+          { sitePolygonUuid: "poly-1", attributes: {} },
+          { sitePolygonUuid: "poly-2", attributes: {} }
+        ],
+        mockTransaction
+      );
+
+      expect(findAllSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -235,7 +303,21 @@ describe("PolygonAttributeValuesService", () => {
       expect(matched).toEqual({ strata: null });
     });
 
-    it("drops wrong types without throwing", async () => {
+    it("soft-filters invalid options and coerces comma-separated multi_select on upload", async () => {
+      jest
+        .spyOn(PolygonAttributeDefinition, "findAll")
+        .mockResolvedValue([singleSelectDefinition, multiSelectDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ anrSubcategory: "not-an-option", strata: "a,nope,b" }],
+        "terrafund",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ anrSubcategory: null, strata: ["a", "b"] });
+    });
+
+    it("drops wrong single_select types without throwing", async () => {
       jest
         .spyOn(PolygonAttributeDefinition, "findAll")
         .mockResolvedValue([singleSelectDefinition, multiSelectDefinition] as never);
@@ -246,7 +328,42 @@ describe("PolygonAttributeValuesService", () => {
         mockTransaction
       );
 
-      expect(matched).toEqual({ anrSubcategory: null, strata: null });
+      expect(matched).toEqual({ anrSubcategory: null, strata: ["a"] });
+    });
+  });
+
+  describe("filterNonNullAttributes", () => {
+    it("keeps only non-null values for version merge", () => {
+      expect(
+        service.filterNonNullAttributes({
+          anrSubcategory: "assisted",
+          strata: null,
+          other: ["a"]
+        })
+      ).toEqual({
+        anrSubcategory: "assisted",
+        other: ["a"]
+      });
+    });
+  });
+
+  describe("getActiveKeysByFrameworkKeys", () => {
+    it("returns ordered active keys grouped by framework", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([
+        { frameworkKey: "terrafund", key: "anrSubcategory" },
+        { frameworkKey: "terrafund", key: "strata" },
+        { frameworkKey: "ppc", key: "ppcOnly" }
+      ] as never);
+
+      const keys = await service.getActiveKeysByFrameworkKeys(["terrafund", "ppc", null]);
+
+      expect(keys.get("terrafund")).toEqual(["anrSubcategory", "strata"]);
+      expect(keys.get("ppc")).toEqual(["ppcOnly"]);
+      expect(PolygonAttributeDefinition.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { frameworkKey: { [Op.in]: ["terrafund", "ppc"] }, isActive: true }
+        })
+      );
     });
   });
 });

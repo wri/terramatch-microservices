@@ -34,6 +34,7 @@ import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bi
 import { updateTasks } from "./202608111527-update-tasks";
 import { addIsArchivedToProjectsSitesNurseries } from "./202608241200-add-is-archived-to-projects-sites-nurseries";
 import { convertDueAtToDate } from "./202608242200-convert-due-at-to-date";
+import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-beneficiaries-training-total-column";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -69,5 +70,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   convertBioeconomyProductColumnsToText,
   updateTasks,
   addIsArchivedToProjectsSitesNurseries,
-  convertDueAtToDate
+  convertDueAtToDate,
+  addBeneficiariesTrainingTotalColumn
 ];

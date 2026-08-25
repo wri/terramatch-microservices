@@ -27,7 +27,8 @@ import {
   ProjectReport,
   SiteReport,
   Task,
-  UpdateRequest
+  UpdateRequest,
+  DisturbanceReport
 } from "@terramatch-microservices/database/entities";
 import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
@@ -46,7 +47,7 @@ import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { isField, LinkedField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { APPROVAL_PROCESSERS } from "./processors";
+import { APPROVAL_PROCESSERS, DisturbanceReportEntryApprovalProcessor } from "./processors";
 import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
@@ -97,6 +98,13 @@ export class EntityStatusUpdate extends EventProcessor {
 
       if (this.model.status === PENDING_APPROVAL) {
         await this.sendProjectManagerEmail(entityType);
+      }
+
+      if (
+        this.model instanceof DisturbanceReport &&
+        (this.model.status === PENDING_APPROVAL || this.model.status === INFORMATION_REQUIRED)
+      ) {
+        await DisturbanceReportEntryApprovalProcessor.processEntityApproval(this.model, this.eventService.mediaService);
       } else if (this.model.status === APPROVED) {
         await Promise.all(
           APPROVAL_PROCESSERS.map(processor =>

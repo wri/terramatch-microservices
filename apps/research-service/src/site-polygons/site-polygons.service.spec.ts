@@ -753,6 +753,29 @@ describe("SitePolygonsService", () => {
     expect(sitePolygon.disturbanceId).toBeNull();
   });
 
+  it("should leave disturbanceReportUuid null when the polygon is only in a draft report", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      disturbanceId: null
+    });
+    const report = await DisturbanceReportFactory.create({
+      projectId: project.id,
+      status: "draft"
+    });
+    await DisturbanceReportEntryFactory.report(report).create({
+      name: "polygon-affected",
+      value: `[[{"polyUuid":"${sitePolygon.uuid}","polyName":"${sitePolygon.polyName}","siteUuid":"${site.uuid}"}]]`
+    });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
+
+    expect(lightDto.disturbanceReportUuid).toBeNull();
+  });
+
   it("should prefer an approved disturbance_id over a pending polygon-affected entry", async () => {
     await SitePolygon.truncate();
     const project = await ProjectFactory.create();

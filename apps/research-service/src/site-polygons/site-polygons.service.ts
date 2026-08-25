@@ -50,10 +50,10 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import {
   parsePolygonAffectedUuids,
-  POLYGON_AFFECTED_ENTRY_NAME
+  POLYGON_AFFECTED_ENTRY_NAME,
+  PRE_APPROVAL_DISTURBANCE_REPORT_STATUSES
 } from "@terramatch-microservices/database/util/disturbance-report-entries";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
@@ -509,9 +509,9 @@ export class SitePolygonsService {
 
   /**
    * Maps site polygon IDs to the UUID of the linked disturbance report.
-   * Approved reports are resolved through site_polygon.disturbance_id (written by
-   * approval processors). Reports that are not yet approved are resolved from
-   * polygon-affected entries instead — processors do not run for those statuses.
+   * Submitted reports (pending-approval, information-required, approved) write
+   * site_polygon.disturbance_id. Draft reports never do. A query-time fallback
+   * still reads polygon-affected entries for submitted reports that are not yet approved.
    */
   private async getDisturbanceReportUuids(sitePolygons: SitePolygon[]): Promise<Map<number, string>> {
     const uuidBySitePolygonId = await this.getApprovedDisturbanceReportUuids(sitePolygons);
@@ -583,7 +583,7 @@ export class SitePolygonsService {
           model: DisturbanceReport,
           required: true,
           where: {
-            status: { [Op.ne]: APPROVED },
+            status: { [Op.in]: [...PRE_APPROVAL_DISTURBANCE_REPORT_STATUSES] },
             projectId: { [Op.in]: projectIds }
           },
           attributes: ["uuid"]

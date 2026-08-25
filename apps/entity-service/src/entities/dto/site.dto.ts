@@ -84,6 +84,11 @@ export class SiteFullDto extends SiteLightDto {
     populateDto<SiteLightDto, Site>(this, site, { lightResource: false, ...props });
   }
 
+  @ApiProperty({
+    description: "When true, report generation is paused for this site. Independent of project archival."
+  })
+  isArchived: boolean;
+
   @ApiProperty()
   seedsPlantedCount: number;
 

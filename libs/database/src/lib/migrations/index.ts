@@ -32,6 +32,7 @@ import { addPolygonAttributeTables } from "./202608131700-add-polygon-attribute-
 import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
 import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
 import { updateTasks } from "./202608111527-update-tasks";
+import { addIsArchivedToProjectsSitesNurseries } from "./202608241200-add-is-archived-to-projects-sites-nurseries";
 import { convertDueAtToDate } from "./202608242200-convert-due-at-to-date";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
@@ -67,5 +68,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   nullUpdateRequestStatusDefault,
   convertBioeconomyProductColumnsToText,
   updateTasks,
+  addIsArchivedToProjectsSitesNurseries,
   convertDueAtToDate
 ];

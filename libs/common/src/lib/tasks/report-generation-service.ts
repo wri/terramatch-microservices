@@ -44,7 +44,7 @@ export class ReportGenerationService {
     }
 
     const project = await Project.findOne({
-      where: { id: projectId },
+      where: { id: projectId, isArchived: false },
       attributes: ["id", "frameworkKey", "organisationId"]
     });
     if (project == null) {
@@ -70,7 +70,7 @@ export class ReportGenerationService {
 
     const sites = await Site.nonDraft()
       .project(projectId)
-      .findAll({ attributes: ["id"] });
+      .findAll({ attributes: ["id"], where: { isArchived: false } });
     if (sites.length > 0) {
       labels.push("site");
       await SiteReport.bulkCreate(
@@ -86,7 +86,7 @@ export class ReportGenerationService {
 
     const nurseries = await Nursery.nonDraft()
       .project(projectId)
-      .findAll({ attributes: ["id"] });
+      .findAll({ attributes: ["id"], where: { isArchived: false } });
     if (nurseries.length > 0) {
       labels.push("nursery");
       await NurseryReport.bulkCreate(

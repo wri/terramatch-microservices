@@ -239,6 +239,9 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
   @Column(TEXT)
   declare description: string | null;
 
+  @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
+  declare isArchived: CreationOptional<boolean>;
+
   @AllowNull
   @Column(BOOLEAN)
   declare controlSite: boolean | null;

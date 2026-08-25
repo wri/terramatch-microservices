@@ -87,6 +87,7 @@ describe("SitePolygonsController", () => {
     filterTargetSys: jest.Mock;
     filterSource: jest.Mock;
     filterHasOverlap: jest.Mock;
+    filterHasDisturbance: jest.Mock;
   }
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
@@ -113,7 +114,8 @@ describe("SitePolygonsController", () => {
       filterSubmissionCycle: jest.fn().mockReturnThis(),
       filterTargetSys: jest.fn().mockReturnThis(),
       filterSource: jest.fn().mockReturnThis(),
-      filterHasOverlap: jest.fn().mockReturnThis()
+      filterHasOverlap: jest.fn().mockReturnThis(),
+      filterHasDisturbance: jest.fn().mockReturnThis()
     } as unknown as MockQueryBuilder;
 
     builder.filterProjectUuids.mockResolvedValue(builder);
@@ -451,7 +453,8 @@ describe("SitePolygonsController", () => {
         targetSys: ["mangrove", "urban-forest"],
         submissionCycle: ["1", "3"],
         source: ["terramatch", "greenhouse"],
-        hasOverlap: true
+        hasOverlap: true,
+        hasDisturbance: true
       });
 
       expect(builder.filterPlantStartRange).toHaveBeenCalledWith(from, to);
@@ -461,6 +464,7 @@ describe("SitePolygonsController", () => {
       expect(builder.filterSubmissionCycle).toHaveBeenCalledWith(["1", "3"]);
       expect(builder.filterSource).toHaveBeenCalledWith(["terramatch", "greenhouse"]);
       expect(builder.filterHasOverlap).toHaveBeenCalledWith(true);
+      expect(builder.filterHasDisturbance).toHaveBeenCalledWith(true);
     });
 
     it("should throw when plantStartFrom is after plantStartTo", async () => {

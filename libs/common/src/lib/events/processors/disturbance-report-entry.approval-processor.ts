@@ -8,8 +8,9 @@ import {
 import { Attributes, CreationAttributes } from "sequelize";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
-import { isNotEmpty, isNotNull } from "@terramatch-microservices/database/types/array";
+import { isNotEmpty } from "@terramatch-microservices/database/types/array";
 import { laravelType } from "@terramatch-microservices/database/types/util";
+import { parsePolygonAffectedUuids } from "@terramatch-microservices/database/util/disturbance-report-entries";
 
 type DisturbanceAttribute = keyof Attributes<Disturbance>;
 type DisturbanceMapping<C extends DisturbanceAttribute> = {
@@ -56,7 +57,6 @@ const DISTURBANCE_MAPPING = {
   "disturbance-start-date": disturbanceStartDate
 };
 
-type AffectedPolygon = { polyUuid?: string };
 type AffectedSite = { siteUuid?: string };
 type AffectedNursery = { nurseryUuid?: string };
 
@@ -74,10 +74,7 @@ export const getEntryData = (entries: DisturbanceReportEntry[]) => {
     }
 
     if (entry.name === "polygon-affected") {
-      const polygons = mapJson(entry.value) as AffectedPolygon[][] | null;
-      if (polygons != null && polygons.length > 0) {
-        affectedPolygonUuids.push(...polygons.flatMap(group => group.map(p => p.polyUuid)).filter(isNotNull));
-      }
+      affectedPolygonUuids.push(...parsePolygonAffectedUuids(entry.value));
     } else if (entry.name === "site-affected") {
       const sites = mapJson(entry.value) as AffectedSite[] | null;
       if (sites != null && sites.length > 0) {
@@ -96,6 +93,9 @@ export const getEntryData = (entries: DisturbanceReportEntry[]) => {
 
 export const DisturbanceReportEntryApprovalProcessor: EntityApprovalProcessor = {
   async processEntityApproval(entity) {
+    // Approval processors only run when status becomes approved. Disturbed polygons on
+    // draft / pending / information-required reports are resolved at query time from
+    // polygon-affected entries instead of writing site_polygon.disturbance_id.
     if (!(entity instanceof DisturbanceReport)) return;
 
     const entries = await DisturbanceReportEntry.report(entity.id).findAll();

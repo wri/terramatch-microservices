@@ -5,7 +5,10 @@ import {
   ProjectFactory,
   SiteFactory,
   IndicatorOutputTreeCoverFactory,
-  LandscapeGeometryFactory
+  LandscapeGeometryFactory,
+  DisturbanceFactory,
+  DisturbanceReportFactory,
+  DisturbanceReportEntryFactory
 } from "@terramatch-microservices/database/factories";
 import { CriteriaSite, SitePolygon, Site, PolygonGeometry } from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
@@ -469,6 +472,76 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("filterHasDisturbance", () => {
+    it("should return only polygons linked to a disturbance when enabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbance = await DisturbanceFactory.site(site).create();
+      const disturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: disturbance.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(disturbed.id);
+    });
+
+    it("should not filter polygons when disabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const disturbance = await DisturbanceFactory.site(site).create();
+      const disturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: disturbance.id });
+      const undisturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(false);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([disturbed.id, undisturbed.id].sort());
+    });
+
+    it("should include polygons listed in a report that is not yet approved", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const pendingPolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "pending-approval"
+      });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${pendingPolygon.uuid}"}]]`
+      });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(pendingPolygon.id);
+    });
+
+    it("should not include polygons from approved reports unless disturbance_id is set", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ projectId: project.id, status: "approved" });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe("combined attribute filters", () => {
     it("should AND hasStatuses with filterPractice", async () => {
       const project = await ProjectFactory.create();
@@ -568,6 +641,19 @@ describe("SitePolygonQueryBuilder", () => {
       const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
       builder.filterHasOverlap(undefined);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
+    });
+
+    it("filterHasDisturbance should not filter when flag is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(undefined);
       const result = await builder.execute();
 
       expect(result).toHaveLength(1);

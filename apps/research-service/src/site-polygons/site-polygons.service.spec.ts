@@ -16,7 +16,10 @@ import {
   SitePolygonFactory,
   SiteReportFactory,
   TreeSpeciesFactory,
-  UserFactory
+  UserFactory,
+  DisturbanceFactory,
+  DisturbanceReportFactory,
+  DisturbanceReportEntryFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Indicator,
@@ -690,6 +693,90 @@ describe("SitePolygonsService", () => {
 
     expect(lightDto).toBeInstanceOf(SitePolygonLightDto);
     expect(lightDto.name).toBe(sitePolygon.polyName);
+  });
+
+  it("should include disturbanceReportUuid when the polygon is linked to a disturbance report", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const report = await DisturbanceReportFactory.create({ projectId: project.id });
+    const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+    const sitePolygon = await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      status: "approved",
+      disturbanceId: disturbance.id
+    });
+    await sitePolygon.reload({ include: ["disturbance"] });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
+
+    expect(lightDto.disturbanceReportUuid).toBe(report.uuid);
+    expect(lightDto.disturbanceableId).toBe(report.id);
+  });
+
+  it("should leave disturbanceReportUuid null when the polygon has no disturbance", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
+
+    expect(lightDto.disturbanceReportUuid).toBeNull();
+  });
+
+  it("should include disturbanceReportUuid from a pending report without writing disturbance_id", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      disturbanceId: null
+    });
+    const report = await DisturbanceReportFactory.create({
+      projectId: project.id,
+      status: "pending-approval"
+    });
+    await DisturbanceReportEntryFactory.report(report).create({
+      name: "polygon-affected",
+      value: `[[{"polyUuid":"${sitePolygon.uuid}","polyName":"${sitePolygon.polyName}","siteUuid":"${site.uuid}"}]]`
+    });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
+
+    expect(lightDto.disturbanceReportUuid).toBe(report.uuid);
+    expect(lightDto.disturbanceableId).toBeNull();
+    await sitePolygon.reload();
+    expect(sitePolygon.disturbanceId).toBeNull();
+  });
+
+  it("should prefer an approved disturbance_id over a pending polygon-affected entry", async () => {
+    await SitePolygon.truncate();
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const approvedReport = await DisturbanceReportFactory.create({ projectId: project.id, status: "approved" });
+    const disturbance = await DisturbanceFactory.disturbanceReport(approvedReport).create();
+    const sitePolygon = await SitePolygonFactory.create({
+      siteUuid: site.uuid,
+      disturbanceId: disturbance.id
+    });
+    const pendingReport = await DisturbanceReportFactory.create({
+      projectId: project.id,
+      status: "draft"
+    });
+    await DisturbanceReportEntryFactory.report(pendingReport).create({
+      name: "polygon-affected",
+      value: `[[{"polyUuid":"${sitePolygon.uuid}"}]]`
+    });
+    await sitePolygon.reload({ include: ["disturbance"] });
+
+    const associations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, associations[sitePolygon.id]);
+
+    expect(lightDto.disturbanceReportUuid).toBe(approvedReport.uuid);
   });
 
   it("should build FullDto correctly when lightResource is false", async () => {

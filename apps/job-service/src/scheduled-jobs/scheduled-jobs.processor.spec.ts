@@ -60,6 +60,7 @@ describe("ScheduledJobsProcessor", () => {
     it("should call the service with all projects in the framework", async () => {
       await Project.truncate();
       const projects = await ProjectFactory.createMany(150, { frameworkKey: "ppc", status: "approved" });
+      await ProjectFactory.create({ frameworkKey: "ppc", status: "approved", isArchived: true });
       await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
       await ProjectFactory.create({ frameworkKey: "hbf", status: "approved" });
       const dueAt = DateTime.now().plus({ months: 1 }).set({ millisecond: 0 }).toISO();

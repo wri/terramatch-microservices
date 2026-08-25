@@ -81,7 +81,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const failed: PromiseSettledResult<void>[] = [];
     const builder = new PaginatedQueryBuilder(Project, 100)
       .attributes(["id"])
-      .where({ frameworkKey, status: { [Op.ne]: "draft" } });
+      .where({ frameworkKey, status: { [Op.ne]: "draft" }, isArchived: false });
     for await (const page of batchFindAll(builder)) {
       failed.push(
         ...(await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))).filter(

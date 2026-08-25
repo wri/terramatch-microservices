@@ -102,6 +102,32 @@ describe("ReportGenerationService", () => {
       expect(nurseryReportsStatus).toEqual(["due"]);
     });
 
+    it("should skip reports for archived sites and nurseries without archiving siblings", async () => {
+      const { id: projectId } = await ProjectFactory.create();
+      const activeSite = await SiteFactory.create({ projectId, status: "approved" });
+      await SiteFactory.create({ projectId, status: "approved", isArchived: true });
+      const activeNursery = await NurseryFactory.create({ projectId, status: "approved" });
+      await NurseryFactory.create({ projectId, status: "approved", isArchived: true });
+
+      await service.createTask(projectId, DateTime.now().set({ millisecond: 0 }).toJSDate());
+
+      const task = await Task.findOne({ where: { projectId } });
+      expect((await task!.$get("projectReport"))?.projectId).toBe(projectId);
+      expect((await task!.$get("siteReports")).map(({ siteId }) => siteId)).toEqual([activeSite.id]);
+      expect((await task!.$get("nurseryReports")).map(({ nurseryId }) => nurseryId)).toEqual([activeNursery.id]);
+    });
+
+    it("should skip report generation when the project is archived", async () => {
+      const { id: projectId } = await ProjectFactory.create({ isArchived: true, frameworkKey: "ppc" });
+      await SiteFactory.create({ projectId, status: "approved" });
+      await NurseryFactory.create({ projectId, status: "approved" });
+
+      await expect(service.createTask(projectId, DateTime.utc(2027, 1, 7).toJSDate())).rejects.toThrow(
+        NotFoundException
+      );
+      expect(await Task.count({ where: { projectId } })).toBe(0);
+    });
+
     it("should create an action for the project report", async () => {
       const { id: projectId, organisationId } = await ProjectFactory.create();
       await service.createTask(projectId, new Date());

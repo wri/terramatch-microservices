@@ -13,6 +13,7 @@ import {
 } from "sequelize-typescript";
 import {
   BIGINT,
+  BOOLEAN,
   CreationOptional,
   DATE,
   InferAttributes,
@@ -159,6 +160,9 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
   @AllowNull
   @JsonColumn()
   declare feedbackFields: string[] | null;
+
+  @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
+  declare isArchived: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)

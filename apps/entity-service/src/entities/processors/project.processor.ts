@@ -661,13 +661,7 @@ export class ProjectProcessor extends EntityProcessor<
       .project(projectId)
       .lastReport()
       .findOne({
-        where: {
-          [Op.or]: [
-            { plantingStatus: { [Op.ne]: null } },
-            { landscapeCommunityContribution: { [Op.ne]: null } },
-            { communityProgress: { [Op.ne]: null } }
-          ]
-        },
+        where: { plantingStatus: { [Op.ne]: null } },
         attributes: ["plantingStatus", "landscapeCommunityContribution", "communityProgress"]
       });
   }

@@ -5,6 +5,8 @@ import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-
 import { isEmpty } from "lodash";
 import { Op } from "sequelize";
 import { attributeExporter } from "./utils";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { syncDisturbanceReportPolygons } from "../../events/processors/disturbance-report-entry.approval-processor";
 
 export function disturbanceReportEntriesCollector(logger: LoggerService): RelationResourceCollector {
   let questionName: string;
@@ -68,6 +70,10 @@ export function disturbanceReportEntriesCollector(logger: LoggerService): Relati
       );
 
       await DisturbanceReportEntry.destroy({ where: { disturbanceReportId: model.id, id: { [Op.notIn]: entryIds } } });
+
+      if (model.status !== DRAFT) {
+        await syncDisturbanceReportPolygons(model);
+      }
     },
 
     // Only used in the lower-env only testing feature "clear reports", not covered in specs.

@@ -2,6 +2,9 @@ import { isNotNull } from "../types/array";
 
 export const POLYGON_AFFECTED_ENTRY_NAME = "polygon-affected";
 
+/** Submitted but not yet approved. Draft reports must not mark polygons as disturbed. */
+export const PRE_APPROVAL_DISTURBANCE_REPORT_STATUSES = ["pending-approval", "information-required"] as const;
+
 type AffectedPolygon = { polyUuid?: string };
 
 /**

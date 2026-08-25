@@ -524,6 +524,26 @@ describe("SitePolygonQueryBuilder", () => {
       expect(result[0].id).toBe(pendingPolygon.id);
     });
 
+    it("should not include polygons listed only in a draft report", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const draftPolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({
+        projectId: project.id,
+        status: "draft"
+      });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${draftPolygon.uuid}"}]]`
+      });
+
+      await builder.filterSiteUuids([site.uuid]);
+      builder.filterHasDisturbance(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(0);
+    });
+
     it("should not include polygons from approved reports unless disturbance_id is set", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });

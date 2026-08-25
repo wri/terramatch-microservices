@@ -28,8 +28,10 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
-import { POLYGON_AFFECTED_ENTRY_NAME } from "@terramatch-microservices/database/util/disturbance-report-entries";
+import {
+  POLYGON_AFFECTED_ENTRY_NAME,
+  PRE_APPROVAL_DISTURBANCE_REPORT_STATUSES
+} from "@terramatch-microservices/database/util/disturbance-report-entries";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 
 type IndicatorModel =
@@ -307,7 +309,9 @@ export class SitePolygonQueryBuilder extends PaginatedQueryBuilder<SitePolygon> 
           `AND \`${reportTable}\`.\`deleted_at\` IS NULL ` +
           `WHERE \`${entryTable}\`.\`name\` = ${SitePolygon.sql.escape(POLYGON_AFFECTED_ENTRY_NAME)} ` +
           `AND \`${entryTable}\`.\`deleted_at\` IS NULL ` +
-          `AND \`${reportTable}\`.\`status\` <> ${SitePolygon.sql.escape(APPROVED)} ` +
+          `AND \`${reportTable}\`.\`status\` IN (${PRE_APPROVAL_DISTURBANCE_REPORT_STATUSES.map(status =>
+            SitePolygon.sql.escape(status)
+          ).join(", ")}) ` +
           `AND \`${entryTable}\`.\`value\` LIKE CONCAT('%"polyUuid":"', SitePolygon.uuid, '"%')))`
       )
     );

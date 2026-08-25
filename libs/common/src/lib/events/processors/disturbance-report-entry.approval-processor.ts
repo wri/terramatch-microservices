@@ -60,6 +60,40 @@ const DISTURBANCE_MAPPING = {
 type AffectedSite = { siteUuid?: string };
 type AffectedNursery = { nurseryUuid?: string };
 
+export const syncDisturbanceReportPolygons = async (entity: unknown) => {
+  if (!(entity instanceof DisturbanceReport)) return;
+
+  const entries = await DisturbanceReportEntry.report(entity.id).findAll();
+  const { disturbanceData, affectedPolygonUuids } = getEntryData(entries);
+  const entityData: CreationAttributes<Disturbance> = {
+    disturbanceableType: laravelType(entity),
+    disturbanceableId: entity.id,
+    description: entity.description,
+    actionDescription: entity.actionDescription,
+    ...disturbanceData
+  };
+
+  if (affectedPolygonUuids.length === 0) {
+    // If there are no affected polygons, we don't create the disturbance.
+    return;
+  }
+
+  let disturbance = await Disturbance.for(entity).findOne();
+  if (disturbance == null) {
+    disturbance = await Disturbance.create(entityData);
+  } else {
+    await disturbance.update(entityData);
+  }
+
+  // Remove disturbance id from all polygons that were previously assigned to this disturbance
+  await SitePolygon.disturbance(disturbance.id).active().update({ disturbanceId: null }, { where: {} });
+
+  // Add the disturbance id to all affected polygons that were not already assigned a disturbance
+  await SitePolygon.forUuids(affectedPolygonUuids)
+    .active()
+    .update({ disturbanceId: disturbance.id }, { where: { disturbanceId: null } });
+};
+
 export const getEntryData = (entries: DisturbanceReportEntry[]) => {
   const disturbanceData: Dictionary<unknown> = {};
   const affectedPolygonUuids: string[] = [];
@@ -93,39 +127,8 @@ export const getEntryData = (entries: DisturbanceReportEntry[]) => {
 
 export const DisturbanceReportEntryApprovalProcessor: EntityApprovalProcessor = {
   async processEntityApproval(entity) {
-    // Approval processors only run when status becomes approved. Disturbed polygons on
-    // draft / pending / information-required reports are resolved at query time from
-    // polygon-affected entries instead of writing site_polygon.disturbance_id.
-    if (!(entity instanceof DisturbanceReport)) return;
-
-    const entries = await DisturbanceReportEntry.report(entity.id).findAll();
-    const { disturbanceData, affectedPolygonUuids } = getEntryData(entries);
-    const entityData: CreationAttributes<Disturbance> = {
-      disturbanceableType: laravelType(entity),
-      disturbanceableId: entity.id,
-      description: entity.description,
-      actionDescription: entity.actionDescription,
-      ...disturbanceData
-    };
-
-    if (affectedPolygonUuids.length === 0) {
-      // If there are no affected polygons, we don't create the disturbance.
-      return;
-    }
-
-    let disturbance = await Disturbance.for(entity).findOne();
-    if (disturbance == null) {
-      disturbance = await Disturbance.create(entityData);
-    } else {
-      await disturbance.update(entityData);
-    }
-
-    // Remove disturbance id from all polygons that were previously assigned to this disturbance
-    await SitePolygon.disturbance(disturbance.id).active().update({ disturbanceId: null }, { where: {} });
-
-    // Add the disturbance id to all affected polygons that were not already assigned a disturbance
-    await SitePolygon.forUuids(affectedPolygonUuids)
-      .active()
-      .update({ disturbanceId: disturbance.id }, { where: { disturbanceId: null } });
+    // Also invoked when a disturbance report is submitted (pending-approval) or sent back
+    // (information-required). Draft reports do not write site_polygon.disturbance_id.
+    await syncDisturbanceReportPolygons(entity);
   }
 };

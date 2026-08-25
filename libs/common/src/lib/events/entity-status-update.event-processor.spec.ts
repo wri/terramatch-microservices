@@ -4,6 +4,8 @@ import { EventService } from "./event.service";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import {
   ApplicationFactory,
+  DisturbanceReportEntryFactory,
+  DisturbanceReportFactory,
   EntityFormFactory,
   FinancialReportFactory,
   FormFactory,
@@ -15,6 +17,7 @@ import {
   ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
+  SitePolygonFactory,
   SiteReportFactory,
   StageFactory,
   TaskFactory,
@@ -23,7 +26,14 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
-import { Action, AuditStatus, FinancialReport, Organisation, Task } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  AuditStatus,
+  Disturbance,
+  FinancialReport,
+  Organisation,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
@@ -456,6 +466,64 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
       await new EntityStatusUpdate(eventService, submission).handle();
       expect(eventService.entitiesQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("disturbance report polygon sync", () => {
+    async function handleStatusUpdate(report: Awaited<ReturnType<typeof DisturbanceReportFactory.create>>) {
+      mockUserContext();
+      const handler = new EntityStatusUpdate(eventService, report);
+      jest.spyOn(handler as any, "sendStatusUpdateEmail").mockResolvedValue(undefined);
+      jest.spyOn(handler as any, "updateActions").mockResolvedValue(undefined);
+      jest.spyOn(handler as any, "createAuditStatus").mockResolvedValue(undefined);
+      await handler.handle();
+    }
+
+    it("populates site_polygon.disturbance_id when the report is pending-approval", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: PENDING_APPROVAL });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      const disturbance = await Disturbance.for(report).findOne();
+      expect(disturbance).not.toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("populates site_polygon.disturbance_id when the report is information-required", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: INFORMATION_REQUIRED });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      const disturbance = await Disturbance.for(report).findOne();
+      expect(disturbance).not.toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("does not populate site_polygon.disturbance_id while the report is draft", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: DRAFT });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      expect(await Disturbance.for(report).findOne()).toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBeNull();
     });
   });
 });

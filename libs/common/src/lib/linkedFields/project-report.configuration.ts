@@ -340,6 +340,11 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "womenGovernance",
       label: "Women in Governance or Leadership",
       inputType: "text"
+    },
+    "pro-rep-beneficiaries-training-total": {
+      property: "beneficiariesTrainingTotal",
+      label: "Training Total",
+      inputType: "number"
     }
   },
   fileCollections: {

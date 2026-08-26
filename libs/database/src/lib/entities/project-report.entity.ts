@@ -817,4 +817,8 @@ export class ProjectReport extends Model<InferAttributes<ProjectReport>, InferCr
   @AllowNull
   @Column(TEXT)
   declare womenGovernance: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  declare beneficiariesTrainingTotal: number | null;
 }

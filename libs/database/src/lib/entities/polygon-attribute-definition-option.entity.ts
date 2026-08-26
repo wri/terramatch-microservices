@@ -1,4 +1,14 @@
-import { AutoIncrement, BelongsTo, Column, ForeignKey, Index, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  DefaultScope,
+  ForeignKey,
+  Index,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import {
   BIGINT,
   CreationOptional,
@@ -11,6 +21,7 @@ import {
 } from "sequelize";
 import { PolygonAttributeDefinition } from "./polygon-attribute-definition.entity";
 
+@DefaultScope(() => ({ order: ["order"] }))
 @Table({
   tableName: "polygon_attribute_definition_options",
   underscored: true,

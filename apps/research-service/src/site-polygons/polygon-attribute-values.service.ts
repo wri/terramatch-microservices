@@ -168,9 +168,6 @@ export class PolygonAttributeValuesService {
 
   private validateValue(definition: DefinitionWithOptions, rawValue: unknown): SitePolygonAttributeValueData | null {
     if (rawValue === null || rawValue === undefined) {
-      if (definition.isRequired) {
-        throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-      }
       return null;
     }
 
@@ -181,9 +178,6 @@ export class PolygonAttributeValuesService {
         throw new BadRequestException(`Custom attribute "${definition.key}" must be a string or null`);
       }
       if (rawValue.length === 0) {
-        if (definition.isRequired) {
-          throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-        }
         return null;
       }
       if (!allowedValues.has(rawValue)) {
@@ -198,9 +192,6 @@ export class PolygonAttributeValuesService {
 
     const values = rawValue as string[];
     if (values.length === 0) {
-      if (definition.isRequired) {
-        throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-      }
       return null;
     }
 

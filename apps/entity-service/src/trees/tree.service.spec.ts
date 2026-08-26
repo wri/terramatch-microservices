@@ -137,6 +137,15 @@ describe("TreeService", () => {
       expect(sortBy(result["nursery-seedling"], "name")).toEqual(nurserySeedlings);
     });
 
+    it("includes established trees from the parent site on site reports", async () => {
+      const site = await SiteFactory.create();
+      const siteReport = await SiteReportFactory.create({ siteId: site.id });
+      const establishedTrees = sortedSpeciesDto(await TreeSpeciesFactory.siteEstablished(site).createMany(2));
+
+      const result = await service.getEstablishmentTrees("siteReports", siteReport.uuid);
+      expect(sortBy(result["established"], "name")).toEqual(establishedTrees);
+    });
+
     it("throws with bad inputs to establishment trees", async () => {
       await expect(service.getEstablishmentTrees("sites", "fakeuuid")).rejects.toThrow(NotFoundException);
       await expect(service.getEstablishmentTrees("siteReports", "fakeuuid")).rejects.toThrow(NotFoundException);

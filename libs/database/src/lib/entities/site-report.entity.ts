@@ -94,7 +94,7 @@ type SiteReportMedia =
   }
 })
 export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreationAttributes<SiteReport>> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees", "invasiveTrees"];
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "anrTrees", "invasiveTrees", "establishedTrees"];
   static readonly PARENT_ID = "siteId";
   static readonly APPROVED_STATUSES = ["approved"];
   static readonly UNSUBMITTED_STATUSES = ["due", "draft"];
@@ -474,6 +474,13 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "invasive" }
   })
   declare invasiveTrees: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "established" }
+  })
+  declare establishedTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",

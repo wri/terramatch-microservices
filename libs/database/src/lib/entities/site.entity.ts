@@ -85,7 +85,7 @@ type SiteMedia =
   }
 })
 export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<Site>> {
-  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "invasiveTrees"];
+  static readonly TREE_ASSOCIATIONS = ["treesPlanted", "nonTrees", "invasiveTrees", "establishedTrees"];
   static readonly APPROVED_STATUSES = [APPROVED] as EntityStatus[];
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Sites\\Site";
 
@@ -364,6 +364,13 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "invasive" }
   })
   declare invasiveTrees: TreeSpecies[] | null;
+
+  @HasMany(() => TreeSpecies, {
+    foreignKey: "speciesableId",
+    constraints: false,
+    scope: { speciesable_type: Site.LARAVEL_TYPE, collection: "established" }
+  })
+  declare establishedTrees: TreeSpecies[] | null;
 
   @HasMany(() => Seeding, {
     foreignKey: "seedableId",

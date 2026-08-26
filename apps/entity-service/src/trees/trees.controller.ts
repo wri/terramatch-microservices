@@ -1,3 +1,4 @@
+import { Response } from "express";
 import {
   BadRequestException,
   Controller,
@@ -5,12 +6,13 @@ import {
   NotFoundException,
   Param,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
-import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { intersection, isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
@@ -23,6 +25,8 @@ import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/co
 import { PolicyService } from "@terramatch-microservices/common";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { SpeciesDto } from "./dto/species.dto";
+import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
+import { Task } from "@terramatch-microservices/database/entities";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
@@ -95,6 +99,26 @@ export class TreesController {
       `${entity}|${uuid}`,
       populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts })
     );
+  }
+
+  @Get("bulkImportCsv/:uuid")
+  @ApiOperation({
+    operationId: "treeBulkImportCsvGet",
+    summary: "Get a CSV for bulk importing tree data for a given task"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(NotFoundException, { description: "Task not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this task" })
+  async getBulkImportCsv(@Param() { uuid }: SingleResourceDto, @Res({ passthrough: true }) response: Response) {
+    const task = await Task.findOne({ where: { uuid } });
+    if (task == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", task);
+    await this.treeService.getBulkImportCsv(task, response);
   }
 
   private async authorizeRead(entity: EntityType, uuid: string) {

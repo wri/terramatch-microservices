@@ -31,7 +31,7 @@ export type StreamWriter = {
   close: () => void;
 };
 
-export type RowWriter = (addRow: StreamWriter["addRow"]) => Promise<void>;
+export type RowWriter = (addRow: AddRow) => Promise<void>;
 
 export type FormQuestionExportMapping = {
   questionName: string;
@@ -120,7 +120,7 @@ export class CsvExportService {
 
   /**
    * A utility to make it easy for services to write to an arbitrary destination. If target is undefined,
-   * the file will be sent to the environment's default bucket.
+   * the file will be sent to the environment's default S3 bucket.
    */
   async writeCsv(
     fileName: string,

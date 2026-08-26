@@ -1,3 +1,4 @@
+import { Response } from "express";
 import {
   Nursery,
   NurseryReport,
@@ -6,6 +7,7 @@ import {
   Seeding,
   Site,
   SiteReport,
+  Task,
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
@@ -16,6 +18,11 @@ import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 import { SpeciesDto } from "./dto/species.dto";
+import { isoForFilename, normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -79,6 +86,11 @@ const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
 
 @Injectable()
 export class TreeService {
+  constructor(
+    private readonly localizationService: LocalizationService,
+    private readonly csvExportService: CsvExportService
+  ) {}
+
   async searchScientificNames(search: string) {
     return (
       await TreeSpeciesResearch.findAll({
@@ -331,6 +343,64 @@ export class TreeService {
     }
 
     return planting;
+  }
+
+  async getBulkImportCsv(task: Task, response: Response) {
+    const project = await task.$get("project", { attributes: ["id", "name"] });
+    if (project == null) throw new BadRequestException("Task has no project");
+
+    const fileName = normalizedFileName(
+      await this.localizationService.localizeText(
+        `Bulk Tree Import for {project} - reporting task due {dueAt}`,
+        UserContext.userLocale ?? "en-US",
+        { project: project.name, dueAt: task.dueAt == null ? null : isoForFilename(task.dueAt, true) }
+      )
+    );
+
+    // map from site report id to site name so that if we have existing data to prefill, it's
+    // mapped by a report ID.
+    const siteReports = await task.$get("siteReports", {
+      attributes: ["id"],
+      include: [{ association: "site", attributes: ["name"], required: true }]
+    });
+    const columns = siteReports.reduce(
+      (columns, report) =>
+        report.site?.name == null
+          ? columns
+          : {
+              ...columns,
+              [`report${report.id}`]: report.site.name
+            },
+      { treeSpecies: "Tree Species" } as Dictionary<string>
+    );
+    console.log("columns", JSON.stringify(columns, null, 2));
+
+    const existingReportTrees = groupBy(
+      await TreeSpecies.for(siteReports).findAll({ attributes: ["name", "amount"] }),
+      "speciesableId"
+    );
+    const trees = uniqBy(
+      [
+        ...(await TreeSpecies.for(project)
+          .collection("tree-planted")
+          .findAll({ attributes: ["name"] })),
+        ...(await TreeSpecies.for(siteReports.map(({ site }) => site).filter(isNotNull))
+          .collection("tree-planted")
+          .findAll({ attributes: ["name"] })),
+        ...Object.values(existingReportTrees).flat()
+      ],
+      "name"
+    );
+
+    await this.csvExportService.writeCsv(fileName, response, columns, async addRow => {
+      for (const { name } of trees) {
+        const row: Dictionary<string | number | null> = { treeSpecies: name };
+        for (const { id } of siteReports) {
+          row[`report${id}`] = existingReportTrees[id]?.find(tree => tree.name === name)?.amount ?? null;
+        }
+        addRow(row);
+      }
+    });
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

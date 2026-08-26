@@ -9,6 +9,7 @@ import {
   Table
 } from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, JSON, UUID } from "sequelize";
+import { InternalServerErrorException } from "@nestjs/common";
 import { PolygonAttributeDefinition } from "./polygon-attribute-definition.entity";
 import { SitePolygon } from "./site-polygon.entity";
 
@@ -22,6 +23,13 @@ export class SitePolygonAttributeValue extends Model<
   InferAttributes<SitePolygonAttributeValue>,
   InferCreationAttributes<SitePolygonAttributeValue>
 > {
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("SitePolygonAttributeValue model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)

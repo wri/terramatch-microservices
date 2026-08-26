@@ -35,6 +35,8 @@ import { updateTasks } from "./202608111527-update-tasks";
 import { addIsArchivedToProjectsSitesNurseries } from "./202608241200-add-is-archived-to-projects-sites-nurseries";
 import { convertDueAtToDate } from "./202608242200-convert-due-at-to-date";
 import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-beneficiaries-training-total-column";
+import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-to-polygon-attribute-definitions";
+import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -69,6 +71,8 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   nullUpdateRequestStatusDefault,
   convertBioeconomyProductColumnsToText,
   updateTasks,
+  addOrderToPolygonAttributeDefinitions,
+  removeIsRequiredFromPolygonAttributeDefinitions,
   addIsArchivedToProjectsSitesNurseries,
   convertDueAtToDate,
   addBeneficiariesTrainingTotalColumn

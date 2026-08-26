@@ -28,7 +28,6 @@ describe("PolygonAttributeValuesService", () => {
     id: 1,
     key: "anrSubcategory",
     inputType: "single_select",
-    isRequired: false,
     isActive: true,
     frameworkKey: "terrafund",
     options: [
@@ -41,7 +40,6 @@ describe("PolygonAttributeValuesService", () => {
     id: 2,
     key: "strata",
     inputType: "multi_select",
-    isRequired: false,
     isActive: true,
     frameworkKey: "ppc",
     options: [

@@ -37,6 +37,8 @@ import { ProjectPolygonCreationService } from "./project-polygons/project-polygo
 import { ProjectPolygonGeometryService } from "./project-polygons/project-polygon-geometry.service";
 import { AnrPlotGeometryController } from "./site-polygons/anr-plot-geometry.controller";
 import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.service";
+import { PolygonAttributeDefinitionsController } from "./polygon-attribute-definitions/polygon-attribute-definitions.controller";
+import { PolygonAttributeDefinitionsService } from "./polygon-attribute-definitions/polygon-attribute-definitions.service";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -71,7 +73,8 @@ const IS_REPL = process.env["REPL"] === "true";
     PolygonClippingController,
     IndicatorsController,
     ProjectPolygonsController,
-    AnrPlotGeometryController
+    AnrPlotGeometryController,
+    PolygonAttributeDefinitionsController
   ],
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
@@ -94,6 +97,7 @@ const IS_REPL = process.env["REPL"] === "true";
     ProjectPolygonCreationService,
     ProjectPolygonGeometryService,
     AnrPlotGeometryService,
+    PolygonAttributeDefinitionsService,
 
     ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
   ]

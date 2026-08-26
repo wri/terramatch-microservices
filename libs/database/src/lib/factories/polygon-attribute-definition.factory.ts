@@ -9,6 +9,6 @@ export const PolygonAttributeDefinitionFactory = FactoryGirl.define(PolygonAttri
   label: faker.lorem.words({ min: 2, max: 4 }),
   inputType: faker.helpers.arrayElement(POLYGON_ATTRIBUTE_INPUT_TYPES),
   frameworkKey: faker.helpers.arrayElement(FRAMEWORK_KEYS),
-  isRequired: false,
-  isActive: true
+  isActive: true,
+  order: 0
 }));

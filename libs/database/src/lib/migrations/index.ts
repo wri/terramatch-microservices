@@ -34,6 +34,7 @@ import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bi
 import { updateTasks } from "./202608111527-update-tasks";
 import { addIsArchivedToProjectsSitesNurseries } from "./202608241200-add-is-archived-to-projects-sites-nurseries";
 import { convertDueAtToDate } from "./202608242200-convert-due-at-to-date";
+import { addPolygonGeometryApprovedView } from "./202608251200-add-polygon-geometry-approved-view";
 import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-beneficiaries-training-total-column";
 import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-to-polygon-attribute-definitions";
 import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
@@ -75,5 +76,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeIsRequiredFromPolygonAttributeDefinitions,
   addIsArchivedToProjectsSitesNurseries,
   convertDueAtToDate,
+  addPolygonGeometryApprovedView,
   addBeneficiariesTrainingTotalColumn
 ];

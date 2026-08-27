@@ -13,7 +13,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Attributes, col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, uniq, uniqBy } from "lodash";
+import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
@@ -417,6 +417,7 @@ export class TreeService {
     }
 
     const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
+    const trees: string[] = [];
     let currentRow = 1; // starting at 1 to account for the header row.
     await parseCsvStream(Readable.from(csv.buffer), async row => {
       currentRow++;
@@ -427,6 +428,8 @@ export class TreeService {
           column: "Tree Species"
         });
       }
+
+      trees.push(treeSpeciesName);
 
       if (treeSpeciesName === "") {
         warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
@@ -457,12 +460,33 @@ export class TreeService {
       }
     });
 
+    // map of tree name to taxon ID.
+    const taxonIds = (await TreeSpeciesResearch.findAll({ where: { scientificName: { [Op.in]: trees } } })).reduce(
+      (acc, { taxonId, scientificName }) => ({
+        ...acc,
+        [scientificName]: taxonId
+      }),
+      {} as Dictionary<string>
+    );
+    // Check for any missing taxon IDs, and add a warning for the rows
+    for (const [index, treeName] of trees.entries()) {
+      if (taxonIds[treeName] == null) {
+        warnings.push({
+          row: index + 2,
+          message: `Scientific name not found for tree species: ${treeName}`,
+          code: "TAXON_ID_MISSING",
+          variables: { treeName }
+        });
+      }
+    }
+
     // TODO:
-    //  Get Taxon IDs (add warning if not found)
     //  Get Site Reports from task by name, need ID for tree creation (add warning if not found)
     //  Upsert Trees
+    //  Make sure all reports are in `draft` form once they have had data added to them.
 
-    return warnings;
+    // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
+    return orderBy(warnings, ({ row }) => (row == null ? -1 : row));
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

@@ -78,6 +78,11 @@ describe("SitePolygonCreationService - Versioning", () => {
             pickMatchingFromProperties: jest.fn().mockResolvedValue({}),
             pickMatchingFromPropertiesBatch: jest.fn().mockResolvedValue([]),
             upsert: polygonAttributeValuesService.upsert,
+            bulkUpsert: jest.fn().mockResolvedValue(undefined),
+            filterNonNullAttributes: jest.fn((attrs: Record<string, unknown>) =>
+              Object.fromEntries(Object.entries(attrs).filter(([, value]) => value != null))
+            ),
+            getActiveKeysByFrameworkKeys: jest.fn().mockResolvedValue(new Map()),
             ingestFromProperties: jest.fn().mockResolvedValue({})
           }
         },

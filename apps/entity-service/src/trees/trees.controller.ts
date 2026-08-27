@@ -1,13 +1,17 @@
 import { Response } from "express";
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Post,
   Query,
   Res,
-  UnauthorizedException
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -27,6 +31,9 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { SpeciesDto } from "./dto/species.dto";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { Task } from "@terramatch-microservices/database/entities";
+import { TreeBulkUploadBody, TreeBulkUploadDto } from "./dto/tree-bulk-upload.dto";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
@@ -119,6 +126,34 @@ export class TreesController {
 
     await this.policyService.authorize("read", task);
     await this.treeService.getBulkImportCsv(task, response);
+  }
+
+  @Post("bulkImportCsv/:uuid")
+  @ApiOperation({
+    operationId: "treeBulkImportCsvUpload",
+    summary: "Upload a CSV for bulk importing tree data for a given task"
+  })
+  @JsonApiResponse(TreeBulkUploadDto)
+  @ExceptionResponse(NotFoundException, { description: "Task not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this task" })
+  @UseInterceptors(FileInterceptor("uploadFile"), FormDtoInterceptor)
+  async uploadBulkImportCsv(
+    @Param() { uuid }: SingleResourceDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: TreeBulkUploadBody
+  ) {
+    const task = await Task.findOne({ where: { uuid } });
+    if (task == null) throw new NotFoundException();
+
+    if (payload.data.type !== "treeBulkUploads") {
+      throw new BadRequestException("Bad data type for tree bulk upload data");
+    }
+
+    await this.policyService.authorize("update", task);
+    return buildJsonApi<TreeBulkUploadDto>(TreeBulkUploadDto).addData(
+      uuid,
+      new TreeBulkUploadDto(await this.treeService.bulkImportTreeCsv(task, file))
+    );
   }
 
   private async authorizeRead(entity: EntityType, uuid: string) {

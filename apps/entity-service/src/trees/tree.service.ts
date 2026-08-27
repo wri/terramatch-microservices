@@ -24,6 +24,10 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
+import { BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
+import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
+import { Readable } from "stream";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -403,6 +407,62 @@ export class TreeService {
         addRow(row);
       }
     });
+  }
+
+  async bulkImportTreeCsv(task: Task, csv: Express.Multer.File) {
+    const warnings: BulkUploadWarning[] = [];
+
+    if (csv.mimetype !== "text/csv") {
+      throw new TranslatableException("Uploaded file must be a CSV", "CSV_REQUIRED");
+    }
+
+    const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
+    let currentRow = 1; // starting at 1 to account for the header row.
+    await parseCsvStream(Readable.from(csv.buffer), async row => {
+      currentRow++;
+
+      const treeSpeciesName = row["Tree Species"];
+      if (treeSpeciesName == null) {
+        throw new TranslatableException("Tree Species column missing", "MISSING_CSV_COLUMN", {
+          column: "Tree Species"
+        });
+      }
+
+      if (treeSpeciesName === "") {
+        warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
+        return;
+      }
+
+      for (const [siteName, amountString] of Object.entries(row)) {
+        if (siteName === "Tree Species" || isEmpty(amountString)) continue;
+
+        if (isEmpty(siteName)) {
+          warnings.push(new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { row: currentRow }));
+          continue;
+        }
+
+        const amount = Number.parseInt(amountString);
+        // Checking against the amount string catches decimal values because Number.parseInt("1.2") yields 1.
+        if (isNaN(amount) || amount < 0 || `${amount}` !== amountString) {
+          warnings.push(
+            new BulkUploadWarning(`Amount value not supported: ${amountString}`, "AMOUNT_UNSUPPORTED", {
+              row: currentRow,
+              variables: { amountString }
+            })
+          );
+          continue;
+        }
+
+        (treesToCreate[siteName] ??= []).push({ name: treeSpeciesName, amount });
+      }
+    });
+
+    // TODO:
+    //  Get Taxon IDs (add warning if not found)
+    //  Get Site Reports from task by name, need ID for tree creation (add warning if not found)
+    //  Upsert Trees
+
+    return warnings;
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

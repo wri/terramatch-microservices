@@ -26,11 +26,6 @@ import { Archiver } from "archiver";
 import { PassThrough } from "node:stream";
 
 export type AddRow = (...sources: (Model | Dictionary<unknown>)[]) => void;
-export type StreamWriter = {
-  addRow: AddRow;
-  close: () => void;
-};
-
 export type RowWriter = (addRow: AddRow) => Promise<void>;
 
 export type FormQuestionExportMapping = {

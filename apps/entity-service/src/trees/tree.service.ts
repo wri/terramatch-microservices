@@ -23,6 +23,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -360,6 +361,7 @@ export class TreeService {
     // map from site report id to site name so that if we have existing data to prefill, it's
     // mapped by a report ID.
     const siteReports = await task.$get("siteReports", {
+      where: { status: { [Op.in]: [DRAFT, DUE] } },
       attributes: ["id"],
       include: [{ association: "site", attributes: ["name"], required: true }]
     });

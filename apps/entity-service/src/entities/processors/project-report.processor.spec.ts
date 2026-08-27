@@ -150,6 +150,15 @@ describe("ProjectReportProcessor", () => {
       await expectProjectReports([first, second, third], { country: "MX" });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const matching = await ProjectReportFactory.create({ projectId: terrafundProject.id });
+      await ProjectReportFactory.create({ projectId: ppcProject.id });
+
+      await expectProjectReports([matching], { cohort: ["terrafund"] });
+    });
+
     it("should throw an error if the project uuid is not found", async () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });

@@ -142,6 +142,15 @@ describe("NurseryProcessor", () => {
       await expectNurseries([fourth], { projectUuid: p2.uuid });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const matching = await NurseryFactory.create({ projectId: terrafundProject.id });
+      await NurseryFactory.create({ projectId: ppcProject.id });
+
+      await expectNurseries([matching], { cohort: ["terrafund"] });
+    });
+
     it("should throw an error if the project uuid is not found", async () => {
       await expect(processor.findMany({ projectUuid: "123" })).rejects.toThrow(BadRequestException);
     });

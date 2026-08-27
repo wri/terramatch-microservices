@@ -3,6 +3,7 @@ import {
   FinancialReport,
   FundingType,
   Media,
+  Project,
   User
 } from "@terramatch-microservices/database/entities";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
@@ -131,6 +132,10 @@ export class FinancialReportProcessor extends ReportProcessor<
         builder.where({ [field]: query[term] });
       }
     });
+
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ organisationId: { [Op.in]: Project.organisationIdsForCohort(query.cohort) } });
+    }
 
     if (query.search != null) {
       builder.where({

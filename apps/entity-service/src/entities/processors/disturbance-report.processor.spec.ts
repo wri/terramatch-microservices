@@ -105,6 +105,15 @@ describe("DisturbanceReportProcessor", () => {
       await expectDisturbanceReports(reports1, { projectUuid: project1.uuid });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const matching = await DisturbanceReportFactory.create({ projectId: terrafundProject.id });
+      await DisturbanceReportFactory.create({ projectId: ppcProject.id });
+
+      await expectDisturbanceReports([matching], { cohort: ["terrafund"] });
+    });
+
     it("should search by project name", async () => {
       const project = await ProjectFactory.create({ name: "Test Project" });
       const disturbanceReports = await DisturbanceReportFactory.createMany(2, { projectId: project.id });

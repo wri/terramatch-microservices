@@ -11,7 +11,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Attributes, col, fn, Includeable, Op, WhereOptions } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
@@ -23,7 +23,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
+import { COMPLETE_REPORT_STATUSES, DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
 import { BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
 import { Readable } from "stream";
@@ -91,7 +91,12 @@ const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
 
 const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) => {
   // map of tree name to taxon ID.
-  const taxonIds = (await TreeSpeciesResearch.findAll({ where: { scientificName: { [Op.in]: trees } } })).reduce(
+  const taxonIds = (
+    await TreeSpeciesResearch.findAll({
+      where: { scientificName: { [Op.in]: trees } },
+      attributes: ["taxonId", "scientificName"]
+    })
+  ).reduce(
     (acc, { taxonId, scientificName }) => ({
       ...acc,
       [scientificName]: taxonId
@@ -119,7 +124,7 @@ const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUp
   const siteIds = (
     await task.$get("siteReports", {
       attributes: ["id"],
-      where: { "$site.name$": { [Op.in]: sites } },
+      where: { "$site.name$": { [Op.in]: sites }, status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } },
       include: [{ association: "site", attributes: ["name"], required: true }]
     })
   ).reduce(
@@ -134,7 +139,7 @@ const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUp
   for (const site of sites) {
     if (siteIds[site] == null) {
       warnings.push({
-        message: `Site not found: ${site}`,
+        message: `Site not found or report not editable: ${site}`,
         code: "SITE_NOT_FOUND",
         variables: { site }
       });
@@ -520,8 +525,43 @@ export class TreeService {
     const taxonIds = await taxonIdsByName(trees, warnings);
     const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
 
+    const existingTrees = groupBy(
+      await TreeSpecies.siteReports(Object.values(siteReportIds)).findAll(),
+      "speciesableId"
+    );
+    const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
+    const updatePromises: Promise<TreeSpecies>[] = [];
+    for (const [siteName, pendingTrees] of Object.entries(treesToCreate)) {
+      const speciesableId = siteReportIds[siteName];
+      if (speciesableId == null) continue; // skip creation if report not found
+
+      for (const { name, amount } of pendingTrees) {
+        const taxonId = taxonIds[name];
+        const existingTree = existingTrees[speciesableId]?.find(existingTree =>
+          taxonId == null ? name === existingTree.name : taxonId === existingTree.taxonId
+        );
+
+        if (existingTree == null) {
+          bulkTrees.push({
+            speciesableId,
+            speciesableType: SiteReport.LARAVEL_TYPE,
+            name,
+            taxonId,
+            amount,
+            collection: "tree-planted"
+          });
+        } else {
+          if (amount !== existingTree.amount || existingTree.hidden) {
+            updatePromises.push(existingTree.update({ amount, hidden: false }));
+          }
+        }
+      }
+    }
+
+    await Promise.all(updatePromises);
+    await TreeSpecies.bulkCreate(bulkTrees);
+
     // TODO:
-    //  Upsert Trees
     //  Make sure all reports are in `draft` form once they have had data added to them. Do them one
     //    at a time so that we can update the report status via state machine.
 

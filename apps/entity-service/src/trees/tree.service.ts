@@ -416,9 +416,9 @@ export class TreeService {
 
     const fileName = normalizedFileName(
       await this.localizationService.localizeText(
-        `Bulk Tree Import for {project} - reporting task due {dueAt}`,
+        `Bulk Tree Import for {project} - {collection} - reporting task due {dueAt}`,
         UserContext.userLocale ?? "en-US",
-        { project: project.name, dueAt: task.dueAt == null ? null : isoForFilename(task.dueAt, true) }
+        { project: project.name, collection, dueAt: task.dueAt == null ? null : isoForFilename(task.dueAt, true) }
       )
     );
 

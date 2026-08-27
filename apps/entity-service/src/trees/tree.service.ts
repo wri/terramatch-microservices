@@ -89,6 +89,61 @@ const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
     {} as PlantingCountMap
   );
 
+const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) => {
+  // map of tree name to taxon ID.
+  const taxonIds = (await TreeSpeciesResearch.findAll({ where: { scientificName: { [Op.in]: trees } } })).reduce(
+    (acc, { taxonId, scientificName }) => ({
+      ...acc,
+      [scientificName]: taxonId
+    }),
+    {} as Dictionary<string>
+  );
+
+  // Check for any missing taxon IDs, and add a warning for the rows that are missing it.
+  for (const [index, treeName] of trees.entries()) {
+    if (taxonIds[treeName] == null) {
+      warnings.push({
+        row: index + 2,
+        message: `Scientific name not found for tree species: ${treeName}`,
+        code: "TAXON_ID_MISSING",
+        variables: { treeName }
+      });
+    }
+  }
+
+  return taxonIds;
+};
+
+const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUploadWarning[]) => {
+  // map of site name to site report ID.
+  const siteIds = (
+    await task.$get("siteReports", {
+      attributes: ["id"],
+      where: { "$site.name$": { [Op.in]: sites } },
+      include: [{ association: "site", attributes: ["name"], required: true }]
+    })
+  ).reduce(
+    (acc, { id, site }) => ({
+      ...acc,
+      [site?.name as string]: id
+    }),
+    {} as Dictionary<number>
+  );
+
+  // check for any missing sites and add a warning
+  for (const site of sites) {
+    if (siteIds[site] == null) {
+      warnings.push({
+        message: `Site not found: ${site}`,
+        code: "SITE_NOT_FOUND",
+        variables: { site }
+      });
+    }
+  }
+
+  return siteIds;
+};
+
 @Injectable()
 export class TreeService {
   constructor(
@@ -416,7 +471,9 @@ export class TreeService {
       throw new TranslatableException("Uploaded file must be a CSV", "CSV_REQUIRED");
     }
 
+    // Map of site name to trees to create
     const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
+    // List of tree species name by row
     const trees: string[] = [];
     let currentRow = 1; // starting at 1 to account for the header row.
     await parseCsvStream(Readable.from(csv.buffer), async row => {
@@ -460,30 +517,13 @@ export class TreeService {
       }
     });
 
-    // map of tree name to taxon ID.
-    const taxonIds = (await TreeSpeciesResearch.findAll({ where: { scientificName: { [Op.in]: trees } } })).reduce(
-      (acc, { taxonId, scientificName }) => ({
-        ...acc,
-        [scientificName]: taxonId
-      }),
-      {} as Dictionary<string>
-    );
-    // Check for any missing taxon IDs, and add a warning for the rows
-    for (const [index, treeName] of trees.entries()) {
-      if (taxonIds[treeName] == null) {
-        warnings.push({
-          row: index + 2,
-          message: `Scientific name not found for tree species: ${treeName}`,
-          code: "TAXON_ID_MISSING",
-          variables: { treeName }
-        });
-      }
-    }
+    const taxonIds = await taxonIdsByName(trees, warnings);
+    const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
 
     // TODO:
-    //  Get Site Reports from task by name, need ID for tree creation (add warning if not found)
     //  Upsert Trees
-    //  Make sure all reports are in `draft` form once they have had data added to them.
+    //  Make sure all reports are in `draft` form once they have had data added to them. Do them one
+    //    at a time so that we can update the report status via state machine.
 
     // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
     return orderBy(warnings, ({ row }) => (row == null ? -1 : row));

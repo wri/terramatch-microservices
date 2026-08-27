@@ -427,7 +427,7 @@ export class TreeService {
     const siteReports = await task.$get("siteReports", {
       where: { status: { [Op.in]: [DRAFT, DUE] } },
       attributes: ["id"],
-      include: [{ association: "site", attributes: ["name"], required: true }]
+      include: [{ association: "site", attributes: ["id", "name"], required: true }]
     });
     const columns = siteReports.reduce(
       (columns, report) =>

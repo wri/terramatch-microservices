@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { Response } from "express";
 import { ReportCountEntity, TreeService } from "./tree.service";
-import { Test } from "@nestjs/testing";
+import { Test, TestingModule } from "@nestjs/testing";
 import {
   ProjectReport,
   Seeding,
@@ -27,6 +28,9 @@ import { DateTime } from "luxon";
 
 import { PlantingCountDto } from "./dto/planting-count.dto";
 import { Op } from "sequelize";
+import { createMock, DeepMocked } from "@golevelup/ts-jest";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 
 const sortedSpeciesDto = (species: TreeSpecies[] | Seeding[]) =>
   sortBy(
@@ -35,15 +39,22 @@ const sortedSpeciesDto = (species: TreeSpecies[] | Seeding[]) =>
   );
 
 describe("TreeService", () => {
+  let module: TestingModule;
   let service: TreeService;
+
+  const csvExportService = (): DeepMocked<CsvExportService> => module.get(CsvExportService);
 
   beforeAll(async () => {
     await TreeSpeciesResearch.truncate({ force: true });
   });
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [TreeService]
+    module = await Test.createTestingModule({
+      providers: [
+        TreeService,
+        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
+        { provide: CsvExportService, useValue: createMock<CsvExportService>() }
+      ]
     }).compile();
 
     service = module.get(TreeService);
@@ -382,6 +393,58 @@ describe("TreeService", () => {
       expect(result["nursery-seedling"]).toMatchObject({
         Oak: { amount: tfSeedlingSum }
       });
+    });
+  });
+
+  describe("getBulkImportCsv", () => {
+    it("throws if the task is missing a project", async () => {
+      const task = await TaskFactory.create({ projectId: null });
+      await expect(service.getBulkImportCsv(task, "anr", {} as Response)).rejects.toThrow("Task has no project");
+    });
+
+    it("generates a CSV", async () => {
+      const project = await ProjectFactory.create();
+      const projectTrees = await TreeSpeciesFactory.projectTreePlanted(project).createMany(2);
+      const site = await SiteFactory.create({ projectId: project.id });
+      const siteTrees = await TreeSpeciesFactory.siteTreePlanted(site).createMany(2);
+      const task = await TaskFactory.create({ projectId: project.id });
+      const siteReport = await SiteReportFactory.create({ status: "draft", siteId: site.id, taskId: task.id });
+      const reportTree = await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({
+        collection: "anr",
+        amount: 10
+      });
+
+      // These two should not be included. (wrong collection
+      await TreeSpeciesFactory.siteReportNonTree(siteReport).create();
+      await TreeSpeciesFactory.siteNonTree(site).create();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+
+      const response = {} as Response;
+      await service.getBulkImportCsv(task, "anr", response);
+
+      const expectedColumns = {
+        treeSpecies: "Tree Species",
+        [`report${siteReport.id}`]: site.name
+      };
+
+      expect(csvExportService().writeCsv).toHaveBeenCalledWith(
+        expect.any(String),
+        response,
+        expect.objectContaining(expectedColumns),
+        expect.any(Function)
+      );
+      expect(addRow).toHaveBeenCalledTimes(5);
+      expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: projectTrees[0].name }));
+      expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: projectTrees[1].name }));
+      expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: siteTrees[0].name }));
+      expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: siteTrees[1].name }));
+      expect(addRow).toHaveBeenCalledWith(
+        expect.objectContaining({ treeSpecies: reportTree.name, [`report${siteReport.id}`]: 10 })
+      );
     });
   });
 });

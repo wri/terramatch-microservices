@@ -159,7 +159,7 @@ export class TreesController {
     await this.policyService.authorize("update", task);
     return buildJsonApi<TreeBulkUploadDto>(TreeBulkUploadDto).addData(
       uuid,
-      new TreeBulkUploadDto(await this.treeService.bulkImportTreeCsv(task, file))
+      new TreeBulkUploadDto(await this.treeService.bulkImportTreeCsv(task, payload.data.attributes.collection, file))
     );
   }
 

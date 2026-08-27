@@ -472,7 +472,7 @@ export class TreeService {
     });
   }
 
-  async bulkImportTreeCsv(task: Task, csv: Express.Multer.File) {
+  async bulkImportTreeCsv(task: Task, collection: BulkTreeCollection, csv: Express.Multer.File) {
     const warnings: BulkUploadWarning[] = [];
 
     if (csv.mimetype !== "text/csv") {
@@ -529,7 +529,7 @@ export class TreeService {
     const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
 
     const existingTrees = groupBy(
-      await TreeSpecies.siteReports(Object.values(siteReportIds)).findAll(),
+      await TreeSpecies.collection(collection).siteReports(Object.values(siteReportIds)).findAll(),
       "speciesableId"
     );
     const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
@@ -551,7 +551,7 @@ export class TreeService {
             name,
             taxonId,
             amount,
-            collection: "tree-planted"
+            collection
           });
         } else {
           if (amount !== existingTree.amount || existingTree.hidden) {

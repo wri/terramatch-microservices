@@ -561,9 +561,11 @@ export class TreeService {
     await Promise.all(updatePromises);
     await TreeSpecies.bulkCreate(bulkTrees);
 
-    // TODO:
-    //  Make sure all reports are in `draft` form once they have had data added to them. Do them one
-    //    at a time so that we can update the report status via state machine.
+    // Make sure that none of the affected reports are in "due" status. Have to do it individually
+    // so that the state machine processing happens.
+    await Promise.all(
+      (await task.$get("siteReports", { where: { status: DUE } })).map(report => report.update({ status: DRAFT }))
+    );
 
     // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
     return orderBy(warnings, ({ row }) => (row == null ? -1 : row));

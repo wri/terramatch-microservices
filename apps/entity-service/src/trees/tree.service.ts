@@ -442,7 +442,9 @@ export class TreeService {
     console.log("columns", JSON.stringify(columns, null, 2));
 
     const existingReportTrees = groupBy(
-      await TreeSpecies.for(siteReports).findAll({ attributes: ["name", "amount"] }),
+      await TreeSpecies.visible()
+        .for(siteReports)
+        .findAll({ attributes: ["speciesableId", "name", "amount"] }),
       "speciesableId"
     );
     const trees = uniqBy(

@@ -31,7 +31,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { SpeciesDto } from "./dto/species.dto";
 import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
 import { Task } from "@terramatch-microservices/database/entities";
-import { TreeBulkUploadBody, TreeBulkUploadDto } from "./dto/tree-bulk-upload.dto";
+import { BulkCsvDownloadQueryDto, TreeBulkUploadBody, TreeBulkUploadDto } from "./dto/tree-bulk-upload.dto";
 import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
 import { FileInterceptor } from "@nestjs/platform-express";
 
@@ -120,12 +120,19 @@ export class TreesController {
   })
   @ExceptionResponse(NotFoundException, { description: "Task not found" })
   @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this task" })
-  async getBulkImportCsv(@Param() { uuid }: SingleResourceDto, @Res({ passthrough: true }) response: Response) {
+  async getBulkImportCsv(
+    @Param() { uuid }: SingleResourceDto,
+    @Query() { collection }: BulkCsvDownloadQueryDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    // If there is no query at all, the DTO validation doesn't process
+    if (collection == null) throw new BadRequestException("Collection is required");
+
     const task = await Task.findOne({ where: { uuid } });
     if (task == null) throw new NotFoundException();
 
     await this.policyService.authorize("read", task);
-    await this.treeService.getBulkImportCsv(task, response);
+    await this.treeService.getBulkImportCsv(task, collection, response);
   }
 
   @Post("bulkImportCsv/:uuid")

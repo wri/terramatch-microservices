@@ -3,6 +3,14 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Dictionary } from "lodash";
 
+const BULK_TREE_COLLECTIONS = ["anr", "replanting", "tree-planted", "non-tree", "invasive"] as const;
+export type BulkTreeCollection = (typeof BULK_TREE_COLLECTIONS)[number];
+
+export class BulkCsvDownloadQueryDto {
+  @ApiProperty({ description: "The collection to download", enum: BULK_TREE_COLLECTIONS })
+  collection: BulkTreeCollection;
+}
+
 export class BulkUploadWarning {
   constructor(
     message: string,
@@ -42,6 +50,11 @@ export class TreeBulkUploadDto {
   warnings: BulkUploadWarning[];
 }
 
+class TreeBulkUploadAttributes {
+  @ApiProperty({ description: "The collection the trees belong to", enum: BULK_TREE_COLLECTIONS })
+  collection: BulkTreeCollection;
+}
+
 export class TreeBulkUploadBody extends JsonApiBodyDto(
-  class TreeBulkUploadData extends CreateDataDto("treeBulkUploads", class TreeBulkUploadAttributes {}) {}
+  class TreeBulkUploadData extends CreateDataDto("treeBulkUploads", TreeBulkUploadAttributes) {}
 ) {}

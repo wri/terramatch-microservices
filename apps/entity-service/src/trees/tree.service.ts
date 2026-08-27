@@ -24,7 +24,7 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { COMPLETE_REPORT_STATUSES, DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
-import { BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
+import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
 import { Readable } from "stream";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
@@ -410,7 +410,7 @@ export class TreeService {
     return planting;
   }
 
-  async getBulkImportCsv(task: Task, response: Response) {
+  async getBulkImportCsv(task: Task, collection: BulkTreeCollection, response: Response) {
     const project = await task.$get("project", { attributes: ["id", "name"] });
     if (project == null) throw new BadRequestException("Task has no project");
 
@@ -439,21 +439,22 @@ export class TreeService {
             },
       { treeSpecies: "Tree Species" } as Dictionary<string>
     );
-    console.log("columns", JSON.stringify(columns, null, 2));
 
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()
         .for(siteReports)
+        .collection(collection)
         .findAll({ attributes: ["speciesableId", "name", "amount"] }),
       "speciesableId"
     );
+    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
     const trees = uniqBy(
       [
         ...(await TreeSpecies.for(project)
-          .collection("tree-planted")
+          .collection(establishmentCollection)
           .findAll({ attributes: ["name"] })),
         ...(await TreeSpecies.for(siteReports.map(({ site }) => site).filter(isNotNull))
-          .collection("tree-planted")
+          .collection(establishmentCollection)
           .findAll({ attributes: ["name"] })),
         ...Object.values(existingReportTrees).flat()
       ],

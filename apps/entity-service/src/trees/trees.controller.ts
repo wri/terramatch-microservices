@@ -1,16 +1,22 @@
+import { Response } from "express";
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Post,
   Query,
-  UnauthorizedException
+  Res,
+  UnauthorizedException,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
 import { isEstablishmentEntity, isReportCountEntity, TreeService } from "./tree.service";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ScientificNameDto } from "./dto/scientific-name.dto";
-import { ApiExtraModels, ApiOperation } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { intersection, isEmpty } from "lodash";
 import { EstablishmentsTreesParamsDto } from "./dto/establishments-trees-params.dto";
@@ -23,6 +29,11 @@ import { ENTITY_MODELS, EntityType } from "@terramatch-microservices/database/co
 import { PolicyService } from "@terramatch-microservices/common";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { SpeciesDto } from "./dto/species.dto";
+import { SingleResourceDto } from "@terramatch-microservices/common/dto/single-resource.dto";
+import { Task } from "@terramatch-microservices/database/entities";
+import { BulkCsvDownloadQueryDto, TreeBulkUploadBody, TreeBulkUploadDto } from "./dto/tree-bulk-upload.dto";
+import { FormDtoInterceptor } from "@terramatch-microservices/common/interceptors/form-dto.interceptor";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @Controller("trees/v3")
 @ApiExtraModels(PlantingCountDto, SpeciesDto, TreeEntityTypes)
@@ -94,6 +105,61 @@ export class TreesController {
     return buildJsonApi(TreeReportCountsDto).addData(
       `${entity}|${uuid}`,
       populateDto(new TreeReportCountsDto(), { establishmentTrees, reportCounts })
+    );
+  }
+
+  @Get("bulkImportCsv/:uuid")
+  @ApiOperation({
+    operationId: "treeBulkImportCsvGet",
+    summary: "Get a CSV for bulk importing tree data for a given task"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(NotFoundException, { description: "Task not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this task" })
+  async getBulkImportCsv(
+    @Param() { uuid }: SingleResourceDto,
+    @Query() { collection }: BulkCsvDownloadQueryDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    // If there is no query at all, the DTO validation doesn't process
+    if (collection == null) throw new BadRequestException("Collection is required");
+
+    const task = await Task.findOne({ where: { uuid } });
+    if (task == null) throw new NotFoundException();
+
+    await this.policyService.authorize("read", task);
+    await this.treeService.getBulkImportCsv(task, collection, response);
+  }
+
+  @Post("bulkImportCsv/:uuid")
+  @ApiOperation({
+    operationId: "treeBulkImportCsvUpload",
+    summary: "Upload a CSV for bulk importing tree data for a given task"
+  })
+  @JsonApiResponse(TreeBulkUploadDto)
+  @ExceptionResponse(NotFoundException, { description: "Task not found" })
+  @ExceptionResponse(UnauthorizedException, { description: "User is not authorized to access this task" })
+  @UseInterceptors(FileInterceptor("uploadFile"), FormDtoInterceptor)
+  async uploadBulkImportCsv(
+    @Param() { uuid }: SingleResourceDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() payload: TreeBulkUploadBody
+  ) {
+    const task = await Task.findOne({ where: { uuid } });
+    if (task == null) throw new NotFoundException();
+
+    if (payload.data.type !== "treeBulkUploads") {
+      throw new BadRequestException("Bad data type for tree bulk upload data");
+    }
+
+    await this.policyService.authorize("update", task);
+    return buildJsonApi<TreeBulkUploadDto>(TreeBulkUploadDto).addData(
+      uuid,
+      new TreeBulkUploadDto(await this.treeService.bulkImportTreeCsv(task, payload.data.attributes.collection, file))
     );
   }
 

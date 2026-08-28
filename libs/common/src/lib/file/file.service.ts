@@ -17,11 +17,17 @@ import { Dictionary } from "lodash";
 import { parse } from "csv";
 import { NodeJsClient } from "@smithy/types";
 import { Injectable } from "@nestjs/common";
-import { PassThrough } from "node:stream";
+import Stream, { PassThrough } from "node:stream";
 
 export type CsvRowCallback = (row: Dictionary<string>) => void | Promise<void>;
 
 const PRESIGNED_URL_TIMEOUT = 3600; // 1 hour
+
+export const parseCsvStream = async (stream: Stream, onRow: CsvRowCallback) => {
+  for await (const row of stream.pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))) {
+    await onRow(row);
+  }
+};
 
 @Injectable()
 export class FileService {
@@ -148,9 +154,7 @@ export class FileService {
       throw new Error(`No stream found [path=${path}, bucket=${bucket}]`);
     }
 
-    for await (const row of stream.pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))) {
-      await onRow(row);
-    }
+    await parseCsvStream(stream, onRow);
   }
 
   /* istanbul ignore next */

@@ -7,6 +7,7 @@ import {
   Seeding,
   Site,
   SiteReport,
+  Task,
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
@@ -444,6 +445,98 @@ describe("TreeService", () => {
       expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: siteTrees[1].name }));
       expect(addRow).toHaveBeenCalledWith(
         expect.objectContaining({ treeSpecies: reportTree.name, [`report${siteReport.id}`]: 10 })
+      );
+    });
+  });
+
+  describe("bulkImportTreeCsv", () => {
+    it("throws if it gets a non-CSV file", async () => {
+      const file: Partial<Express.Multer.File> = {
+        mimetype: "text/plain"
+      };
+      await expect(service.bulkImportTreeCsv({} as Task, "anr", file as Express.Multer.File)).rejects.toThrow(
+        "Uploaded file must be a CSV"
+      );
+    });
+
+    it("throws if the tree species column is missing in the upload", async () => {
+      const file: Partial<Express.Multer.File> = {
+        mimetype: "text/csv",
+        buffer: Buffer.from("foo,bar\n1,2")
+      };
+      await expect(service.bulkImportTreeCsv({} as Task, "anr", file as Express.Multer.File)).rejects.toThrow(
+        "Tree Species column missing"
+      );
+    });
+
+    it("persists rows from CSV and reports errors", async () => {
+      const project = await ProjectFactory.create();
+      const projectTree = await TreeSpeciesFactory.projectTreePlanted(project).create();
+      const site = await SiteFactory.create();
+      const siteTree = await TreeSpeciesFactory.siteTreePlanted(site).create();
+      const task = await TaskFactory.create({ projectId: project.id });
+      const report = await SiteReportFactory.create({ taskId: task.id, siteId: site.id, status: "due" });
+      const reportTree = await TreeSpeciesFactory.siteReportTreePlanted(report).create({
+        collection: "anr",
+        amount: 10,
+        hidden: true
+      });
+
+      const csv = `Tree Species,${site.name},,Foo Site
+${projectTree.name},1,,
+${siteTree.name},-2,,
+${reportTree.name},3,,
+${projectTree.name},,4,
+,5,,
+${projectTree.name},,6,
+${projectTree.name},,,7`;
+      const file: Partial<Express.Multer.File> = {
+        mimetype: "text/csv",
+        buffer: Buffer.from(csv)
+      };
+
+      const warnings = await service.bulkImportTreeCsv(task, "anr", file as Express.Multer.File);
+      expect((await report.reload()).status).toEqual("draft");
+      await reportTree.reload();
+      expect(reportTree.amount).toEqual(3);
+      expect(reportTree.hidden).toEqual(false);
+      const reportTrees = await TreeSpecies.for(report).visible().collection("anr").findAll();
+      expect(reportTrees.length).toEqual(2);
+      expect(reportTrees).toContainEqual(expect.objectContaining({ name: projectTree.name, amount: 1 }));
+      expect(reportTrees).toContainEqual(expect.objectContaining({ name: reportTree.name, amount: 3 }));
+      expect(warnings.length).toBe(12);
+      expect(warnings[0]).toMatchObject({ row: undefined, message: "Site not found or report not editable: Foo Site" });
+      expect(warnings).toContainEqual(
+        expect.objectContaining({
+          row: 2,
+          code: "TAXON_ID_MISSING",
+          variables: { treeName: projectTree.name },
+          message: `Scientific name not found for tree species: ${projectTree.name}`
+        })
+      );
+      expect(warnings).toContainEqual(
+        expect.objectContaining({
+          row: 3,
+          code: "AMOUNT_UNSUPPORTED",
+          variables: { amountString: "-2" },
+          message: "Amount value not supported: -2"
+        })
+      );
+      expect(warnings).toContainEqual(
+        expect.objectContaining({
+          row: 5,
+          message: "Site name missing",
+          code: "SITE_NAME_MISSING",
+          variables: undefined
+        })
+      );
+      expect(warnings).toContainEqual(
+        expect.objectContaining({
+          row: 6,
+          message: "Tree Species name missing",
+          code: "TREE_NAME_MISSING",
+          variables: undefined
+        })
       );
     });
   });

@@ -107,12 +107,12 @@ const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) =>
   // Check for any missing taxon IDs, and add a warning for the rows that are missing it.
   for (const [index, treeName] of trees.entries()) {
     if (taxonIds[treeName] == null) {
-      warnings.push({
-        row: index + 2,
-        message: `Scientific name not found for tree species: ${treeName}`,
-        code: "TAXON_ID_MISSING",
-        variables: { treeName }
-      });
+      warnings.push(
+        new BulkUploadWarning(`Scientific name not found for tree species: ${treeName}`, "TAXON_ID_MISSING", {
+          variables: { treeName },
+          row: index + 2
+        })
+      );
     }
   }
 
@@ -138,11 +138,11 @@ const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUp
   // check for any missing sites and add a warning
   for (const site of sites) {
     if (siteIds[site] == null) {
-      warnings.push({
-        message: `Site not found or report not editable: ${site}`,
-        code: "SITE_NOT_FOUND",
-        variables: { site }
-      });
+      warnings.push(
+        new BulkUploadWarning(`Site not found or report not editable: ${site}`, "SITE_NOT_FOUND", {
+          variables: { site }
+        })
+      );
     }
   }
 

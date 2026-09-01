@@ -15,7 +15,7 @@ import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
 
 const V3_SERVICES = {
-  "user-service": ["auth", "users", "organisations", "userAssociations"],
+  "user-service": ["auth", "users", "organisations", "userAssociations", "userSockets"],
   "job-service": ["jobs"],
   "entity-service": [
     "entities",

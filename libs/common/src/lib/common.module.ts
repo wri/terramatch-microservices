@@ -26,7 +26,7 @@ import { UserContextMiddleware } from "./middleware/user-context.middleware";
 import { GwcTileInvalidationService } from "./gwc/gwc-tile-invalidation.service";
 import { ProductEventService } from "./product-events/product-event.service";
 
-export const QUEUES = ["email", "analytics", "entities", "greenhouse"];
+export const QUEUES = ["email", "analytics", "entities", "greenhouse", "userSocket"];
 const IS_REPL = process.env["REPL"] === "true";
 
 @Module({

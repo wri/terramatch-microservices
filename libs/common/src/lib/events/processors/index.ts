@@ -6,6 +6,8 @@ import { DisturbanceReportEntryApprovalProcessor } from "./disturbance-report-en
 import { HiddenRelationsApprovalProcessor } from "./hidden-relations.approval-processor";
 import { NothingToReportApprovalProcessor } from "./nothing-to-report.approval-processor";
 
+export { DisturbanceReportEntryApprovalProcessor };
+
 // A set of processors that should be run any time an EntityType model moves to approved status.
 export const APPROVAL_PROCESSERS: EntityApprovalProcessor[] = [
   FieldsApprovalProcessor,

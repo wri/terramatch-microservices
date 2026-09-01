@@ -33,7 +33,11 @@ import {
   CriteriaId,
   EXCLUDED_VALIDATION_CRITERIA,
   CRITERIA_ID_TO_VALIDATION_TYPE,
-  POLYGON_VALIDATION_AUDIT_TYPE
+  POLYGON_VALIDATION_AUDIT_TYPE,
+  POLYGON_VALIDATION_FAILED,
+  POLYGON_VALIDATION_PARTIAL,
+  POLYGON_VALIDATION_PASSED,
+  PolygonValidationStatus
 } from "@terramatch-microservices/database/constants";
 import { Op } from "sequelize";
 import { CreationAttributes } from "sequelize";
@@ -444,7 +448,7 @@ export class ValidationService {
     }
 
     const baseExcludedCriteriaSet = new Set(EXCLUDED_VALIDATION_CRITERIA as number[]);
-    const updates: Array<{ id: number; validationStatus: string | null }> = [];
+    const updates: Array<{ id: number; validationStatus: PolygonValidationStatus | null }> = [];
 
     for (const sitePolygon of sitePolygons) {
       if (sitePolygon.polygonUuid == null) continue;
@@ -453,7 +457,7 @@ export class ValidationService {
       const dynamicExcludedCriteria = this.getDynamicExcludedCriteria(polygonCriteria);
       const excludedCriteriaSet = new Set([...baseExcludedCriteriaSet, ...dynamicExcludedCriteria]);
 
-      let newValidationStatus: string | null;
+      let newValidationStatus: PolygonValidationStatus | null;
 
       if (polygonCriteria.length === 0) {
         newValidationStatus = null;
@@ -461,12 +465,12 @@ export class ValidationService {
         const hasAnyFailing = polygonCriteria.some(c => !c.valid);
 
         if (!hasAnyFailing) {
-          newValidationStatus = "passed";
+          newValidationStatus = POLYGON_VALIDATION_PASSED;
         } else {
           const nonExcludedCriteria = polygonCriteria.filter(c => !excludedCriteriaSet.has(c.criteriaId));
           const hasFailingNonExcluded = nonExcludedCriteria.some(c => !c.valid);
 
-          newValidationStatus = hasFailingNonExcluded ? "failed" : "partial";
+          newValidationStatus = hasFailingNonExcluded ? POLYGON_VALIDATION_FAILED : POLYGON_VALIDATION_PARTIAL;
         }
       }
 

@@ -74,5 +74,22 @@ describe("TreeSpeciesCollector", () => {
         collection: "tree-planted"
       });
     });
+
+    it("syncs established collection tree species on sites and site reports", async () => {
+      const site = await SiteFactory.create();
+      const report = await SiteReportFactory.create();
+      const establishedSiteField = getRelation("site-rel-established-tree-species");
+      const establishedReportField = getRelation("site-rep-rel-established-tree-species");
+
+      await collector.syncRelation(site, establishedSiteField, [{ name: "Cedrela odorata", amount: 12 }], false);
+      await collector.syncRelation(report, establishedReportField, [{ name: "Cedrela odorata", amount: 7 }], false);
+
+      const siteTrees = await TreeSpecies.for(site).collection("established").findAll();
+      const reportTrees = await TreeSpecies.for(report).collection("established").findAll();
+      expect(siteTrees).toHaveLength(1);
+      expect(siteTrees[0]).toMatchObject({ name: "Cedrela odorata", amount: 12, collection: "established" });
+      expect(reportTrees).toHaveLength(1);
+      expect(reportTrees[0]).toMatchObject({ name: "Cedrela odorata", amount: 7, collection: "established" });
+    });
   });
 });

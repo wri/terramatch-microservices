@@ -14,6 +14,35 @@ type DefinitionWithOptions = PolygonAttributeDefinition & {
   options: PolygonAttributeDefinitionOption[] | null;
 };
 
+function coerceToStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String).map(item => item.trim());
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return [];
+    if (trimmed.startsWith("[")) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed) as unknown;
+      } catch {
+        parsed = undefined;
+      }
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).map(item => item.trim());
+      }
+    }
+
+    return trimmed
+      .split(",")
+      .map(item => item.trim())
+      .filter(item => item !== "");
+  }
+
+  return [];
+}
+
 @Injectable()
 export class PolygonAttributeValuesService {
   async getMapsByPolygonUuids(uuids: string[]): Promise<Map<string, CustomAttributeMap>> {
@@ -56,8 +85,16 @@ export class PolygonAttributeValuesService {
     attributes: CustomAttributeMap,
     transaction: Transaction
   ): Promise<void> {
-    const entries = Object.entries(attributes);
-    if (entries.length === 0) return;
+    await this.bulkUpsert(frameworkKey, [{ sitePolygonUuid, attributes }], transaction);
+  }
+
+  async bulkUpsert(
+    frameworkKey: FrameworkKey | null | undefined,
+    rows: Array<{ sitePolygonUuid: string; attributes: CustomAttributeMap }>,
+    transaction: Transaction
+  ): Promise<void> {
+    const nonEmptyRows = rows.filter(row => Object.keys(row.attributes).length > 0);
+    if (nonEmptyRows.length === 0) return;
 
     if (frameworkKey == null) {
       throw new BadRequestException("Site has no frameworkKey; cannot set custom attributes");
@@ -66,36 +103,40 @@ export class PolygonAttributeValuesService {
     const definitions = await this.loadActiveDefinitions(frameworkKey, transaction);
     const definitionByKey = new Map(definitions.map(definition => [definition.key, definition]));
 
-    const toClearIds: number[] = [];
+    const toClear: Array<{ sitePolygonUuid: string; polygonAttributeDefinitionId: number }> = [];
     const toUpsert: Array<{
       sitePolygonUuid: string;
       polygonAttributeDefinitionId: number;
       value: SitePolygonAttributeValueData;
     }> = [];
 
-    for (const [key, rawValue] of entries) {
-      const definition = definitionByKey.get(key);
-      if (definition == null) {
-        throw new BadRequestException(`Unknown or inactive custom attribute: ${key}`);
-      }
+    for (const { sitePolygonUuid, attributes } of nonEmptyRows) {
+      for (const [key, rawValue] of Object.entries(attributes)) {
+        const definition = definitionByKey.get(key);
+        if (definition == null) {
+          throw new BadRequestException(`Unknown or inactive custom attribute: ${key}`);
+        }
 
-      const validated = this.validateValue(definition, rawValue);
-      if (validated == null) {
-        toClearIds.push(definition.id);
-      } else {
-        toUpsert.push({
-          sitePolygonUuid,
-          polygonAttributeDefinitionId: definition.id,
-          value: validated
-        });
+        const validated = this.validateValue(definition, rawValue);
+        if (validated == null) {
+          toClear.push({ sitePolygonUuid, polygonAttributeDefinitionId: definition.id });
+        } else {
+          toUpsert.push({
+            sitePolygonUuid,
+            polygonAttributeDefinitionId: definition.id,
+            value: validated
+          });
+        }
       }
     }
 
-    if (toClearIds.length > 0) {
+    if (toClear.length > 0) {
       await SitePolygonAttributeValue.destroy({
         where: {
-          sitePolygonUuid,
-          polygonAttributeDefinitionId: { [Op.in]: toClearIds }
+          [Op.or]: toClear.map(({ sitePolygonUuid, polygonAttributeDefinitionId }) => ({
+            sitePolygonUuid,
+            polygonAttributeDefinitionId
+          }))
         },
         transaction
       });
@@ -133,10 +174,45 @@ export class PolygonAttributeValuesService {
       const matched: CustomAttributeMap = {};
       for (const definition of definitions) {
         if (!(definition.key in properties)) continue;
-        matched[definition.key] = this.validateValue(definition, properties[definition.key]);
+        matched[definition.key] = this.filterValueForUpload(definition, properties[definition.key]);
       }
       return matched;
     });
+  }
+
+  filterNonNullAttributes(attributes: CustomAttributeMap): CustomAttributeMap {
+    const result: CustomAttributeMap = {};
+    for (const [key, value] of Object.entries(attributes)) {
+      if (value != null) {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
+
+  async getActiveKeysByFrameworkKeys(
+    frameworkKeys: Array<FrameworkKey | null | undefined>
+  ): Promise<Map<FrameworkKey, string[]>> {
+    const unique = [...new Set(frameworkKeys.filter((key): key is FrameworkKey => key != null))];
+    const result = new Map<FrameworkKey, string[]>();
+    if (unique.length === 0) return result;
+
+    const definitions = await PolygonAttributeDefinition.findAll({
+      where: { frameworkKey: { [Op.in]: unique }, isActive: true },
+      attributes: ["frameworkKey", "key"],
+      order: [
+        ["order", "ASC"],
+        ["id", "ASC"]
+      ]
+    });
+
+    for (const definition of definitions) {
+      const list = result.get(definition.frameworkKey) ?? [];
+      list.push(definition.key);
+      result.set(definition.frameworkKey, list);
+    }
+
+    return result;
   }
 
   async ingestFromProperties(
@@ -146,9 +222,10 @@ export class PolygonAttributeValuesService {
     transaction: Transaction
   ): Promise<CustomAttributeMap> {
     const matched = await this.pickMatchingFromProperties(properties, frameworkKey, transaction);
-    if (Object.keys(matched).length === 0) return matched;
+    const toUpsert = this.filterNonNullAttributes(matched);
+    if (Object.keys(toUpsert).length === 0) return matched;
 
-    await this.upsert(sitePolygonUuid, frameworkKey, matched, transaction);
+    await this.upsert(sitePolygonUuid, frameworkKey, toUpsert, transaction);
     return matched;
   }
 
@@ -165,9 +242,6 @@ export class PolygonAttributeValuesService {
 
   private validateValue(definition: DefinitionWithOptions, rawValue: unknown): SitePolygonAttributeValueData | null {
     if (rawValue === null || rawValue === undefined) {
-      if (definition.isRequired) {
-        throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-      }
       return null;
     }
 
@@ -177,27 +251,24 @@ export class PolygonAttributeValuesService {
       if (typeof rawValue !== "string") {
         throw new BadRequestException(`Custom attribute "${definition.key}" must be a string or null`);
       }
-      if (rawValue.length === 0) {
-        if (definition.isRequired) {
-          throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-        }
+      const trimmed = rawValue.trim();
+      if (trimmed.length === 0) {
         return null;
       }
-      if (!allowedValues.has(rawValue)) {
-        throw new BadRequestException(`Invalid option for custom attribute "${definition.key}": ${rawValue}`);
+      if (!allowedValues.has(trimmed)) {
+        throw new BadRequestException(`Invalid option for custom attribute "${definition.key}": ${trimmed}`);
       }
-      return rawValue;
+      return trimmed;
     }
 
-    if (!Array.isArray(rawValue) || rawValue.some(item => typeof item !== "string")) {
-      throw new BadRequestException(`Custom attribute "${definition.key}" must be a string array or null`);
+    if (!Array.isArray(rawValue) && typeof rawValue !== "string") {
+      throw new BadRequestException(
+        `Custom attribute "${definition.key}" must be a string array, comma-separated string, or null`
+      );
     }
 
-    const values = rawValue as string[];
+    const values = coerceToStringArray(rawValue);
     if (values.length === 0) {
-      if (definition.isRequired) {
-        throw new BadRequestException(`Custom attribute "${definition.key}" is required`);
-      }
       return null;
     }
 
@@ -209,5 +280,25 @@ export class PolygonAttributeValuesService {
     }
 
     return [...values].sort();
+  }
+
+  private filterValueForUpload(
+    definition: DefinitionWithOptions,
+    rawValue: unknown
+  ): SitePolygonAttributeValueData | null {
+    if (rawValue === null || rawValue === undefined) return null;
+
+    const allowedValues = new Set((definition.options ?? []).map(option => option.value));
+
+    if (definition.inputType === "single_select") {
+      if (typeof rawValue !== "string") return null;
+      const trimmed = rawValue.trim();
+      if (trimmed.length === 0) return null;
+      return allowedValues.has(trimmed) ? trimmed : null;
+    }
+
+    const values = coerceToStringArray(rawValue);
+    const filtered = values.filter(value => allowedValues.has(value));
+    return filtered.length > 0 ? [...filtered].sort() : null;
   }
 }

@@ -197,7 +197,7 @@ export class NurseryReport extends Model<InferAttributes<NurseryReport>, InferCr
     return this.nursery?.uuid;
   }
 
-  get taskUuid() {
+  get taskUuid(): string | undefined {
     return this.task?.uuid;
   }
 

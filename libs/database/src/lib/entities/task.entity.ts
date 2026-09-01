@@ -12,7 +12,16 @@ import {
   Scopes,
   Table
 } from "sequelize-typescript";
-import { BIGINT, DATE, STRING, UUID, UUIDV4 } from "sequelize";
+import {
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  STRING,
+  UUID,
+  UUIDV4
+} from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { Project } from "./project.entity";
 import { TaskStatus, TaskStatusStates } from "../constants/status";
@@ -23,13 +32,14 @@ import { NurseryReport } from "./nursery-report.entity";
 import { SrpReport } from "./srp-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { InternalServerErrorException } from "@nestjs/common";
+import { EventCategory } from "../constants/product-events";
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
   dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
 }))
 @Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
-export class Task extends Model<Task> {
+export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<Task>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Tasks\\Task";
 
   static forProject(projectId: number) {
@@ -50,11 +60,11 @@ export class Task extends Model<Task> {
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
-  declare id: number;
+  declare id: CreationOptional<number>;
 
   @Index
   @Column({ type: UUID, defaultValue: UUIDV4 })
-  declare uuid: string;
+  declare uuid: CreationOptional<string>;
 
   @AllowNull
   @ForeignKey(() => Organisation)
@@ -65,7 +75,7 @@ export class Task extends Model<Task> {
   declare organisation: Organisation | null;
 
   get organisationName() {
-    return this.organisation?.name ?? "";
+    return this.organisation?.name;
   }
 
   @AllowNull
@@ -76,22 +86,24 @@ export class Task extends Model<Task> {
   @BelongsTo(() => Project, { constraints: false })
   declare project: Project | null;
 
-  get projectUuid(): string {
-    return this.project?.uuid ?? "";
+  get projectUuid(): string | undefined {
+    return this.project?.uuid;
   }
 
   get projectName() {
-    return this.project?.name ?? "";
+    return this.project?.name;
   }
 
   get frameworkKey() {
-    return this.project?.frameworkKey ?? "";
+    return this.project?.frameworkKey;
   }
 
-  /** @deprecated this field is null for all rows in the production DB. */
   @AllowNull
   @Column(STRING)
-  declare title: string | null;
+  declare summary: string | null;
+
+  @Column(STRING)
+  declare category: EventCategory;
 
   @StateMachineColumn(TaskStatusStates)
   declare status: TaskStatus;
@@ -100,15 +112,9 @@ export class Task extends Model<Task> {
     return getStateMachine(this, "status")?.canBe(this.status, status) ?? false;
   }
 
-  // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
-  // make that a real constraint when the schema is controlled by v3 code.
-  @Column(STRING)
-  declare periodKey: string;
-
-  // Note: this column is marked nullable in the DB, but in fact no rows are null, and we should
-  // make that a real constraint when the schema is controlled by v3 code.
+  @AllowNull
   @Column(DATE)
-  declare dueAt: Date;
+  declare dueAt: Date | null;
 
   @HasOne(() => ProjectReport)
   declare projectReport: ProjectReport | null;

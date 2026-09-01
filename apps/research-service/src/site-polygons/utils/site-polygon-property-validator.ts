@@ -1,3 +1,4 @@
+import { SITE_POLYGON_TARGET_SYSTEMS } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 
 // Core property keys in both formats
@@ -106,7 +107,7 @@ export function validateSitePolygonProperties(properties: Record<string, unknown
   const distr = validateArrayProperty(distrValue, VALID_DISTRIBUTION_VALUES);
   const practice = validateArrayProperty(practiceValue, VALID_PRACTICE_VALUES);
   const submissionCycle = trimToNullableString(submissionCycleValue as string | null | undefined);
-  const targetSys = trimToNullableString(targetSysValue as string | null | undefined);
+  const targetSys = allowlistedTargetSys(targetSysValue);
 
   return {
     polyName: (polyNameValue as string) ?? null,
@@ -176,4 +177,13 @@ function trimToNullableString(value: string | null | undefined): string | null {
   // Trim once; empty/whitespace-only becomes null so DB stores absence, not "".
   const result = (value ?? "").trim();
   return result.length === 0 ? null : result;
+}
+
+function allowlistedTargetSys(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+
+  return SITE_POLYGON_TARGET_SYSTEMS.includes(trimmed as (typeof SITE_POLYGON_TARGET_SYSTEMS)[number]) ? trimmed : null;
 }

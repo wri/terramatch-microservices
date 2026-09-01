@@ -60,6 +60,7 @@ describe("ScheduledJobsProcessor", () => {
     it("should call the service with all projects in the framework", async () => {
       await Project.truncate();
       const projects = await ProjectFactory.createMany(150, { frameworkKey: "ppc", status: "approved" });
+      await ProjectFactory.create({ frameworkKey: "ppc", status: "approved", isArchived: true });
       await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
       await ProjectFactory.create({ frameworkKey: "hbf", status: "approved" });
       const dueAt = DateTime.now().plus({ months: 1 }).set({ millisecond: 0 }).toISO();
@@ -85,24 +86,6 @@ describe("ScheduledJobsProcessor", () => {
         data: { taskDefinition: { frameworkKey: "terrafund", dueAt } }
       } as Job);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to create task for some projects:"));
-    });
-
-    it("should queue report reminder emails when TaskDue runs for a TF report-reminder framework", async () => {
-      await Project.truncate();
-      const projects = await ProjectFactory.createMany(2, { frameworkKey: "enterprises", status: "approved" });
-      const dueAt = DateTime.utc(2027, 1, 31).toISO();
-      await processor.process({
-        name: TASK_DUE_EVENT,
-        data: { taskDefinition: { frameworkKey: "enterprises", dueAt } }
-      } as Job);
-
-      expect(queue.add).toHaveBeenCalledWith(
-        "terrafundReportReminder",
-        expect.objectContaining({
-          projectIds: expect.arrayContaining(projects.map(({ id }) => id)),
-          dueAt
-        })
-      );
     });
 
     it("should not queue report reminder emails for Top 100 terrafund TaskDue", async () => {

@@ -31,6 +31,13 @@ import { removeI18nFieldIdColumns } from "./202608100100-remove-i18n-field-id-co
 import { addPolygonAttributeTables } from "./202608131700-add-polygon-attribute-tables";
 import { nullUpdateRequestStatusDefault } from "./202608132200-null-update-request-status-default";
 import { convertBioeconomyProductColumnsToText } from "./202608141200-convert-bioeconomy-product-columns-to-text";
+import { updateTasks } from "./202608111527-update-tasks";
+import { addIsArchivedToProjectsSitesNurseries } from "./202608241200-add-is-archived-to-projects-sites-nurseries";
+import { convertDueAtToDate } from "./202608242200-convert-due-at-to-date";
+import { addPolygonGeometryApprovedView } from "./202608251200-add-polygon-geometry-approved-view";
+import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-beneficiaries-training-total-column";
+import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-to-polygon-attribute-definitions";
+import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -63,5 +70,12 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeI18nFieldIdColumns,
   addPolygonAttributeTables,
   nullUpdateRequestStatusDefault,
-  convertBioeconomyProductColumnsToText
+  convertBioeconomyProductColumnsToText,
+  updateTasks,
+  addOrderToPolygonAttributeDefinitions,
+  removeIsRequiredFromPolygonAttributeDefinitions,
+  addIsArchivedToProjectsSitesNurseries,
+  convertDueAtToDate,
+  addPolygonGeometryApprovedView,
+  addBeneficiariesTrainingTotalColumn
 ];

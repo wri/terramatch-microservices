@@ -20,6 +20,7 @@ import {
   Nursery,
   NurseryReport,
   Organisation,
+  PolygonAttributeDefinition,
   Project,
   ProjectPitch,
   ProjectPolygon,
@@ -59,6 +60,7 @@ import { ImpactStoryPolicy } from "./impact-story.policy";
 import { AnrPlotGeometryPolicy } from "./anr-plot-geometry.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
+import { PolygonAttributeDefinitionPolicy } from "./polygon-attribute-definition.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
 import { FormSubmissionPolicy } from "./form-submission.policy";
@@ -99,6 +101,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
   [Organisation, OrganisationPolicy],
+  [PolygonAttributeDefinition, PolygonAttributeDefinitionPolicy],
   [Project, ProjectPolicy],
   [ProjectPitch, ProjectPitchPolicy],
   [ProjectPolygon, ProjectPolygonPolicy],

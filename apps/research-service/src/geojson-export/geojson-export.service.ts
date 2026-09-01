@@ -12,15 +12,18 @@ import {
   SitePolygon,
   SitePolygonData
 } from "@terramatch-microservices/database/entities";
-import { PPC } from "@terramatch-microservices/database/constants";
+import { FrameworkKey, PPC } from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Geometry } from "geojson";
 import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { Includeable, Op } from "sequelize";
+import { CustomAttributeMap, PolygonAttributeValuesService } from "../site-polygons/polygon-attribute-values.service";
 
 @Injectable()
 export class GeoJsonExportService {
   private readonly logger = new Logger(GeoJsonExportService.name);
+
+  constructor(private readonly polygonAttributeValuesService: PolygonAttributeValuesService) {}
 
   private siteIncludeForGeoJson(): Includeable[] {
     return [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }];
@@ -96,7 +99,15 @@ export class GeoJsonExportService {
       extendedData = await this.getExtendedDataForSitePolygon(sitePolygon.uuid);
     }
 
-    const properties = this.buildProperties(sitePolygon, includeExtendedData, extendedData);
+    const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext([sitePolygon]);
+    const properties = this.buildProperties(
+      sitePolygon,
+      includeExtendedData,
+      extendedData,
+      undefined,
+      keysByFramework,
+      valuesByUuid
+    );
 
     return [
       {
@@ -152,6 +163,8 @@ export class GeoJsonExportService {
       }
     }
 
+    const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext(sitePolygons);
+
     const features: Feature[] = [];
     for (const sitePolygon of sitePolygons) {
       if (sitePolygon.polygonUuid == null) {
@@ -163,7 +176,14 @@ export class GeoJsonExportService {
         continue;
       }
 
-      const properties = this.buildProperties(sitePolygon, includeExtendedData, null, extendedDataMap);
+      const properties = this.buildProperties(
+        sitePolygon,
+        includeExtendedData,
+        null,
+        extendedDataMap,
+        keysByFramework,
+        valuesByUuid
+      );
 
       features.push({
         type: "Feature",
@@ -239,6 +259,8 @@ export class GeoJsonExportService {
       }
     }
 
+    const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext(sitePolygons);
+
     const features: Feature[] = [];
     for (const sitePolygon of sitePolygons) {
       if (sitePolygon.polygonUuid == null) {
@@ -250,7 +272,14 @@ export class GeoJsonExportService {
         continue;
       }
 
-      const properties = this.buildProperties(sitePolygon, includeExtendedData, null, extendedDataMap);
+      const properties = this.buildProperties(
+        sitePolygon,
+        includeExtendedData,
+        null,
+        extendedDataMap,
+        keysByFramework,
+        valuesByUuid
+      );
 
       features.push({
         type: "Feature",
@@ -262,11 +291,25 @@ export class GeoJsonExportService {
     return features;
   }
 
+  private async loadCustomAttributeExportContext(sitePolygons: SitePolygon[]): Promise<{
+    keysByFramework: Map<FrameworkKey, string[]>;
+    valuesByUuid: Map<string, CustomAttributeMap>;
+  }> {
+    const frameworkKeys = sitePolygons.map(sitePolygon => sitePolygon.site?.frameworkKey);
+    const keysByFramework = await this.polygonAttributeValuesService.getActiveKeysByFrameworkKeys(frameworkKeys);
+    const valuesByUuid = await this.polygonAttributeValuesService.getMapsByPolygonUuids(
+      sitePolygons.map(sitePolygon => sitePolygon.uuid)
+    );
+    return { keysByFramework, valuesByUuid };
+  }
+
   private buildProperties(
     sitePolygon: SitePolygon,
     includeExtendedData: boolean,
     extendedData?: Record<string, unknown> | null,
-    extendedDataMap?: Map<string, Record<string, unknown>> | null
+    extendedDataMap?: Map<string, Record<string, unknown>> | null,
+    keysByFramework?: Map<FrameworkKey, string[]>,
+    valuesByUuid?: Map<string, CustomAttributeMap>
   ): Record<string, unknown> {
     const properties: Record<string, unknown> = {
       uuid: sitePolygon.uuid,
@@ -295,6 +338,15 @@ export class GeoJsonExportService {
 
       if (dataToMerge != null) {
         Object.assign(properties, dataToMerge);
+      }
+    }
+
+    const frameworkKey = site?.frameworkKey;
+    if (frameworkKey != null && keysByFramework != null) {
+      const configuredKeys = keysByFramework.get(frameworkKey) ?? [];
+      const stored = valuesByUuid?.get(sitePolygon.uuid) ?? {};
+      for (const key of configuredKeys) {
+        properties[key] = stored[key] ?? null;
       }
     }
 

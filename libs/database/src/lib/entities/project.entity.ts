@@ -166,6 +166,9 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @Column({ type: BOOLEAN, defaultValue: false })
   declare isTest: CreationOptional<boolean>;
 
+  @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
+  declare isArchived: CreationOptional<boolean>;
+
   @AllowNull
   @Column(TEXT)
   declare name: string | null;

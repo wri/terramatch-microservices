@@ -11,6 +11,7 @@ import {
 import { Polygon } from "geojson";
 import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
 import { PPC } from "@terramatch-microservices/database/constants";
+import { PolygonAttributeValuesService } from "../site-polygons/polygon-attribute-values.service";
 
 jest.mock("@terramatch-microservices/database/entities", () => ({
   PolygonGeometry: {
@@ -44,13 +45,23 @@ describe("GeoJsonExportService", () => {
   const mockSitePolygonData = SitePolygonData as jest.Mocked<typeof SitePolygonData>;
   const mockProjectEntity = Project as jest.Mocked<typeof Project>;
 
+  const mockPolygonAttributeValuesService = {
+    getActiveKeysByFrameworkKeys: jest.fn().mockResolvedValue(new Map()),
+    getMapsByPolygonUuids: jest.fn().mockResolvedValue(new Map())
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [GeoJsonExportService]
+      providers: [
+        GeoJsonExportService,
+        { provide: PolygonAttributeValuesService, useValue: mockPolygonAttributeValuesService }
+      ]
     }).compile();
 
     service = module.get<GeoJsonExportService>(GeoJsonExportService);
     jest.clearAllMocks();
+    mockPolygonAttributeValuesService.getActiveKeysByFrameworkKeys.mockResolvedValue(new Map());
+    mockPolygonAttributeValuesService.getMapsByPolygonUuids.mockResolvedValue(new Map());
   });
 
   describe("getGeoJson", () => {
@@ -238,6 +249,74 @@ describe("GeoJsonExportService", () => {
 
         expect(result.features[0].properties).not.toHaveProperty("customField1");
         expect(mockSitePolygonData.findOne).not.toHaveBeenCalled();
+      });
+
+      it("should always include configured custom attribute keys with null when unset", async () => {
+        const query: GeoJsonQueryDto = {
+          uuid: polygonUuid,
+          includeExtendedData: false
+        };
+
+        const sitePolygonWithFramework = {
+          ...mockSitePolygonInstance,
+          site: {
+            uuid: siteUuid,
+            name: "Test Site",
+            frameworkKey: "terrafund"
+          }
+        } as unknown as SitePolygon;
+
+        mockPolygonGeometry.getGeoJSON.mockResolvedValue(mockGeoJsonString);
+        mockSitePolygon.findOne.mockResolvedValue(sitePolygonWithFramework);
+        mockPolygonAttributeValuesService.getActiveKeysByFrameworkKeys.mockResolvedValue(
+          new Map([["terrafund", ["anrSubcategory", "strata"]]])
+        );
+        mockPolygonAttributeValuesService.getMapsByPolygonUuids.mockResolvedValue(
+          new Map([[sitePolygonUuid, { anrSubcategory: "assisted" }]])
+        );
+
+        const result = await service.getGeoJson(query);
+
+        expect(result.features[0].properties).toMatchObject({
+          anrSubcategory: "assisted",
+          strata: null
+        });
+      });
+
+      it("should prefer stored custom attributes over colliding extended data keys", async () => {
+        const query: GeoJsonQueryDto = {
+          uuid: polygonUuid,
+          includeExtendedData: true
+        };
+
+        const sitePolygonWithFramework = {
+          ...mockSitePolygonInstance,
+          site: {
+            uuid: siteUuid,
+            name: "Test Site",
+            frameworkKey: "terrafund"
+          }
+        } as unknown as SitePolygon;
+
+        mockPolygonGeometry.getGeoJSON.mockResolvedValue(mockGeoJsonString);
+        mockSitePolygon.findOne.mockResolvedValue(sitePolygonWithFramework);
+        mockSitePolygonData.findOne.mockResolvedValue({
+          sitePolygonUuid,
+          data: { anrSubcategory: "stale-extended", leftover: "keep" }
+        } as unknown as SitePolygonData);
+        mockPolygonAttributeValuesService.getActiveKeysByFrameworkKeys.mockResolvedValue(
+          new Map([["terrafund", ["anrSubcategory"]]])
+        );
+        mockPolygonAttributeValuesService.getMapsByPolygonUuids.mockResolvedValue(
+          new Map([[sitePolygonUuid, { anrSubcategory: "farmer-managed" }]])
+        );
+
+        const result = await service.getGeoJson(query);
+
+        expect(result.features[0].properties).toMatchObject({
+          leftover: "keep",
+          anrSubcategory: "farmer-managed"
+        });
       });
 
       it("should include ppcExternalId for PPC framework sites", async () => {

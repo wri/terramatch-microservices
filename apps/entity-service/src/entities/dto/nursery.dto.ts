@@ -95,6 +95,11 @@ export class NurseryFullDto extends NurseryLightDto {
     populateDto<NurseryFullDto, Nursery>(this, nursery, { lightResource: false, ...props });
   }
 
+  @ApiProperty({
+    description: "When true, report generation is paused for this nursery. Independent of project archival."
+  })
+  isArchived: boolean;
+
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 

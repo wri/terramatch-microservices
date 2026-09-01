@@ -66,6 +66,11 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
       return;
     }
 
+    if (task.dueAt == null) {
+      this.logger.debug(`Task digest skipped: No due date [taskId=${taskId}]`);
+      return;
+    }
+
     const now = DateTime.now().setZone("Europe/Sofia");
     const dueAt = DateTime.fromJSDate(task.dueAt).setZone("Europe/Sofia");
     const oneWeekBeforeDue = dueAt.minus({ weeks: 1 });
@@ -107,13 +112,10 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
     const managerTaskLink = `${baseUrl}/admin#/task/${task.uuid}/show`;
     const pdTaskLink = `${baseUrl}/project/${task.project.uuid}/reporting-task/${task.uuid}`;
 
-    const projectName = task.project.name ?? "";
-    const dueDateFormatted = dueAt.toLocaleString(DateTime.DATE_MED);
-
     const i18nReplacements: Dictionary<string> = {
-      "{projectName}": projectName,
-      "{dueDate}": dueDateFormatted,
-      "{periodKey}": task.periodKey ?? ""
+      "{projectName}": task.project.name ?? "",
+      "{dueDate}": dueAt.toLocaleString(DateTime.DATE_MED),
+      "{periodKey}": `${dueAt.year}-${dueAt.month}`
     };
 
     const managers = recipients.filter(u => managingIds.has(u.id));

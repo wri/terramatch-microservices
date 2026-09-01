@@ -33,6 +33,7 @@ import {
 import { DuplicateGeometryValidator } from "../validations/validators/duplicate-geometry.validator";
 import {
   CriteriaId,
+  FrameworkKey,
   SITE_POLYGON_SUBMISSION_CYCLES,
   SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
@@ -840,9 +841,7 @@ export class SitePolygonCreationService {
       await SitePolygonData.bulkCreate(additionalDataRecords as SitePolygonData[], { transaction });
     }
 
-    for (const { sitePolygonUuid, attributes } of pendingCustomAttributes) {
-      await this.polygonAttributeValuesService.upsert(sitePolygonUuid, frameworkKey, attributes, transaction);
-    }
+    await this.polygonAttributeValuesService.bulkUpsert(frameworkKey, pendingCustomAttributes, transaction);
 
     if (polygonUuids.length > 0) {
       await CriteriaSite.destroy({
@@ -938,6 +937,59 @@ export class SitePolygonCreationService {
     return this.versioningService.createVersions(versionEntries, transaction);
   }
 
+  async resolveNonNullCustomAttributesFromProperties(
+    properties: Record<string, unknown>,
+    siteUuid: string,
+    transaction?: Transaction
+  ): Promise<AttributeChangesDto["customAttributes"] | undefined> {
+    const { matchedPerFeature } = await this.resolveCustomAttributeUploadContext([properties], siteUuid, transaction);
+    return matchedPerFeature[0];
+  }
+
+  async resolveCustomAttributeUploadContext(
+    propertiesList: Record<string, unknown>[],
+    siteUuid: string,
+    transaction?: Transaction
+  ): Promise<{
+    frameworkKey: FrameworkKey | null;
+    matchedPerFeature: Array<AttributeChangesDto["customAttributes"] | undefined>;
+  }> {
+    if (propertiesList.length === 0) {
+      return { frameworkKey: null, matchedPerFeature: [] };
+    }
+
+    const site = await Site.findOne({
+      where: { uuid: siteUuid },
+      attributes: ["uuid", "frameworkKey"],
+      transaction
+    });
+    const frameworkKey = site?.frameworkKey ?? null;
+    const matchedList = await this.polygonAttributeValuesService.pickMatchingFromPropertiesBatch(
+      propertiesList,
+      frameworkKey,
+      transaction
+    );
+
+    return {
+      frameworkKey,
+      matchedPerFeature: matchedList.map(matched => {
+        const nonNull = this.polygonAttributeValuesService.filterNonNullAttributes(matched);
+        return Object.keys(nonNull).length > 0 ? nonNull : undefined;
+      })
+    };
+  }
+
+  async bulkPersistCustomAttributes(
+    frameworkKey: FrameworkKey | null | undefined,
+    rows: Array<{
+      sitePolygonUuid: string;
+      attributes: NonNullable<AttributeChangesDto["customAttributes"]>;
+    }>,
+    transaction: Transaction
+  ): Promise<void> {
+    await this.polygonAttributeValuesService.bulkUpsert(frameworkKey, rows, transaction);
+  }
+
   async createSitePolygonVersion(
     baseSitePolygonUuid: string,
     newGeometry: CreateSitePolygonRequestDto[] | undefined,
@@ -947,7 +999,8 @@ export class SitePolygonCreationService {
     userFullName: string | null,
     source: string,
     transaction: Transaction,
-    isAdminSession = false
+    isAdminSession = false,
+    persistCustomAttributes = true
   ): Promise<SitePolygon> {
     const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid, transaction);
 
@@ -1012,7 +1065,7 @@ export class SitePolygonCreationService {
       transaction
     );
 
-    if (attributeChanges?.customAttributes != null) {
+    if (persistCustomAttributes && attributeChanges?.customAttributes != null) {
       const site = await basePolygon.loadSite();
       await this.polygonAttributeValuesService.upsert(
         newVersion.uuid,
@@ -1190,6 +1243,15 @@ export class SitePolygonCreationService {
     }
 
     const newVersion = await SitePolygon.sequelize.transaction(async transaction => {
+      const customAttributes = await this.resolveNonNullCustomAttributesFromProperties(
+        allProperties,
+        siteId,
+        transaction
+      );
+      if (customAttributes != null) {
+        attributeChanges.customAttributes = customAttributes;
+      }
+
       return await this.createSitePolygonVersion(
         sitePolygonUuid,
         versionGeometries,

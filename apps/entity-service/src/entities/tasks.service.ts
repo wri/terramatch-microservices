@@ -98,7 +98,7 @@ export class TasksService {
   }
 
   async addFullTaskDto(document: DocumentBuilder, task: Task) {
-    const taskResource = await TasksSerializer.addFullDto(document, task);
+    const taskResource = await TasksSerializer.addDto(document, task);
     await this.loadReports(task);
     for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);

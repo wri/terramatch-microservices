@@ -1,4 +1,4 @@
-import { modelOrNotFound, ModelSerializer } from "./util";
+import { modelOrNotFound, ModelSerializer } from "./model-serializer";
 import { SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { buildJsonApi, DocumentBuilder } from "../util";
 import { Includeable } from "sequelize";
@@ -24,7 +24,7 @@ export const TasksSerializer: ModelSerializer<Task> = {
     return buildJsonApi<TaskFullDto>(TaskFullDto);
   },
 
-  async addFullDto(document: DocumentBuilder, task: Task) {
+  async addDto(document: DocumentBuilder, task: Task) {
     const treesPlantedCount =
       (await TreeSpecies.visible()
         .collection("tree-planted")

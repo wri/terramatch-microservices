@@ -9,7 +9,7 @@ import {
 } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { UserGateway } from "./user.gateway";
-import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/util";
+import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
 import { TasksSerializer } from "@terramatch-microservices/common/modelSerializers/tasks.serializer";
 
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
@@ -57,6 +57,6 @@ export class UserSocketProcessor extends WorkerHost {
     }
 
     const instance = await serializer.findById(modelId);
-    return (await serializer.addFullDto(serializer.createDocument(), instance)).document.serialize();
+    return (await serializer.addDto(serializer.createDocument(), instance)).document.serialize();
   }
 }

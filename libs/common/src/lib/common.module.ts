@@ -25,8 +25,9 @@ import { GreenhouseNotificationService } from "./notifications/greenhouse-notifi
 import { UserContextMiddleware } from "./middleware/user-context.middleware";
 import { GwcTileInvalidationService } from "./gwc/gwc-tile-invalidation.service";
 import { ProductEventService } from "./product-events/product-event.service";
+import { USER_DATA_PUSH_QUEUE, UserDataPushService } from "./userDataPush/user-data-push.service";
 
-export const QUEUES = ["email", "analytics", "entities", "greenhouse", "userSocket"];
+export const QUEUES = ["email", "analytics", "entities", "greenhouse", USER_DATA_PUSH_QUEUE];
 const IS_REPL = process.env["REPL"] === "true";
 
 @Module({
@@ -80,6 +81,7 @@ const IS_REPL = process.env["REPL"] === "true";
     UserContextMiddleware,
     GwcTileInvalidationService,
     ProductEventService,
+    UserDataPushService,
 
     ...(IS_REPL ? [] : [GreenhouseNotificationProcessor, EmailProcessor, AnalyticsProcessor])
   ],

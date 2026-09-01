@@ -119,8 +119,14 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
   }
 
-  static forCohort(cohort: string) {
-    return Subquery.select(Project, "id").eq("cohort", cohort).literal;
+  static forCohort(cohort: string | string[]) {
+    const subquery = Subquery.select(Project, "id");
+    return (typeof cohort === "string" ? subquery.eq("cohort", cohort) : subquery.in("cohort", cohort)).literal;
+  }
+
+  static organisationIdsForCohort(cohort: string | string[]) {
+    const subquery = Subquery.select(Project, "organisationId", { distinct: true });
+    return (typeof cohort === "string" ? subquery.eq("cohort", cohort) : subquery.in("cohort", cohort)).literal;
   }
 
   static forLandscape(landscapeName: string) {

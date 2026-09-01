@@ -174,6 +174,10 @@ export class ProjectReportProcessor extends ReportProcessor<
       }
     }
 
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ projectId: { [Op.in]: Project.forCohort(query.cohort) } });
+    }
+
     if (query.taskId != null) {
       builder.where({ taskId: query.taskId });
     }

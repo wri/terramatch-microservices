@@ -17,7 +17,8 @@ import {
   FinancialReportFactory,
   FundingTypeFactory,
   MediaFactory,
-  OrganisationFactory
+  OrganisationFactory,
+  ProjectFactory
 } from "@terramatch-microservices/database/factories";
 import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -109,6 +110,17 @@ describe("FinancialReportProcessor", () => {
       await FinancialReportFactory.org(organisation2).createMany(3);
 
       await expectFinancialReports(reports1, { organisationUuid: organisation1.uuid });
+    });
+
+    it("filters by cohort", async () => {
+      const organisation1 = await OrganisationFactory.create();
+      const organisation2 = await OrganisationFactory.create();
+      await ProjectFactory.create({ organisationId: organisation1.id, cohort: "terrafund" });
+      await ProjectFactory.create({ organisationId: organisation2.id, cohort: "ppc" });
+      const matching = await FinancialReportFactory.org(organisation1).create();
+      await FinancialReportFactory.org(organisation2).create();
+
+      await expectFinancialReports([matching], { cohort: ["terrafund"] });
     });
 
     it("should search by organisation name", async () => {

@@ -212,7 +212,12 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Number })
   totalHectaresRestoredGoal: number | null;
 
-  @ApiProperty({ nullable: true, type: Number })
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description:
+      "Project trees restored goal: sum of trees-planted-goal year entries (plus any remaining trees-goal year entries) and trees-goal ANR and direct-seeding strategy amounts."
+  })
   treesGrownGoal: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
@@ -322,7 +327,7 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({
     description:
-      "Expected trees restored from project tree goals: (sum of trees-goal tracking entries with type years) × (survivalRate / 100) + ANR strategy goal, rounded to the nearest integer."
+      "Expected trees restored from project tree goals: (sum of trees-planted-goal year entries, plus any remaining trees-goal year entries) × (survivalRate / 100) + ANR strategy goal, rounded to the nearest integer."
   })
   treesToBeRestoredGoal: number;
 

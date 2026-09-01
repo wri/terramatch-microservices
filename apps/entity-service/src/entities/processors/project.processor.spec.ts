@@ -788,6 +788,30 @@ describe("ProjectProcessor", () => {
       });
     });
 
+    it("includes trees-planted-goal years in restoration goals", async () => {
+      const survivalRate = 80;
+      const { uuid } = await ProjectFactory.create({ survivalRate });
+      const project = (await processor.findOne(uuid)) as Project;
+
+      const treesGoal = await TrackingFactory.projectTreesGoal(project).create();
+      const treesPlantedGoal = await TrackingFactory.projectTreesGoal(project).create({
+        type: Tracking.TREES_PLANTED_GOAL_TYPE
+      });
+      const yearEntries = await Promise.all([
+        TrackingEntryFactory.years(treesPlantedGoal, "1-year").create({ amount: 1000 }),
+        TrackingEntryFactory.years(treesPlantedGoal, "2-year").create({ amount: 500 })
+      ]);
+      const anr = await TrackingEntryFactory.strategy(treesGoal, "anr").create({ amount: 200 });
+      const directSeeding = await TrackingEntryFactory.strategy(treesGoal, "direct-seeding").create({ amount: 50 });
+      const treesPlantedGoalYears = sumBy(yearEntries, "amount");
+
+      const { dto } = await processor.getFullDto(project);
+      expect(dto.treesGrownGoal).toEqual(treesPlantedGoalYears + anr.amount + directSeeding.amount);
+      expect(dto.goalTreesRestoredAnr).toEqual(anr.amount);
+      expect(dto.seedsGrownGoal).toEqual(directSeeding.amount);
+      expect(dto.treesToBeRestoredGoal).toEqual(Math.round(treesPlantedGoalYears * (survivalRate / 100) + anr.amount));
+    });
+
     it("loads association data", async () => {
       const project = await ProjectFactory.create();
       const sites = await SiteFactory.createMany(2, { status: "approved", projectId: project.id });

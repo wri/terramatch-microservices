@@ -522,7 +522,7 @@ export class ProjectProcessor extends EntityProcessor<
   protected async getRestorationGoals(project: Project) {
     const trackings = await Tracking.for(project)
       .domain("restoration")
-      .type(["hectares-goal", "trees-goal"])
+      .type(["hectares-goal", "trees-goal", Tracking.TREES_PLANTED_GOAL_TYPE])
       .collection("all")
       .findAll({
         include: [{ association: "entries" }]
@@ -533,23 +533,25 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
-    const trees = trackings.find(({ type }) => type === "trees-goal");
-    // trees grown goal is a bit more complicated: it's the sum of years + anr + direct seeding.
-    const treesGrownGoal = sumBy(
-      (trees?.entries ?? []).filter(
-        ({ type, subtype }) =>
-          type === "years" || (type === "strategy" && ["anr", "direct-seeding"].includes(subtype ?? ""))
-      ),
+    const trees = trackings.find(({ type }) => type === Tracking.TREES_GOAL_TYPE);
+    const treesPlantedGoal = trackings.find(({ type }) => type === Tracking.TREES_PLANTED_GOAL_TYPE);
+    // Year entries moved to trees-planted-goal in TM-3721; still sum trees-goal years for unmigrated rows.
+    const treesPlantedGoalYears = sumBy(
+      [...(treesPlantedGoal?.entries ?? []), ...(trees?.entries ?? [])].filter(({ type }) => type === "years"),
       "amount"
     );
+    // trees grown goal is years + anr + direct seeding.
+    const treesGrownGoal =
+      treesPlantedGoalYears +
+      sumBy(
+        (trees?.entries ?? []).filter(
+          ({ type, subtype }) => type === "strategy" && ["anr", "direct-seeding"].includes(subtype ?? "")
+        ),
+        "amount"
+      );
 
     const goalTreesRestoredAnr = sumBy(
       (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "anr"),
-      "amount"
-    );
-
-    const treesPlantedGoalYears = sumBy(
-      (trees?.entries ?? []).filter(({ type }) => type === "years"),
       "amount"
     );
     const survivalRateFraction = (project.survivalRate ?? 0) / 100;

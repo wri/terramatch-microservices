@@ -8,7 +8,7 @@ import { TaskFactory } from "@terramatch-microservices/database/factories";
 import { Task } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
 import { Resource } from "@terramatch-microservices/common/util";
-import { TaskLightDto } from "./dto/task.dto";
+import { TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
 import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
 describe("TasksController", () => {

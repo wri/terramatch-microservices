@@ -131,7 +131,7 @@ export class ServiceStack extends Stack {
         // connection. Running websockets through Api Gateway to a load balancer is not supported -
         // we would have to use a stateless socket connection system instead.
         publicLoadBalancer: service === SOCKET_SERVICE,
-        loadBalancerName: `${service}-${env}`,
+        loadBalancerName: `${service}-${env}-${service === SOCKET_SERVICE ? "public" : "private"}`,
         circuitBreaker: { enable: true, rollback: true }
       })
     );

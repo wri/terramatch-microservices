@@ -70,7 +70,7 @@ export class ServiceStack extends Stack {
     );
     const image = ContainerImage.fromEcrRepository(repository, imageTag);
 
-    // Identify our pre-configured cluster.
+    // Create a cluster.
     const vpc = Vpc.fromLookup(this, "wri-terramatch-vpc", {
       vpcId: "vpc-0beac5973796d96b1"
     });

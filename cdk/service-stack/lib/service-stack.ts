@@ -74,9 +74,9 @@ export class ServiceStack extends Stack {
     const vpc = Vpc.fromLookup(this, "wri-terramatch-vpc", {
       vpcId: "vpc-0beac5973796d96b1"
     });
-    const cluster = Cluster.fromClusterAttributes(this, "terramatch-microservices", {
-      clusterName: "terramatch-microservices",
-      clusterArn: "arn:aws:ecs:eu-west-1:603634817705:cluster/terramatch-microservices",
+    const cluster = Cluster.fromClusterAttributes(this, `terramatch-microservices-${env}`, {
+      clusterName: `terramatch-microservices-${env}`,
+      clusterArn: `arn:aws:ecs:eu-west-1:603634817705:cluster/terramatch-microservices-${env}`,
       vpc
     });
 
@@ -120,7 +120,7 @@ export class ServiceStack extends Stack {
             logGroup: LogGroup.fromLogGroupName(this, `${service}-${env}`, `ecs/${service}-${env}`),
             streamPrefix: `${service}-${env}`
           }),
-          executionRole: Role.fromRoleName(this, "ecsTaskExecutionRole", "ecsTaskExecutionRole")
+          executionRole: Role.fromRoleName(this, `ecsTaskExecutionRole-${env}`, `ecsTaskExecutionRole-${env}`)
         },
         securityGroups: securityGroups,
         taskSubnets: { subnets: privateSubnets },

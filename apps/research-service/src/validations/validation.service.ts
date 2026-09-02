@@ -134,7 +134,49 @@ export class ValidationService {
       .map(polygon => polygon.polygonUuid)
       .filter(uuid => uuid !== null) as string[];
 
-    if (allPolygonUuids.length === 0) {
+    return this.getValidationsForPolygonUuids(allPolygonUuids, pageSize, pageNumber, criteriaId);
+  }
+
+  async getProjectValidations(
+    projectUuid: string,
+    pageSize: number,
+    pageNumber = 1,
+    criteriaId?: CriteriaId
+  ): Promise<{
+    validations: ValidationDto[];
+    total: number;
+  }> {
+    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+      throw new BadRequestException(`Invalid page size: ${pageSize}`);
+    }
+    if (pageNumber < 1) {
+      throw new BadRequestException(`Invalid page number: ${pageNumber}`);
+    }
+
+    const project = await Project.findOne({
+      where: { uuid: projectUuid },
+      attributes: ["id"]
+    });
+
+    if (project === null) {
+      throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
+    }
+
+    const polygonUuids = await this.getProjectPolygonUuidsForValidation(project.id);
+
+    return this.getValidationsForPolygonUuids(polygonUuids, pageSize, pageNumber, criteriaId);
+  }
+
+  private async getValidationsForPolygonUuids(
+    polygonUuids: string[],
+    pageSize: number,
+    pageNumber = 1,
+    criteriaId?: CriteriaId
+  ): Promise<{
+    validations: ValidationDto[];
+    total: number;
+  }> {
+    if (polygonUuids.length === 0) {
       return {
         validations: [],
         total: 0
@@ -142,7 +184,7 @@ export class ValidationService {
     }
 
     const allCriteriaData = await CriteriaSite.findAll({
-      where: { polygonId: allPolygonUuids },
+      where: { polygonId: polygonUuids },
       attributes: ["polygonId", "criteriaId", "valid", "createdAt", "extraInfo"],
       order: [["createdAt", "DESC"]]
     });

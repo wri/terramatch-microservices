@@ -46,6 +46,8 @@ const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, ApplicationLoadBa
   }
 };
 
+const SOCKET_SERVICE = "user-service";
+
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
   const recommendation = RIGHTSIZE_RECOMMENDATIONS[service]?.[env];
   if (recommendation != null) {
@@ -124,8 +126,11 @@ export class ServiceStack extends Stack {
         },
         securityGroups: securityGroups,
         taskSubnets: { subnets: privateSubnets },
-        assignPublicIp: false,
-        publicLoadBalancer: false,
+        // For the websocket service, we have to make the load balancer public for direct socket
+        // connection. Running websockets through Api Gateway to a load balancer is not supported -
+        // we would have to use a stateless socket connection system instead.
+        assignPublicIp: service === SOCKET_SERVICE,
+        publicLoadBalancer: service === SOCKET_SERVICE,
         loadBalancerName: `${service}-${env}`,
         circuitBreaker: { enable: true, rollback: true }
       })
@@ -136,7 +141,7 @@ export class ServiceStack extends Stack {
       timeout: Duration.seconds(3)
     });
     fargateService.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "45");
-    if (service === "user-service") {
+    if (service === SOCKET_SERVICE) {
       fargateService.targetGroup.enableCookieStickiness(Duration.days(1));
     }
     Tags.of(fargateService.loadBalancer).add("service", `${service}-${env}`);

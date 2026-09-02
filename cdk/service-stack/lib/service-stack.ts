@@ -136,6 +136,9 @@ export class ServiceStack extends Stack {
       timeout: Duration.seconds(3)
     });
     fargateService.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "45");
+    if (service === "user-service") {
+      fargateService.targetGroup.enableCookieStickiness(Duration.days(1));
+    }
     Tags.of(fargateService.loadBalancer).add("service", `${service}-${env}`);
   }
 }

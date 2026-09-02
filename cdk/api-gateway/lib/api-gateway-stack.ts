@@ -7,28 +7,34 @@ import {
   HttpApiProps,
   HttpMethod,
   IVpcLink,
-  VpcLink
+  VpcLink,
+  WebSocketApi,
+  CfnIntegration,
+  CfnRoute
 } from "aws-cdk-lib/aws-apigatewayv2";
-import { HttpAlbIntegration, HttpUrlIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import { HttpAlbIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { ApplicationListener, IApplicationListener } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
 
-const V3_SERVICES = {
-  "user-service": ["auth", "users", "organisations", "userAssociations", "userSockets"],
-  "job-service": ["jobs"],
-  "entity-service": [
-    "entities",
-    "trees",
-    "forms",
-    "applications",
-    "fundingProgrammes",
-    "reportingFrameworks",
-    "aboutSections"
-  ],
-  "research-service": ["research", "boundingBoxes", "validations", "polygonClipping"],
-  "dashboard-service": ["dashboard"],
-  "unified-database-service": ["unified-database"]
+type ServiceDefinition = { namespaces: string[]; sockets?: string[] };
+const V3_SERVICES: Record<string, ServiceDefinition> = {
+  "user-service": { namespaces: ["auth", "users", "organisations", "userAssociations"], sockets: ["userSockets"] },
+  "job-service": { namespaces: ["jobs"] },
+  "entity-service": {
+    namespaces: [
+      "entities",
+      "trees",
+      "forms",
+      "applications",
+      "fundingProgrammes",
+      "reportingFrameworks",
+      "aboutSections"
+    ]
+  },
+  "research-service": { namespaces: ["research", "boundingBoxes", "validations", "polygonClipping"] },
+  "dashboard-service": { namespaces: ["dashboard"] },
+  "unified-database-service": { namespaces: ["unified-database"] }
 };
 
 const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
@@ -54,10 +60,9 @@ const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
   }
 };
 
-type AddProxyProps = { targetHost: string; service?: never } | { targetHost?: never; service: string };
-
 export class ApiGatewayStack extends Stack {
   private readonly _httpApi: HttpApi;
+  private readonly _websocketApi: WebSocketApi;
   private readonly _env: string;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -97,47 +102,27 @@ export class ApiGatewayStack extends Stack {
     };
 
     this._httpApi = new HttpApi(this, `TerraMatch API Gateway - ${this._env}`, httpApiProps);
+    this._websocketApi = new WebSocketApi(this, `TerraMatch Websocket Gateway - ${this._env}`, {
+      apiName: `TerraMatch Websocket Gateway - ${this._env}`
+    });
 
-    for (const [service, namespaces] of Object.entries(V3_SERVICES)) {
+    for (const [service, { namespaces, sockets }] of Object.entries(V3_SERVICES)) {
       if (!enabledServices.includes(service)) continue;
 
-      this.addProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/`, { service });
+      this.addAlbProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/{proxy+}`, service);
 
       for (const namespace of namespaces) {
-        this.addProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/`, { service });
+        this.addAlbProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/{proxy+}`, service);
+      }
+
+      for (const socket of sockets ?? []) {
+        this.addWebsocketProxy(`V3 Socket [${service}/${socket}]`, `/${socket}/v3/{proxy+}`, service);
       }
     }
   }
 
-  private addProxy(name: string, path: string, { targetHost, service }: AddProxyProps) {
-    const sourcePath = `${path}{proxy+}`;
-    if (targetHost == null) {
-      this.addAlbProxy(name, sourcePath, service);
-    } else {
-      this.addHttpUrlProxy(name, sourcePath, `${targetHost}${path}{proxy}`);
-    }
-  }
-
-  private addHttpUrlProxy(name: string, sourcePath: string, targetUrl: string) {
-    this._httpApi.addRoutes({
-      path: sourcePath,
-      methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
-      integration: new HttpUrlIntegration(name, targetUrl)
-    });
-  }
-
   private _serviceListeners: Map<string, IApplicationListener> = new Map();
-  private _vpcLink: IVpcLink;
-  private addAlbProxy(name: string, sourcePath: string, service: string) {
-    if (this._vpcLink == null) {
-      this._vpcLink = VpcLink.fromVpcLinkAttributes(this, `vpc-link-${this._env}`, {
-        vpcLinkId: "t74cf1",
-        vpc: Vpc.fromLookup(this, "wri-terramatch-vpc", {
-          vpcId: "vpc-0beac5973796d96b1"
-        })
-      });
-    }
-
+  private getServiceListener(service: string) {
     let serviceListener = this._serviceListeners.get(service);
     if (serviceListener == null) {
       this._serviceListeners.set(
@@ -148,10 +133,62 @@ export class ApiGatewayStack extends Stack {
       );
     }
 
+    return serviceListener;
+  }
+
+  private _vpcLink: IVpcLink;
+  private getVpcLink() {
+    if (this._vpcLink == null) {
+      this._vpcLink = VpcLink.fromVpcLinkAttributes(this, `vpc-link-${this._env}`, {
+        vpcLinkId: "t74cf1",
+        vpc: Vpc.fromLookup(this, "wri-terramatch-vpc", {
+          vpcId: "vpc-0beac5973796d96b1"
+        })
+      });
+    }
+
+    return this._vpcLink;
+  }
+
+  private addAlbProxy(name: string, sourcePath: string, service: string) {
+    const vpcLink = this.getVpcLink();
+    const serviceListener = this.getServiceListener(service);
     this._httpApi.addRoutes({
       path: sourcePath,
       methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
-      integration: new HttpAlbIntegration(name, serviceListener, { vpcLink: this._vpcLink })
+      integration: new HttpAlbIntegration(name, serviceListener, { vpcLink })
+    });
+  }
+
+  private addWebsocketProxy(name: string, sourcePath: string, service: string) {
+    const vpcLink = this.getVpcLink();
+    const serviceListener = this.getServiceListener(service);
+    const integration = new CfnIntegration(this, name, {
+      apiId: this._websocketApi.apiId,
+      integrationType: "HTTP_PROXY",
+      integrationMethod: "ANY",
+      connectionType: "VPC_LINK",
+      connectionId: vpcLink.vpcLinkRef.vpcLinkId,
+      integrationUri: serviceListener.listenerArn,
+      requestParameters: {
+        "integration.request.header.Connection": "'Upgrade'"
+      }
+    });
+
+    new CfnRoute(this, "ConnectRoute", {
+      apiId: this._websocketApi.apiId,
+      routeKey: "$connect",
+      target: `integrations/${integration.ref}`
+    });
+    new CfnRoute(this, "ConnectRoute", {
+      apiId: this._websocketApi.apiId,
+      routeKey: "$disconnect",
+      target: `integrations/${integration.ref}`
+    });
+    new CfnRoute(this, "ConnectRoute", {
+      apiId: this._websocketApi.apiId,
+      routeKey: "$default",
+      target: `integrations/${integration.ref}`
     });
   }
 }

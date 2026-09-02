@@ -96,6 +96,12 @@ export const TaskStatusStates: States<Task, TaskStatus> = {
 export const NO_UPDATE = "no-update";
 /** Active update-request statuses. Absence of a change request is represented as NULL (not no-update). */
 export const UPDATE_REQUEST_STATUSES = [DRAFT, PENDING_APPROVAL, APPROVED, INFORMATION_REQUIRED] as const;
+/** Base entity statuses that may have an active change request. Draft/pending-approval must keep updateRequestStatus NULL. */
+export const CHANGE_REQUEST_ENTITY_STATUSES = [APPROVED, INFORMATION_REQUIRED] as const;
+
+export const entityAllowsChangeRequest = (status: string | null | undefined) =>
+  (CHANGE_REQUEST_ENTITY_STATUSES as readonly string[]).includes(status ?? "");
+
 export type UpdateRequestStatus = (typeof UPDATE_REQUEST_STATUSES)[number];
 /** @deprecated Prefer NULL on entity update_request_status; kept for legacy comparisons during migration. */
 export type UpdateRequestStatusOrLegacyNoUpdate = UpdateRequestStatus | typeof NO_UPDATE;

@@ -70,13 +70,14 @@ export class ServiceStack extends Stack {
     );
     const image = ContainerImage.fromEcrRepository(repository, imageTag);
 
-    // Create a cluster.
+    // Identify our pre-configured cluster.
     const vpc = Vpc.fromLookup(this, "wri-terramatch-vpc", {
       vpcId: "vpc-0beac5973796d96b1"
     });
-    const cluster = new Cluster(this, `terramatch-microservices-${env}`, {
-      vpc: vpc,
-      clusterName: `terramatch-microservices-${env}`
+    const cluster = Cluster.fromClusterAttributes(this, "terramatch-microservices", {
+      clusterName: "terramatch-microservices",
+      clusterArn: "arn:aws:ecs:eu-west-1:603634817705:cluster/terramatch-microservices",
+      vpc
     });
 
     // The staging redis security group has an inconsistent name

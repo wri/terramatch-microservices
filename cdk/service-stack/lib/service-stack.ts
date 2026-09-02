@@ -76,7 +76,7 @@ export class ServiceStack extends Stack {
     });
     const cluster = new Cluster(this, `terramatch-microservices-${env}`, {
       vpc: vpc,
-      clusterName: "production-core-cluster"
+      clusterName: `terramatch-microservices-${env}`
     });
 
     // The staging redis security group has an inconsistent name

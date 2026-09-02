@@ -11,6 +11,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilderInterceptor } from "@terramatch-microservices/common/util/document-builder-interceptor";
+import { WsAdapter } from "@nestjs/platform-ws";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -40,6 +41,9 @@ async function bootstrap() {
   );
 
   app.useGlobalInterceptors(new DocumentBuilderInterceptor());
+
+  // Only used in local dev, but OK to expose in AWS as well.
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   const port = process.env.NODE_ENV === "production" ? 80 : (process.env.USER_SERVICE_PORT ?? 4010);
   await app.listen(port);

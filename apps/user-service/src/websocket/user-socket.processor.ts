@@ -8,9 +8,10 @@ import {
   UserDataPushEvent
 } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
-import { UserGateway } from "./user.gateway";
+import { AuthenticatedSocket, UserGateway } from "./user.gateway";
 import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
 import { TasksSerializer } from "@terramatch-microservices/common/modelSerializers/tasks.serializer";
+import { WebSocket } from "ws";
 
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
   tasks: TasksSerializer
@@ -43,14 +44,40 @@ export class UserSocketProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Model missing for user push event ${JSON.stringify(data)}`);
     }
 
-    if ((await this.gateway.server.in(`user:${userId}`).fetchSockets()).length === 0) {
-      return; // skip loading the model and serializing the DTO if there's nobody listening.
-    }
-
-    this.gateway.server.in(`user:${userId}`).emit("userDataPush", await this.serializeDto(model, modelId));
+    await this.sendModelUpdate(userId, model, modelId);
   }
 
-  async serializeDto(model: UserDataModel, modelId: number) {
+  private async sendModelUpdate(userId: number, model: UserDataModel, modelId: number) {
+    if (process.env.NODE_ENV === "development") {
+      // In local development, the client connects directly to this service's websocket connection,
+      // and we manage it all locally
+      await this.sendDevModelUpdate(userId, model, modelId);
+    } else {
+      // In AWS, the client connects to the Api Gateway websocket connection, and we send a request
+      // to the AWS service to push an update to the client.
+      await this.sendAwsModelUpdate(userId, model, modelId);
+    }
+  }
+
+  private async sendDevModelUpdate(userId: number, model: UserDataModel, modelId: number) {
+    const clients = [
+      ...(this.gateway.server.clients as Set<AuthenticatedSocket>)
+        .values()
+        .filter(client => client.userId === userId && client.readyState === WebSocket.OPEN)
+    ];
+    if (clients.length === 0) return;
+
+    const payload = JSON.stringify({ event: "userDataPush", data: await this.serializeDto(model, modelId) });
+    for (const client of clients) {
+      client.send(payload);
+    }
+  }
+
+  private async sendAwsModelUpdate(userId: number, model: UserDataModel, modelId: number) {
+    throw new NotImplementedException();
+  }
+
+  private async serializeDto(model: UserDataModel, modelId: number) {
     const serializer = SERIALIZERS[model];
     if (serializer == null) {
       throw new InternalServerErrorException(`Invalid model: ${model}`);

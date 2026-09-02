@@ -180,12 +180,12 @@ export class ApiGatewayStack extends Stack {
       routeKey: "$connect",
       target: `integrations/${integration.ref}`
     });
-    new CfnRoute(this, "ConnectRoute", {
+    new CfnRoute(this, "DisconnectRoute", {
       apiId: this._websocketApi.apiId,
       routeKey: "$disconnect",
       target: `integrations/${integration.ref}`
     });
-    new CfnRoute(this, "ConnectRoute", {
+    new CfnRoute(this, "DefaultRoute", {
       apiId: this._websocketApi.apiId,
       routeKey: "$default",
       target: `integrations/${integration.ref}`

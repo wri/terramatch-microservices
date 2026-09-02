@@ -7,6 +7,7 @@ import {
   ProjectFactory,
   ProjectReportFactory,
   SiteReportFactory,
+  UpdateRequestFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
@@ -22,7 +23,7 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityUpdateData } from "../dto/entity-update.dto";
 import { EntityCreateData } from "../dto/entity-create.dto";
 import { FindOptions, WhereOptions } from "sequelize";
-import { ProjectUser } from "@terramatch-microservices/database/entities";
+import { ProjectUser, UpdateRequest } from "@terramatch-microservices/database/entities";
 
 export const mockEntityService = async () => {
   const userId = (await UserFactory.create()).id;
@@ -138,6 +139,48 @@ describe("EntityProcessor", () => {
       expect(project.status).toEqual("approved");
       expect(project.feedback).toEqual("foo");
       expect(project.feedbackFields).toEqual(["bar"]);
+    });
+
+    it("submits a change request when the entity is approved", async () => {
+      const project = await ProjectFactory.create({ status: "approved", updateRequestStatus: "draft" });
+      const updateRequest = await UpdateRequestFactory.project(project).create({ status: "draft" });
+      await createProcessor().update(project, { status: "pending-approval" });
+      await updateRequest.reload();
+      expect(updateRequest.status).toBe("pending-approval");
+      expect(project.status).toBe("approved");
+    });
+
+    it("clears a change request when submitting an entity that is pending-approval", async () => {
+      const project = await ProjectFactory.create({
+        status: "draft",
+        updateRequestStatus: "draft"
+      });
+      const updateRequest = await UpdateRequestFactory.project(project).create({ status: "draft" });
+      await createProcessor().update(project, { status: "pending-approval" });
+      expect(await UpdateRequest.findByPk(updateRequest.id)).toBeNull();
+      expect(project.status).toBe("pending-approval");
+      expect(project.updateRequestStatus).toBeNull();
+    });
+
+    it("clears updateRequestStatus when submitting without a change request", async () => {
+      const project = await ProjectFactory.create({
+        status: "draft",
+        updateRequestStatus: "approved"
+      });
+      await createProcessor().update(project, { status: "pending-approval" });
+      expect(project.status).toBe("pending-approval");
+      expect(project.updateRequestStatus).toBeNull();
+    });
+
+    it("clears updateRequestStatus when requesting more information on pending-approval", async () => {
+      const project = await ProjectFactory.create({
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
+      jest.spyOn(policyService, "authorize").mockResolvedValue();
+      await createProcessor().update(project, { status: "information-required" });
+      expect(project.status).toBe("information-required");
+      expect(project.updateRequestStatus).toBeNull();
     });
 
     describe("nothingToReport", () => {

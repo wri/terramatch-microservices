@@ -28,7 +28,7 @@ import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/com
 import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
+import { DUE, DRAFT, entityAllowsChangeRequest } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -45,9 +45,15 @@ export class FormDataService {
 
   async storeEntityAnswers(model: EntityModel, form: Form, answers: Dictionary<unknown>) {
     const updateRequest = await UpdateRequest.for(model).current().findOne();
-    if (updateRequest != null) {
+    const allowsChangeRequest = entityAllowsChangeRequest(model.status);
+    if (updateRequest != null && allowsChangeRequest) {
       await updateRequest.update({ content: answers });
     } else if (!(await this.policyService.hasAccess("updateAnswers", model))) {
+      if (!allowsChangeRequest) {
+        throw new BadRequestException(
+          "Change requests can only be created when the entity is approved or information-required"
+        );
+      }
       const newUpdateRequest = await UpdateRequest.create({
         updateRequestableType: laravelType(model),
         updateRequestableId: model.id,

@@ -9,7 +9,12 @@ import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
 import { EntityUpdateData, ReportUpdateAttributes, DisturbanceReportUpdateAttributes } from "../dto/entity-update.dto";
-import { APPROVED, PENDING_APPROVAL, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
+import {
+  APPROVED,
+  PENDING_APPROVAL,
+  INFORMATION_REQUIRED,
+  entityAllowsChangeRequest
+} from "@terramatch-microservices/database/constants/status";
 import { DisturbanceReport, Media, ProjectReport, UpdateRequest } from "@terramatch-microservices/database/entities";
 import { EntityCreateAttributes, EntityCreateData } from "../dto/entity-create.dto";
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
@@ -179,18 +184,29 @@ export abstract class EntityProcessor<
         model.feedback = update.feedback ?? null;
         model.feedbackFields = update.feedbackFields ?? null;
         if (isReport(model)) model.completion = 100;
+        // First-review transitions must not leave a stale change request on draft/pending-approval.
+        if (!entityAllowsChangeRequest(model.status)) {
+          model.updateRequestStatus = null;
+        }
         model.status = update.status as ModelType["status"];
       } else if (update.status === PENDING_APPROVAL) {
         // If we're submitting for approval, check for an update request and submit that instead if there is one
         const updateRequest = await UpdateRequest.for(model).current().findOne();
-        if (updateRequest == null) {
-          model.status = PENDING_APPROVAL;
-        } else {
+        if (updateRequest != null && entityAllowsChangeRequest(model.status)) {
           await updateRequest.update({ status: PENDING_APPROVAL });
+        } else {
+          if (updateRequest != null) {
+            await updateRequest.destroy();
+          }
+          model.status = PENDING_APPROVAL;
+          model.updateRequestStatus = null;
         }
         if (isReport(model)) model.submittedAt = new Date();
       } else {
         model.status = update.status as ModelType["status"];
+        if (!entityAllowsChangeRequest(update.status)) {
+          model.updateRequestStatus = null;
+        }
       }
     }
 
@@ -278,6 +294,7 @@ export abstract class ReportProcessor<
           }
 
           model.status = "pending-approval";
+          model.updateRequestStatus = null;
         }
       }
     }

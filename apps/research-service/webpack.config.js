@@ -46,8 +46,8 @@ module.exports = composePlugins(config => ({
     }),
     sentryWebpackPlugin({
       authToken: process.env.SENTRY_AUTH_TOKEN,
-      org: "wri-terramatch",
-      project: "v3-backend"
+      org: "world-resources-institute-data-lab",
+      project: "terramatch-backend"
     })
   ],
 

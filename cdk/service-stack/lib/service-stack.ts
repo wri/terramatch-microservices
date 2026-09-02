@@ -74,10 +74,9 @@ export class ServiceStack extends Stack {
     const vpc = Vpc.fromLookup(this, "wri-terramatch-vpc", {
       vpcId: "vpc-0beac5973796d96b1"
     });
-    const cluster = Cluster.fromClusterAttributes(this, `terramatch-microservices-${env}`, {
-      clusterName: `terramatch-microservices-${env}`,
-      clusterArn: `arn:aws:ecs:eu-west-1:603634817705:cluster/terramatch-microservices-${env}`,
-      vpc
+    const cluster = new Cluster(this, `terramatch-microservices-${env}`, {
+      vpc: vpc,
+      clusterName: "production-core-cluster"
     });
 
     // The staging redis security group has an inconsistent name

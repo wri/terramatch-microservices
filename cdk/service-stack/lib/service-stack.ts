@@ -136,7 +136,7 @@ export class ServiceStack extends Stack {
     if (service === SOCKET_SERVICE) {
       serviceProps.publicLoadBalancer = true;
       serviceProps.loadBalancerName = `${service}-${env}-public`;
-      serviceProps.domainName = `${env === "prod" ? "ws" : `ws-${env}`}.terramatch.org`;
+      serviceProps.redirectHTTP = true;
       serviceProps.certificate = Certificate.fromCertificateArn(
         this,
         "*.terramatch.org certificate",

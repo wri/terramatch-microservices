@@ -20,7 +20,7 @@ const loadRows = async (csvPath: string): Promise<InvestmentSplitUpdateRow[]> =>
   const rows: InvestmentSplitUpdateRow[] = [];
   await parseCsv(csvPath, async row => {
     const amountRaw = assertNotNull(columnValue(row, "amount"), "amount is required");
-    const amount = Number(amountRaw);
+    const amount = Number(amountRaw.replace(/[$,]/g, "").trim());
     if (Number.isNaN(amount)) throw new Error(`Invalid amount: ${amountRaw}`);
 
     rows.push({

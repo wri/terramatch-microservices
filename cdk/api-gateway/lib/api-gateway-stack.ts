@@ -10,9 +10,20 @@ import {
   VpcLink
 } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpAlbIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import { ApplicationListener, IApplicationListener } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import {
+  ApplicationListener,
+  ApplicationListenerLookupOptions,
+  ApplicationProtocol,
+  IApplicationListener
+} from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
+
+type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
+
+const SOCKET_SERVICE = "user-service";
 
 type ServiceDefinition = { namespaces: string[] };
 const V3_SERVICES: Record<string, ServiceDefinition> = {
@@ -114,11 +125,15 @@ export class ApiGatewayStack extends Stack {
   private getServiceListener(service: string) {
     let serviceListener = this._serviceListeners.get(service);
     if (serviceListener == null) {
+      const props: Mutable<ApplicationListenerLookupOptions> = {
+        loadBalancerTags: { service: `${service}-${this._env}` }
+      };
+      if (service === SOCKET_SERVICE) {
+        props.listenerProtocol = ApplicationProtocol.HTTPS;
+      }
       this._serviceListeners.set(
         service,
-        (serviceListener = ApplicationListener.fromLookup(this, `${service} Listener`, {
-          loadBalancerTags: { service: `${service}-${this._env}` }
-        }))
+        (serviceListener = ApplicationListener.fromLookup(this, `${service} Listener`, props))
       );
     }
 

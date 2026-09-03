@@ -130,6 +130,21 @@ describe("AggregateReportsService", () => {
       expect(result.seedingRecords).toBeUndefined();
     });
 
+    it("returns only treePlanted and treesRegenerating for terrafund-3", async () => {
+      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-3" });
+      const mockFindAll = jest.fn().mockResolvedValue([]);
+      const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
+      jest.spyOn(SiteReport, "approved").mockReturnValue({
+        sites: mockSites
+      } as unknown as ReturnType<typeof SiteReport.approved>);
+
+      const result = await service.getAggregateReports("projects", project);
+
+      expect(result.treePlanted).toEqual([]);
+      expect(result.treesRegenerating).toEqual([]);
+      expect(result.seedingRecords).toBeUndefined();
+    });
+
     it("returns empty arrays when entity has no approved site reports", async () => {
       const project = createMock<Project>({ id: 1, frameworkKey: "terrafund" });
 

@@ -43,25 +43,49 @@
       }
     ]
   },
-  "load-balancer:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=user-service-test:loadBalancerType=application:region=eu-west-1": {
-    "loadBalancerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:loadbalancer/app/user-service-test/e1ee1ce635080238",
-    "loadBalancerCanonicalHostedZoneId": "Z32O12XQLNTSW2",
-    "loadBalancerDnsName": "internal-user-service-test-1863479300.eu-west-1.elb.amazonaws.com",
-    "vpcId": "vpc-0beac5973796d96b1",
-    "securityGroupIds": ["sg-06a4b12aa14e529be"],
-    "ipAddressType": "ipv4"
-  },
-  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-06a4b12aa14e529be": {
-    "securityGroupId": "sg-06a4b12aa14e529be",
-    "allowAllOutbound": false
-  },
-  "security-group:account=603634817705:region=eu-west-1:securityGroupName=default:vpcId=vpc-0beac5973796d96b1": {
-    "securityGroupId": "sg-0fcff87239114297b",
-    "allowAllOutbound": false
-  },
   "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=user-service-test:loadBalancerType=application:region=eu-west-1": {
-    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/user-service-test/e1ee1ce635080238/069ab4638dd50686",
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/user-service-test-public/23a64bc788c2cb8f/181aff0115da7f68",
     "listenerPort": 80,
-    "securityGroupIds": ["sg-06a4b12aa14e529be"]
+    "securityGroupIds": ["sg-043c9774a2ce8a139"]
+  },
+  "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=job-service-test:loadBalancerType=application:region=eu-west-1": {
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/job-service-test/791d31b93e0abb37/f3c7ac61fa2cc3a3",
+    "listenerPort": 80,
+    "securityGroupIds": ["sg-0925ac1e228546c0d"]
+  },
+  "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=entity-service-test:loadBalancerType=application:region=eu-west-1": {
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/entity-service-test/9f6e4e6e63b4a3f9/59fc311f7aaf8abd",
+    "listenerPort": 80,
+    "securityGroupIds": ["sg-00bcb05474fb65207"]
+  },
+  "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=research-service-test:loadBalancerType=application:region=eu-west-1": {
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/research-service-test/4ad94268cde577e3/25f3cf497e22e6d3",
+    "listenerPort": 80,
+    "securityGroupIds": ["sg-065323b8df1a19ac7"]
+  },
+  "load-balancer-listener:account=603634817705:loadBalancerTags.0.key=service:loadBalancerTags.0.value=dashboard-service-test:loadBalancerType=application:region=eu-west-1": {
+    "listenerArn": "arn:aws:elasticloadbalancing:eu-west-1:603634817705:listener/app/dashboard-service-test/1521c4f7ecd867a9/82a080aa5a7c751c",
+    "listenerPort": 80,
+    "securityGroupIds": ["sg-0f0bcb6402c2470cd"]
+  },
+  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-043c9774a2ce8a139": {
+    "securityGroupId": "sg-043c9774a2ce8a139",
+    "allowAllOutbound": false
+  },
+  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-0925ac1e228546c0d": {
+    "securityGroupId": "sg-0925ac1e228546c0d",
+    "allowAllOutbound": false
+  },
+  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-00bcb05474fb65207": {
+    "securityGroupId": "sg-00bcb05474fb65207",
+    "allowAllOutbound": false
+  },
+  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-065323b8df1a19ac7": {
+    "securityGroupId": "sg-065323b8df1a19ac7",
+    "allowAllOutbound": false
+  },
+  "security-group:account=603634817705:region=eu-west-1:securityGroupId=sg-0f0bcb6402c2470cd": {
+    "securityGroupId": "sg-0f0bcb6402c2470cd",
+    "allowAllOutbound": false
   }
 }

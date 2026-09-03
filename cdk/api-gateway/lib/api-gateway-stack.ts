@@ -7,19 +7,16 @@ import {
   HttpApiProps,
   HttpMethod,
   IVpcLink,
-  VpcLink,
-  WebSocketApi,
-  CfnIntegration,
-  CfnRoute
+  VpcLink
 } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpAlbIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { ApplicationListener, IApplicationListener } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import { Stack, StackProps } from "aws-cdk-lib";
 
-type ServiceDefinition = { namespaces: string[]; sockets?: string[] };
+type ServiceDefinition = { namespaces: string[] };
 const V3_SERVICES: Record<string, ServiceDefinition> = {
-  "user-service": { namespaces: ["auth", "users", "organisations", "userAssociations"], sockets: ["userSockets"] },
+  "user-service": { namespaces: ["auth", "users", "organisations", "userAssociations"] },
   "job-service": { namespaces: ["jobs"] },
   "entity-service": {
     namespaces: [
@@ -62,7 +59,6 @@ const DOMAIN_MAPPINGS: Record<string, DomainNameAttributes> = {
 
 export class ApiGatewayStack extends Stack {
   private readonly _httpApi: HttpApi;
-  private readonly _websocketApi: WebSocketApi;
   private readonly _env: string;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -102,21 +98,14 @@ export class ApiGatewayStack extends Stack {
     };
 
     this._httpApi = new HttpApi(this, `TerraMatch API Gateway - ${this._env}`, httpApiProps);
-    this._websocketApi = new WebSocketApi(this, `TerraMatch Websocket Gateway - ${this._env}`, {
-      apiName: `TerraMatch Websocket Gateway - ${this._env}`
-    });
 
-    for (const [service, { namespaces, sockets }] of Object.entries(V3_SERVICES)) {
+    for (const [service, { namespaces }] of Object.entries(V3_SERVICES)) {
       if (!enabledServices.includes(service)) continue;
 
       this.addAlbProxy(`API Swagger Docs [${service}]`, `/${service}/documentation/{proxy+}`, service);
 
       for (const namespace of namespaces) {
         this.addAlbProxy(`V3 Namespace [${service}/${namespace}]`, `/${namespace}/v3/{proxy+}`, service);
-      }
-
-      for (const socket of sockets ?? []) {
-        this.addWebsocketProxy(`V3 Socket [${service}/${socket}]`, `/${socket}/v3/{proxy+}`, service);
       }
     }
   }
@@ -157,38 +146,6 @@ export class ApiGatewayStack extends Stack {
       path: sourcePath,
       methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
       integration: new HttpAlbIntegration(name, serviceListener, { vpcLink })
-    });
-  }
-
-  private addWebsocketProxy(name: string, sourcePath: string, service: string) {
-    const vpcLink = this.getVpcLink();
-    const serviceListener = this.getServiceListener(service);
-    const integration = new CfnIntegration(this, name, {
-      apiId: this._websocketApi.apiId,
-      integrationType: "HTTP_PROXY",
-      integrationMethod: "ANY",
-      connectionType: "VPC_LINK",
-      connectionId: vpcLink.vpcLinkRef.vpcLinkId,
-      integrationUri: serviceListener.listenerArn,
-      requestParameters: {
-        "integration.request.header.Connection": "'Upgrade'"
-      }
-    });
-
-    new CfnRoute(this, "ConnectRoute", {
-      apiId: this._websocketApi.apiId,
-      routeKey: "$connect",
-      target: `integrations/${integration.ref}`
-    });
-    new CfnRoute(this, "DisconnectRoute", {
-      apiId: this._websocketApi.apiId,
-      routeKey: "$disconnect",
-      target: `integrations/${integration.ref}`
-    });
-    new CfnRoute(this, "DefaultRoute", {
-      apiId: this._websocketApi.apiId,
-      routeKey: "$default",
-      target: `integrations/${integration.ref}`
     });
   }
 }

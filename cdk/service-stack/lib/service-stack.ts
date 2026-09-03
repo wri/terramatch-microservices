@@ -10,6 +10,7 @@ import {
 } from "aws-cdk-lib/aws-ecs-patterns";
 import { Role } from "aws-cdk-lib/aws-iam";
 import { upperFirst } from "lodash";
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
 
 const extractFromEnv = (...names: string[]) =>
   names.map(name => {
@@ -47,6 +48,8 @@ const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, ApplicationLoadBa
 };
 
 const SOCKET_SERVICE = "user-service";
+const TERRAMATCH_ORG_CERTIFICATE_ARN =
+  "arn:aws:acm:eu-west-1:603634817705:certificate/9b5ba349-6969-4013-9868-95f69312d2c4";
 
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
   const recommendation = RIGHTSIZE_RECOMMENDATIONS[service]?.[env];
@@ -100,40 +103,52 @@ export class ServiceStack extends Stack {
       })
     ];
 
+    const serviceProps: Mutable<ApplicationLoadBalancedFargateServiceProps> = {
+      serviceName: `terramatch-${service}-${env}`,
+      cluster,
+      // These are the recommended defaults by Amazon Rightsize in the billing console
+      cpu: 256,
+      memoryLimitMiB: 512,
+      desiredCount: 1,
+      minHealthyPercent: 100,
+      maxHealthyPercent: 200,
+      enableExecuteCommand: true,
+      taskImageOptions: {
+        image,
+        family: `terramatch-${service}-${env}`,
+        containerName: `terramatch-${service}-${env}`,
+        logDriver: LogDriver.awsLogs({
+          logGroup: LogGroup.fromLogGroupName(this, `${service}-${env}`, `ecs/${service}-${env}`),
+          streamPrefix: `${service}-${env}`
+        }),
+        executionRole: Role.fromRoleName(this, `ecsTaskExecutionRole-${env}`, `ecsTaskExecutionRole-${env}`)
+      },
+      securityGroups: securityGroups,
+      taskSubnets: { subnets: privateSubnets },
+      assignPublicIp: false,
+      publicLoadBalancer: false,
+      loadBalancerName: `${service}-${env}`,
+      circuitBreaker: { enable: true, rollback: true }
+    };
+
+    // For the websocket service, we have to make the load balancer public for direct socket
+    // connection. Running websockets through Api Gateway to a load balancer is not supported.
+    if (service === SOCKET_SERVICE) {
+      serviceProps.publicLoadBalancer = true;
+      serviceProps.loadBalancerName = `${service}-${env}-public`;
+      serviceProps.domainName = `${env === "prod" ? "ws" : `ws-${env}`}.terramatch.org`;
+      serviceProps.certificate = Certificate.fromCertificateArn(
+        this,
+        "*.terramatch.org certificate",
+        TERRAMATCH_ORG_CERTIFICATE_ARN
+      );
+    }
+
     // Create a load-balanced Fargate service and make it public
     const fargateService = new ApplicationLoadBalancedFargateService(
       this,
       `terramatch-${service}-${env}`,
-      customizeFargate(service, env, {
-        serviceName: `terramatch-${service}-${env}`,
-        cluster,
-        // These are the recommended defaults by Amazon Rightsize in the billing console
-        cpu: 256,
-        memoryLimitMiB: 512,
-        desiredCount: 1,
-        minHealthyPercent: 100,
-        maxHealthyPercent: 200,
-        enableExecuteCommand: true,
-        taskImageOptions: {
-          image,
-          family: `terramatch-${service}-${env}`,
-          containerName: `terramatch-${service}-${env}`,
-          logDriver: LogDriver.awsLogs({
-            logGroup: LogGroup.fromLogGroupName(this, `${service}-${env}`, `ecs/${service}-${env}`),
-            streamPrefix: `${service}-${env}`
-          }),
-          executionRole: Role.fromRoleName(this, `ecsTaskExecutionRole-${env}`, `ecsTaskExecutionRole-${env}`)
-        },
-        securityGroups: securityGroups,
-        taskSubnets: { subnets: privateSubnets },
-        assignPublicIp: false,
-        // For the websocket service, we have to make the load balancer public for direct socket
-        // connection. Running websockets through Api Gateway to a load balancer is not supported -
-        // we would have to use a stateless socket connection system instead.
-        publicLoadBalancer: service === SOCKET_SERVICE,
-        loadBalancerName: `${service}-${env}-${service === SOCKET_SERVICE ? "public" : "private"}`,
-        circuitBreaker: { enable: true, rollback: true }
-      })
+      customizeFargate(service, env, serviceProps)
     );
     fargateService.targetGroup.configureHealthCheck({
       path: "/health",

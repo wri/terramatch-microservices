@@ -1,44 +1,42 @@
-import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import { OnGatewayInit, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
-import { Server, WebSocket } from "ws";
 import { Injectable } from "@nestjs/common";
-import { IncomingMessage } from "node:http";
-import { isEmpty } from "lodash";
-
-export type AuthenticatedSocket = WebSocket & {
-  userId: number;
-};
 
 @Injectable()
 @WebSocketGateway({
+  cors: {
+    origin: "*"
+  },
   path: "/userSockets/v3/connection"
 })
-export class UserGateway implements OnGatewayConnection {
+export class UserGateway implements OnGatewayInit {
   @WebSocketServer() server: Server;
 
   constructor(private readonly jwtService: JwtService) {}
 
-  handleConnection(client: AuthenticatedSocket, request: IncomingMessage) {
-    const userId = this.getUserId(request);
-    console.log("websocket connection", { userId });
-    if (userId == null) {
-      client.terminate();
-      return;
-    }
-
-    client.userId = userId;
+  // Install middleware to authenticate users and add them to a "room" for their user events.
+  afterInit(server: Server) {
+    server.use((socket: Socket, next) => {
+      const userId = this.getUserId(socket);
+      if (userId == null) {
+        next(new Error("Unauthorized"));
+      } else {
+        socket.join(`user:${userId}`);
+        socket.data.userId = userId;
+        next();
+      }
+    });
   }
 
-  private getUserId(request: IncomingMessage) {
-    if (request.url == null) return null;
-
-    console.log("request url", request.url);
-    const url = new URL(`http://${process.env.HOST ?? "localhost"}${request.url}`);
-    const token = url.searchParams.get("authToken");
-    if (isEmpty(token)) return null;
+  private getUserId(socket: Socket) {
+    const [type, token] = socket.handshake?.auth?.token?.split(" ") ?? [];
+    if (type !== "Bearer" || token == null) {
+      return null;
+    }
 
     try {
-      const { sub } = this.jwtService.verify(token as string);
+      const { sub } = this.jwtService.verify(token);
       return (sub ?? null) as number | null;
     } catch {
       return null;

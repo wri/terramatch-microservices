@@ -8,10 +8,9 @@ import {
   UserDataPushEvent
 } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
-import { AuthenticatedSocket, UserGateway } from "./user.gateway";
+import { UserGateway } from "./user.gateway";
 import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
 import { TasksSerializer } from "@terramatch-microservices/common/modelSerializers/tasks.serializer";
-import { WebSocket } from "ws";
 
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
   tasks: TasksSerializer
@@ -44,27 +43,11 @@ export class UserSocketProcessor extends WorkerHost {
       throw new InternalServerErrorException(`Model missing for user push event ${JSON.stringify(data)}`);
     }
 
-    await this.sendModelUpdate(userId, model, modelId);
-  }
-
-  private async sendModelUpdate(userId: number, model: UserDataModel, modelId: number) {
-    // In local development, the client connects directly to this service's websocket connection,
-    // and we manage it all locally
-    await this.sendDevModelUpdate(userId, model, modelId);
-  }
-
-  private async sendDevModelUpdate(userId: number, model: UserDataModel, modelId: number) {
-    const clients = [
-      ...(this.gateway.server.clients as Set<AuthenticatedSocket>)
-        .values()
-        .filter(client => client.userId === userId && client.readyState === WebSocket.OPEN)
-    ];
-    if (clients.length === 0) return;
-
-    const payload = JSON.stringify({ event: "userDataPush", data: await this.serializeDto(model, modelId) });
-    for (const client of clients) {
-      client.send(payload);
+    if ((await this.gateway.server.in(`user:${userId}`).fetchSockets()).length === 0) {
+      return; // skip loading the model and serializing the DTO if there's nobody listening.
     }
+
+    this.gateway.server.in(`user:${userId}`).emit("userDataPush", await this.serializeDto(model, modelId));
   }
 
   private async serializeDto(model: UserDataModel, modelId: number) {

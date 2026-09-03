@@ -22,9 +22,9 @@ type DefinitionWithOptions = PolygonAttributeDefinition & {
 
 @Injectable()
 export class PolygonAttributeDefinitionsService {
-  async findAll(frameworkKey: FrameworkKey): Promise<DefinitionWithOptions[]> {
+  async findAll(frameworkKey: FrameworkKey, activeOnly = false): Promise<DefinitionWithOptions[]> {
     return (await PolygonAttributeDefinition.findAll({
-      where: { frameworkKey },
+      where: { frameworkKey, ...(activeOnly ? { isActive: true } : {}) },
       include: [{ association: "options", required: false }]
     })) as DefinitionWithOptions[];
   }

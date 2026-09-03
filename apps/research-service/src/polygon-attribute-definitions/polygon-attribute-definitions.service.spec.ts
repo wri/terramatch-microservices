@@ -366,6 +366,10 @@ describe("PolygonAttributeDefinitionsService", () => {
       const ids = listed.map(definition => definition.id);
       expect(ids).toEqual(expect.arrayContaining([ppcActive.id, ppcInactive.id]));
       expect(ids).not.toContain(terrafund.id);
+
+      const activeOnlyIds = (await service.findAll("ppc", true)).map(definition => definition.id);
+      expect(activeOnlyIds).toContain(ppcActive.id);
+      expect(activeOnlyIds).not.toContain(ppcInactive.id);
     });
 
     it("throws NotFoundException for an unknown uuid", async () => {

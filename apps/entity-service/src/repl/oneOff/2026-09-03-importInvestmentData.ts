@@ -13,9 +13,8 @@ type InvestmentRow = {
 
 type InvestmentSplitRow = {
   uuid: string;
-  /** For new investments: matches the `uuid` column from the investments CSV to link them.
-   *  For splits tied to an existing investment: use the existing investment's uuid directly. */
-  investmentUuid: string;
+  /** Matches a placeholder uuid from the investments CSV, or an existing Investment id. */
+  investmentId: string;
   funder: string;
   amount: number;
 };
@@ -30,16 +29,23 @@ type ImportInvestmentDataOptions = {
 const DEFAULT_INVESTMENTS_CSV = "tm_3893_investment_data.csv";
 const DEFAULT_SPLITS_CSV = "tm_3893_investment_splits_data.csv";
 
+const parseAmount = (raw: string): number => {
+  const cleaned = raw.replace(/[$,]/g, "").trim();
+  const amount = Number(cleaned);
+  if (Number.isNaN(amount)) throw new Error(`Invalid amount: ${raw}`);
+  return amount;
+};
+
 const loadInvestmentRows = async (csvPath: string): Promise<InvestmentRow[]> => {
   const rows: InvestmentRow[] = [];
   await parseCsv(csvPath, async row => {
-    const projectIdRaw = assertNotNull(columnValue(row, "project_id"), "project_id is required");
+    const projectIdRaw = assertNotNull(columnValue(row, "projectId"), "projectId is required");
     const projectId = Number(projectIdRaw);
-    if (Number.isNaN(projectId)) throw new Error(`Invalid project_id: ${projectIdRaw}`);
+    if (Number.isNaN(projectId)) throw new Error(`Invalid projectId: ${projectIdRaw}`);
 
-    const dateRaw = assertNotNull(columnValue(row, "investment_date"), "investment_date is required");
+    const dateRaw = assertNotNull(columnValue(row, "investmentDate"), "investmentDate is required");
     const investmentDate = new Date(dateRaw);
-    if (isNaN(investmentDate.getTime())) throw new Error(`Invalid investment_date: ${dateRaw}`);
+    if (isNaN(investmentDate.getTime())) throw new Error(`Invalid investmentDate: ${dateRaw}`);
 
     rows.push({
       uuid: assertNotNull(columnValue(row, "uuid"), "uuid is required"),
@@ -54,15 +60,11 @@ const loadInvestmentRows = async (csvPath: string): Promise<InvestmentRow[]> => 
 const loadSplitRows = async (csvPath: string): Promise<InvestmentSplitRow[]> => {
   const rows: InvestmentSplitRow[] = [];
   await parseCsv(csvPath, async row => {
-    const amountRaw = assertNotNull(columnValue(row, "amount"), "amount is required");
-    const amount = Number(amountRaw);
-    if (Number.isNaN(amount)) throw new Error(`Invalid amount: ${amountRaw}`);
-
     rows.push({
       uuid: assertNotNull(columnValue(row, "uuid"), "uuid is required"),
-      investmentUuid: assertNotNull(columnValue(row, "investment_uuid"), "investment_uuid is required"),
+      investmentId: assertNotNull(columnValue(row, "investmentId"), "investmentId is required"),
       funder: assertNotNull(columnValue(row, "funder"), "funder is required"),
-      amount
+      amount: parseAmount(assertNotNull(columnValue(row, "amount"), "amount is required"))
     });
   });
   return rows;
@@ -71,10 +73,10 @@ const loadSplitRows = async (csvPath: string): Promise<InvestmentSplitRow[]> => 
 /**
  * Part 1 of TM-3893: Creates new Investment and InvestmentSplit records from CSV files.
  *
- * - investments CSV (tm_3893_investment_data.csv): uuid, project_id, investment_date, type
- * - splits CSV (tm_3893_investment_splits_data.csv): uuid, investment_uuid, funder, amount
- *   The `investment_uuid` column must match either a uuid from the investments CSV (new record)
- *   or an existing Investment uuid in the DB (for splits tied to existing investments).
+ * - investments CSV (tm_3893_investment_data.csv): uuid, projectId, investmentDate, type
+ * - splits CSV (tm_3893_investment_splits_data.csv): uuid, investmentId, funder, amount
+ *   The `investmentId` column matches either a placeholder uuid from the investments CSV (new record)
+ *   or an existing Investment numeric id (for splits tied to existing investments).
  *
  * Usage (dry run by default):
  *   await oneOff.importInvestmentData()
@@ -96,8 +98,9 @@ export const importInvestmentData = withoutSqlLogs(async (opts: ImportInvestment
 
   const counts = { investmentsCreated: 0, splitsCreated: 0, errors: [] as string[] };
 
-  // Map from CSV uuid -> DB id for newly created investments (used when linking splits)
+  // Map from CSV placeholder uuid -> DB id for newly created investments
   const createdInvestmentIdByUuid = new Map<string, number>();
+  const newInvestmentUuids = new Set(investmentRows.map(r => r.uuid));
 
   // --- Part 1a: Create Investment records ---
   for (const row of investmentRows) {
@@ -120,23 +123,45 @@ export const importInvestmentData = withoutSqlLogs(async (opts: ImportInvestment
 
   // --- Part 1b: Create InvestmentSplit records ---
   for (const row of splitRows) {
-    // Resolve investmentId: first check newly created, then look up existing in DB
-    let investmentId: number | undefined = createdInvestmentIdByUuid.get(row.investmentUuid);
+    let investmentId: number | undefined;
 
-    if (investmentId == null) {
-      const existing = await Investment.findOne({
-        where: { uuid: row.investmentUuid },
-        attributes: ["id", "uuid"]
-      });
-
-      if (existing == null) {
+    if (newInvestmentUuids.has(row.investmentId)) {
+      // Linked to a newly created investment via CSV placeholder uuid
+      investmentId = createdInvestmentIdByUuid.get(row.investmentId);
+      if (investmentId == null && dryRun) {
+        // Dry run: investment not created yet — use a placeholder for logging
+        console.log(
+          `InvestmentSplit (uuid=${row.uuid}): investmentId=<new:${row.investmentId}>, funder=${row.funder}, amount=${row.amount}`
+        );
+        counts.splitsCreated++;
+        continue;
+      }
+    } else {
+      // Existing investment referenced by numeric id
+      const numericId = Number(row.investmentId);
+      if (Number.isNaN(numericId)) {
         counts.errors.push(
-          `InvestmentSplit (uuid=${row.uuid}): investment_uuid=${row.investmentUuid} not found in DB or new investments CSV`
+          `InvestmentSplit (uuid=${row.uuid}): investmentId=${row.investmentId} is not a valid id or new-investment placeholder`
         );
         continue;
       }
 
+      const existing = await Investment.findOne({
+        where: { id: numericId },
+        attributes: ["id", "uuid"]
+      });
+
+      if (existing == null) {
+        counts.errors.push(`InvestmentSplit (uuid=${row.uuid}): investmentId=${row.investmentId} not found in DB`);
+        continue;
+      }
+
       investmentId = existing.id;
+    }
+
+    if (investmentId == null) {
+      counts.errors.push(`InvestmentSplit (uuid=${row.uuid}): could not resolve investmentId=${row.investmentId}`);
+      continue;
     }
 
     console.log(

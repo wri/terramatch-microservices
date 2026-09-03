@@ -160,7 +160,13 @@ export class ApiGatewayStack extends Stack {
     this._httpApi.addRoutes({
       path: sourcePath,
       methods: [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT],
-      integration: new HttpAlbIntegration(name, serviceListener, { vpcLink })
+      integration: new HttpAlbIntegration(name, serviceListener, {
+        vpcLink,
+        // This turns on connection via HTTPS to the ALB. The actual subdomain does not need to match
+        // because the certificate in use specifies *.terramatch.org and the server doesn't do any
+        // kind of domain based routing.
+        secureServerName: service === SOCKET_SERVICE ? `${service}-${this._env}.terramatch.org` : undefined
+      })
     });
   }
 }

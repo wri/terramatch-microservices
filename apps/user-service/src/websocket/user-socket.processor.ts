@@ -48,15 +48,9 @@ export class UserSocketProcessor extends WorkerHost {
   }
 
   private async sendModelUpdate(userId: number, model: UserDataModel, modelId: number) {
-    if (process.env.NODE_ENV === "development") {
-      // In local development, the client connects directly to this service's websocket connection,
-      // and we manage it all locally
-      await this.sendDevModelUpdate(userId, model, modelId);
-    } else {
-      // In AWS, the client connects to the Api Gateway websocket connection, and we send a request
-      // to the AWS service to push an update to the client.
-      await this.sendAwsModelUpdate(userId, model, modelId);
-    }
+    // In local development, the client connects directly to this service's websocket connection,
+    // and we manage it all locally
+    await this.sendDevModelUpdate(userId, model, modelId);
   }
 
   private async sendDevModelUpdate(userId: number, model: UserDataModel, modelId: number) {
@@ -71,10 +65,6 @@ export class UserSocketProcessor extends WorkerHost {
     for (const client of clients) {
       client.send(payload);
     }
-  }
-
-  private async sendAwsModelUpdate(userId: number, model: UserDataModel, modelId: number) {
-    throw new NotImplementedException();
   }
 
   private async serializeDto(model: UserDataModel, modelId: number) {

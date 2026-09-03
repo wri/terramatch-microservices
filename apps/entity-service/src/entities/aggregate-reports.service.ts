@@ -12,6 +12,7 @@ const SUPPORTED_FRAMEWORKS: ReadonlySet<FrameworkKey> = new Set([
   "terrafund",
   "terrafund-landscapes",
   "enterprises",
+  "terrafund-3",
   "ppc",
   "hbf"
 ]);
@@ -22,6 +23,7 @@ const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollect
   terrafund: ["treePlanted", "treesRegenerating"],
   "terrafund-landscapes": ["treePlanted", "treesRegenerating"],
   enterprises: ["treePlanted", "treesRegenerating"],
+  "terrafund-3": ["treePlanted", "treesRegenerating"],
   ppc: ["treePlanted", "seedingRecords", "treesRegenerating"],
   hbf: ["treePlanted", "seedingRecords", "treesRegenerating"]
 };

@@ -31,6 +31,9 @@ import { VersionUpdateBody } from "./dto/version-update.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
+import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
+import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 
 function getSharedSequelize(): Sequelize {
   const connection = User.sequelize;
@@ -62,6 +65,7 @@ describe("SitePolygonsController", () => {
   let geometryUploadQueue: DeepMocked<Queue>;
   let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
   let geoJsonExportService: DeepMocked<GeoJsonExportService>;
+  let sitePolygonMapIndexService: DeepMocked<SitePolygonMapIndexService>;
 
   interface MockQueryBuilder {
     execute: jest.Mock;
@@ -171,6 +175,10 @@ describe("SitePolygonsController", () => {
         {
           provide: GeoJsonExportService,
           useValue: (geoJsonExportService = createMock<GeoJsonExportService>())
+        },
+        {
+          provide: SitePolygonMapIndexService,
+          useValue: (sitePolygonMapIndexService = createMock<SitePolygonMapIndexService>())
         }
       ]
     }).compile();
@@ -2288,6 +2296,64 @@ describe("SitePolygonsController", () => {
       expect(result.data).toBeDefined();
       if (!Array.isArray(result.data) && result.data != null) {
         expect(result.data).toHaveProperty("id", "project-uuid-123");
+      }
+    });
+  });
+
+  describe("mapIndex", () => {
+    const mapIndexDto = new SitePolygonMapIndexDto([
+      { uuid: "sp-1", polygonUuid: "poly-1", status: "approved" },
+      { uuid: "sp-2", polygonUuid: "poly-2", status: "draft" }
+    ]);
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.mapIndex({ siteId: ["site-1"] })).rejects.toThrow(UnauthorizedException);
+      expect(sitePolygonMapIndexService.getMapIndex).not.toHaveBeenCalled();
+    });
+
+    it("should return a single sparse sitePolygonMapIndexes resource", async () => {
+      const query: SitePolygonMapIndexQueryDto = { siteId: ["site-uuid-123"] };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonMapIndexService.getMapIndex.mockResolvedValue(mapIndexDto);
+      sitePolygonMapIndexService.getResourceId.mockReturnValue("sites:site-uuid-123");
+
+      const result = serialize(await controller.mapIndex(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(sitePolygonMapIndexService.getMapIndex).toHaveBeenCalledWith(query);
+      expect(sitePolygonMapIndexService.getResourceId).toHaveBeenCalledWith(query);
+      expect(result.data).toBeDefined();
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("type", "sitePolygonMapIndexes");
+        expect(result.data).toHaveProperty("id", "sites:site-uuid-123");
+        expect(result.data.attributes).toEqual({
+          polygons: [
+            { uuid: "sp-1", polygonUuid: "poly-1", status: "approved" },
+            { uuid: "sp-2", polygonUuid: "poly-2", status: "draft" }
+          ],
+          total: 2
+        });
+        const polygons = result.data.attributes.polygons as unknown as Array<Record<string, unknown>>;
+        expect(Object.keys(polygons[0]).sort()).toEqual(["polygonUuid", "status", "uuid"]);
+      }
+    });
+
+    it("should identify a project-scoped resource", async () => {
+      const query: SitePolygonMapIndexQueryDto = { projectId: ["project-uuid-123"] };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonMapIndexService.getMapIndex.mockResolvedValue(new SitePolygonMapIndexDto([]));
+      sitePolygonMapIndexService.getResourceId.mockReturnValue("projects:project-uuid-123");
+
+      const result = serialize(await controller.mapIndex(query));
+
+      expect(sitePolygonMapIndexService.getMapIndex).toHaveBeenCalledWith(query);
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("id", "projects:project-uuid-123");
+        expect(result.data.attributes).toEqual({ polygons: [], total: 0 });
       }
     });
   });

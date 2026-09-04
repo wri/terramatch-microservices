@@ -38,6 +38,7 @@ import { addPolygonGeometryApprovedView } from "./202608251200-add-polygon-geome
 import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-beneficiaries-training-total-column";
 import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-to-polygon-attribute-definitions";
 import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
+import { createUserTasks } from "./202609041522-create-user-tasks";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -77,5 +78,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addIsArchivedToProjectsSitesNurseries,
   convertDueAtToDate,
   addPolygonGeometryApprovedView,
-  addBeneficiariesTrainingTotalColumn
+  addBeneficiariesTrainingTotalColumn,
+  createUserTasks
 ];

@@ -33,6 +33,7 @@ import { SrpReport } from "./srp-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { InternalServerErrorException } from "@nestjs/common";
 import { EventCategory } from "../constants/product-events";
+import { UserTask } from "./user-task.entity";
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
@@ -73,6 +74,10 @@ export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<T
 
   @BelongsTo(() => Organisation, { constraints: false })
   declare organisation: Organisation | null;
+
+  get organisationUuid(): string | undefined {
+    return this.organisation?.uuid;
+  }
 
   get organisationName() {
     return this.organisation?.name;
@@ -127,4 +132,7 @@ export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<T
 
   @HasMany(() => SrpReport)
   declare srpReports: SrpReport[] | null;
+
+  @HasMany(() => UserTask)
+  declare userTasks: UserTask[] | null;
 }

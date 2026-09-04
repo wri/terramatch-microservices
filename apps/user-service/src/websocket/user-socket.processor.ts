@@ -10,10 +10,10 @@ import {
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { UserGateway } from "./user.gateway";
 import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
-import { TasksSerializer } from "@terramatch-microservices/common/modelSerializers/tasks.serializer";
+import { UserTasksSerializer } from "@terramatch-microservices/common/modelSerializers/user-tasks.serializer";
 
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
-  tasks: TasksSerializer
+  tasks: UserTasksSerializer
 };
 
 @Processor(USER_DATA_PUSH_QUEUE)

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   Action,
   AuditStatus,
@@ -8,6 +8,7 @@ import {
   SiteReport,
   SrpReport,
   Task,
+  TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -23,7 +24,7 @@ import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
 import { filter } from "lodash";
-import { TasksSerializer } from "@terramatch-microservices/common/modelSerializers/tasks.serializer";
+import { TaskFullDto } from "@terramatch-microservices/common/dto/task.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -94,11 +95,28 @@ export class TasksService {
   }
 
   async getTask(uuid: string) {
-    return await TasksSerializer.findByUuid(uuid);
+    const task = await Task.findOne({
+      where: { uuid },
+      include: [
+        { association: "organisation", attributes: ["name"], required: true },
+        // Project framework key is required for the policy (see task.policy.ts `frameworkKey` checks,
+        // and the `get frameworkKey` method in task.entity.ts
+        { association: "project", attributes: ["name", "frameworkKey"], required: true }
+      ]
+    });
+    if (task == null) throw new NotFoundException();
+
+    return task;
   }
 
   async addFullTaskDto(document: DocumentBuilder, task: Task) {
-    const taskResource = await TasksSerializer.addDto(document, task);
+    const treesPlantedCount =
+      (await TreeSpecies.visible()
+        .collection("tree-planted")
+        .siteReports(SiteReport.approvedIdsForTaskSubquery(task.id))
+        .sum("amount")) ?? 0;
+
+    const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
     await this.loadReports(task);
     for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);

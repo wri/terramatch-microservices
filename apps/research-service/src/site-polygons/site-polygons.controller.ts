@@ -27,6 +27,9 @@ import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/co
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
+import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
+import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
+import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,
@@ -92,6 +95,7 @@ export class SitePolygonsController {
     private readonly versioningService: SitePolygonVersioningService,
     private readonly geoJsonExportService: GeoJsonExportService,
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
+    private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
@@ -239,6 +243,30 @@ export class SitePolygonsController {
     const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
 
     return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
+  }
+
+  @Get("mapIndex")
+  @ApiOperation({
+    operationId: "sitePolygonsMapIndex",
+    summary: "Get a sparse list of every site polygon in scope",
+    description: `Returns one resource whose attributes hold the complete in-scope polygon list as
+    \`{ uuid, polygonUuid, status }\`, plus a \`total\`. There is no pagination: the payload stays small
+    because each row carries only the three fields a map needs to style and filter GeoServer tiles.
+
+    Provide exactly one of siteId[] or projectId[]. The remaining workspace filters match the polygon
+    table and map, including deletedOnly.`
+  })
+  @JsonApiResponse(SitePolygonMapIndexDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Scope is missing or ambiguous, or a filter value is invalid."
+  })
+  async mapIndex(@Query() query: SitePolygonMapIndexQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const mapIndex = await this.sitePolygonMapIndexService.getMapIndex(query);
+
+    return buildJsonApi(SitePolygonMapIndexDto).addData(this.sitePolygonMapIndexService.getResourceId(query), mapIndex);
   }
 
   @Get()

@@ -273,6 +273,52 @@ describe("AggregateReportsService", () => {
       });
     });
 
+    it("treats invalid dueAt as null instead of throwing", async () => {
+      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const reportInvalidDue = createMock<SiteReport>({
+        id: 1,
+        dueAt: new Date("invalid"),
+        numTreesRegenerating: 0
+      });
+      const reportStringDue = createMock<SiteReport>({
+        id: 2,
+        dueAt: "2024-12-31T00:00:00.000Z" as unknown as Date,
+        numTreesRegenerating: 0
+      });
+
+      const mockFindAll = jest.fn().mockResolvedValue([reportInvalidDue, reportStringDue]);
+      const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
+      jest.spyOn(SiteReport, "approved").mockReturnValue({
+        sites: mockSites
+      } as unknown as ReturnType<typeof SiteReport.approved>);
+      jest.spyOn(Site, "approvedIdsSubquery").mockReturnValue(undefined as never);
+      jest.spyOn(TreeSpecies, "visible").mockReturnValue({
+        collection: jest.fn().mockReturnValue({
+          siteReports: jest.fn().mockReturnValue({
+            findAll: jest.fn().mockResolvedValue([
+              { speciesableId: 1, total: "40" },
+              { speciesableId: 2, total: "60" }
+            ])
+          })
+        })
+      } as unknown as ReturnType<typeof TreeSpecies.visible>);
+      jest.spyOn(Seeding, "visible").mockReturnValue({
+        siteReports: jest.fn().mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) })
+      } as unknown as ReturnType<typeof Seeding.visible>);
+
+      const result = await service.getAggregateReports("projects", project);
+
+      expect(result.treePlanted).toHaveLength(2);
+      expect(result.treePlanted != null && result.treePlanted[0]).toMatchObject({
+        dueDate: null,
+        aggregateAmount: 40
+      });
+      expect(result.treePlanted != null && result.treePlanted[1]).toMatchObject({
+        dueDate: "2024-12-31T00:00:00.000Z",
+        aggregateAmount: 60
+      });
+    });
+
     it("returns period series (one point per unique due_at, sum per period) matching V2 with camelCase", async () => {
       const site = Site.build({ id: 1, projectId: 1, frameworkKey: "ppc" });
       const report1 = createMock<SiteReport>({

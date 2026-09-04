@@ -4,13 +4,14 @@ import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
   USER_DATA_PUSH_EVENT,
   USER_DATA_PUSH_QUEUE,
-  UserDataModel,
   UserDataPushEvent
 } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { UserGateway } from "./user.gateway";
 import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
 import { UserTasksSerializer } from "@terramatch-microservices/common/modelSerializers/user-tasks.serializer";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { UserDataModel } from "@terramatch-microservices/database/types/user-model";
 
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
   tasks: UserTasksSerializer
@@ -35,19 +36,28 @@ export class UserSocketProcessor extends WorkerHost {
       throw new NotImplementedException(`Received unknown job ${name} with data ${JSON.stringify(data)}`);
     }
 
-    const { userId, model, modelId } = data;
-    if (userId == null) {
+    const { userIds, model, modelId } = data;
+    if (userIds == null) {
       throw new InternalServerErrorException(`No user ID for user push event ${JSON.stringify(data)}`);
     }
     if (model == null || modelId == null) {
       throw new InternalServerErrorException(`Model missing for user push event ${JSON.stringify(data)}`);
     }
 
-    if ((await this.gateway.server.in(`user:${userId}`).fetchSockets()).length === 0) {
-      return; // skip loading the model and serializing the DTO if there's nobody listening.
-    }
+    const userIdsOnline = (
+      await Promise.all(
+        userIds.map(async userId =>
+          (await this.gateway.server.in(`user:${userId}`).fetchSockets()).length !== 0 ? userId : null
+        )
+      )
+    ).filter(isNotNull);
+    // skip loading the model and serializing the DTO if there's nobody listening.
+    if (userIdsOnline.length === 0) return;
 
-    this.gateway.server.in(`user:${userId}`).emit("userDataPush", await this.serializeDto(model, modelId));
+    const payload = await this.serializeDto(model, modelId);
+    for (const userId of userIdsOnline) {
+      this.gateway.server.in(`user:${userId}`).emit("userDataPush", payload);
+    }
   }
 
   private async serializeDto(model: UserDataModel, modelId: number) {

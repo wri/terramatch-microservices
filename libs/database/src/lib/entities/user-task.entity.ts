@@ -2,8 +2,25 @@ import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table 
 import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes } from "sequelize";
 import { User } from "./user.entity";
 import { Task } from "./task.entity";
+import { DatabaseModule } from "../database.module";
 
-@Table({ tableName: "user_tasks", underscored: true, paranoid: true })
+const userTaskUpdatedHook = async (userTask: UserTask) => {
+  await DatabaseModule.emitUserDataModelUpdated({
+    userIds: [userTask.userId],
+    model: "tasks",
+    modelId: userTask.taskId
+  });
+};
+
+@Table({
+  tableName: "user_tasks",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    afterCreate: userTaskUpdatedHook,
+    afterUpdate: userTaskUpdatedHook
+  }
+})
 export class UserTask extends Model<InferAttributes<UserTask>, InferCreationAttributes<UserTask>> {
   @PrimaryKey
   @AutoIncrement

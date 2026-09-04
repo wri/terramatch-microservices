@@ -34,12 +34,30 @@ import { chainScope } from "../util/chain-scope";
 import { InternalServerErrorException } from "@nestjs/common";
 import { EventCategory } from "../constants/product-events";
 import { UserTask } from "./user-task.entity";
+import { DatabaseModule } from "../database.module";
+
+const taskUpdatedHook = async (task: Task) => {
+  const userIds = (task.userTasks ?? (await task.$get("userTasks", { attributes: ["userId"] }))).map(
+    ({ userId }) => userId
+  );
+  if (userIds.length > 0) {
+    await DatabaseModule.emitUserDataModelUpdated({ userIds, model: "tasks", modelId: task.id });
+  }
+};
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
   dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
 }))
-@Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_tasks",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    afterCreate: taskUpdatedHook,
+    afterUpdate: taskUpdatedHook
+  }
+})
 export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<Task>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Tasks\\Task";
 

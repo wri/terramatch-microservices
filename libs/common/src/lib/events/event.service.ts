@@ -9,6 +9,8 @@ import { MediaService } from "../media/media.service";
 import { Media, PolygonGeometry, User } from "@terramatch-microservices/database/entities";
 import { POLYGON_PUSHED_VIA_API_EVENT, PolygonPushedViaApiParams } from "../analytics/polygon-pushed-via-api";
 import { POLYGON_VERSION_CHANGED_EVENT, PolygonVersionChangedParams } from "../analytics/polygon-version-changed";
+import { UserDataPushService } from "../userDataPush/user-data-push.service";
+import { UserDataModelUpdateEvent } from "@terramatch-microservices/database/types/user-model";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -23,7 +25,8 @@ export class EventService {
     @InjectQueue("analytics") readonly analyticsQueue: Queue,
     @InjectQueue("entities") readonly entitiesQueue: Queue,
     @InjectQueue("greenhouse") readonly greenhouseQueue: Queue,
-    readonly mediaService: MediaService
+    readonly mediaService: MediaService,
+    readonly userDataPushService: UserDataPushService
   ) {}
 
   @OnEvent("database.statusUpdated")
@@ -54,6 +57,11 @@ export class EventService {
   @OnEvent("database.polygonUpdated")
   async handlePolygonUpdated(polygon: PolygonGeometry) {
     await this.greenhouseQueue.add("polygonUpdated", polygon);
+  }
+
+  @OnEvent("database.userDataModelUpdated")
+  async handleUserDataModelUpdate({ userIds, model, modelId }: UserDataModelUpdateEvent) {
+    await this.userDataPushService.sendData(userIds, model, modelId);
   }
 
   async sendStatusUpdateAnalytics(modelUuid: string, modelLaravelType: string, status: string) {

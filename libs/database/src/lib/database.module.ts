@@ -5,6 +5,7 @@ import { SequelizeConfigService } from "./sequelize-config.service";
 import { EventEmitter2, EventEmitterModule } from "@nestjs/event-emitter";
 import { Model } from "sequelize-typescript";
 import { Media, PolygonGeometry } from "./entities";
+import { UserDataModelUpdateEvent } from "./types/user-model";
 
 @Module({
   imports: [
@@ -39,5 +40,9 @@ export class DatabaseModule {
 
   static async emitPolygonUpdated(polygon: PolygonGeometry) {
     await this.eventEmitter?.emitAsync(`database.polygonUpdated`, polygon);
+  }
+
+  static async emitUserDataModelUpdated(event: UserDataModelUpdateEvent) {
+    await this.eventEmitter?.emitAsync(`database.userDataModelUpdated`, event);
   }
 }

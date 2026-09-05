@@ -1,5 +1,5 @@
 import { Model } from "sequelize";
-import { DocumentBuilder, ResourceBuilder } from "../util";
+import { DocumentBuilder, JsonApiDocument, ResourceBuilder } from "../util";
 import { NotFoundException } from "@nestjs/common";
 
 export const modelOrNotFound = <T extends Model>(model: T | null | undefined) => {
@@ -7,11 +7,16 @@ export const modelOrNotFound = <T extends Model>(model: T | null | undefined) =>
   return model;
 };
 
+export type SerializerFindOptions = {
+  includeDeleted?: boolean;
+};
+
 export type ModelSerializer<T extends Model = Model> = {
-  findByUuid(uuid: string): Promise<T>;
-  findById(id: number): Promise<T>;
+  findByUuid(uuid: string, options?: SerializerFindOptions): Promise<T>;
+  findById(id: number, options?: SerializerFindOptions): Promise<T>;
   findForUser(userId: number): Promise<T[]>;
   createDocument(): DocumentBuilder;
   addDto(document: DocumentBuilder, model: T): Promise<ResourceBuilder>;
   addDtos(document: DocumentBuilder, models: T[]): Promise<DocumentBuilder>;
+  serializeDeletion(model: T): JsonApiDocument;
 };

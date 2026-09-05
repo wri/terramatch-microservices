@@ -2,6 +2,7 @@ import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import {
+  USER_DATA_DELETE_EVENT,
   USER_DATA_PUSH_EVENT,
   USER_DATA_PUSH_QUEUE,
   UserDataPushEvent
@@ -16,6 +17,9 @@ import { UserDataModel } from "@terramatch-microservices/database/types/user-mod
 const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
   tasks: UserTasksSerializer
 };
+
+const SUPPORTED_EVENTS = [USER_DATA_PUSH_EVENT, USER_DATA_DELETE_EVENT] as const;
+type SupportedEvent = (typeof SUPPORTED_EVENTS)[number];
 
 @Processor(USER_DATA_PUSH_QUEUE)
 export class UserSocketProcessor extends WorkerHost {
@@ -32,9 +36,10 @@ export class UserSocketProcessor extends WorkerHost {
 
   async process(job: Job<UserDataPushEvent>) {
     const { name, data } = job;
-    if (name !== USER_DATA_PUSH_EVENT) {
-      throw new NotImplementedException(`Received unknown job ${name} with data ${JSON.stringify(data)}`);
+    if (!SUPPORTED_EVENTS.includes(name as SupportedEvent)) {
+      throw new NotImplementedException(`Received unknown job "${name}" with data ${JSON.stringify(data)}`);
     }
+    const event = name as SupportedEvent;
 
     const { userIds, model, modelId } = data;
     if (userIds == null) {
@@ -54,19 +59,44 @@ export class UserSocketProcessor extends WorkerHost {
     // skip loading the model and serializing the DTO if there's nobody listening.
     if (userIdsOnline.length === 0) return;
 
-    const payload = await this.serializeDto(model, modelId);
+    const payload = await this.generatePayload(event, model, modelId);
     for (const userId of userIdsOnline) {
       this.gateway.server.in(`user:${userId}`).emit("userDataPush", payload);
     }
   }
 
-  private async serializeDto(model: UserDataModel, modelId: number) {
+  private async generatePayload(event: SupportedEvent, model: UserDataModel, modelId: number) {
+    switch (event) {
+      case USER_DATA_PUSH_EVENT:
+        return await this.serializeDto(model, modelId);
+      case USER_DATA_DELETE_EVENT:
+        return await this.generateDeletionDocument(model, modelId);
+
+      default:
+        throw new InternalServerErrorException(`Unsupported event: ${event}`);
+    }
+  }
+
+  private serializer(model: UserDataModel) {
     const serializer = SERIALIZERS[model];
     if (serializer == null) {
       throw new InternalServerErrorException(`Invalid model: ${model}`);
     }
 
+    return serializer;
+  }
+
+  private async serializeDto(model: UserDataModel, modelId: number) {
+    const serializer = this.serializer(model);
     const instance = await serializer.findById(modelId);
     return (await serializer.addDto(serializer.createDocument(), instance)).document.serialize();
+  }
+
+  private async generateDeletionDocument(model: UserDataModel, modelId: number) {
+    const serializer = this.serializer(model);
+    // The underlying resource might be deleted or might not (for instance, in the case of UserTasks,
+    // the user association might have been removed, but the task would still exist.
+    const instance = await serializer.findById(modelId, { includeDeleted: true });
+    return serializer.serializeDeletion(instance);
   }
 }

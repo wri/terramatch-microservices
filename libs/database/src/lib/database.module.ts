@@ -45,4 +45,8 @@ export class DatabaseModule {
   static async emitUserDataModelUpdated(event: UserDataModelUpdateEvent) {
     await this.eventEmitter?.emitAsync(`database.userDataModelUpdated`, event);
   }
+
+  static async emitUserDataModelDeleted(event: UserDataModelUpdateEvent) {
+    await this.eventEmitter?.emitAsync(`database.userDataModelDeleted`, event);
+  }
 }

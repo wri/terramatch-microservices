@@ -45,6 +45,17 @@ const taskUpdatedHook = async (task: Task) => {
   }
 };
 
+const taskDestroyedHook = async (task: Task) => {
+  // If we have to load the user tasks, get deleted ones too, in case they were removed before the
+  // task was destroyed.
+  const userIds = (task.userTasks ?? (await task.$get("userTasks", { attributes: ["userId"], paranoid: false }))).map(
+    ({ userId }) => userId
+  );
+  if (userIds.length > 0) {
+    await DatabaseModule.emitUserDataModelDeleted({ userIds, model: "tasks", modelId: task.id });
+  }
+};
+
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
   dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
@@ -55,7 +66,8 @@ const taskUpdatedHook = async (task: Task) => {
   paranoid: true,
   hooks: {
     afterCreate: taskUpdatedHook,
-    afterUpdate: taskUpdatedHook
+    afterUpdate: taskUpdatedHook,
+    afterDestroy: taskDestroyedHook
   }
 })
 export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<Task>> {

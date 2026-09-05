@@ -64,6 +64,11 @@ export class EventService {
     await this.userDataPushService.sendData(userIds, model, modelId);
   }
 
+  @OnEvent("database.userDataModelDeleted")
+  async handleUserDataModelDeletion({ userIds, model, modelId }: UserDataModelUpdateEvent) {
+    await this.userDataPushService.sendDataDeletion(userIds, model, modelId);
+  }
+
   async sendStatusUpdateAnalytics(modelUuid: string, modelLaravelType: string, status: string) {
     this.logger.log(`Sending status update analytics for ${modelUuid}, ${modelLaravelType} to queue.`);
     await this.analyticsQueue.add("modelStatusUpdate", {

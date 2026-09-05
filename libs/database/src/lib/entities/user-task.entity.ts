@@ -12,13 +12,22 @@ const userTaskUpdatedHook = async (userTask: UserTask) => {
   });
 };
 
+const userTaskDestroyedHook = async (userTask: UserTask) => {
+  await DatabaseModule.emitUserDataModelDeleted({
+    userIds: [userTask.userId],
+    model: "tasks",
+    modelId: userTask.taskId
+  });
+};
+
 @Table({
   tableName: "user_tasks",
   underscored: true,
   paranoid: true,
   hooks: {
     afterCreate: userTaskUpdatedHook,
-    afterUpdate: userTaskUpdatedHook
+    afterUpdate: userTaskUpdatedHook,
+    afterDestroy: userTaskDestroyedHook
   }
 })
 export class UserTask extends Model<InferAttributes<UserTask>, InferCreationAttributes<UserTask>> {

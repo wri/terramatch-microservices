@@ -1,6 +1,6 @@
 import { modelOrNotFound, ModelSerializer } from "./model-serializer";
 import { Task, UserTask } from "@terramatch-microservices/database/entities";
-import { buildJsonApi, DocumentBuilder } from "../util";
+import { buildDeletedResponse, buildJsonApi, DocumentBuilder, getDtoType } from "../util";
 import { Includeable } from "sequelize";
 import { UserTaskAssociation, UserTaskDto } from "../dto/user-task.dto";
 import { groupBy } from "lodash";
@@ -22,15 +22,19 @@ const addDto = async (document: DocumentBuilder, task: Task, associations?: User
 };
 
 export const UserTasksSerializer: ModelSerializer<Task> = {
-  async findById(id: number) {
-    return modelOrNotFound(await Task.findByPk(id, { include: INCLUDE }));
+  async findById(id, options) {
+    return modelOrNotFound(
+      await Task.findByPk(id, { include: INCLUDE, paranoid: !(options?.includeDeleted ?? false) })
+    );
   },
 
-  async findByUuid(uuid: string) {
-    return modelOrNotFound(await Task.findOne({ where: { uuid }, include: INCLUDE }));
+  async findByUuid(uuid, options) {
+    return modelOrNotFound(
+      await Task.findOne({ where: { uuid }, include: INCLUDE, paranoid: !(options?.includeDeleted ?? false) })
+    );
   },
 
-  async findForUser(userId: number) {
+  async findForUser(userId) {
     return await Task.findAll({
       where: { "$userTasks.user_id$": userId },
       include: [
@@ -50,7 +54,7 @@ export const UserTasksSerializer: ModelSerializer<Task> = {
 
   addDto,
 
-  async addDtos(document: DocumentBuilder, tasks: Task[]) {
+  async addDtos(document, tasks) {
     const associations = groupBy(
       await UserTask.findAll({
         where: { taskId: tasks.map(({ id }) => id) },
@@ -67,5 +71,9 @@ export const UserTasksSerializer: ModelSerializer<Task> = {
       );
     }
     return document;
+  },
+
+  serializeDeletion(task) {
+    return buildDeletedResponse(getDtoType(UserTaskDto), task.uuid);
   }
 };

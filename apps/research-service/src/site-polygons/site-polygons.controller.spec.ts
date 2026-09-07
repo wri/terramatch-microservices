@@ -31,6 +31,7 @@ import { VersionUpdateBody } from "./dto/version-update.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { SiteReviewRollupRow } from "./dto/site-review-rollup.dto";
 
 function getSharedSequelize(): Sequelize {
   const connection = User.sequelize;
@@ -2289,6 +2290,109 @@ describe("SitePolygonsController", () => {
       if (!Array.isArray(result.data) && result.data != null) {
         expect(result.data).toHaveProperty("id", "project-uuid-123");
       }
+    });
+  });
+
+  describe("getSiteReviewRollup", () => {
+    const mockRows: SiteReviewRollupRow[] = [
+      {
+        siteUuid: "site-uuid-1",
+        siteName: "Site One",
+        siteStatus: "approved",
+        activeTotal: 12,
+        passed: 5,
+        partial: 2,
+        failed: 1,
+        notChecked: 4,
+        approved: 8,
+        pendingApproval: 3,
+        draft: 1,
+        informationRequired: 0,
+        overlapCount: 2,
+        hectares: "123.45",
+        centroidLat: "1.5",
+        centroidLong: "-2.5"
+      },
+      {
+        siteUuid: "site-uuid-2",
+        siteName: "Site Two (no active polygons)",
+        siteStatus: "draft",
+        activeTotal: 0,
+        passed: 0,
+        partial: 0,
+        failed: 0,
+        notChecked: 0,
+        approved: 0,
+        pendingApproval: 0,
+        draft: 0,
+        informationRequired: 0,
+        overlapCount: 0,
+        hectares: null,
+        centroidLat: null,
+        centroidLong: null
+      }
+    ];
+
+    it("should throw an error if the policy does not authorize", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      await expect(controller.getSiteReviewRollup({ projectId: "project-uuid-123" })).rejects.toThrow(
+        UnauthorizedException
+      );
+    });
+
+    it("should return one resource per row, including sites with zero active polygons", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.getSiteReviewRollup.mockResolvedValue(mockRows);
+
+      const result = serialize(await controller.getSiteReviewRollup({ projectId: "project-uuid-123" }));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(sitePolygonService.getSiteReviewRollup).toHaveBeenCalledWith("project-uuid-123");
+
+      expect(result.meta).not.toBe(null);
+      expect(result.meta!.indices?.[0].total).toBe(2);
+      expect(result.meta!.indices?.[0].pageNumber).toBe(1);
+
+      const resources = result.data as Resource[];
+      expect(resources).toHaveLength(2);
+      expect(resources[0].id).toBe("site-uuid-1");
+      expect(resources[0].type).toBe("siteReviewRollups");
+      expect(resources[0].attributes).toMatchObject({
+        siteUuid: "site-uuid-1",
+        siteName: "Site One",
+        siteStatus: "approved",
+        activeTotal: 12,
+        passed: 5,
+        partial: 2,
+        failed: 1,
+        notChecked: 4,
+        approved: 8,
+        pendingApproval: 3,
+        draft: 1,
+        informationRequired: 0,
+        overlapCount: 2,
+        hectares: 123.45,
+        centroidLat: 1.5,
+        centroidLong: -2.5
+      });
+
+      expect(resources[1].id).toBe("site-uuid-2");
+      expect(resources[1].attributes).toMatchObject({
+        activeTotal: 0,
+        hectares: null,
+        centroidLat: null,
+        centroidLong: null
+      });
+    });
+
+    it("should return an empty index when the project has no sites", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.getSiteReviewRollup.mockResolvedValue([]);
+
+      const result = serialize(await controller.getSiteReviewRollup({ projectId: "project-uuid-empty" }));
+
+      expect(result.meta!.indices?.[0].total).toBe(0);
+      expect(result.data).toEqual([]);
     });
   });
 });

@@ -871,6 +871,10 @@ export class SitePolygonsService {
         SUM(CASE WHEN sp.status = :pendingApproval THEN 1 ELSE 0 END) AS pendingApproval,
         SUM(CASE WHEN sp.status = :draft THEN 1 ELSE 0 END) AS draft,
         SUM(CASE WHEN sp.status = :informationRequired THEN 1 ELSE 0 END) AS informationRequired,
+        -- Correlated EXISTS: each check is a single index seek on
+        -- idx_criteria_site_criteria_valid_polygon (criteria_id, valid, polygon_id) — see the
+        -- migration that adds it. Without that index this is catastrophic on large sites (a full
+        -- criteria_site scan per polygon); with it, ~1 seek per polygon.
         SUM(CASE WHEN EXISTS (
           SELECT 1 FROM ${criteriaTable} cs
           WHERE cs.polygon_id = sp.poly_id AND cs.criteria_id = :overlapping AND cs.valid = 0

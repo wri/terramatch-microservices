@@ -2005,4 +2005,92 @@ describe("SitePolygonsService", () => {
       });
     });
   });
+
+  describe("getSiteReviewRollup", () => {
+    // Raw SQL goes straight through SitePolygon.sequelize, bypassing the paranoid/scoping magic
+    // Sequelize gives model queries. Mocking the connection here (rather than seeding real rows)
+    // keeps this test runnable without a live database, matching the approach already used for
+    // `create`'s versioning tests above (SitePolygon.sequelize swapped for a mock, then restored).
+    let originalSequelize: typeof SitePolygon.sequelize;
+
+    beforeEach(() => {
+      originalSequelize = SitePolygon.sequelize;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: originalSequelize,
+        writable: true,
+        configurable: true
+      });
+    });
+
+    it("queries with the DB's actual status/validation literals and the OVERLAPPING criteria id", async () => {
+      const mockQuery = jest.fn().mockResolvedValue([]);
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: { query: mockQuery },
+        writable: true,
+        configurable: true
+      });
+
+      await service.getSiteReviewRollup("project-uuid-123");
+
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      const [sql, options] = mockQuery.mock.calls[0] as [string, { replacements: Record<string, unknown> }];
+
+      expect(sql).toContain("FROM v2_projects p");
+      expect(sql).toContain("JOIN v2_sites s");
+      expect(sql).toContain("LEFT JOIN site_polygon sp");
+      expect(sql).toContain("GROUP BY s.uuid, s.name, s.status");
+
+      // These are the literal values actually stored in the DB (libs/database constants), not
+      // guessed FE-facing names - e.g. the polygon status is "information-required", not
+      // "needs-more-information".
+      expect(options.replacements).toEqual({
+        projectUuid: "project-uuid-123",
+        passed: "passed",
+        partial: "partial",
+        failed: "failed",
+        notChecked: "not_checked",
+        approved: "approved",
+        pendingApproval: "pending-approval",
+        draft: "draft",
+        informationRequired: "information-required",
+        overlapping: 3
+      });
+    });
+
+    it("returns the rows from the query as-is for the DTO to normalise", async () => {
+      const rows = [
+        {
+          siteUuid: "site-uuid-1",
+          siteName: "Site One",
+          siteStatus: "approved",
+          activeTotal: "3",
+          passed: "1",
+          partial: "1",
+          failed: "0",
+          notChecked: "1",
+          approved: "2",
+          pendingApproval: "1",
+          draft: "0",
+          informationRequired: "0",
+          overlapCount: "1",
+          hectares: "12.5",
+          centroidLat: "1.1",
+          centroidLong: "2.2"
+        }
+      ];
+      const mockQuery = jest.fn().mockResolvedValue(rows);
+      Object.defineProperty(SitePolygon, "sequelize", {
+        value: { query: mockQuery },
+        writable: true,
+        configurable: true
+      });
+
+      const result = await service.getSiteReviewRollup("project-uuid-123");
+
+      expect(result).toBe(rows);
+    });
+  });
 });

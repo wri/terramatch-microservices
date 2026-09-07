@@ -7,7 +7,13 @@ import {
   SitePolygonAttributeValue
 } from "@terramatch-microservices/database/entities";
 import { col, fn, literal, Op, Transaction, UniqueConstraintError } from "sequelize";
-import { assertNotReservedAttributeKey, assertValidGeneratedKey, generateAttributeKey } from "./attribute-key";
+import {
+  assertNotReservedAttributeKey,
+  assertValidGeneratedKey,
+  assertValidGeneratedOptionValue,
+  generateAttributeKey,
+  generateAttributeOptionValue
+} from "./attribute-key";
 import {
   CreatePolygonAttributeDefinitionAttributes,
   PolygonAttributeDefinitionDto,
@@ -188,8 +194,8 @@ export class PolygonAttributeDefinitionsService {
         await found.save({ transaction });
         option = found;
       } else {
-        const value = generateAttributeKey(attrs.label);
-        assertValidGeneratedKey(value, attrs.label);
+        const value = generateAttributeOptionValue(attrs.label);
+        assertValidGeneratedOptionValue(value, attrs.label);
         option = await PolygonAttributeDefinitionOption.create(
           {
             polygonAttributeDefinitionId: definition.id,

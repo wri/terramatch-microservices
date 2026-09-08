@@ -1,19 +1,14 @@
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
-import {
-  IndicatorOutputHectaresFactory,
-  SiteFactory,
-  SitePolygonFactory
-} from "@terramatch-microservices/database/factories";
 import { HectaresRestorationService } from "./hectares-restoration.service";
 
 jest.mock("./dashboard-query.builder");
 
-const baseMocks = () => {
+const baseMocks = (projectIds: number[] = [1, 2]) => {
   const mockBuilder = {
     queryFilters: jest.fn().mockReturnThis(),
-    pluckIds: jest.fn().mockResolvedValue([1, 2]),
+    pluckIds: jest.fn().mockResolvedValue(projectIds),
     execute: jest
       .fn()
       .mockResolvedValue([
@@ -28,6 +23,17 @@ const baseMocks = () => {
   return mockBuilder;
 };
 
+const mockPolygonQuery = (polygons: Array<Partial<SitePolygon>>) => {
+  const findAll = jest.fn().mockResolvedValue(polygons);
+  jest.spyOn(SitePolygon, "active").mockReturnValue({
+    approved: jest.fn().mockReturnThis(),
+    sites: jest.fn().mockReturnThis(),
+    findAll
+  } as unknown as typeof SitePolygon);
+  jest.spyOn(Site, "approvedUuidsProjectsSubquery").mockReturnValue("site-subquery" as never);
+  return findAll;
+};
+
 describe("HectaresRestorationService - filters", () => {
   let service: HectaresRestorationService;
 
@@ -38,44 +44,68 @@ describe("HectaresRestorationService - filters", () => {
 
   it("should apply filters with totals empty", async () => {
     const filters: DashboardQueryDto = {};
-
     const mockBuilder = baseMocks();
+    mockPolygonQuery([]);
 
     const result = await service.getResults(filters);
 
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
-    expect(result.restorationStrategiesRepresented).toBeDefined();
-    expect(result.targetLandUseTypesRepresented).toBeDefined();
+    expect(result.restorationStrategiesRepresented).toEqual({});
+    expect(result.targetLandUseTypesRepresented).toEqual({});
   });
 
-  it("should apply filters with results", async () => {
+  it("should skip the polygon query when no projects match", async () => {
+    baseMocks([]);
+    const findAll = mockPolygonQuery([]);
+
+    const result = await service.getResults({});
+
+    expect(findAll).not.toHaveBeenCalled();
+    expect(Site.approvedUuidsProjectsSubquery).not.toHaveBeenCalled();
+    expect(result.restorationStrategiesRepresented).toEqual({});
+    expect(result.targetLandUseTypesRepresented).toEqual({});
+  });
+
+  it("should group calcArea by practice and target land use", async () => {
     const filters: DashboardQueryDto = {};
-    const hectaresByRestoration = "restorationByStrategy";
-    const hectaresByTargetLandUseTypes = "restorationByLandUse";
-
     const mockBuilder = baseMocks();
-
-    const site = await SiteFactory.create();
-    const sitePolygon = await SitePolygonFactory.create({ site, isActive: true, status: "approved" });
-    await IndicatorOutputHectaresFactory.create({
-      sitePolygonId: sitePolygon.id,
-      indicatorSlug: hectaresByRestoration,
-      value: { "tree-planting": 100.0 }
-    });
-    await IndicatorOutputHectaresFactory.create({
-      sitePolygonId: sitePolygon.id,
-      indicatorSlug: hectaresByTargetLandUseTypes,
-      value: { "natural-forest": 200.0 }
-    });
-    jest.spyOn(SitePolygon, "findAll").mockImplementation(() => Promise.resolve([sitePolygon]));
+    mockPolygonQuery([
+      { practice: ["tree-planting"], targetSys: "natural-forest", calcArea: 100 },
+      { practice: ["tree-planting"], targetSys: "natural-forest", calcArea: 50.555 },
+      { practice: ["direct-seeding"], targetSys: "riparian-area-or-wetland", calcArea: 25 }
+    ]);
 
     const result = await service.getResults(filters);
+
     expect(mockBuilder.queryFilters).toHaveBeenCalledWith(filters);
-    expect(result.restorationStrategiesRepresented).toBeDefined();
-    expect(result.restorationStrategiesRepresented).toHaveProperty("tree-planting");
-    expect(result.restorationStrategiesRepresented["tree-planting"]).toBe(100.0);
-    expect(result.targetLandUseTypesRepresented).toBeDefined();
-    expect(result.targetLandUseTypesRepresented).toHaveProperty("natural-forest");
-    expect(result.targetLandUseTypesRepresented["natural-forest"]).toBe(200.0);
+    expect(result.restorationStrategiesRepresented).toEqual({
+      "tree-planting": 150.555,
+      "direct-seeding": 25
+    });
+    expect(result.targetLandUseTypesRepresented).toEqual({
+      "natural-forest": 150.555,
+      "riparian-area-or-wetland": 25
+    });
+  });
+
+  it("should keep multiple strategies as one key and empty attributes as an empty key", async () => {
+    baseMocks();
+    mockPolygonQuery([
+      { practice: ["tree-planting", "direct-seeding"], targetSys: "agroforest", calcArea: 10 },
+      { practice: [], targetSys: "", calcArea: 7 },
+      { practice: null, targetSys: null, calcArea: 3 },
+      { practice: ["tree-planting"], targetSys: "natural-forest", calcArea: null }
+    ]);
+
+    const result = await service.getResults({});
+
+    expect(result.restorationStrategiesRepresented).toEqual({
+      "tree-planting,direct-seeding": 10,
+      "": 10
+    });
+    expect(result.targetLandUseTypesRepresented).toEqual({
+      agroforest: 10,
+      "": 10
+    });
   });
 });

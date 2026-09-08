@@ -123,7 +123,7 @@ describe("UpdateRequestsController", () => {
     });
 
     it("updates if the status has changed", async () => {
-      const project = await ProjectFactory.create();
+      const project = await ProjectFactory.create({ status: "approved" });
       processor.findOne.mockResolvedValue(project);
       const updateRequest = await UpdateRequestFactory.project(project).create({
         status: "pending-approval",
@@ -147,8 +147,26 @@ describe("UpdateRequestsController", () => {
       expect(service.updateModelFromForm).not.toHaveBeenCalledWith();
     });
 
+    it("rejects reviewing a change request when the entity is pending-approval", async () => {
+      const project = await ProjectFactory.create({ status: "pending-approval" });
+      processor.findOne.mockResolvedValue(project);
+      await UpdateRequestFactory.project(project).create({
+        status: "pending-approval",
+        content: { color: "red" }
+      });
+      await FormFactory.create({ frameworkKey: project.frameworkKey, model: Project.LARAVEL_TYPE });
+      service.getAnswers.mockResolvedValue({ color: "blue" });
+
+      await expect(
+        controller.update(
+          { entity: "projects", uuid: project.uuid },
+          createPayload(`projects|${project.uuid}`, "information-required", "feedback", ["feedback"])
+        )
+      ).rejects.toThrow("Change requests can only be reviewed when the entity is approved or information-required");
+    });
+
     it("stores the update request answers if the status is approved", async () => {
-      const project = await ProjectFactory.create();
+      const project = await ProjectFactory.create({ status: "approved" });
       processor.findOne.mockResolvedValue(project);
       await UpdateRequestFactory.project(project).create({
         status: "pending-approval",

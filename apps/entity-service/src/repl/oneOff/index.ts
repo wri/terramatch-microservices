@@ -41,3 +41,5 @@ export { convertBioeconomyProductQuestionsToText } from "./2026-08-14-convertBio
 export { alignTaskReportDueAt } from "./2026-08-17-alignTaskReportDueAt";
 export { clearNothingToReportReports } from "./2026-08-17-clearNothingToReportReports";
 export { backfillPpcProjectLandUseAndStrategy } from "./2026-08-18-backfillPpcProjectLandUseAndStrategy";
+export { importInvestmentData } from "./2026-09-03-importInvestmentData";
+export { updateInvestmentSplitsAmount } from "./2026-09-03-updateInvestmentSplitsAmount";

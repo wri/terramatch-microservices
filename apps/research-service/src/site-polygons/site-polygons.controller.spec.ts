@@ -399,6 +399,49 @@ describe("SitePolygonsController", () => {
       expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
     });
 
+    it.each([
+      ["validationStatus", "validationStatus"],
+      ["plantStart", "plantStart"],
+      ["numTrees", "numTrees"],
+      ["calcArea", "calcArea"],
+      ["targetSys", "targetSys"],
+      ["submissionCycle", "submissionCycle"],
+      ["source", "source"]
+    ] as const)("should apply sorting by %s with number pagination", async (field, column) => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field, direction: "ASC" } });
+
+      expect(builder.order).toHaveBeenCalledWith([[column, "ASC"]]);
+    });
+
+    it("should apply practice sort using joined-code expression", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "practice", direction: "ASC" } });
+
+      expect(builder.order).toHaveBeenCalledTimes(1);
+      const orderArg = builder.order.mock.calls[0][0];
+      expect(orderArg[0][1]).toBe("ASC");
+      expect(String(orderArg[0][0].val)).toContain("JSON_CONTAINS(SitePolygon.practice");
+      expect(String(orderArg[0][0].val)).toContain("tree-planting");
+    });
+
+    it("should apply distr sort using joined-code expression", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+
+      await controller.findMany({ page: { size: 10, number: 1 }, sort: { field: "distr", direction: "DESC" } });
+
+      expect(builder.order).toHaveBeenCalledTimes(1);
+      const orderArg = builder.order.mock.calls[0][0];
+      expect(orderArg[0][1]).toBe("DESC");
+      expect(String(orderArg[0][0].val)).toContain("JSON_CONTAINS(SitePolygon.distr");
+      expect(String(orderArg[0][0].val)).toContain("'full'");
+    });
+
     it("should call isMissingIndicators when missingIndicator is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const builder = mockQueryBuilder();

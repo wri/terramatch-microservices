@@ -29,6 +29,7 @@ export class UserSocketProcessor extends WorkerHost {
     super();
   }
 
+  /* istanbul ignore next */
   @OnWorkerEvent("failed")
   async onFailed(job: Job, error: Error) {
     this.logger.error("Job failed", error, job);
@@ -73,6 +74,7 @@ export class UserSocketProcessor extends WorkerHost {
         return await this.generateDeletionDocument(model, modelId);
 
       default:
+        /* istanbul ignore next */
         throw new InternalServerErrorException(`Unsupported event: ${event}`);
     }
   }

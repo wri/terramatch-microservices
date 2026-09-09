@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { CommonModule } from "@terramatch-microservices/common";
 import { SitePolygonsController } from "./site-polygons/site-polygons.controller";
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
+import { SitePolygonMapIndexService } from "./site-polygons/site-polygon-map-index.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
 import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
 import { PolygonAttributeValuesService } from "./site-polygons/polygon-attribute-values.service";
@@ -80,6 +81,7 @@ const IS_REPL = process.env["REPL"] === "true";
     { provide: APP_FILTER, useClass: TMGlobalFilter },
     IndicatorsService,
     SitePolygonsService,
+    SitePolygonMapIndexService,
     SitePolygonCreationService,
     SitePolygonVersioningService,
     PolygonAttributeValuesService,

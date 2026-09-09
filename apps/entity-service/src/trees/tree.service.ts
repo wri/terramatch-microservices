@@ -11,7 +11,7 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Attributes, col, CreationAttributes, fn, Includeable, Op, WhereOptions } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, Includeable, Op, ProjectionAlias, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
@@ -440,6 +440,28 @@ export class TreeService {
       { treeSpecies: "Tree Species" } as Dictionary<string>
     );
 
+    // Get all tree names from project establishment, site establishment and all reporting periods
+    const distinctNameAlias: ProjectionAlias = [fn("DISTINCT", col("name")), "name"];
+    const allReportingPeriodTrees = await TreeSpecies.visible()
+      .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
+      .collection(collection)
+      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
+    const projectEstablishmentTrees = await TreeSpecies.visible()
+      .for(project)
+      .collection(establishmentCollection)
+      .findAll({ attributes: ["name"], order: [["name", "ASC"]] });
+    const siteEstablishmentTrees = await TreeSpecies.visible()
+      .for(siteReports.map(({ site }) => site).filter(isNotNull))
+      .collection(establishmentCollection)
+      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+    const treeNames = uniqBy(
+      [...projectEstablishmentTrees, ...siteEstablishmentTrees, ...allReportingPeriodTrees],
+      "name"
+    )
+      .map(({ name }) => name)
+      .filter(name => !isEmpty(name)) as string[];
+
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()
         .for(siteReports)
@@ -447,22 +469,8 @@ export class TreeService {
         .findAll({ attributes: ["speciesableId", "name", "amount"] }),
       "speciesableId"
     );
-    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
-    const trees = uniqBy(
-      [
-        ...(await TreeSpecies.for(project)
-          .collection(establishmentCollection)
-          .findAll({ attributes: ["name"] })),
-        ...(await TreeSpecies.for(siteReports.map(({ site }) => site).filter(isNotNull))
-          .collection(establishmentCollection)
-          .findAll({ attributes: ["name"] })),
-        ...Object.values(existingReportTrees).flat()
-      ],
-      "name"
-    );
-
     await this.csvExportService.writeCsv(fileName, response, columns, async addRow => {
-      for (const { name } of trees) {
+      for (const name of treeNames) {
         const row: Dictionary<string | number | null> = { treeSpecies: name };
         for (const { id } of siteReports) {
           row[`report${id}`] = existingReportTrees[id]?.find(tree => tree.name === name)?.amount ?? null;

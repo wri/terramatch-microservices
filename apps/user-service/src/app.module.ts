@@ -23,6 +23,8 @@ import { UserAssociationController } from "./user-association/user-association.c
 import { UserAssociationService } from "./user-association/user-association.service";
 import { USER_SERVICE_EXPORT_QUEUE, UserServiceExportsProcessor } from "./exports/user-service-exports.processor";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { UserGateway } from "./websocket/user.gateway";
+import { UserSocketProcessor } from "./websocket/user-socket.processor";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -64,8 +66,9 @@ const IS_REPL = process.env["REPL"] === "true";
     OrganisationCreationService,
     ActionsService,
     UserAssociationService,
+    UserGateway,
 
-    ...(IS_REPL ? [] : [UserServiceExportsProcessor])
+    ...(IS_REPL ? [] : [UserServiceExportsProcessor, UserSocketProcessor])
   ]
 })
 export class AppModule {}

@@ -33,12 +33,43 @@ import { SrpReport } from "./srp-report.entity";
 import { chainScope } from "../util/chain-scope";
 import { InternalServerErrorException } from "@nestjs/common";
 import { EventCategory } from "../constants/product-events";
+import { UserTask } from "./user-task.entity";
+import { DatabaseModule } from "../database.module";
+
+const taskUpdatedHook = async (task: Task) => {
+  const userIds = (task.userTasks ?? (await task.$get("userTasks", { attributes: ["userId"] }))).map(
+    ({ userId }) => userId
+  );
+  if (userIds.length > 0) {
+    await DatabaseModule.emitUserDataModelUpdated({ userIds, model: "tasks", modelId: task.id });
+  }
+};
+
+const taskDestroyedHook = async (task: Task) => {
+  // If we have to load the user tasks, get deleted ones too, in case they were removed before the
+  // task was destroyed.
+  const userIds = (task.userTasks ?? (await task.$get("userTasks", { attributes: ["userId"], paranoid: false }))).map(
+    ({ userId }) => userId
+  );
+  if (userIds.length > 0) {
+    await DatabaseModule.emitUserDataModelDeleted({ userIds, model: "tasks", modelId: task.id });
+  }
+};
 
 @Scopes(() => ({
   project: (projectId: number) => ({ where: { projectId: projectId } }),
   dueAtDesc: () => ({ order: [["dueAt", "DESC"]] })
 }))
-@Table({ tableName: "v2_tasks", underscored: true, paranoid: true })
+@Table({
+  tableName: "v2_tasks",
+  underscored: true,
+  paranoid: true,
+  hooks: {
+    afterCreate: taskUpdatedHook,
+    afterUpdate: taskUpdatedHook,
+    afterDestroy: taskDestroyedHook
+  }
+})
 export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<Task>> {
   static readonly LARAVEL_TYPE = "App\\Models\\V2\\Tasks\\Task";
 
@@ -73,6 +104,10 @@ export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<T
 
   @BelongsTo(() => Organisation, { constraints: false })
   declare organisation: Organisation | null;
+
+  get organisationUuid(): string | undefined {
+    return this.organisation?.uuid;
+  }
 
   get organisationName() {
     return this.organisation?.name;
@@ -127,4 +162,7 @@ export class Task extends Model<InferAttributes<Task>, InferCreationAttributes<T
 
   @HasMany(() => SrpReport)
   declare srpReports: SrpReport[] | null;
+
+  @HasMany(() => UserTask)
+  declare userTasks: UserTask[] | null;
 }

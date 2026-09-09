@@ -63,7 +63,7 @@ describe("PolygonAttributeDefinitionsService", () => {
       expect(definition.label).toBe(label);
       expect(definition.isActive).toBe(true);
       expect(definition.options).toHaveLength(2);
-      expect(definition.options?.map(opt => opt.value)).toEqual(["farmerManaged", "assisted"]);
+      expect(definition.options?.map(opt => opt.value)).toEqual(["farmer-managed", "assisted"]);
       expect(definition.options?.map(opt => opt.order)).toEqual([0, 1]);
     });
 
@@ -127,7 +127,7 @@ describe("PolygonAttributeDefinitionsService", () => {
           frameworkKey: "ppc",
           options: [{ label: "Farmer managed" }, { label: "farmer managed" }]
         })
-      ).rejects.toThrow('Duplicate option value "farmerManaged"');
+      ).rejects.toThrow('Duplicate option value "farmer-managed"');
     });
 
     it("persists the provided order", async () => {
@@ -223,7 +223,7 @@ describe("PolygonAttributeDefinitionsService", () => {
 
       expect(updated.options).toHaveLength(2);
       expect(updated.options?.[0]?.uuid).toBe(kept.uuid);
-      expect(updated.options?.[0]?.value).toBe("farmerManaged");
+      expect(updated.options?.[0]?.value).toBe("farmer-managed");
       expect(updated.options?.[0]?.label).toBe("Farmer-managed natural regeneration");
       expect(updated.options?.[1]?.value).toBe("coppicing");
       expect(updated.options?.[1]?.order).toBe(1);

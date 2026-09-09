@@ -30,6 +30,7 @@ import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
+import { buildSitePolygonSortOrder } from "./site-polygon-sort";
 import {
   IndicatorFieldMonitoringDto,
   IndicatorHectaresDto,
@@ -396,18 +397,7 @@ export class SitePolygonsController {
         throw new BadRequestException("Sorting is only supported with number pagination.");
       }
       const direction = query.sort.direction ?? "ASC";
-      const field = query.sort.field;
-      if (["name", "status", "createdAt"].includes(field)) {
-        if (field === "name") {
-          queryBuilder.order([["polyName", direction]]);
-        } else if (field === "status") {
-          queryBuilder.order([["status", direction]]);
-        } else {
-          queryBuilder.order([["createdAt", direction]]);
-        }
-      } else {
-        throw new BadRequestException(`Invalid sort field: ${field}`);
-      }
+      queryBuilder.order(buildSitePolygonSortOrder(query.sort.field, direction));
     }
 
     const dtoType = lightResource ? SitePolygonLightDto : SitePolygonFullDto;

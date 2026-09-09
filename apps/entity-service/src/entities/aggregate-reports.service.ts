@@ -28,13 +28,29 @@ const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollect
   hbf: ["treePlanted", "seedingRecords", "treesRegenerating"]
 };
 
+function toValidDueAt(value: Date | string | null | undefined): Date | null {
+  if (value == null || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
 function buildPeriodSeries(
   reportRows: SiteReport[],
   amountByReportId: Map<number, number>,
   getAmountFromRow: (row: SiteReport) => number
 ): AggregateReportSeriesItemDto[] {
-  const withDueAt = reportRows.filter((row): row is SiteReport & { dueAt: Date } => row.dueAt != null);
-  const withNullDueAt = reportRows.filter(row => row.dueAt == null);
+  const withDueAt: { row: SiteReport; dueAt: Date }[] = [];
+  const withNullDueAt: SiteReport[] = [];
+  for (const row of reportRows) {
+    const dueAt = toValidDueAt(row.dueAt);
+    if (dueAt == null) withNullDueAt.push(row);
+    else withDueAt.push({ row, dueAt });
+  }
 
   let nullDueAmount = 0;
   for (const row of withNullDueAt) {
@@ -42,12 +58,12 @@ function buildPeriodSeries(
   }
 
   const amountByDueTime = new Map<number, { dueAt: Date; amount: number }>();
-  for (const row of withDueAt) {
-    const dueTime = row.dueAt.getTime();
+  for (const { row, dueAt } of withDueAt) {
+    const dueTime = dueAt.getTime();
     const periodAmount = amountByReportId.get(row.id) ?? getAmountFromRow(row);
     const existing = amountByDueTime.get(dueTime);
     if (existing == null) {
-      amountByDueTime.set(dueTime, { dueAt: row.dueAt, amount: periodAmount });
+      amountByDueTime.set(dueTime, { dueAt, amount: periodAmount });
     } else {
       existing.amount += periodAmount;
     }
@@ -152,8 +168,9 @@ export class AggregateReportsService {
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null && Number.isFinite(row.total)) {
-        map.set(row.speciesableId, row.total);
+      const total = toFiniteNumber(row?.total);
+      if (row != null && total != null) {
+        map.set(row.speciesableId, total);
       }
     }
     return map;
@@ -173,8 +190,9 @@ export class AggregateReportsService {
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null && Number.isFinite(row.total)) {
-        map.set(row.speciesableId, row.total);
+      const total = toFiniteNumber(row?.total);
+      if (row != null && total != null) {
+        map.set(row.speciesableId, total);
       }
     }
     return map;
@@ -194,8 +212,9 @@ export class AggregateReportsService {
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null && Number.isFinite(row.total)) {
-        map.set(row.speciesableId, row.total);
+      const total = toFiniteNumber(row?.total);
+      if (row != null && total != null) {
+        map.set(row.speciesableId, total);
       }
     }
     return map;
@@ -214,8 +233,9 @@ export class AggregateReportsService {
 
     const map = new Map<number, number>();
     for (const row of rows) {
-      if (row != null && Number.isFinite(row.total)) {
-        map.set(row.seedableId, row.total);
+      const total = toFiniteNumber(row?.total);
+      if (row != null && total != null) {
+        map.set(row.seedableId, total);
       }
     }
     return map;

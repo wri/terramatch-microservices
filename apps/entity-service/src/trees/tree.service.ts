@@ -1,5 +1,7 @@
 import { Response } from "express";
 import {
+  Form,
+  FormQuestion,
   Nursery,
   NurseryReport,
   Project,
@@ -12,7 +14,7 @@ import {
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
 import { Attributes, col, CreationAttributes, fn, Includeable, Op, ProjectionAlias, WhereOptions } from "sequelize";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
@@ -28,6 +30,7 @@ import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dt
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
 import { Readable } from "stream";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
+import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -535,16 +538,16 @@ export class TreeService {
         .map(({ name }) => name)
     );
     const taxonIds = await taxonIdsByName(treeNames, warnings);
-    const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
+    const reportIdMap = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
 
     const existingTrees = groupBy(
-      await TreeSpecies.collection(collection).siteReports(Object.values(siteReportIds)).findAll(),
+      await TreeSpecies.collection(collection).siteReports(Object.values(reportIdMap)).findAll(),
       "speciesableId"
     );
     const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
     const updatePromises: Promise<TreeSpecies>[] = [];
     for (const [siteName, pendingTrees] of Object.entries(treesToCreate)) {
-      const speciesableId = siteReportIds[siteName];
+      const speciesableId = reportIdMap[siteName];
       if (speciesableId == null) continue; // skip creation if report not found
 
       for (const { name, amount } of pendingTrees) {
@@ -573,13 +576,37 @@ export class TreeService {
     await Promise.all(updatePromises);
     await TreeSpecies.bulkCreate(bulkTrees);
 
-    // Make sure that none of the affected reports are in "due" status. Have to do it individually
-    // so that the state machine processing happens.
-    await Promise.all(
-      (await SiteReport.findAll({ where: { id: Object.values(siteReportIds), status: DUE } })).map(report =>
-        report.update({ status: DRAFT })
-      )
-    );
+    const siteReportIds = Object.values(reportIdMap);
+    if (siteReportIds.length > 0) {
+      const affectedSiteReports = await SiteReport.findAll({
+        where: { id: siteReportIds },
+        attributes: ["id", "status", "answers", "frameworkKey"]
+      });
+
+      const linkedFieldKeys = Object.entries(LinkedFieldsConfiguration.siteReports.relations)
+        .filter(([, relation]) => relation.resource === "treeSpecies" && relation.collection === collection)
+        .map(([key]) => key);
+      if (linkedFieldKeys.length !== 1) {
+        throw new InternalServerErrorException("There should be exactly one linked field for trees per collection");
+      }
+      const question = await FormQuestion.forForm(Form.uuidFor(affectedSiteReports[0])).findOne({
+        where: {
+          linkedFieldKey: linkedFieldKeys[0],
+          parentId: { [Op.ne]: null }
+        },
+        attributes: ["parentId", "showOnParentCondition"]
+      });
+      await Promise.all(
+        affectedSiteReports.map(async report => {
+          // Make sure that none of the affected reports are left in the draft status
+          if (report.status === DUE) report.status = DRAFT;
+          // Make sure that if the tree species being modified has a parent conditional, that the
+          // conditional is set such that the tree species table would show in the form.
+          if (question != null) (report.answers ??= {})[question.parentId as string] = question.showOnParentCondition;
+          await report.save();
+        })
+      );
+    }
 
     // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
     return orderBy(warnings, ({ row }) => (row == null ? -1 : row));

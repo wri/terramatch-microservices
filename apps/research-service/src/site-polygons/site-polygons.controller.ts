@@ -30,6 +30,9 @@ import { SitePolygonQueryDto } from "./dto/site-polygon-query.dto";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
+import { SitePolygonSummaryQueryDto } from "./dto/site-polygon-summary-query.dto";
+import { SitePolygonSummaryDto } from "./dto/site-polygon-summary.dto";
+import { SitePolygonSummaryService } from "./site-polygon-summary.service";
 import { buildSitePolygonSortOrder } from "./site-polygon-sort";
 import {
   IndicatorFieldMonitoringDto,
@@ -85,7 +88,9 @@ const MAX_PAGE_SIZE = 100 as const;
   IndicatorMsuCarbonDto,
   ValidationDto,
   GeoJsonExportDto,
-  GeometryUploadComparisonSummaryDto
+  GeometryUploadComparisonSummaryDto,
+  SitePolygonMapIndexDto,
+  SitePolygonSummaryDto
 )
 export class SitePolygonsController {
   constructor(
@@ -97,6 +102,7 @@ export class SitePolygonsController {
     private readonly geoJsonExportService: GeoJsonExportService,
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
+    private readonly sitePolygonSummaryService: SitePolygonSummaryService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
   ) {}
 
@@ -268,6 +274,27 @@ export class SitePolygonsController {
     const mapIndex = await this.sitePolygonMapIndexService.getMapIndex(query);
 
     return buildJsonApi(SitePolygonMapIndexDto).addData(this.sitePolygonMapIndexService.getResourceId(query), mapIndex);
+  }
+
+  @Get("summary")
+  @ApiOperation({
+    operationId: "sitePolygonsSummary",
+    summary: "Get aggregate site polygon metrics for a filtered scope",
+    description: `Returns workspace totals and optional indicator aggregates without loading polygon rows.
+    Provide exactly one of siteId[] or projectId[]. Workspace filters match mapIndex / index.
+    Pass indicatorSlug[] to include Monitored chart and run-analysis aggregates.`
+  })
+  @JsonApiResponse(SitePolygonSummaryDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Scope is missing or ambiguous, or a filter value is invalid."
+  })
+  async summary(@Query() query: SitePolygonSummaryQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const summary = await this.sitePolygonSummaryService.getSummary(query);
+
+    return buildJsonApi(SitePolygonSummaryDto).addData(this.sitePolygonSummaryService.getResourceId(query), summary);
   }
 
   @Get()

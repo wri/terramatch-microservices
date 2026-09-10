@@ -6,7 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
-  Post,
+  Put,
   Query,
   Res,
   UnauthorizedException,
@@ -135,7 +135,7 @@ export class TreesController {
     await this.treeService.getBulkImportCsv(task, collection, response);
   }
 
-  @Post("bulkImportCsv/:uuid")
+  @Put("bulkImportCsv/:uuid")
   @ApiOperation({
     operationId: "treeBulkImportCsvUpload",
     summary: "Upload a CSV for bulk importing tree data for a given task"

@@ -3,7 +3,7 @@ import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { Dictionary } from "lodash";
 
-const BULK_TREE_COLLECTIONS = ["anr", "replanting", "tree-planted", "non-tree", "invasive"] as const;
+const BULK_TREE_COLLECTIONS = ["anr", "replanting", "tree-planted", "non-tree", "invasive", "established"] as const;
 export type BulkTreeCollection = (typeof BULK_TREE_COLLECTIONS)[number];
 
 export class BulkCsvDownloadQueryDto {

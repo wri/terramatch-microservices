@@ -1,4 +1,4 @@
-import { literal, Op, WhereOptions } from "sequelize";
+import { FindAttributeOptions, FindOptions, literal, Op, WhereOptions } from "sequelize";
 import {
   CriteriaSite,
   IndicatorOutputFieldMonitoring,
@@ -18,7 +18,7 @@ import {
 import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
-import { uniq } from "lodash";
+import { omit, uniq } from "lodash";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -184,6 +184,13 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
       this.where({ [Op.and]: literals });
     }
     return this;
+  }
+
+  findOptionsForAggregation(attributes: FindAttributeOptions): FindOptions {
+    return {
+      ...omit(this.findOptions, ["limit", "offset", "order", "attributes"]),
+      attributes
+    };
   }
 
   private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {

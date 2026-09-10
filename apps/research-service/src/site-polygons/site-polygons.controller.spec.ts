@@ -34,6 +34,9 @@ import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
 import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
+import { SitePolygonSummaryService } from "./site-polygon-summary.service";
+import { SitePolygonSummaryDto } from "./dto/site-polygon-summary.dto";
+import { SitePolygonSummaryQueryDto } from "./dto/site-polygon-summary-query.dto";
 
 function getSharedSequelize(): Sequelize {
   const connection = User.sequelize;
@@ -66,6 +69,7 @@ describe("SitePolygonsController", () => {
   let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
   let geoJsonExportService: DeepMocked<GeoJsonExportService>;
   let sitePolygonMapIndexService: DeepMocked<SitePolygonMapIndexService>;
+  let sitePolygonSummaryService: DeepMocked<SitePolygonSummaryService>;
 
   interface MockQueryBuilder {
     execute: jest.Mock;
@@ -179,6 +183,10 @@ describe("SitePolygonsController", () => {
         {
           provide: SitePolygonMapIndexService,
           useValue: (sitePolygonMapIndexService = createMock<SitePolygonMapIndexService>())
+        },
+        {
+          provide: SitePolygonSummaryService,
+          useValue: (sitePolygonSummaryService = createMock<SitePolygonSummaryService>())
         }
       ]
     }).compile();
@@ -2397,6 +2405,59 @@ describe("SitePolygonsController", () => {
       if (!Array.isArray(result.data) && result.data != null) {
         expect(result.data).toHaveProperty("id", getStableRequestQuery(query));
         expect(result.data.attributes).toEqual({ polygons: [], total: 0 });
+      }
+    });
+  });
+
+  describe("summary", () => {
+    const summaryDto = new SitePolygonSummaryDto({
+      sumNumTrees: 15,
+      sumCalcArea: 3.5,
+      totalPolygons: 2,
+      countByStatus: {
+        draft: 1,
+        "pending-approval": 0,
+        "information-required": 0,
+        approved: 1
+      }
+    });
+
+    it("should throw UnauthorizedException when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.summary({ siteId: ["site-1"] })).rejects.toThrow(UnauthorizedException);
+      expect(sitePolygonSummaryService.getSummary).not.toHaveBeenCalled();
+    });
+
+    it("should return a single sitePolygonSummaries resource", async () => {
+      const query: SitePolygonSummaryQueryDto = {
+        siteId: ["site-uuid-123"],
+        indicatorSlug: ["treeCoverLoss"]
+      };
+
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonSummaryService.getSummary.mockResolvedValue(summaryDto);
+      sitePolygonSummaryService.getResourceId.mockReturnValue(getStableRequestQuery(query));
+
+      const result = serialize(await controller.summary(query));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(sitePolygonSummaryService.getSummary).toHaveBeenCalledWith(query);
+      expect(sitePolygonSummaryService.getResourceId).toHaveBeenCalledWith(query);
+      if (!Array.isArray(result.data) && result.data != null) {
+        expect(result.data).toHaveProperty("type", "sitePolygonSummaries");
+        expect(result.data).toHaveProperty("id", getStableRequestQuery(query));
+        expect(result.data.attributes).toEqual({
+          sumNumTrees: 15,
+          sumCalcArea: 3.5,
+          totalPolygons: 2,
+          countByStatus: {
+            draft: 1,
+            "pending-approval": 0,
+            "information-required": 0,
+            approved: 1
+          }
+        });
       }
     });
   });

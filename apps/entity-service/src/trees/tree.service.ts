@@ -1,5 +1,7 @@
 import { Response } from "express";
 import {
+  Form,
+  FormQuestion,
   Nursery,
   NurseryReport,
   Project,
@@ -11,8 +13,8 @@ import {
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Attributes, col, CreationAttributes, fn, Includeable, Op, WhereOptions } from "sequelize";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Attributes, col, CreationAttributes, fn, Includeable, Op, ProjectionAlias, WhereOptions } from "sequelize";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
@@ -28,6 +30,7 @@ import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dt
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
 import { Readable } from "stream";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
+import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -119,8 +122,8 @@ const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) =>
   return taxonIds;
 };
 
-const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUploadWarning[]) => {
-  // map of site name to site report ID.
+const siteReportNamesById = async (task: Task, sites: string[], warnings: BulkUploadWarning[]) => {
+  // map of site report id to site name.
   const siteIds = (
     await task.$get("siteReports", {
       attributes: ["id"],
@@ -130,14 +133,14 @@ const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUp
   ).reduce(
     (acc, { id, site }) => ({
       ...acc,
-      [site?.name as string]: id
+      [id]: site?.name as string
     }),
-    {} as Dictionary<number>
+    {} as Dictionary<string>
   );
 
   // check for any missing sites and add a warning
   for (const site of sites) {
-    if (siteIds[site] == null) {
+    if (Object.values(siteIds).find(name => site === name) == null) {
       warnings.push(
         new BulkUploadWarning(`Site not found or report not editable: ${site}`, "SITE_NOT_FOUND", {
           variables: { site }
@@ -440,6 +443,28 @@ export class TreeService {
       { treeSpecies: "Tree Species" } as Dictionary<string>
     );
 
+    // Get all tree names from project establishment, site establishment and all reporting periods
+    const distinctNameAlias: ProjectionAlias = [fn("DISTINCT", col("name")), "name"];
+    const allReportingPeriodTrees = await TreeSpecies.visible()
+      .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
+      .collection(collection)
+      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
+    const projectEstablishmentTrees = await TreeSpecies.visible()
+      .for(project)
+      .collection(establishmentCollection)
+      .findAll({ attributes: ["name"], order: [["name", "ASC"]] });
+    const siteEstablishmentTrees = await TreeSpecies.visible()
+      .for(siteReports.map(({ site }) => site).filter(isNotNull))
+      .collection(establishmentCollection)
+      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+    const treeNames = uniqBy(
+      [...projectEstablishmentTrees, ...siteEstablishmentTrees, ...allReportingPeriodTrees],
+      "name"
+    )
+      .map(({ name }) => name)
+      .filter(name => !isEmpty(name)) as string[];
+
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()
         .for(siteReports)
@@ -447,22 +472,8 @@ export class TreeService {
         .findAll({ attributes: ["speciesableId", "name", "amount"] }),
       "speciesableId"
     );
-    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
-    const trees = uniqBy(
-      [
-        ...(await TreeSpecies.for(project)
-          .collection(establishmentCollection)
-          .findAll({ attributes: ["name"] })),
-        ...(await TreeSpecies.for(siteReports.map(({ site }) => site).filter(isNotNull))
-          .collection(establishmentCollection)
-          .findAll({ attributes: ["name"] })),
-        ...Object.values(existingReportTrees).flat()
-      ],
-      "name"
-    );
-
     await this.csvExportService.writeCsv(fileName, response, columns, async addRow => {
-      for (const { name } of trees) {
+      for (const name of treeNames) {
         const row: Dictionary<string | number | null> = { treeSpecies: name };
         for (const { id } of siteReports) {
           row[`report${id}`] = existingReportTrees[id]?.find(tree => tree.name === name)?.amount ?? null;
@@ -479,10 +490,7 @@ export class TreeService {
       throw new TranslatableException("Uploaded file must be a CSV", "CSV_REQUIRED");
     }
 
-    // Map of site name to trees to create
-    const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
-    // List of tree species name by row
-    const trees: string[] = [];
+    const treesToSync: Dictionary<{ name: string; amount: number }[]> = {};
     let currentRow = 1; // starting at 1 to account for the header row.
     await parseCsvStream(Readable.from(csv.buffer), async row => {
       currentRow++;
@@ -493,8 +501,6 @@ export class TreeService {
           column: "Tree Species"
         });
       }
-
-      trees.push(treeSpeciesName);
 
       if (treeSpeciesName === "") {
         warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
@@ -509,9 +515,9 @@ export class TreeService {
           continue;
         }
 
-        const amount = Number.parseInt(amountString);
+        const amount = isEmpty(amountString) ? null : Number.parseInt(amountString);
         // Checking against the amount string catches decimal values because Number.parseInt("1.2") yields 1.
-        if (isNaN(amount) || amount < 0 || `${amount}` !== amountString) {
+        if (amount != null && (isNaN(amount) || amount < 0 || `${amount}` !== amountString)) {
           warnings.push(
             new BulkUploadWarning(`Amount value not supported: ${amountString}`, "AMOUNT_UNSUPPORTED", {
               row: currentRow,
@@ -521,54 +527,96 @@ export class TreeService {
           continue;
         }
 
-        (treesToCreate[siteName] ??= []).push({ name: treeSpeciesName, amount });
+        // make sure the site is represented even if its trees all end up empty (in that case
+        // we have to make sure there are no trees saved on the report in this collection)
+        treesToSync[siteName] ??= [];
+        if (amount != null && amount > 0) {
+          treesToSync[siteName].push({ name: treeSpeciesName, amount: amount ?? 0 });
+        }
       }
     });
 
-    const taxonIds = await taxonIdsByName(trees, warnings);
-    const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
-
-    const existingTrees = groupBy(
-      await TreeSpecies.collection(collection).siteReports(Object.values(siteReportIds)).findAll(),
-      "speciesableId"
+    const treeNames = uniq(
+      Object.values(treesToSync)
+        .flat()
+        .map(({ name }) => name)
     );
-    const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
-    const updatePromises: Promise<TreeSpecies>[] = [];
-    for (const [siteName, pendingTrees] of Object.entries(treesToCreate)) {
-      const speciesableId = siteReportIds[siteName];
-      if (speciesableId == null) continue; // skip creation if report not found
+    const taxonIds = await taxonIdsByName(treeNames, warnings);
+    const reportIdMap = await siteReportNamesById(task, Object.keys(treesToSync), warnings);
 
-      for (const { name, amount } of pendingTrees) {
-        const taxonId = taxonIds[name];
-        const existingTree = existingTrees[speciesableId]?.find(existingTree =>
-          taxonId == null ? name === existingTree.name : taxonId === existingTree.taxonId
-        );
+    const siteReportIds = Object.keys(reportIdMap).map(id => Number.parseInt(id));
+    if (siteReportIds.length > 0) {
+      const existingTrees = groupBy(
+        await TreeSpecies.collection(collection).siteReports(siteReportIds).findAll(),
+        "speciesableId"
+      );
+      const affectedSiteReports = await SiteReport.findAll({
+        where: { id: siteReportIds },
+        attributes: ["id", "status", "answers", "frameworkKey"]
+      });
 
-        if (existingTree == null) {
-          bulkTrees.push({
-            speciesableId,
-            speciesableType: SiteReport.LARAVEL_TYPE,
-            name,
-            taxonId,
-            amount,
-            collection
-          });
-        } else {
-          if (amount !== existingTree.amount || existingTree.hidden) {
-            updatePromises.push(existingTree.update({ amount, hidden: false }));
-          }
-        }
+      const linkedFieldKeys = Object.entries(LinkedFieldsConfiguration.siteReports.relations)
+        .filter(([, relation]) => relation.resource === "treeSpecies" && relation.collection === collection)
+        .map(([key]) => key);
+      if (linkedFieldKeys.length !== 1) {
+        throw new InternalServerErrorException("There should be exactly one linked field for trees per collection");
       }
+      const question = await FormQuestion.forForm(Form.uuidFor(affectedSiteReports[0])).findOne({
+        where: {
+          linkedFieldKey: linkedFieldKeys[0],
+          parentId: { [Op.ne]: null }
+        },
+        attributes: ["parentId", "showOnParentCondition"]
+      });
+      const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
+      const updatePromises: Promise<TreeSpecies>[] = [];
+      const deletePromises: Promise<unknown>[] = [];
+      await Promise.all(
+        affectedSiteReports.map(async report => {
+          // Make sure that none of the affected reports are left in the draft status
+          if (report.status === DUE) report.status = DRAFT;
+
+          // Make sure that if the tree species being modified has a parent conditional, that the
+          // conditional is set such that the tree species table would show in the form.
+          if (question != null) (report.answers ??= {})[question.parentId as string] = question.showOnParentCondition;
+
+          const treeNames: string[] = [];
+          for (const { name, amount } of treesToSync[reportIdMap[report.id]]) {
+            treeNames.push(name);
+            const existingTree = existingTrees[report.id].find(tree => tree.name === name);
+            if (existingTree == null) {
+              bulkTrees.push({
+                speciesableId: report.id,
+                speciesableType: SiteReport.LARAVEL_TYPE,
+                name,
+                taxonId: taxonIds[name],
+                amount,
+                collection
+              });
+            } else {
+              if (amount !== existingTree.amount || existingTree.hidden) {
+                updatePromises.push(existingTree.update({ amount, hidden: false }));
+              }
+            }
+          }
+          deletePromises.push(
+            TreeSpecies.destroy({
+              where: {
+                speciesableType: SiteReport.LARAVEL_TYPE,
+                speciesableId: report.id,
+                name: { [Op.notIn]: treeNames }
+              }
+            })
+          );
+
+          await report.save();
+        })
+      );
+
+      await Promise.all(deletePromises);
+      await Promise.all(updatePromises);
+      await TreeSpecies.bulkCreate(bulkTrees);
     }
-
-    await Promise.all(updatePromises);
-    await TreeSpecies.bulkCreate(bulkTrees);
-
-    // Make sure that none of the affected reports are in "due" status. Have to do it individually
-    // so that the state machine processing happens.
-    await Promise.all(
-      (await task.$get("siteReports", { where: { status: DUE } })).map(report => report.update({ status: DRAFT }))
-    );
 
     // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
     return orderBy(warnings, ({ row }) => (row == null ? -1 : row));

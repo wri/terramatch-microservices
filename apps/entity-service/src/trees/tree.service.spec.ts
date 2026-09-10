@@ -423,6 +423,12 @@ describe("TreeService", () => {
         collection: "anr",
         amount: 10
       });
+      const oldTask = await TaskFactory.create({ projectId: project.id });
+      const oldReport = await SiteReportFactory.create({ status: "approved", siteId: site.id, taskId: oldTask.id });
+      const oldReportTree = await TreeSpeciesFactory.siteReportTreePlanted(oldReport).create({
+        collection: "anr",
+        amount: 20
+      });
 
       // These two should not be included. (wrong collection
       await TreeSpeciesFactory.siteReportNonTree(siteReport).create();
@@ -447,11 +453,12 @@ describe("TreeService", () => {
         expect.objectContaining(expectedColumns),
         expect.any(Function)
       );
-      expect(addRow).toHaveBeenCalledTimes(5);
+      expect(addRow).toHaveBeenCalledTimes(6);
       expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: projectTrees[0].name }));
       expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: projectTrees[1].name }));
       expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: siteTrees[0].name }));
       expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: siteTrees[1].name }));
+      expect(addRow).toHaveBeenCalledWith(expect.objectContaining({ treeSpecies: oldReportTree.name }));
       expect(addRow).toHaveBeenCalledWith(
         expect.objectContaining({ treeSpecies: reportTree.name, [`report${siteReport.id}`]: 10 })
       );
@@ -513,7 +520,7 @@ ${projectTree.name},,,7`;
       expect(reportTrees.length).toEqual(2);
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: projectTree.name, amount: 1 }));
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: reportTree.name, amount: 3 }));
-      expect(warnings.length).toBe(12);
+      expect(warnings.length).toBe(7);
       expect(warnings[0]).toMatchObject({ row: undefined, message: "Site not found or report not editable: Foo Site" });
       expect(warnings).toContainEqual(
         expect.objectContaining({

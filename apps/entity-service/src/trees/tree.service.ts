@@ -489,8 +489,6 @@ export class TreeService {
 
     // Map of site name to trees to create
     const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
-    // List of tree species name by row
-    const trees: string[] = [];
     let currentRow = 1; // starting at 1 to account for the header row.
     await parseCsvStream(Readable.from(csv.buffer), async row => {
       currentRow++;
@@ -501,8 +499,6 @@ export class TreeService {
           column: "Tree Species"
         });
       }
-
-      trees.push(treeSpeciesName);
 
       if (treeSpeciesName === "") {
         warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
@@ -533,7 +529,12 @@ export class TreeService {
       }
     });
 
-    const taxonIds = await taxonIdsByName(trees, warnings);
+    const treeNames = uniq(
+      Object.values(treesToCreate)
+        .flat()
+        .map(({ name }) => name)
+    );
+    const taxonIds = await taxonIdsByName(treeNames, warnings);
     const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
 
     const existingTrees = groupBy(

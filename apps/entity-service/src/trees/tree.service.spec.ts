@@ -520,7 +520,7 @@ ${projectTree.name},,,7`;
       expect(reportTrees.length).toEqual(2);
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: projectTree.name, amount: 1 }));
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: reportTree.name, amount: 3 }));
-      expect(warnings.length).toBe(12);
+      expect(warnings.length).toBe(7);
       expect(warnings[0]).toMatchObject({ row: undefined, message: "Site not found or report not editable: Foo Site" });
       expect(warnings).toContainEqual(
         expect.objectContaining({

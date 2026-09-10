@@ -8,6 +8,7 @@ import {
   SitePolygonFactory
 } from "@terramatch-microservices/database/factories";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
+import { getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 
@@ -289,22 +290,27 @@ describe("SitePolygonMapIndexService", () => {
   });
 
   describe("getResourceId", () => {
-    it("identifies a site scope regardless of uuid order", () => {
-      const id = service.getResourceId({ siteId: ["b", "a"] } as SitePolygonMapIndexQueryDto);
+    it("matches getStableRequestQuery so FE singleByFilter can cache by the full query", () => {
+      const query = { siteId: ["b", "a"] } as SitePolygonMapIndexQueryDto;
 
-      expect(id).toBe("sites:a,b");
+      expect(service.getResourceId(query)).toBe(getStableRequestQuery(query));
     });
 
-    it("identifies a project scope", () => {
-      const id = service.getResourceId({ projectId: ["p1"] } as SitePolygonMapIndexQueryDto);
+    it("changes when workspace filters change", () => {
+      const unfiltered = service.getResourceId({ siteId: ["s1"] } as SitePolygonMapIndexQueryDto);
+      const filtered = service.getResourceId({
+        siteId: ["s1"],
+        polygonStatus: ["approved"]
+      } as SitePolygonMapIndexQueryDto);
 
-      expect(id).toBe("projects:p1");
+      expect(unfiltered).not.toBe(filtered);
     });
 
     it("distinguishes the soft-deleted branch", () => {
-      const id = service.getResourceId({ siteId: ["s1"], deletedOnly: true } as SitePolygonMapIndexQueryDto);
+      const active = service.getResourceId({ siteId: ["s1"] } as SitePolygonMapIndexQueryDto);
+      const deleted = service.getResourceId({ siteId: ["s1"], deletedOnly: true } as SitePolygonMapIndexQueryDto);
 
-      expect(id).toBe("deleted:sites:s1");
+      expect(active).not.toBe(deleted);
     });
   });
 });

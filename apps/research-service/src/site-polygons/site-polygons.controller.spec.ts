@@ -7,7 +7,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { Resource } from "@terramatch-microservices/common/util";
+import { getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
@@ -2361,7 +2361,7 @@ describe("SitePolygonsController", () => {
 
       policyService.authorize.mockResolvedValue(undefined);
       sitePolygonMapIndexService.getMapIndex.mockResolvedValue(mapIndexDto);
-      sitePolygonMapIndexService.getResourceId.mockReturnValue("sites:site-uuid-123");
+      sitePolygonMapIndexService.getResourceId.mockReturnValue(getStableRequestQuery(query));
 
       const result = serialize(await controller.mapIndex(query));
 
@@ -2371,7 +2371,7 @@ describe("SitePolygonsController", () => {
       expect(result.data).toBeDefined();
       if (!Array.isArray(result.data) && result.data != null) {
         expect(result.data).toHaveProperty("type", "sitePolygonMapIndexes");
-        expect(result.data).toHaveProperty("id", "sites:site-uuid-123");
+        expect(result.data).toHaveProperty("id", getStableRequestQuery(query));
         expect(result.data.attributes).toEqual({
           polygons: [
             { uuid: "sp-1", polygonUuid: "poly-1", status: "approved" },
@@ -2389,13 +2389,13 @@ describe("SitePolygonsController", () => {
 
       policyService.authorize.mockResolvedValue(undefined);
       sitePolygonMapIndexService.getMapIndex.mockResolvedValue(new SitePolygonMapIndexDto([]));
-      sitePolygonMapIndexService.getResourceId.mockReturnValue("projects:project-uuid-123");
+      sitePolygonMapIndexService.getResourceId.mockReturnValue(getStableRequestQuery(query));
 
       const result = serialize(await controller.mapIndex(query));
 
       expect(sitePolygonMapIndexService.getMapIndex).toHaveBeenCalledWith(query);
       if (!Array.isArray(result.data) && result.data != null) {
-        expect(result.data).toHaveProperty("id", "projects:project-uuid-123");
+        expect(result.data).toHaveProperty("id", getStableRequestQuery(query));
         expect(result.data.attributes).toEqual({ polygons: [], total: 0 });
       }
     });

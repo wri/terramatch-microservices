@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import { getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapEntryDto, SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
@@ -65,9 +66,7 @@ export class SitePolygonMapIndexService {
     );
   }
 
-  getResourceId({ siteId, projectId, deletedOnly }: SitePolygonMapIndexQueryDto): string {
-    const scope =
-      siteId != null ? `sites:${[...siteId].sort().join(",")}` : `projects:${[...(projectId ?? [])].sort().join(",")}`;
-    return deletedOnly === true ? `deleted:${scope}` : scope;
+  getResourceId(query: SitePolygonMapIndexQueryDto): string {
+    return getStableRequestQuery(query);
   }
 }

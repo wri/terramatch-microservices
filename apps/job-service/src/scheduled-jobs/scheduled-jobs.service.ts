@@ -28,6 +28,8 @@ const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
 const NOTIFICATION_RETENTION_DAYS = 90;
 
+const IS_DEV = process.env["NODE_ENV"] === "development";
+
 @Injectable()
 export class ScheduledJobsService {
   private readonly logger = new TMLogger(ScheduledJobsService.name);
@@ -88,6 +90,8 @@ export class ScheduledJobsService {
 
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async ensureAnnualTaskDueJobs() {
+    if (IS_DEV) return;
+
     const now = DateTime.utc();
     const currentYear = now.year;
     const years = [currentYear, currentYear + 1] as const;
@@ -158,6 +162,8 @@ export class ScheduledJobsService {
 
   @Cron("0 13,20 * * *", { name: "generateFrameworkEntityExports" })
   async generateFrameworkEntityExports() {
+    if (IS_DEV) return;
+
     const frameworks = (await Framework.findAll({ attributes: ["slug"] })).map(({ slug }) => slug).filter(isNotNull);
     for (const frameworkKey of frameworks) {
       for (const entityType of CACHED_EXPORT_ENTITY_TYPES) {
@@ -168,6 +174,8 @@ export class ScheduledJobsService {
 
   @Cron("0 13,20 * * *", { name: "generateApplicationExports" })
   async generateApplicationExports() {
+    if (IS_DEV) return;
+
     const ids = (await FundingProgramme.findAll({ attributes: ["id"] })).map(({ id }) => id as number);
     for (const fundingProgrammeId of ids) {
       await this.entitiesQueue.add("generateApplicationExport", { fundingProgrammeId });

@@ -18,6 +18,8 @@ type SiteAssociations = {
   nonTreeNameAndAmount: string;
   invasiveAmount: number | null;
   invasiveNameAndAmount: string;
+  establishedAmount: number | null;
+  establishedNameAndAmount: string;
 };
 
 const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
@@ -53,7 +55,9 @@ const COLUMNS: ColumnMapping<Site, SiteAssociations>[] = [
   associatedValueColumn("nonTreeAmount"),
   associatedValueColumn("nonTreeNameAndAmount"),
   associatedValueColumn("invasiveAmount"),
-  associatedValueColumn("invasiveNameAndAmount")
+  associatedValueColumn("invasiveNameAndAmount"),
+  associatedValueColumn("establishedAmount"),
+  associatedValueColumn("establishedNameAndAmount")
 ];
 
 const TREE_ASSOCIATION: UpdateAssociation<Site, TreeSpecies> = {
@@ -88,7 +92,9 @@ export class SiteEntity extends AirtableEntity<Site, SiteAssociations> {
           nonTreeAmount: treeAmountRollup(treesBySite[id], "non-tree"),
           nonTreeNameAndAmount: treeDescriptionRollup(treesBySite[id], "non-tree"),
           invasiveAmount: treeAmountRollup(treesBySite[id], "invasive"),
-          invasiveNameAndAmount: treeDescriptionRollup(treesBySite[id], "invasive")
+          invasiveNameAndAmount: treeDescriptionRollup(treesBySite[id], "invasive"),
+          establishedAmount: treeAmountRollup(treesBySite[id], "established"),
+          establishedNameAndAmount: treeDescriptionRollup(treesBySite[id], "established")
         }
       }),
       {} as Record<number, SiteAssociations>

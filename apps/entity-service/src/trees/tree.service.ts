@@ -449,7 +449,9 @@ export class TreeService {
       .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
       .collection(collection)
       .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
-    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
+    const establishmentCollection = ["anr", "replanting", "established"].includes(collection)
+      ? "tree-planted"
+      : collection;
     const projectEstablishmentTrees = await TreeSpecies.visible()
       .for(project)
       .collection(establishmentCollection)

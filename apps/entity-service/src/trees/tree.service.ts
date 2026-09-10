@@ -576,7 +576,9 @@ export class TreeService {
     // Make sure that none of the affected reports are in "due" status. Have to do it individually
     // so that the state machine processing happens.
     await Promise.all(
-      (await task.$get("siteReports", { where: { status: DUE } })).map(report => report.update({ status: DRAFT }))
+      (await SiteReport.findAll({ where: { id: Object.values(siteReportIds), status: DUE } })).map(report =>
+        report.update({ status: DRAFT })
+      )
     );
 
     // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.

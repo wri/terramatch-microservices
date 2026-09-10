@@ -657,16 +657,11 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   protected async getLastReport(projectId: number) {
-    return await ProjectReport.project(projectId)
+    return await ProjectReport.approved()
+      .project(projectId)
       .lastReport()
       .findOne({
-        where: {
-          [Op.or]: [
-            { plantingStatus: { [Op.ne]: null } },
-            { landscapeCommunityContribution: { [Op.ne]: null } },
-            { communityProgress: { [Op.ne]: null } }
-          ]
-        },
+        where: { plantingStatus: { [Op.ne]: null } },
         attributes: ["plantingStatus", "landscapeCommunityContribution", "communityProgress"]
       });
   }

@@ -310,8 +310,25 @@ export class SiteReportProcessor extends ReportProcessor<
     frameworkKey,
     projectUuid,
     siteId,
-    fileNamePrefix
+    fileNamePrefix,
+    uuids
   }: ExportAllOptions & { siteId?: number } = {}) {
+    if (uuids != null && uuids.length > 0) {
+      const reports = await SiteReport.findAll({ where: { uuid: { [Op.in]: uuids } }, include: CSV_EXPORT_INCLUDES });
+      if (reports.length === 0) return;
+      await this.entitiesService.authorize("read", reports);
+      frameworkKey ??= reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined;
+      if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+      const reportsLabel = await this.entitiesService.localizeText("site reports");
+      await this.exportReports(
+        frameworkKey,
+        target,
+        reports,
+        fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
+      );
+      return;
+    }
+
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??

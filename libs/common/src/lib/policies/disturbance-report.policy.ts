@@ -1,6 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, DisturbanceReport, User } from "@terramatch-microservices/database/entities";
-import { AWAITING_APPROVAL, STARTED } from "@terramatch-microservices/database/constants/status";
+import { PENDING_APPROVAL, DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class DisturbanceReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -49,11 +49,11 @@ export class DisturbanceReportPolicy extends UserPermissionsPolicy {
           );
           this.builder.can("updateAnswers", DisturbanceReport, {
             projectId: { $in: projectIds },
-            status: { $in: [STARTED] }
+            status: { $in: [DRAFT] }
           });
           this.builder.can("updateAnswers", DisturbanceReport, {
             projectId: { $in: projectIds },
-            status: AWAITING_APPROVAL,
+            status: PENDING_APPROVAL,
             nothingToReport: true
           });
         }

@@ -35,7 +35,6 @@ import { literal, Op } from "sequelize";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { ApplicationDto } from "../applications/dto/application.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
@@ -45,7 +44,6 @@ export class FundingProgrammesController {
   constructor(
     private readonly policyService: PolicyService,
     private readonly formDataService: FormDataService,
-    private readonly localizationService: LocalizationService,
     private readonly csvExportService: CsvExportService
   ) {}
 
@@ -134,11 +132,8 @@ export class FundingProgrammesController {
     const attributes = payload.data.attributes;
     const fundingProgramme = FundingProgramme.build({
       name: attributes.name,
-      nameId: await this.localizationService.generateI18nId(attributes.name),
       description: attributes.description,
-      descriptionId: await this.localizationService.generateI18nId(attributes.description),
       location: attributes.location,
-      locationId: await this.localizationService.generateI18nId(attributes.location),
       readMoreUrl: attributes.readMoreUrl,
       status: attributes.status,
       frameworkKey: attributes.frameworkKey,
@@ -192,20 +187,8 @@ export class FundingProgrammesController {
     const attributes = payload.data.attributes;
     await fundingProgramme.update({
       name: attributes.name,
-      nameId:
-        attributes.name === fundingProgramme.name
-          ? fundingProgramme.nameId
-          : await this.localizationService.generateI18nId(attributes.name),
       description: attributes.description,
-      descriptionId:
-        attributes.description === fundingProgramme.description
-          ? fundingProgramme.descriptionId
-          : await this.localizationService.generateI18nId(attributes.description),
       location: attributes.location,
-      locationId:
-        attributes.location === fundingProgramme.location
-          ? fundingProgramme.locationId
-          : await this.localizationService.generateI18nId(attributes.location),
       readMoreUrl: attributes.readMoreUrl,
       status: attributes.status,
       frameworkKey: attributes.frameworkKey,

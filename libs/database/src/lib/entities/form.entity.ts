@@ -10,7 +10,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, INTEGER, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, BOOLEAN, literal, Op, STRING, TEXT, UUID, UUIDV4 } from "sequelize";
 import { FrameworkKey } from "../constants";
 import { Stage } from "./stage.entity";
 import { FormType } from "../constants/forms";
@@ -153,24 +153,12 @@ export class Form extends Model<Form> {
   declare title: string;
 
   @AllowNull
-  @Column(INTEGER)
-  declare titleId: number | null;
-
-  @AllowNull
   @Column(TEXT)
   declare subtitle: string | null;
 
   @AllowNull
-  @Column(INTEGER)
-  declare subtitleId: number | null;
-
-  @AllowNull
   @Column(TEXT)
   declare description: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare descriptionId: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -179,10 +167,6 @@ export class Form extends Model<Form> {
   @AllowNull
   @Column(TEXT)
   declare submissionMessage: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare submissionMessageId: number | null;
 
   @AllowNull
   @Column(TEXT)

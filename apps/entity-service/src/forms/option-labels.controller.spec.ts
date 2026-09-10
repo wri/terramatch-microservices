@@ -7,7 +7,6 @@ import {
   FormQuestionOptionFactory
 } from "@terramatch-microservices/database/factories";
 import { faker } from "@faker-js/faker";
-import { I18nTranslationFactory } from "@terramatch-microservices/database/factories/i18n-translation.factory";
 import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { NotFoundException } from "@nestjs/common";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
@@ -29,6 +28,8 @@ describe("OptionsLabelsController", () => {
     }).compile();
 
     controller = module.get(OptionLabelsController);
+
+    jest.spyOn(controller["localizationService"], "localizeText").mockImplementation(async (text: string) => text);
 
     await FormOptionListOption.truncate();
     await FormQuestion.truncate();
@@ -90,25 +91,25 @@ describe("OptionsLabelsController", () => {
     });
 
     it("should translate", async () => {
-      const translation1 = await I18nTranslationFactory.create({ language: "es-MX", shortValue: null });
-      const translation2 = await I18nTranslationFactory.create({ language: "es-MX" });
-      const listOption = await FormOptionListOptionFactory.create({ labelId: translation1.i18nItemId });
-      const questionOption = await FormQuestionOptionFactory.forQuestion().create({ labelId: translation2.i18nItemId });
+      const listOption = await FormOptionListOptionFactory.create({ label: "Hello" });
+      const questionOption = await FormQuestionOptionFactory.forQuestion().create({ label: "World" });
       const options = [listOption, questionOption];
-      const translations = [translation1, translation2];
+
+      jest
+        .spyOn(controller["localizationService"], "localizeText")
+        .mockImplementation(async (text: string) => `translated:${text}`);
 
       mockUserContext({ userId: 123, locale: "es-MX" });
       const document = serialize(await controller.optionLabelsIndex(options.map(({ slug }) => slug) as string[]));
       expect(document.data).toHaveLength(options.length);
-      for (const { slug, labelId, imageUrl } of options) {
-        const translation = translations.find(({ i18nItemId }) => i18nItemId === labelId);
+      for (const { slug, label, imageUrl } of options) {
         expect(document.data).toContainEqual({
           id: slug,
           type: "optionLabels",
           attributes: {
             slug,
             imageUrl: imageUrl ?? null,
-            label: translation?.shortValue ?? translation?.longValue,
+            label: `translated:${label}`,
             altValue: null
           }
         });

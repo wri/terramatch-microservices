@@ -1,7 +1,5 @@
 /* istanbul ignore file */
-/**
- * Terrafund programme emails: scheduled report reminder (DB job) and weekly incomplete-task digest (job-service cron).
- */
+
 import { EmailService } from "./email.service";
 import { Notification, Project, Task, User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";

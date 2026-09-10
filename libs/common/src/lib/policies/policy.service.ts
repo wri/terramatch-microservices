@@ -15,10 +15,12 @@ import {
   Framework,
   FundingProgramme,
   ImpactStory,
+  LocalizationKey,
   Media,
   Nursery,
   NurseryReport,
   Organisation,
+  PolygonAttributeDefinition,
   Project,
   ProjectPitch,
   ProjectPolygon,
@@ -58,6 +60,7 @@ import { ImpactStoryPolicy } from "./impact-story.policy";
 import { AnrPlotGeometryPolicy } from "./anr-plot-geometry.policy";
 import { DisturbancePolicy } from "./disturbance.policy";
 import { OrganisationPolicy } from "./organisation.policy";
+import { PolygonAttributeDefinitionPolicy } from "./polygon-attribute-definition.policy";
 import { DisturbanceReportPolicy } from "./disturbance-report.policy";
 import { SrpReportPolicy } from "./srp-report.policy";
 import { FormSubmissionPolicy } from "./form-submission.policy";
@@ -65,6 +68,7 @@ import { ApplicationPolicy } from "./application.policy";
 import { MediaPolicy } from "./media.policy";
 import { UserContext } from "../contexts/user.context";
 import { AboutSectionPolicy } from "./about-section.policy";
+import { LocalizationKeyPolicy } from "./localization-key.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,10 +96,12 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [FormQuestionOption, FormQuestionOptionPolicy],
   [Framework, FrameworkPolicy],
   [FundingProgramme, FundingProgrammePolicy],
+  [LocalizationKey, LocalizationKeyPolicy],
   [Media, MediaPolicy],
   [Nursery, NurseryPolicy],
   [NurseryReport, NurseryReportPolicy],
   [Organisation, OrganisationPolicy],
+  [PolygonAttributeDefinition, PolygonAttributeDefinitionPolicy],
   [Project, ProjectPolicy],
   [ProjectPitch, ProjectPitchPolicy],
   [ProjectPolygon, ProjectPolygonPolicy],

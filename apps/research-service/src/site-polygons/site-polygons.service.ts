@@ -8,6 +8,7 @@ import {
   ProjectPolygon,
   Site,
   SitePolygon,
+  SitePolygonAttributeValue,
   SitePolygonData,
   SiteReport,
   TreeSpecies,
@@ -20,6 +21,7 @@ import { Queue } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
+  CustomAttributesDto,
   IndicatorDto,
   ReportingPeriodDto,
   SitePolygonFullDto,
@@ -37,7 +39,10 @@ import {
   INDICATOR_SLUGS,
   PolygonStatus,
   POLYGON_DRAFT,
+  POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
+  isPassingPolygonValidationStatus,
+  POLYGON_VALIDATION_PASSING_STATUSES,
   VALIDATION_TYPES,
   AuditStatusType
 } from "@terramatch-microservices/database/constants";
@@ -45,6 +50,10 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
+import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
+import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
+import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 
 // Earliest year present in indicator_output_tree_cover_loss.value maps. The span is walked
 // explicitly because the per-year keys cannot be enumerated in SQL without JSON_TABLE.
@@ -54,6 +63,7 @@ type AssociationDtos = {
   indicators?: IndicatorDto[];
   establishmentTreeSpecies?: TreeSpeciesDto[];
   reportingPeriods?: ReportingPeriodDto[];
+  customAttributes?: CustomAttributesDto;
 };
 
 @Injectable()
@@ -62,6 +72,9 @@ export class SitePolygonsService {
 
   constructor(
     private readonly polygonGeometryService: PolygonGeometryCreationService,
+    private readonly boundingBoxService: BoundingBoxService,
+    private readonly gwcTileInvalidationService: GwcTileInvalidationService,
+    private readonly polygonAttributeValuesService: PolygonAttributeValuesService,
     @InjectQueue("validation") private readonly validationQueue: Queue
   ) {}
 
@@ -127,14 +140,31 @@ export class SitePolygonsService {
     }
   }
 
+  private queueGwcInvalidationForDelete(activePolygonUuids: string[], transaction: Transaction): void {
+    if (activePolygonUuids.length === 0) return;
+
+    transaction.afterCommit(async () => {
+      await invalidatePolygonTileCache({
+        boundingBoxService: this.boundingBoxService,
+        gwcTileInvalidationService: this.gwcTileInvalidationService,
+        polygonUuids: activePolygonUuids,
+        layers: ["active", "deleted"],
+        onError: error => this.logger.error("Failed to invalidate GWC cache after deleting polygon(s)", error)
+      });
+    });
+  }
+
   private async deleteSitePolygonRelatedRecords(
     sitePolygonIds: number[],
     sitePolygonUuids: string[],
     polygonUuids: string[],
     pointUuids: string[],
     primaryUuids: string[],
+    activePolygonUuids: string[],
     transaction: Transaction
   ): Promise<void> {
+    this.queueGwcInvalidationForDelete(activePolygonUuids, transaction);
+
     for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
       await IndicatorClass.destroy({
         where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
@@ -154,6 +184,11 @@ export class SitePolygonsService {
     }
 
     await SitePolygonData.destroy({
+      where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
+      transaction
+    });
+
+    await SitePolygonAttributeValue.destroy({
       where: { sitePolygonUuid: { [Op.in]: sitePolygonUuids } },
       transaction
     });
@@ -206,7 +241,7 @@ export class SitePolygonsService {
 
       const allRelatedSitePolygons = await SitePolygon.findAll({
         where: { primaryUuid: { [Op.in]: uniquePrimaryUuids } },
-        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid", "isActive"],
         transaction
       });
 
@@ -214,6 +249,10 @@ export class SitePolygonsService {
       const allSitePolygonUuids = allRelatedSitePolygons.map(sp => sp.uuid);
       const allPolygonUuids = allRelatedSitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
       const allPointUuids = allRelatedSitePolygons.map(sp => sp.pointUuid).filter(isNotNull);
+      const allActivePolygonUuids = allRelatedSitePolygons
+        .filter(sp => sp.isActive)
+        .map(sp => sp.polygonUuid)
+        .filter(isNotNull);
 
       await this.deleteSitePolygonRelatedRecords(
         allSitePolygonIds,
@@ -221,6 +260,7 @@ export class SitePolygonsService {
         allPolygonUuids,
         allPointUuids,
         uniquePrimaryUuids,
+        allActivePolygonUuids,
         transaction
       );
 
@@ -246,7 +286,7 @@ export class SitePolygonsService {
 
       const relatedSitePolygons = await SitePolygon.findAll({
         where: { primaryUuid: sitePolygon.primaryUuid },
-        attributes: ["id", "uuid", "polygonUuid", "pointUuid"],
+        attributes: ["id", "uuid", "polygonUuid", "pointUuid", "isActive"],
         transaction
       });
 
@@ -254,6 +294,10 @@ export class SitePolygonsService {
       const sitePolygonUuids = relatedSitePolygons.map(sp => sp.uuid);
       const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
       const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
+      const activePolygonUuids = relatedSitePolygons
+        .filter(sp => sp.isActive)
+        .map(sp => sp.polygonUuid)
+        .filter((uuid): uuid is string => uuid != null);
       const primaryUuid = sitePolygon.primaryUuid;
 
       await this.deleteSitePolygonRelatedRecords(
@@ -262,6 +306,7 @@ export class SitePolygonsService {
         polygonUuids,
         pointUuids,
         [primaryUuid],
+        activePolygonUuids,
         transaction
       );
     });
@@ -325,6 +370,11 @@ export class SitePolygonsService {
         transaction
       });
 
+      await SitePolygonAttributeValue.destroy({
+        where: { sitePolygonUuid: uuid },
+        transaction
+      });
+
       await AuditStatus.destroy({
         where: {
           auditableType: SitePolygon.LARAVEL_TYPE,
@@ -377,9 +427,17 @@ export class SitePolygonsService {
     const associationDtos: Record<number, AssociationDtos> = {};
     if (sitePolygons.length === 0) return associationDtos;
 
+    const customAttributesByUuid = await this.polygonAttributeValuesService.getMapsByPolygonUuids(
+      sitePolygons.map(sitePolygon => sitePolygon.uuid)
+    );
+
     if (lightResource) {
       for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
         associationDtos[Number(sitePolygonId)] = { indicators };
+      }
+      for (const sitePolygon of sitePolygons) {
+        associationDtos[sitePolygon.id] ??= {};
+        associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
       }
       return associationDtos;
     }
@@ -388,6 +446,11 @@ export class SitePolygonsService {
 
     for (const [sitePolygonId, indicators] of Object.entries(indicatorsMap)) {
       associationDtos[Number(sitePolygonId)] = { indicators };
+    }
+
+    for (const sitePolygon of sitePolygons) {
+      associationDtos[sitePolygon.id] ??= {};
+      associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
     }
 
     const siteIds = uniq(Object.values(sites));
@@ -414,15 +477,24 @@ export class SitePolygonsService {
     return associationDtos;
   }
 
-  async buildLightDto(sitePolygon: SitePolygon, { indicators }: AssociationDtos): Promise<SitePolygonLightDto> {
-    return new SitePolygonLightDto(sitePolygon, indicators);
+  async buildLightDto(
+    sitePolygon: SitePolygon,
+    { indicators, customAttributes }: AssociationDtos
+  ): Promise<SitePolygonLightDto> {
+    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes);
   }
 
   async buildFullDto(
     sitePolygon: SitePolygon,
-    { indicators, establishmentTreeSpecies, reportingPeriods }: AssociationDtos
+    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes }: AssociationDtos
   ): Promise<SitePolygonFullDto> {
-    return new SitePolygonFullDto(sitePolygon, indicators, establishmentTreeSpecies, reportingPeriods);
+    return new SitePolygonFullDto(
+      sitePolygon,
+      indicators,
+      establishmentTreeSpecies,
+      reportingPeriods,
+      customAttributes
+    );
   }
 
   /**
@@ -564,8 +636,15 @@ export class SitePolygonsService {
     comment: string | null | undefined,
     user: User | null
   ) {
-    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
-    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: sitePolygonsUpdate.map(d => d.id) } } });
+    const uuids = sitePolygonsUpdate.map(d => d.id);
+
+    if (status === POLYGON_PENDING_APPROVAL) {
+      const requestedSitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
+      this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
+    }
+
+    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: uuids } } });
+    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
 
     const auditStatusRecords = this.createAuditStatusRecords(sitePolygons, status, comment, user) as Array<
       Attributes<AuditStatus>
@@ -592,6 +671,27 @@ export class SitePolygonsService {
     }
 
     return sitePolygons;
+  }
+
+  private assertSitePolygonsEligibleForSubmission(uuids: string[], sitePolygons: SitePolygon[]): void {
+    const sitePolygonsByUuid = new Map(sitePolygons.map(sitePolygon => [sitePolygon.uuid, sitePolygon]));
+
+    const ineligibleUuids = uuids.filter(uuid => {
+      const sitePolygon = sitePolygonsByUuid.get(uuid);
+      if (sitePolygon == null) return true;
+
+      const hasSubmittableStatus =
+        sitePolygon.status === POLYGON_DRAFT || sitePolygon.status === POLYGON_INFORMATION_REQUIRED;
+      const hasPassingValidation = isPassingPolygonValidationStatus(sitePolygon.validationStatus);
+      return !hasSubmittableStatus || !hasPassingValidation;
+    });
+
+    if (ineligibleUuids.length > 0) {
+      throw new BadRequestException(
+        "Site polygons must be Draft or Information Required with a Passed or Partially Passed validation " +
+          `result before they can be submitted. Ineligible UUIDs: ${ineligibleUuids.join(", ")}`
+      );
+    }
   }
 
   async enqueuePolygonValidation(
@@ -647,7 +747,7 @@ export class SitePolygonsService {
         polygonUuid: { [Op.in]: polygonUuids },
         isActive: true,
         status: POLYGON_DRAFT,
-        validationStatus: { [Op.in]: ["passed", "partial"] }
+        validationStatus: { [Op.in]: [...POLYGON_VALIDATION_PASSING_STATUSES] }
       }
     });
     if (sitePolygons.length === 0) return 0;

@@ -27,19 +27,19 @@ import {
   ProjectReport,
   SiteReport,
   Task,
-  UpdateRequest
+  UpdateRequest,
+  DisturbanceReport
 } from "@terramatch-microservices/database/entities";
 import { flatten, get, isEmpty, isEqual, map, uniq } from "lodash";
 import { Op } from "sequelize";
 import {
   AnyStatus,
   APPROVED,
-  AWAITING_APPROVAL,
+  PENDING_APPROVAL,
   DUE,
-  NEEDS_MORE_INFORMATION,
+  INFORMATION_REQUIRED,
   REJECTED,
-  REQUIRES_MORE_INFORMATION,
-  STARTED,
+  DRAFT,
   STATUS_DISPLAY_STRINGS
 } from "@terramatch-microservices/database/constants/status";
 import { LARAVEL_MODELS } from "@terramatch-microservices/database/constants/laravel-types";
@@ -47,7 +47,7 @@ import { Model } from "sequelize-typescript";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { isField, LinkedField } from "@terramatch-microservices/database/constants/linked-fields";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { APPROVAL_PROCESSERS } from "./processors";
+import { APPROVAL_PROCESSERS, DisturbanceReportEntryApprovalProcessor } from "./processors";
 import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
@@ -55,7 +55,7 @@ import { ProjectManagerEmail } from "../email/project-manager.email";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
 import { UserContext } from "../contexts/user.context";
 
-const TASK_UPDATE_REPORT_STATUSES = [APPROVED, NEEDS_MORE_INFORMATION, AWAITING_APPROVAL];
+const TASK_UPDATE_REPORT_STATUSES = [APPROVED, INFORMATION_REQUIRED, PENDING_APPROVAL];
 
 const getEntityType = (model: Model) =>
   Object.entries(ENTITY_MODELS).find(([, entityClass]) => model instanceof entityClass)?.[0] as EntityType | undefined;
@@ -96,8 +96,15 @@ export class EntityStatusUpdate extends EventProcessor {
       await this.sendStatusUpdateEmail(entityType);
       await this.updateActions();
 
-      if (this.model.status === AWAITING_APPROVAL) {
+      if (this.model.status === PENDING_APPROVAL) {
         await this.sendProjectManagerEmail(entityType);
+      }
+
+      if (
+        this.model instanceof DisturbanceReport &&
+        (this.model.status === PENDING_APPROVAL || this.model.status === INFORMATION_REQUIRED)
+      ) {
+        await DisturbanceReportEntryApprovalProcessor.processEntityApproval(this.model, this.eventService.mediaService);
       } else if (this.model.status === APPROVED) {
         await Promise.all(
           APPROVAL_PROCESSERS.map(processor =>
@@ -154,7 +161,7 @@ export class EntityStatusUpdate extends EventProcessor {
       if (hasNothingToReport(baseModel)) {
         baseModel.nothingToReport = false;
       }
-    } else if (updateRequest.status === NEEDS_MORE_INFORMATION) {
+    } else if (updateRequest.status === INFORMATION_REQUIRED) {
       const entityType = getEntityType(baseModel);
       if (entityType != null) {
         await this.sendStatusUpdateEmail(entityType);
@@ -171,7 +178,7 @@ export class EntityStatusUpdate extends EventProcessor {
 
     await Action.for(baseModel).destroy({ where: { type: "notification" } });
 
-    if (updateRequest.status === AWAITING_APPROVAL) {
+    if (updateRequest.status === PENDING_APPROVAL) {
       const entityType = getEntityType(baseModel);
       if (entityType != null) {
         // Gather linked field labels for the audit status.
@@ -197,7 +204,7 @@ export class EntityStatusUpdate extends EventProcessor {
             return (getLinkedFieldConfig(question.linkedFieldKey ?? "")?.field as LinkedField).label;
           })
           .filter(isNotNull);
-        await this.createAuditStatus(baseModel, AWAITING_APPROVAL, `Awaiting Review: ${labels.join(", ")}`);
+        await this.createAuditStatus(baseModel, PENDING_APPROVAL, `Pending Approval: ${labels.join(", ")}`);
         await this.sendProjectManagerEmail(entityType, baseModel);
       }
     }
@@ -206,9 +213,9 @@ export class EntityStatusUpdate extends EventProcessor {
   private async handleFormSubmission(submission: FormSubmission) {
     await this.createAuditStatus();
 
-    if (submission.status === "started") return;
+    if (submission.status === "draft") return;
 
-    if (submission.status === "awaiting-approval") {
+    if (submission.status === "pending-approval") {
       if (submission.applicationId != null) {
         await Application.update(
           { updatedBy: UserContext.authenticatedUserId },
@@ -281,7 +288,7 @@ export class EntityStatusUpdate extends EventProcessor {
       await Action.for(entity).destroy({ where: { type: "notification" } });
     }
 
-    if (entity.status !== AWAITING_APPROVAL) {
+    if (entity.status !== PENDING_APPROVAL) {
       const action = new Action();
       action.status = "pending";
       action.targetableType = laravelType(entity);
@@ -311,16 +318,16 @@ export class EntityStatusUpdate extends EventProcessor {
 
     if (comment == null) {
       if (model instanceof FormSubmission) {
-        if ([REJECTED, APPROVED, REQUIRES_MORE_INFORMATION].includes(status)) {
+        if ([REJECTED, APPROVED, INFORMATION_REQUIRED].includes(status)) {
           comment = model.feedback ?? null;
         }
       } else if (status === APPROVED) {
         comment = `Approved: ${model.feedback}`;
-      } else if (status === NEEDS_MORE_INFORMATION) {
+      } else if (status === INFORMATION_REQUIRED) {
         comment = await this.getNeedsMoreInfoComment();
       }
     }
-    const type = status === NEEDS_MORE_INFORMATION ? "change-request" : "status";
+    const type = status === INFORMATION_REQUIRED ? "change-request" : "status";
     await AuditStatus.createAudit(model, UserContext.authenticatedUserId, type, comment);
   }
 
@@ -380,24 +387,24 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
-    if (reportStatuses.includes(DUE) || reportStatuses.includes(STARTED)) {
+    if (reportStatuses.includes(DUE) || reportStatuses.includes(DRAFT)) {
       return; // NOOP
     }
 
     const moreInfoReport = reports.find(
       ({ status, updateRequestStatus }) =>
-        (status === NEEDS_MORE_INFORMATION && updateRequestStatus !== AWAITING_APPROVAL) ||
-        updateRequestStatus === NEEDS_MORE_INFORMATION
+        (status === INFORMATION_REQUIRED && updateRequestStatus !== PENDING_APPROVAL) ||
+        updateRequestStatus === INFORMATION_REQUIRED
     );
     if (moreInfoReport != null) {
-      // A report in needs-more-information causes the task to go to needs-more-information
-      await task.update({ status: NEEDS_MORE_INFORMATION });
+      // A report in information-required causes the task to go to information-required
+      await task.update({ status: INFORMATION_REQUIRED });
       return;
     }
 
-    // At this point, there are no reports in due, started or needs-more-information, but they're
-    // not all approved, so at least one report is in awaiting-approval.
-    await task.update({ status: AWAITING_APPROVAL });
+    // At this point, there are no reports in due, draft or information-required, but they're
+    // not all approved, so at least one report is in pending-approval.
+    await task.update({ status: PENDING_APPROVAL });
   }
 
   private async canActionBeDeleted() {
@@ -416,17 +423,17 @@ export class EntityStatusUpdate extends EventProcessor {
           {
             association: "projectReport",
             attributes: ["id", "status"],
-            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+            where: { status: { [Op.notIn]: [DUE, INFORMATION_REQUIRED] } }
           },
           {
             association: "siteReports",
             attributes: ["id", "status"],
-            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+            where: { status: { [Op.notIn]: [DUE, INFORMATION_REQUIRED] } }
           },
           {
             association: "nurseryReports",
             attributes: ["id", "status"],
-            where: { status: { [Op.notIn]: [DUE, NEEDS_MORE_INFORMATION] } }
+            where: { status: { [Op.notIn]: [DUE, INFORMATION_REQUIRED] } }
           }
         ]
       });

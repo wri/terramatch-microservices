@@ -310,16 +310,12 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
     "pro-rep-bioeconomy-product-benefit": {
       property: "bioeconomyProductBenefit",
       label: "Bioeconomy product benefit (Project Report)",
-      inputType: "select",
-      multiChoice: true,
-      optionListKey: "bioeconomy-product-list"
+      inputType: "text"
     },
     "pro-rep-bioeconomy-product-sold": {
       property: "bioeconomyProductSold",
       label: "Bioeconomy product sold (Project Report)",
-      inputType: "select",
-      multiChoice: true,
-      optionListKey: "bioeconomy-product-list"
+      inputType: "text"
     },
     "pro-rep-bioeconomy-quality-certifications": {
       property: "bioeconomyQualityCertifications",
@@ -344,6 +340,11 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       property: "womenGovernance",
       label: "Women in Governance or Leadership",
       inputType: "text"
+    },
+    "pro-rep-beneficiaries-training-total": {
+      property: "beneficiariesTrainingTotal",
+      label: "Training Total",
+      inputType: "number"
     }
   },
   fileCollections: {
@@ -714,6 +715,20 @@ export const ProjectReportConfiguration: LinkedFieldConfiguration<ProjectReport>
       resource: "demographics",
       inputType: "jobs",
       collection: "part-time-clt"
+    },
+    "pro-rep-clt-jobs": {
+      label: "CLT Jobs",
+      exportHeading: "jobsClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "clt"
+    },
+    "pro-rep-non-clt-jobs": {
+      label: "Non-CLT Jobs",
+      exportHeading: "jobsNonClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "non-clt"
     },
     "pro-rep-volunteers": {
       label: "Volunteers",

@@ -4,6 +4,8 @@ import { EventService } from "./event.service";
 import { EntityStatusUpdate } from "./entity-status-update.event-processor";
 import {
   ApplicationFactory,
+  DisturbanceReportEntryFactory,
+  DisturbanceReportFactory,
   EntityFormFactory,
   FinancialReportFactory,
   FormFactory,
@@ -15,6 +17,7 @@ import {
   ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
+  SitePolygonFactory,
   SiteReportFactory,
   StageFactory,
   TaskFactory,
@@ -23,19 +26,26 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { ActionFactory } from "@terramatch-microservices/database/factories/action.factory";
-import { Action, AuditStatus, FinancialReport, Organisation, Task } from "@terramatch-microservices/database/entities";
+import {
+  Action,
+  AuditStatus,
+  Disturbance,
+  FinancialReport,
+  Organisation,
+  Task
+} from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Attributes } from "sequelize";
 import {
   APPROVED,
-  AWAITING_APPROVAL,
+  PENDING_APPROVAL,
   DUE,
-  NEEDS_MORE_INFORMATION,
+  INFORMATION_REQUIRED,
   REJECTED,
   ReportStatus,
-  STARTED
+  DRAFT
 } from "@terramatch-microservices/database/constants/status";
 import { mockUserContext } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
@@ -140,7 +150,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     const feedback = faker.lorem.sentence();
     const question = await FormQuestionFactory.section().create({ label: "Form Question Label" });
     const project = await ProjectFactory.create({
-      status: NEEDS_MORE_INFORMATION,
+      status: INFORMATION_REQUIRED,
       feedback,
       feedbackFields: [question.uuid]
     });
@@ -191,14 +201,14 @@ describe("EntityStatusUpdate EventProcessor", () => {
         else expect(spy).not.toHaveBeenCalled();
       }
 
-      await expectCall(STARTED, false);
-      await expectCall(AWAITING_APPROVAL, true);
-      await expectCall(NEEDS_MORE_INFORMATION, true);
+      await expectCall(DRAFT, false);
+      await expectCall(PENDING_APPROVAL, true);
+      await expectCall(INFORMATION_REQUIRED, true);
       await expectCall(APPROVED, true);
     });
 
     it("should log a warning if no task ID is found", async () => {
-      const projectReport = await ProjectReportFactory.create({ taskId: null, status: AWAITING_APPROVAL });
+      const projectReport = await ProjectReportFactory.create({ taskId: null, status: PENDING_APPROVAL });
       const handler = createHandler(projectReport);
       const logSpy = jest.spyOn((handler as any).logger, "warn");
       await handler.handle();
@@ -206,7 +216,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should skip task status check for FinancialReport (which has no taskId)", async () => {
-      const financialReport = await FinancialReportFactory.org().create({ status: AWAITING_APPROVAL });
+      const financialReport = await FinancialReportFactory.org().create({ status: PENDING_APPROVAL });
       const handler = createHandler(financialReport);
       const logSpy = jest.spyOn((handler as any).logger, "log");
       await handler.handle();
@@ -216,7 +226,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should log a warning if the task for the ID is not found", async () => {
-      const projectReport = await ProjectReportFactory.create({ status: AWAITING_APPROVAL });
+      const projectReport = await ProjectReportFactory.create({ status: PENDING_APPROVAL });
       await Task.destroy({ where: { id: projectReport.taskId as number } });
       const handler = createHandler(projectReport);
       const logSpy = jest.spyOn((handler as any).logger, "error");
@@ -225,7 +235,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should move task to approved if all reports are approved", async () => {
-      const task = await createOldTask({ status: AWAITING_APPROVAL });
+      const task = await createOldTask({ status: PENDING_APPROVAL });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: APPROVED });
       await SiteReportFactory.create({ taskId: task.id, status: APPROVED });
       await NurseryReportFactory.create({ taskId: task.id, status: APPROVED });
@@ -236,7 +246,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("should NOOP if there is a report in due or started", async () => {
-      const task = await createOldTask({ status: AWAITING_APPROVAL });
+      const task = await createOldTask({ status: PENDING_APPROVAL });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: APPROVED });
       await SiteReportFactory.create({ taskId: task.id, status: DUE });
       await createHandler(projectReport).handle();
@@ -244,36 +254,36 @@ describe("EntityStatusUpdate EventProcessor", () => {
       expect(task.updatedAt).toEqual(task.createdAt);
     });
 
-    it("should move to needs-more-information if a report is in that status", async () => {
-      const task = await createOldTask({ status: AWAITING_APPROVAL });
+    it("should move to information-required if a report is in that status", async () => {
+      const task = await createOldTask({ status: PENDING_APPROVAL });
       const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: APPROVED });
-      const siteReport = await SiteReportFactory.create({ taskId: task.id, status: NEEDS_MORE_INFORMATION });
+      const siteReport = await SiteReportFactory.create({ taskId: task.id, status: INFORMATION_REQUIRED });
       await createHandler(projectReport).handle();
       await task.reload();
       expect(task.updatedAt).not.toEqual(task.createdAt);
-      expect(task.status).toBe(NEEDS_MORE_INFORMATION);
+      expect(task.status).toBe(INFORMATION_REQUIRED);
 
-      await task.update({ status: AWAITING_APPROVAL });
-      await siteReport.update({ status: AWAITING_APPROVAL, updateRequestStatus: NEEDS_MORE_INFORMATION });
+      await task.update({ status: PENDING_APPROVAL });
+      await siteReport.update({ status: PENDING_APPROVAL, updateRequestStatus: INFORMATION_REQUIRED });
       await createHandler(projectReport).handle();
       await task.reload();
       expect(task.updatedAt).not.toEqual(task.createdAt);
-      expect(task.status).toBe(NEEDS_MORE_INFORMATION);
+      expect(task.status).toBe(INFORMATION_REQUIRED);
     });
 
-    it("should move the task to awaiting-approval when all reports are in awaiting-approval", async () => {
+    it("should move the task to pending-approval when all reports are in pending-approval", async () => {
       const task = await createOldTask({ status: DUE });
-      const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: AWAITING_APPROVAL });
-      await SiteReportFactory.create({ taskId: task.id, status: AWAITING_APPROVAL });
+      const projectReport = await ProjectReportFactory.create({ taskId: task.id, status: PENDING_APPROVAL });
+      await SiteReportFactory.create({ taskId: task.id, status: PENDING_APPROVAL });
       await NurseryReportFactory.create({
         taskId: task.id,
-        status: NEEDS_MORE_INFORMATION,
-        updateRequestStatus: AWAITING_APPROVAL
+        status: INFORMATION_REQUIRED,
+        updateRequestStatus: PENDING_APPROVAL
       });
       await createHandler(projectReport).handle();
       await task.reload();
       expect(task.updatedAt).not.toEqual(task.createdAt);
-      expect(task.status).toBe(AWAITING_APPROVAL);
+      expect(task.status).toBe(PENDING_APPROVAL);
     });
 
     it("should send status update email for FinancialReport to createdBy user", async () => {
@@ -310,7 +320,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("turns off nothingToReport", async () => {
-      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL, nothingToReport: true });
+      const siteReport = await SiteReportFactory.create({ status: PENDING_APPROVAL, nothingToReport: true });
       const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({ status: APPROVED });
       await new EntityStatusUpdate(eventService, updateRequest).handle();
       await siteReport.reload();
@@ -320,10 +330,10 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("sends status update email and checks status", async () => {
-      const { id: taskId } = await TaskFactory.create({ status: AWAITING_APPROVAL });
-      const siteReport = await SiteReportFactory.create({ status: AWAITING_APPROVAL, taskId });
+      const { id: taskId } = await TaskFactory.create({ status: PENDING_APPROVAL });
+      const siteReport = await SiteReportFactory.create({ status: PENDING_APPROVAL, taskId });
       const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
-        status: NEEDS_MORE_INFORMATION
+        status: INFORMATION_REQUIRED
       });
       const processor = new EntityStatusUpdate(eventService, updateRequest);
       const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
@@ -334,14 +344,14 @@ describe("EntityStatusUpdate EventProcessor", () => {
     });
 
     it("creates and audit status and sends a PM email", async () => {
-      const siteReport = await SiteReportFactory.create({ status: NEEDS_MORE_INFORMATION });
+      const siteReport = await SiteReportFactory.create({ status: INFORMATION_REQUIRED });
       const form = await EntityFormFactory.siteReport(siteReport).create();
       const section = await FormSectionFactory.form(form).create();
       const question = await FormQuestionFactory.section(section).create({
         linkedFieldKey: "site-rep-survival-calculation"
       });
       const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({
-        status: AWAITING_APPROVAL,
+        status: PENDING_APPROVAL,
         content: { [question.uuid]: "survival calculation" }
       });
       const processor = new EntityStatusUpdate(eventService, updateRequest);
@@ -350,8 +360,8 @@ describe("EntityStatusUpdate EventProcessor", () => {
       await processor.handle();
       expect(auditStatusSpy).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: siteReport.uuid }),
-        AWAITING_APPROVAL,
-        `Awaiting Review: ${getLinkedFieldConfig("site-rep-survival-calculation")?.field.label}`
+        PENDING_APPROVAL,
+        `Pending Approval: ${getLinkedFieldConfig("site-rep-survival-calculation")?.field.label}`
       );
       expect(pmEmailSpy).toHaveBeenCalledWith("siteReports", expect.objectContaining({ uuid: siteReport.uuid }));
     });
@@ -386,7 +396,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
         applicationId: application.id,
         projectPitchUuid: pitch.uuid,
         formId: form.uuid,
-        status: "awaiting-approval"
+        status: "pending-approval"
       });
 
       await new EntityStatusUpdate(eventService, submission).handle();
@@ -456,6 +466,64 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
       await new EntityStatusUpdate(eventService, submission).handle();
       expect(eventService.entitiesQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("disturbance report polygon sync", () => {
+    async function handleStatusUpdate(report: Awaited<ReturnType<typeof DisturbanceReportFactory.create>>) {
+      mockUserContext();
+      const handler = new EntityStatusUpdate(eventService, report);
+      jest.spyOn(handler as any, "sendStatusUpdateEmail").mockResolvedValue(undefined);
+      jest.spyOn(handler as any, "updateActions").mockResolvedValue(undefined);
+      jest.spyOn(handler as any, "createAuditStatus").mockResolvedValue(undefined);
+      await handler.handle();
+    }
+
+    it("populates site_polygon.disturbance_id when the report is pending-approval", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: PENDING_APPROVAL });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      const disturbance = await Disturbance.for(report).findOne();
+      expect(disturbance).not.toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("populates site_polygon.disturbance_id when the report is information-required", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: INFORMATION_REQUIRED });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      const disturbance = await Disturbance.for(report).findOne();
+      expect(disturbance).not.toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbance?.id);
+    });
+
+    it("does not populate site_polygon.disturbance_id while the report is draft", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+      const report = await DisturbanceReportFactory.create({ status: DRAFT });
+      await DisturbanceReportEntryFactory.report(report).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+
+      await handleStatusUpdate(report);
+
+      expect(await Disturbance.for(report).findOne()).toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBeNull();
     });
   });
 });

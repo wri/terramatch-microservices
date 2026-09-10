@@ -4,6 +4,7 @@ import { SitePolygonsController } from "./site-polygons/site-polygons.controller
 import { SitePolygonsService } from "./site-polygons/site-polygons.service";
 import { SitePolygonCreationService } from "./site-polygons/site-polygon-creation.service";
 import { SitePolygonVersioningService } from "./site-polygons/site-polygon-versioning.service";
+import { PolygonAttributeValuesService } from "./site-polygons/polygon-attribute-values.service";
 import { PolygonGeometryCreationService } from "./site-polygons/polygon-geometry-creation.service";
 import { PointGeometryCreationService } from "./site-polygons/point-geometry-creation.service";
 import { GeometryFileProcessingService } from "./site-polygons/geometry-file-processing.service";
@@ -36,6 +37,8 @@ import { ProjectPolygonCreationService } from "./project-polygons/project-polygo
 import { ProjectPolygonGeometryService } from "./project-polygons/project-polygon-geometry.service";
 import { AnrPlotGeometryController } from "./site-polygons/anr-plot-geometry.controller";
 import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.service";
+import { PolygonAttributeDefinitionsController } from "./polygon-attribute-definitions/polygon-attribute-definitions.controller";
+import { PolygonAttributeDefinitionsService } from "./polygon-attribute-definitions/polygon-attribute-definitions.service";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -70,7 +73,8 @@ const IS_REPL = process.env["REPL"] === "true";
     PolygonClippingController,
     IndicatorsController,
     ProjectPolygonsController,
-    AnrPlotGeometryController
+    AnrPlotGeometryController,
+    PolygonAttributeDefinitionsController
   ],
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
@@ -78,6 +82,7 @@ const IS_REPL = process.env["REPL"] === "true";
     SitePolygonsService,
     SitePolygonCreationService,
     SitePolygonVersioningService,
+    PolygonAttributeValuesService,
     PolygonGeometryCreationService,
     PointGeometryCreationService,
     GeometryFileProcessingService,
@@ -92,6 +97,7 @@ const IS_REPL = process.env["REPL"] === "true";
     ProjectPolygonCreationService,
     ProjectPolygonGeometryService,
     AnrPlotGeometryService,
+    PolygonAttributeDefinitionsService,
 
     ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
   ]

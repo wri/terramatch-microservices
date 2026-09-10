@@ -3,7 +3,7 @@ import { DataApiService } from "@terramatch-microservices/data-api";
 import { Polygon } from "geojson";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { INDICATORS, TreeCoverLossFiresResult } from "@terramatch-microservices/database/constants";
-import { buildTreeCoverLossValue } from "./tree-cover-loss-value.util";
+import { assertValidPlantStart, buildTreeCoverLossValue } from "./tree-cover-loss-value.util";
 import { IndicatorOutputTreeCoverLoss, SitePolygon } from "@terramatch-microservices/database/entities";
 import { NotFoundException } from "@nestjs/common";
 import { Op } from "sequelize";
@@ -21,11 +21,6 @@ export class TreeCoverLossFiresCalculator implements CalculateIndicator {
     dataApiService: DataApiService
   ): Promise<IndicatorOutputTreeCoverLoss> {
     this.logger.debug(`Calculating tree cover loss fires for polygon ${polygonUuid}`);
-    const results: TreeCoverLossFiresResult[] = await dataApiService.getIndicatorsDataset(
-      this.INDICATOR,
-      this.SQL,
-      geometry
-    );
 
     const sitePolygon = await SitePolygon.findOne({
       where: {
@@ -33,18 +28,26 @@ export class TreeCoverLossFiresCalculator implements CalculateIndicator {
         isActive: true,
         status: "approved"
       },
-      attributes: ["id"]
+      attributes: ["id", "plantStart"]
     });
 
     if (sitePolygon == null) {
       throw new NotFoundException(`Site polygon not found for uuid ${polygonUuid}`);
     }
 
+    const plantStart = assertValidPlantStart(sitePolygon.plantStart, polygonUuid);
+
+    const results: TreeCoverLossFiresResult[] = await dataApiService.getIndicatorsDataset(
+      this.INDICATOR,
+      this.SQL,
+      geometry
+    );
+
     const yearOfAnalysis = new Date().getFullYear();
     const treeCoverLossFiresValue = buildTreeCoverLossValue(
       results,
       result => result.umd_tree_cover_loss_from_fires__year + 2000,
-      yearOfAnalysis
+      plantStart
     );
 
     const treeCoverLossFiresData: Partial<IndicatorOutputTreeCoverLoss> = {

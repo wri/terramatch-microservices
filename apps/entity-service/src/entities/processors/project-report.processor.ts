@@ -297,7 +297,26 @@ export class ProjectReportProcessor extends ReportProcessor<
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
-  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix, uuids }: ExportAllOptions = {}) {
+    if (uuids != null && uuids.length > 0) {
+      const reports = await ProjectReport.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        include: CSV_EXPORT_INCLUDES
+      });
+      if (reports.length === 0) return;
+      await this.entitiesService.authorize("read", reports);
+      frameworkKey ??= reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined;
+      if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+      const reportsLabel = await this.entitiesService.localizeText("project reports");
+      await this.exportReports(
+        frameworkKey,
+        target,
+        reports,
+        fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
+      );
+      return;
+    }
+
     if (frameworkKey == null && projectUuid != null) {
       frameworkKey =
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??

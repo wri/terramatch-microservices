@@ -1,11 +1,13 @@
-import { Site, SiteReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { Site, SiteReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { AirtableEntity } from "./airtable-entity";
 import { groupBy, uniq } from "lodash";
 import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
 import { ColumnMapping, UpdateAssociation } from "../util/types";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type SiteReportAssociations = {
   siteUuid?: string;
+  taskUuid?: string;
   treePlantedAmount: number | null;
   treePlantedNameAndAmount: string;
   nonTreeAmount: number | null;
@@ -21,6 +23,7 @@ type SiteReportAssociations = {
 const COLUMNS: ColumnMapping<SiteReport, SiteReportAssociations>[] = [
   ...commonEntityColumns<SiteReport, SiteReportAssociations>("siteReport"),
   associatedValueColumn("siteUuid", "siteId"),
+  associatedValueColumn("taskUuid", "taskId"),
   "status",
   "updateRequestStatus",
   "dueAt",
@@ -84,13 +87,16 @@ export class SiteReportEntity extends AirtableEntity<SiteReport, SiteReportAssoc
       where: { id: siteIds },
       attributes: ["id", "uuid"]
     });
+    const taskIds = uniq(siteReports.map(({ taskId }) => taskId)).filter(isNotNull);
+    const tasks = await Task.findAll({ where: { id: taskIds }, attributes: ["id", "uuid"] });
     const treesByReport = groupBy(await TreeSpecies.visible().for(siteReports).findAll(), "speciesableId");
 
     return siteReports.reduce(
-      (associations, { id, siteId }) => ({
+      (associations, { id, siteId, taskId }) => ({
         ...associations,
         [id]: {
           siteUuid: sites.find(({ id }) => id === siteId)?.uuid,
+          taskUuid: tasks.find(({ id }) => id === taskId)?.uuid,
           treePlantedAmount: treeAmountRollup(treesByReport[id], "tree-planted"),
           treePlantedNameAndAmount: treeDescriptionRollup(treesByReport[id], "tree-planted"),
           nonTreeAmount: treeAmountRollup(treesByReport[id], "non-tree"),

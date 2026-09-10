@@ -7,10 +7,12 @@ import {
   IsOptional,
   IsUUID,
   IsNumber,
-  ValidateIf
+  ValidateIf,
+  IsObject
 } from "class-validator";
 import { Type } from "class-transformer";
 import { Feature as BaseFeature } from "@terramatch-microservices/database/constants";
+import { CustomAttributesDto } from "./site-polygon.dto";
 
 export interface FeatureProperties {
   siteId?: string;
@@ -144,6 +146,19 @@ export class AttributeChangesDto {
   @IsOptional()
   @IsNumber()
   numTrees?: number;
+
+  @ApiProperty({
+    description:
+      "Framework-configured custom attribute values keyed by definition key. " +
+      "Only sent keys are updated; null (or empty array for multi_select) clears the value. " +
+      "Omitted keys are inherited from the previous version via copy-on-version.",
+    required: false,
+    type: Object,
+    example: { anrSubcategory: "farmer-managed" }
+  })
+  @IsOptional()
+  @IsObject()
+  customAttributes?: CustomAttributesDto;
 }
 
 export class CreateSitePolygonBatchRequestDto {

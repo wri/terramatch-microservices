@@ -21,6 +21,7 @@ export * from "./site-polygon.airtable-entity";
 export * from "./site-report.airtable-entity";
 export * from "./srp-report.airtable-entity";
 export * from "./strata.airtable-entity";
+export * from "./task.airtable-entity";
 export * from "./tracking.airtable-entity";
 export * from "./tracking-entry.airtable-entity";
 export * from "./tree-species.airtable-entity";

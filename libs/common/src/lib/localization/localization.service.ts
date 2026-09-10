@@ -1,18 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import {
-  AboutSection,
-  Form,
-  FormOptionListOption,
-  FormQuestion,
-  FormQuestionOption,
-  FormSection,
-  FormTableHeader,
-  FundingProgramme,
-  I18nItem,
-  I18nTranslation,
-  Link,
-  LocalizationKey
-} from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { Attributes, CreationAttributes, FindOptions, Op, WhereOptions } from "sequelize";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, generateHashedKey, ITranslateParams, normalizeLocale, t, tx } from "@transifex/native";
@@ -137,11 +124,15 @@ export class LocalizationService {
     );
   }
 
-  translateFields<M extends Model, K extends (keyof Attributes<M>)[]>(translations: Translations, model: M, fields: K) {
+  translateFields<M extends Model, K extends (keyof Attributes<M>)[]>(
+    _translations: Translations,
+    model: M,
+    fields: K
+  ) {
     return fields.reduce(
       (translated, field) => ({
         ...translated,
-        [field]: translations[model[`${String(field)}Id` as Attributes<M>[number]] ?? -1] ?? model[field]
+        [field]: model[field]
       }),
       {} as Record<(typeof fields)[number], string>
     );
@@ -330,33 +321,9 @@ export class LocalizationService {
   }
 
   async cleanOldI18nItems() {
-    const i18nEntitiesColumns = [
-      { entity: FormOptionListOption, attributes: ["labelId"] },
-      { entity: FormQuestionOption, attributes: ["labelId"] },
-      { entity: FormQuestion, attributes: ["labelId", "descriptionId", "placeholderId"] },
-      { entity: FormSection, attributes: ["titleId", "subtitleId", "descriptionId"] },
-      { entity: FormTableHeader, attributes: ["labelId"] },
-      { entity: Form, attributes: ["titleId", "subtitleId", "descriptionId", "submissionMessageId"] },
-      { entity: FundingProgramme, attributes: ["locationId"] },
-      { entity: LocalizationKey, attributes: ["valueId"] },
-      {
-        entity: AboutSection,
-        attributes: ["headerId", "titleId", "descriptionId", "contactSupportMessageId", "contactSupportSubjectId"]
-      },
-      { entity: Link, attributes: ["titleId"] }
-    ];
-    const i18nIds: number[] = [];
-    for (const { entity, attributes } of i18nEntitiesColumns) {
-      // @ts-expect-error - entity is a model class
-      const entities = await entity.findAll({ attributes });
-      for (const entity of entities) {
-        Object.entries(entity.dataValues).forEach(([, value]) => {
-          if (value != null) {
-            i18nIds.push(value);
-          }
-        });
-      }
-    }
+    const i18nIds = (await LocalizationKey.findAll({ attributes: ["valueId"] }))
+      .map(({ valueId }) => valueId)
+      .filter((id): id is number => id != null);
     this.logger.log(`i18nIds.length: ${i18nIds.length}`);
     const i18nItems = await I18nItem.count();
     this.logger.log(`i18nItems.length: ${i18nItems}`);

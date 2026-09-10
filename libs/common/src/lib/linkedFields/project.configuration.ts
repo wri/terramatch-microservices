@@ -525,6 +525,20 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       inputType: "jobs",
       collection: "part-time"
     },
+    "pro-clt-jobs": {
+      label: "CLT Jobs",
+      exportHeading: "jobsClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "clt"
+    },
+    "pro-non-clt-jobs": {
+      label: "Non-CLT Jobs",
+      exportHeading: "jobsNonClt",
+      resource: "demographics",
+      inputType: "jobs",
+      collection: "non-clt"
+    },
     "pro-volunteers": {
       label: "Volunteers",
       exportHeading: "volunteers",

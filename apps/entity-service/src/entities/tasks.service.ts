@@ -20,7 +20,7 @@ import { TaskQueryDto } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Attributes, Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
-import { APPROVED, AWAITING_APPROVAL } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
@@ -137,10 +137,10 @@ export class TasksService {
   }
 
   async submitForApproval(task: Task) {
-    if (task.status === "awaiting-approval") return;
+    if (task.status === "pending-approval") return;
 
-    if (!task.statusCanBe("awaiting-approval")) {
-      throw new BadRequestException('Task cannot transition to "awaiting-approval" status.');
+    if (!task.statusCanBe("pending-approval")) {
+      throw new BadRequestException('Task cannot transition to "pending-approval" status.');
     }
 
     await this.loadReports(task);
@@ -167,12 +167,12 @@ export class TasksService {
         report.submittedAt = new Date();
       }
 
-      report.status = AWAITING_APPROVAL;
+      report.status = PENDING_APPROVAL;
       await Action.destroy({ where: { targetableType: laravelType(report), targetableId: report.id } });
       await report.save();
     }
 
-    task.status = AWAITING_APPROVAL;
+    task.status = PENDING_APPROVAL;
   }
 
   async approveBulkReports(
@@ -231,7 +231,7 @@ export class TasksService {
         if (report.nothingToReport) return;
 
         report.nothingToReport = true;
-        report.status = "awaiting-approval";
+        report.status = "pending-approval";
         if (report.submittedAt == null) {
           report.completion = 100;
           report.submittedAt = new Date();

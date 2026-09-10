@@ -5,15 +5,11 @@ import { FormsService } from "./forms.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { DelayedJob, Form } from "@terramatch-microservices/database/entities";
+import { Form } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { FormFactory, FormQuestionFactory, FormSectionFactory } from "@terramatch-microservices/database/factories";
 import { StoreFormAttributes } from "./dto/form.dto";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { mockUserContext } from "@terramatch-microservices/common/util/testing";
-import { getQueueToken } from "@nestjs/bullmq";
-import { Queue } from "bullmq";
-import { ENTITY_SERVICE_EXPORT_QUEUE, PUSH_TRANSLATIONS } from "../jobs/entity-service-delayed-jobs.processor";
 
 describe("FormsController", () => {
   let module: TestingModule;
@@ -21,18 +17,11 @@ describe("FormsController", () => {
 
   const service = (): DeepMocked<FormsService> => module.get(FormsService);
   const policyService = () => module.get(PolicyService);
-  const localizationService = (): DeepMocked<LocalizationService> => module.get(LocalizationService);
-  const exportQueue = (): DeepMocked<Queue> => module.get(getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE));
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
       controllers: [FormsController],
-      providers: [
-        PolicyService,
-        { provide: FormsService, useValue: createMock<FormsService>() },
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
-        { provide: getQueueToken(ENTITY_SERVICE_EXPORT_QUEUE), useValue: createMock<Queue>() }
-      ]
+      providers: [PolicyService, { provide: FormsService, useValue: createMock<FormsService>() }]
     }).compile();
 
     controller = module.get(FormsController);
@@ -129,44 +118,6 @@ describe("FormsController", () => {
       expect(service().findOne).toHaveBeenCalledWith("fake-uuid");
       expect(service().store).toHaveBeenCalledWith(attributes, form);
       expect(service().addFullDto).toHaveBeenCalledWith(expect.any(DocumentBuilder), form);
-    });
-  });
-
-  describe("pushFormTranslation", () => {
-    it("queues a delayed job to push translations", async () => {
-      const form = new Form();
-      form.uuid = "fake-uuid";
-      service().findOne.mockResolvedValue(form);
-      const labels = ["1", "2", "3"];
-      service().getI18nIdsForForm.mockResolvedValue(labels);
-      jest.spyOn(policyService(), "authorize").mockResolvedValue();
-      const delayedJob = { id: 42, uuid: "job-uuid" } as DelayedJob;
-      jest.spyOn(DelayedJob, "create").mockResolvedValue(delayedJob);
-
-      await controller.pushFormTranslation("fake-uuid");
-
-      expect(exportQueue().add).toHaveBeenCalledWith(PUSH_TRANSLATIONS, {
-        delayedJobId: 42,
-        uuid: form.uuid,
-        i18nLabels: labels
-      });
-    });
-  });
-
-  describe("pullFormTranslation", () => {
-    it("calls the localization service", async () => {
-      const form = new Form();
-      form.uuid = "fake-uuid";
-      service().findOne.mockResolvedValue(form);
-      jest.spyOn(policyService(), "authorize").mockResolvedValue();
-
-      await controller.pullFormTranslation("fake-uuid", { forceAll: false });
-      expect(localizationService().pullTranslations).toHaveBeenCalledWith(
-        false,
-        expect.objectContaining({
-          filterTags: form.uuid
-        })
-      );
     });
   });
 

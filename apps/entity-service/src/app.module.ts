@@ -21,6 +21,7 @@ import { OptionLabelsController } from "./forms/option-labels.controller";
 import { LinkedFieldsController } from "./forms/linked-fields.controller";
 import { FormsController } from "./forms/forms.controller";
 import { FormsService } from "./forms/forms.service";
+import { EntityTranslationsService } from "./entities/entity-translations.service";
 import { FormDataController } from "./entities/form-data.controller";
 import { FormDataService } from "./entities/form-data.service";
 import { UpdateRequestsController } from "./entities/update-requests.controller";
@@ -96,6 +97,7 @@ const IS_REPL = process.env["REPL"] === "true";
     RemindersService,
     AggregateReportsService,
     FormsService,
+    EntityTranslationsService,
     FormDataService,
     ReportingFrameworksService,
     ExportImageService,

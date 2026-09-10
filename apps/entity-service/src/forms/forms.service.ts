@@ -1,13 +1,9 @@
 import { Response } from "express";
 import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { getTrackingEntryConfigLabels } from "@terramatch-microservices/common/localization/tracking-entry-config-i18n";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Application,
   Form,
-  FormOptionList,
-  FormOptionListOption,
   FormQuestion,
   FormQuestionOption,
   FormSection,
@@ -15,13 +11,12 @@ import {
   FormTableHeader,
   Framework,
   FundingProgramme,
-  LocalizationKey,
   Media,
   Stage
 } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { Dictionary, difference, flatten, groupBy, intersection, sortBy, union, uniq, uniqBy } from "lodash";
+import { Dictionary, difference, flatten, groupBy, sortBy, union, uniq, uniqBy } from "lodash";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { FormSectionDto, StoreFormSectionAttributes } from "./dto/form-section.dto";
 import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
@@ -41,11 +36,9 @@ import {
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { ModelCtor } from "sequelize-typescript/dist/model/model/model";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { LinkedFile, isField, isPropertyField } from "@terramatch-microservices/database/constants/linked-fields";
-import { Model } from "sequelize-typescript";
 import {
   CsvExportService,
   FormQuestionExportMapping,
@@ -61,20 +54,6 @@ import { EntitiesService } from "../entities/entities.service";
 
 const SORTABLE_FIELDS: (keyof Attributes<Form>)[] = ["title", "type", "published"];
 const SIMPLE_FILTERS: (keyof FormIndexQueryDto)[] = ["type"];
-const EXTRA_FIELDS: string[] = ["id", "optionsList", "additionalProps"];
-
-type TranslationModelType =
-  | typeof Form
-  | typeof FormSection
-  | typeof FormQuestion
-  | typeof FormQuestionOption
-  | typeof FormTableHeader
-  | typeof FormOptionList
-  | typeof FundingProgramme
-  | typeof LocalizationKey
-  | typeof FormOptionListOption;
-
-type TranslationParamsType = string | number;
 
 const ADMIN_FORM_SUBMISSION_CSV_COLUMNS: Dictionary<string> = {
   applicationUuid: "Application ID",
@@ -148,7 +127,6 @@ export class FormsService {
   private readonly logger = new TMLogger(FormsService.name);
 
   constructor(
-    private readonly localizationService: LocalizationService,
     private readonly mediaService: MediaService,
     private readonly csvExportService: CsvExportService,
     private readonly entitiesService: EntitiesService
@@ -522,93 +500,12 @@ export class FormsService {
     );
   }
 
-  private getTranslationLabelEntityFields(translationEntity: TranslationModelType) {
-    return translationEntity.I18N_FIELDS;
-  }
-
-  private async processTranslationEntity<M extends TranslationModelType>(
-    model: ModelCtor,
-    property: string,
-    filterParams: TranslationParamsType | TranslationParamsType[]
-  ): Promise<[string[], InstanceType<M>[]]> {
-    const filterParamsArray = Array.isArray(filterParams) ? filterParams : [filterParams];
-    const labelFields = this.getTranslationLabelEntityFields(model as TranslationModelType);
-    const entities = await model.findAll({
-      where: {
-        [property]: {
-          [Op.in]: filterParamsArray
-        }
-      },
-      attributes: intersection(Object.keys(model.getAttributes()), [...labelFields, ...EXTRA_FIELDS])
-    });
-
-    const labelsToBePushed = entities.flatMap(entity => this.getI18nLabelsFromEntity(entity, labelFields));
-
-    return [labelsToBePushed, entities as InstanceType<M>[]];
-  }
-
-  private getI18nLabelsFromEntity(entity: Model, labelFields: readonly string[]) {
-    return Object.entries(entity.dataValues)
-      .filter(([key, value]) => labelFields.includes(key) && value != null)
-      .map(([, value]) => value as string);
-  }
-
-  async getI18nIdsForForm(form: Form) {
-    const formI18nLabels = this.getI18nLabelsFromEntity(form, this.getTranslationLabelEntityFields(Form));
-    const [formSectionI18nLabels, formSections] = await this.processTranslationEntity(FormSection, "formId", [
-      form.uuid
-    ]);
-    const [formQuestionI18nLabels, formQuestions] = await this.processTranslationEntity(
-      FormQuestion,
-      "formSectionId",
-      formSections.map(section => section.id)
-    );
-    const [formQuestionOptionI18nLabels] = await this.processTranslationEntity(
-      FormQuestionOption,
-      "formQuestionId",
-      formQuestions.map(question => question.id)
-    );
-    const [formTableHeaderI18nLabels] = await this.processTranslationEntity(
-      FormTableHeader,
-      "formQuestionId",
-      formQuestions.map(question => question.id)
-    );
-    const optionsListParams = formQuestions
-      .map(question => (question as FormQuestion).optionsList)
-      .filter((optionsList): optionsList is string => optionsList != null && optionsList !== "0");
-    const [formOptionListI18nLabels, formOptionsLists] = await this.processTranslationEntity(
-      FormOptionList,
-      "key",
-      optionsListParams
-    );
-    await this.processTranslationEntity(
-      FormOptionListOption,
-      "formOptionListId",
-      formOptionsLists.map(list => list.id)
-    );
-
-    const trackingEntryConfigLabels = formQuestions.flatMap(question =>
-      getTrackingEntryConfigLabels((question as FormQuestion).additionalProps)
-    );
-    return [
-      ...formI18nLabels,
-      ...formSectionI18nLabels,
-      ...formQuestionI18nLabels,
-      ...formQuestionOptionI18nLabels,
-      ...formTableHeaderI18nLabels,
-      ...formOptionListI18nLabels,
-      ...trackingEntryConfigLabels
-    ];
-  }
-
   private async storeForm(form: Form, attributes: StoreFormAttributes) {
     // Note: this field is a char(32) in the DB which would normally be a UUID, but the current
     // rows are all numerical IDs.
     form.updatedBy = `${UserContext.authenticatedUserId}`;
     form.title = attributes.title;
-    form.titleId = await this.localizationService.generateI18nId(attributes.title, form.titleId);
     form.subtitle = attributes.subtitle ?? null;
-    form.subtitleId = await this.localizationService.generateI18nId(attributes.subtitle, form.subtitleId);
     form.frameworkKey = attributes.frameworkKey ?? null;
     form.framework =
       attributes.frameworkKey == null
@@ -616,14 +513,9 @@ export class FormsService {
         : await Framework.findOne({ where: { slug: attributes.frameworkKey }, attributes: ["name"] });
     form.type = attributes.type ?? null;
     form.description = attributes.description ?? null;
-    form.descriptionId = await this.localizationService.generateI18nId(attributes.description, form.descriptionId);
     form.documentation = attributes.documentation ?? null;
     form.documentationLabel = attributes.documentationLabel ?? null;
     form.submissionMessage = attributes.submissionMessage;
-    form.submissionMessageId = await this.localizationService.generateI18nId(
-      attributes.submissionMessage,
-      form.submissionMessageId
-    );
     form.stageId = attributes.stageId ?? null;
     // attach the stage for the full form DTO
     form.stage =
@@ -665,12 +557,7 @@ export class FormsService {
     section.formId = formUuid;
     section.order = order;
     section.title = attributes.title ?? null;
-    section.titleId = await this.localizationService.generateI18nId(attributes.title, section.titleId);
     section.description = attributes.description ?? null;
-    section.descriptionId = await this.localizationService.generateI18nId(
-      attributes.description,
-      section.descriptionId
-    );
     await section.save();
 
     const currentQuestions = await FormQuestion.findAll({ where: { formSectionId: section.id } });
@@ -705,18 +592,9 @@ export class FormsService {
     question.linkedFieldKey = attributes.linkedFieldKey ?? null;
     question.inputType = attributes.inputType;
     question.label = attributes.label;
-    question.labelId = await this.localizationService.generateI18nId(attributes.label, question.labelId);
     question.name = attributes.name ?? null;
     question.placeholder = attributes.placeholder ?? null;
-    question.placeholderId = await this.localizationService.generateI18nId(
-      attributes.placeholder,
-      question.placeholderId
-    );
     question.description = attributes.description ?? null;
-    question.descriptionId = await this.localizationService.generateI18nId(
-      attributes.description,
-      question.descriptionId
-    );
     question.validation = attributes.validation ?? null;
     question.additionalProps = this.getAdditionalProps(attributes);
     question.optionsOther = attributes.optionsOther ?? null;
@@ -736,7 +614,6 @@ export class FormsService {
           const header = currentHeaders.find(current => current.label === label) ?? new FormTableHeader();
           header.formQuestionId = question.id;
           header.label = label;
-          header.labelId = await this.localizationService.generateI18nId(label, header.labelId);
           header.order = index;
           await header.save();
           return header;
@@ -785,7 +662,6 @@ export class FormsService {
     option.order = order;
     option.slug = attributes.slug;
     option.label = attributes.label;
-    option.labelId = await this.localizationService.generateI18nId(attributes.label, option.labelId);
     option.imageUrl = attributes.imageUrl ?? null;
     await option.save();
     return option;

@@ -236,19 +236,36 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
       }
 
       await SitePolygon.sequelize.transaction(async transaction => {
-        for (const { feature, baseUuid } of featuresForVersioning) {
+        const propertiesList = featuresForVersioning.map(({ feature }) => {
+          const properties = feature.properties ?? {};
+          const allProperties = { ...properties };
+          if (siteId != null) {
+            allProperties.siteId = siteId;
+          }
+          return allProperties;
+        });
+
+        const { frameworkKey, matchedPerFeature } =
+          await this.sitePolygonCreationService.resolveCustomAttributeUploadContext(
+            propertiesList,
+            siteId,
+            transaction
+          );
+
+        const pendingCustomAttributes: Array<{
+          sitePolygonUuid: string;
+          attributes: NonNullable<(typeof matchedPerFeature)[number]>;
+        }> = [];
+
+        for (let i = 0; i < featuresForVersioning.length; i++) {
+          const { feature, baseUuid } = featuresForVersioning[i];
           const basePolygon = existingUuidToPolygon.get(baseUuid);
           if (basePolygon == null) {
             this.logger.warn(`Base polygon not found for UUID: ${baseUuid}`);
             continue;
           }
 
-          const properties = feature.properties ?? {};
-          const allProperties = { ...properties };
-          if (siteId != null) {
-            allProperties.siteId = siteId;
-          }
-
+          const allProperties = propertiesList[i];
           const validatedProperties = validateSitePolygonProperties(allProperties);
           const attributeChanges = convertPropertiesToAttributeChanges(validatedProperties);
 
@@ -259,6 +276,11 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             attributeChanges.polyName = uploadedPolyName;
           } else {
             attributeChanges.polyName = basePolyName != null ? `${basePolyName} (new)` : " (new)";
+          }
+
+          const customAttributes = matchedPerFeature[i];
+          if (customAttributes != null) {
+            attributeChanges.customAttributes = customAttributes;
           }
 
           const versionGeometries: CreateSitePolygonRequestDto[] = [
@@ -285,11 +307,25 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             userFullName,
             source,
             transaction,
-            isAdminSession
+            isAdminSession,
+            false
           );
+
+          if (customAttributes != null) {
+            pendingCustomAttributes.push({
+              sitePolygonUuid: newVersion.uuid,
+              attributes: customAttributes
+            });
+          }
 
           createdVersions.push(newVersion);
         }
+
+        await this.sitePolygonCreationService.bulkPersistCustomAttributes(
+          frameworkKey,
+          pendingCustomAttributes,
+          transaction
+        );
       });
     }
 

@@ -30,6 +30,7 @@ import {
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
 import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { BadRequestException } from "@nestjs/common";
 import { mockUserContext, serialize, mockContextForUser } from "@terramatch-microservices/common/util/testing";
 import {
   LinkedAnswerCollector,
@@ -106,7 +107,7 @@ describe("FormDataService", () => {
 
   describe("storeEntityAnswers", () => {
     it("updates the update request if there is one", async () => {
-      const site = await SiteFactory.create();
+      const site = await SiteFactory.create({ status: "approved" });
       const updateRequest = await UpdateRequestFactory.site(site).create({ content: { color: "blue" } });
       const form = await EntityFormFactory.site(site).create();
       await service.storeEntityAnswers(site, form, { color: "red" });
@@ -115,7 +116,7 @@ describe("FormDataService", () => {
     });
 
     it("creates an update request if the user cannot update answers", async () => {
-      const site = await SiteFactory.create();
+      const site = await SiteFactory.create({ status: "approved" });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
       mockUserContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
@@ -131,6 +132,16 @@ describe("FormDataService", () => {
 
       await site.reload();
       expect(site.updateRequestStatus).toBe(DRAFT);
+    });
+
+    it("does not create a change request when the entity is pending-approval", async () => {
+      const site = await SiteFactory.create({ status: "pending-approval", updateRequestStatus: null });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
+      const form = await EntityFormFactory.site(site).create();
+      await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
+      expect(await UpdateRequest.for(site).findOne()).toBeNull();
+      await site.reload();
+      expect(site.updateRequestStatus).toBeNull();
     });
 
     it("updates the entity content", async () => {

@@ -87,7 +87,9 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   "bioeconomyQualityCertifications",
   "bioeconomyBuyers",
   "bioeconomyOtherCertifications",
-  "womenGovernance"
+  "womenGovernance",
+  "beneficiariesTrainingTotal",
+  "volunteerTotal"
 ];
 
 export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectReportAssociations> {

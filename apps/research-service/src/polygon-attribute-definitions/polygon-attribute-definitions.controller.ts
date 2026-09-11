@@ -42,9 +42,11 @@ export class PolygonAttributeDefinitionsController {
   @Get()
   @ApiOperation({
     operationId: "polygonAttributeDefinitionsIndex",
-    summary: "List polygon attribute definitions for a framework (admin only)",
+    summary: "List polygon attribute definitions for a framework",
     description:
-      "Returns all definitions for the given framework, including inactive ones. Champion write APIs still ignore inactive definitions."
+      "Framework admins (framework-{key} permission) receive all definitions for the given framework, " +
+      "including inactive ones, for use in the management screen. Champions / project managers with access " +
+      "to at least one site in the framework receive active definitions only, for use in the polygon edit UI."
   })
   @JsonApiResponse({ data: PolygonAttributeDefinitionDto, hasMany: true })
   @ExceptionResponse(UnauthorizedException, {
@@ -52,7 +54,8 @@ export class PolygonAttributeDefinitionsController {
   })
   @ExceptionResponse(BadRequestException, { description: "Query params are invalid" })
   async index(@Query() query: PolygonAttributeDefinitionQueryDto) {
-    const definitions = await this.polygonAttributeDefinitionsService.findAll(query.frameworkKey);
+    const isFrameworkAdmin = this.policyService.permissions.includes(`framework-${query.frameworkKey}`);
+    const definitions = await this.polygonAttributeDefinitionsService.findAll(query.frameworkKey, !isFrameworkAdmin);
     await this.policyService.authorize(
       "read",
       definitions.length > 0 ? definitions : this.policySubject(query.frameworkKey)

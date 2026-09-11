@@ -81,6 +81,7 @@ export * from "./tree-species.entity";
 export * from "./tree-species-research.entity";
 export * from "./update-request.entity";
 export * from "./user.entity";
+export * from "./user-task.entity";
 export * from "./verification.entity";
 export * from "./world-country-generalized.entity";
 export * from "./funding-type.entity";

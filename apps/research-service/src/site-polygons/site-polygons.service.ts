@@ -652,19 +652,6 @@ export class SitePolygonsService {
       await this.triggerProjectValidationJobs(sitePolygons, user.id);
     }
 
-    if (status === POLYGON_PENDING_APPROVAL && user != null) {
-      const polygonUuids = sitePolygons
-        .map(sp => sp.polygonUuid)
-        .filter((uuid): uuid is string => uuid != null && uuid !== "");
-      if (polygonUuids.length > 0) {
-        const siteUuid = sitePolygons[0]?.siteUuid ?? undefined;
-        this.enqueuePolygonValidation(polygonUuids, user.id, {
-          siteUuid,
-          triggerType: POLYGON_PENDING_APPROVAL
-        }).catch(err => this.logger.error("Failed to enqueue automated polygon validation on submit", err));
-      }
-    }
-
     return sitePolygons;
   }
 

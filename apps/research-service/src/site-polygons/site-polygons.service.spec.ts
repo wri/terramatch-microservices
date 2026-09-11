@@ -1486,6 +1486,7 @@ describe("SitePolygonsService", () => {
         await service.updateBulkStatus(status, data, null, user);
 
         expect(updateSpy).toHaveBeenCalledWith({ status }, { where: { uuid: { [Op.in]: data.map(d => d.id) } } });
+        expect(validationQueue.add).not.toHaveBeenCalled();
       }
     );
 
@@ -1534,31 +1535,7 @@ describe("SitePolygonsService", () => {
       });
     });
 
-    it("should not enqueue polygon validation on submit when polygons have no geometry UUID", async () => {
-      const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "pending-approval";
-      const comment = "comment";
-      const user = { id: 1 } as User;
-      const sitePolygon = {
-        id: 1,
-        uuid: "polygon-1",
-        siteUuid: "site-1",
-        status: "draft",
-        validationStatus: "passed"
-      } as SitePolygon;
-
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
-      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
-
-      await service.updateBulkStatus(status, data, comment, user);
-      await new Promise<void>(resolve => setImmediate(resolve));
-
-      expect(SitePolygon.update).toHaveBeenCalled();
-      expect(validationQueue.add).not.toHaveBeenCalled();
-    });
-
-    it("should enqueue polygon validation on submit when user and polygon geometry UUIDs are present", async () => {
+    it("should not enqueue polygon validation on submit", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-1" }];
       const status = "pending-approval";
       const comment = "comment";
@@ -1571,116 +1548,23 @@ describe("SitePolygonsService", () => {
         status: "draft",
         validationStatus: "passed"
       } as SitePolygon;
-      const site = { id: 10, uuid: "site-uuid-1", name: "River Valley Site" } as Site;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
       jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
-      jest.spyOn(Site, "findOne").mockResolvedValue(site);
-      jest.spyOn(DelayedJob, "create").mockResolvedValue({
-        id: 99,
-        uuid: "job-uuid",
-        name: "Polygon Validation",
-        totalContent: 1,
-        processedContent: 0,
-        progressMessage: "Queued for automated validation...",
-        createdBy: user.id,
-        metadata: {
-          entity_id: null,
-          entity_type: Site.LARAVEL_TYPE,
-          entity_name: site.name,
-          trigger_type: "pending-approval"
-        }
-      } as unknown as DelayedJob);
+      const findOneSpy = jest.spyOn(Site, "findOne");
+      const delayedJobCreateSpy = jest.spyOn(DelayedJob, "create");
 
       await service.updateBulkStatus(status, data, comment, user);
       await new Promise<void>(resolve => setImmediate(resolve));
 
-      expect(SitePolygon.update).toHaveBeenCalled();
-      expect(Site.findOne).toHaveBeenCalledWith({
-        where: { uuid: "site-uuid-1" },
-        attributes: ["id", "name"]
-      });
-      expect(DelayedJob.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: "Polygon Validation",
-          metadata: expect.objectContaining({
-            entity_name: "River Valley Site"
-          })
-        })
+      expect(SitePolygon.update).toHaveBeenCalledWith(
+        { status },
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
       );
-      expect(validationQueue.add).toHaveBeenCalledWith(
-        "polygonValidation",
-        expect.objectContaining({
-          polygonUuids: ["geom-uuid-1"],
-          delayedJobId: 99,
-          siteUuid: "site-uuid-1"
-        })
-      );
-    });
-
-    it("should use site UUID as delayed job entity_name when site row is not found", async () => {
-      const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "pending-approval";
-      const comment = "comment";
-      const user = { id: 42 } as User;
-      const sitePolygon = {
-        id: 1,
-        uuid: "polygon-1",
-        siteUuid: "site-uuid-missing",
-        polygonUuid: "geom-uuid-2",
-        status: "draft",
-        validationStatus: "passed"
-      } as SitePolygon;
-
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
-      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
-      jest.spyOn(Site, "findOne").mockResolvedValue(null);
-      jest.spyOn(DelayedJob, "create").mockResolvedValue({
-        id: 100,
-        uuid: "job-uuid-2",
-        name: "Polygon Validation",
-        totalContent: 1,
-        processedContent: 0,
-        progressMessage: "Queued for automated validation...",
-        createdBy: user.id,
-        metadata: {}
-      } as unknown as DelayedJob);
-
-      await service.updateBulkStatus(status, data, comment, user);
-      await new Promise<void>(resolve => setImmediate(resolve));
-
-      expect(DelayedJob.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({
-            entity_name: "site-uuid-missing"
-          })
-        })
-      );
-    });
-
-    it("should not enqueue polygon validation on submit when user is null", async () => {
-      const data = [{ type: "sitePolygons", id: "polygon-1" }];
-      const status = "pending-approval";
-      const comment = "comment";
-      const sitePolygon = {
-        id: 1,
-        uuid: "polygon-1",
-        siteUuid: "site-1",
-        polygonUuid: "geom-uuid-1",
-        status: "draft",
-        validationStatus: "passed"
-      } as SitePolygon;
-
-      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
-      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
-      jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
-
-      await service.updateBulkStatus(status, data, comment, null);
-      await new Promise<void>(resolve => setImmediate(resolve));
-
       expect(validationQueue.add).not.toHaveBeenCalled();
+      expect(findOneSpy).not.toHaveBeenCalled();
+      expect(delayedJobCreateSpy).not.toHaveBeenCalled();
     });
 
     it("should handle missing project gracefully", async () => {

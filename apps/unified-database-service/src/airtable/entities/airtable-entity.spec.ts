@@ -666,7 +666,7 @@ describe("AirtableEntity", () => {
 
       await NurseryFactory.create({ projectId: projects[0].id, status: "approved" });
 
-      const { uuid: startedSiteUuid } = await SiteFactory.create({ projectId: projects[0].id, status: "started" });
+      const { uuid: startedSiteUuid } = await SiteFactory.create({ projectId: projects[0].id, status: "draft" });
       const { uuid: site1Uuid } = await SiteFactory.create({
         projectId: projects[0].id,
         status: "approved"

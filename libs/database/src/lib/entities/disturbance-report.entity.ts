@@ -176,7 +176,7 @@ export class DisturbanceReport extends Model<
   }
 
   get isCompletable(): NonAttribute<boolean> {
-    return this.status !== "started";
+    return this.status !== "draft";
   }
 
   get isComplete(): NonAttribute<boolean> {

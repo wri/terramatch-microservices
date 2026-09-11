@@ -281,7 +281,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     for (const site of sites) {
       const siteId = site.id;
-      const siteReport = approvedReports.find(report => report.siteId === siteId);
+      const siteReport = approvedReports.find(report => report.siteId === siteId && report.plantingStatus != null);
       result[site.uuid] = siteReport?.plantingStatus as PlantingStatus;
     }
 
@@ -448,7 +448,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return await SiteReport.approved()
       .sites([siteId])
       .lastReport()
-      .findOne({ attributes: ["plantingStatus"] });
+      .findOne({
+        where: { plantingStatus: { [Op.ne]: null } },
+        attributes: ["plantingStatus"]
+      });
   }
 
   protected async getLastReportSurvivalRate(siteId: number) {
@@ -484,7 +487,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     });
 
     const task = await Task.forProject(project.id).dueAtDesc().findOne();
-    if (task != null) {
+    if (task?.dueAt != null) {
       // If we have a task due in the future, create a report
       let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);
 

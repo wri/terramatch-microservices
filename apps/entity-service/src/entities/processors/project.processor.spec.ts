@@ -144,18 +144,18 @@ describe("ProjectProcessor", () => {
       });
       const mx = await ProjectFactory.create({
         country: "MX",
-        status: "started",
-        updateRequestStatus: "awaiting-approval"
+        status: "draft",
+        updateRequestStatus: "pending-approval"
       });
       const ca = await ProjectFactory.create({
         country: "CA",
         status: "approved",
-        updateRequestStatus: "awaiting-approval"
+        updateRequestStatus: "pending-approval"
       });
 
       await expectProjects([mx], { country: "MX" });
       await expectProjects([us, ca], { status: "approved" });
-      await expectProjects([mx, ca], { updateRequestStatus: "awaiting-approval" });
+      await expectProjects([mx, ca], { updateRequestStatus: "pending-approval" });
     });
 
     it("filters by polygonDataSubmission and readyForBaseline", async () => {
@@ -170,6 +170,71 @@ describe("ProjectProcessor", () => {
 
       await expectProjects([ready], { polygonDataSubmission: "all-polygons-received" });
       await expectProjects([ready], { readyForBaseline: true });
+    });
+
+    it("filters by the latest approved non-null plantingStatus", async () => {
+      const inProgress = await ProjectFactory.create();
+      const completed = await ProjectFactory.create();
+      const unapprovedNewer = await ProjectFactory.create();
+      const nullLatestApproved = await ProjectFactory.create();
+
+      await ProjectReportFactory.create({
+        projectId: inProgress.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: inProgress.id,
+        status: "draft",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: completed.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: unapprovedNewer.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: unapprovedNewer.id,
+        status: "information-required",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await ProjectReportFactory.create({
+        projectId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await ProjectReportFactory.create({
+        projectId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: null,
+        landscapeCommunityContribution: "community narrative",
+        communityProgress: "Planting still in progress"
+      });
+
+      await expectProjects([inProgress, unapprovedNewer, nullLatestApproved], { plantingStatus: "in-progress" });
+      await expectProjects([completed], { plantingStatus: "completed" });
+
+      setMockedPermissions("projects-read");
+      const { models } = await processor.findMany({ plantingStatus: "in-progress" });
+      for (const project of models) {
+        const { dto } = await processor.getLightDto(project);
+        expect(dto.plantingStatus).toBe("in-progress");
+      }
     });
 
     it("filters by projectQaStatus fields", async () => {
@@ -442,7 +507,7 @@ describe("ProjectProcessor", () => {
     });
 
     describe("plantingStatus", () => {
-      it("uses plantingStatus from the most recent report with planting progress data (by dueAt)", async () => {
+      it("uses plantingStatus from the most recent approved report with planting progress data (by dueAt)", async () => {
         const { id: projectId, uuid } = await ProjectFactory.create();
 
         await ProjectReportFactory.create({
@@ -465,19 +530,47 @@ describe("ProjectProcessor", () => {
         });
         await ProjectReportFactory.create({
           projectId,
-          status: "started",
+          status: "draft",
           dueAt: DateTime.now().toJSDate(),
           plantingStatus: "replacement-planting"
         });
 
         const project = await processor.findOne(uuid);
         const { dto: fullDto } = await processor.getFullDto(project!);
-        expect(fullDto.plantingStatus).toBe("replacement-planting");
+        expect(fullDto.plantingStatus).toBe("in-progress");
 
         setMockedPermissions("projects-read");
         const { models } = await processor.findMany({});
         const { dto: lightDto } = await processor.getLightDto(models[0]);
-        expect(lightDto.plantingStatus).toBe("replacement-planting");
+        expect(lightDto.plantingStatus).toBe("in-progress");
+      });
+
+      it("ignores a newer approved report with null plantingStatus even if progress fields are filled", async () => {
+        const { id: projectId, uuid } = await ProjectFactory.create();
+
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: null,
+          landscapeCommunityContribution: "community narrative",
+          communityProgress: "Planting still in progress"
+        });
+
+        const project = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(project!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        setMockedPermissions("projects-read");
+        const { models } = await processor.findMany({});
+        const { dto: lightDto } = await processor.getLightDto(models[0]);
+        expect(lightDto.plantingStatus).toBe("in-progress");
       });
 
       it("returns null when no approved reports and project has no plantingStatus", async () => {
@@ -505,9 +598,9 @@ describe("ProjectProcessor", () => {
       const { id: projectId, uuid } = project;
       const approvedSites = [await SiteFactory.create({ projectId, status: "approved" })];
       approvedSites.push(await SiteFactory.create({ projectId, status: "approved" }));
-      await SiteFactory.create({ projectId, status: "started" });
+      await SiteFactory.create({ projectId, status: "draft" });
       const approvedNurseries = await NurseryFactory.createMany(3, { projectId, status: "approved" });
-      await NurseryFactory.create({ projectId, status: "needs-more-information" });
+      await NurseryFactory.create({ projectId, status: "information-required" });
 
       const approvedProjectReports = [
         await ProjectReportFactory.create({ projectId, status: "approved", dueAt: new Date() })
@@ -556,9 +649,9 @@ describe("ProjectProcessor", () => {
       const seedsPlantedCount = sumBy(seedings, "amount");
 
       // incomplete reports
-      await ProjectReportFactory.create({ projectId, status: "needs-more-information" });
+      await ProjectReportFactory.create({ projectId, status: "information-required" });
       await SiteReportFactory.create({ siteId: approvedSites[0].id, status: "due" });
-      await NurseryReportFactory.create({ nurseryId: approvedNurseries[1].id, status: "started" });
+      await NurseryReportFactory.create({ nurseryId: approvedNurseries[1].id, status: "draft" });
 
       const sitePolygons = flatten(
         await Promise.all(

@@ -1,11 +1,13 @@
-import { NurseryReport, Project, ProjectReport, TreeSpecies } from "@terramatch-microservices/database/entities";
+import { NurseryReport, Project, ProjectReport, Task, TreeSpecies } from "@terramatch-microservices/database/entities";
 import { AirtableEntity } from "./airtable-entity";
-import { filter, groupBy, uniq } from "lodash";
+import { groupBy, uniq } from "lodash";
 import { associatedValueColumn, commonEntityColumns, treeAmountRollup, treeDescriptionRollup } from "../util/columns";
 import { ColumnMapping } from "../util/types";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 type ProjectReportAssociations = {
   projectUuid?: string;
+  taskUuid?: string;
   associatedNurseryReports: NurseryReport[];
   trees: TreeSpecies[];
   nurserySeedlingAmount: number | null;
@@ -15,6 +17,7 @@ type ProjectReportAssociations = {
 const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
   ...commonEntityColumns<ProjectReport, ProjectReportAssociations>("projectReport"),
   associatedValueColumn("projectUuid", "projectId"),
+  associatedValueColumn("taskUuid", "taskId"),
   "status",
   "updateRequestStatus",
   "dueAt",
@@ -100,7 +103,8 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
       where: { id: projectIds },
       attributes: ["id", "uuid"]
     });
-    const taskIds = filter(projectReports.map(({ taskId }) => taskId)) as number[];
+    const taskIds = uniq(projectReports.map(({ taskId }) => taskId)).filter(isNotNull);
+    const tasks = await Task.findAll({ where: { id: taskIds }, attributes: ["id", "uuid"] });
     const nurseryReportsByTaskId = groupBy(
       await NurseryReport.findAll({
         where: { taskId: taskIds, status: NurseryReport.APPROVED_STATUSES },
@@ -115,6 +119,7 @@ export class ProjectReportEntity extends AirtableEntity<ProjectReport, ProjectRe
         ...associations,
         [id]: {
           projectUuid: projects.find(({ id }) => id === projectId)?.uuid,
+          taskUuid: tasks.find(({ id }) => id === taskId)?.uuid,
           associatedNurseryReports: (taskId == null ? null : nurseryReportsByTaskId[taskId]) ?? [],
           trees: treesByReportId[id] ?? [],
           nurserySeedlingAmount: treeAmountRollup(treesByReportId[id], "nursery-seedling"),

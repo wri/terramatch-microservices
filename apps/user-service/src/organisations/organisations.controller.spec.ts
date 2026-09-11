@@ -1016,9 +1016,9 @@ describe("OrganisationsController", () => {
       const org = await OrganisationFactory.create();
       const updateAttrs: OrganisationUpdateAttributes = {
         name: "Updated Name",
-        status: "pending"
+        status: "pending-approval"
       };
-      const updatedOrg = { ...org, name: "Updated Name", status: "pending" };
+      const updatedOrg = { ...org, name: "Updated Name", status: "pending-approval" };
 
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
@@ -1087,7 +1087,7 @@ describe("OrganisationsController", () => {
     });
 
     it("should use approveReject authorization when status changes to approved", async () => {
-      const org = await OrganisationFactory.create({ status: "pending" });
+      const org = await OrganisationFactory.create({ status: "pending-approval" });
       const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
       const updatedOrg = { ...org, status: "approved" };
 
@@ -1114,7 +1114,7 @@ describe("OrganisationsController", () => {
     });
 
     it("should use approveReject authorization when status changes to rejected", async () => {
-      const org = await OrganisationFactory.create({ status: "pending" });
+      const org = await OrganisationFactory.create({ status: "pending-approval" });
       const updateAttrs: OrganisationUpdateAttributes = { status: "rejected" };
       const updatedOrg = { ...org, status: "rejected" };
 
@@ -1142,8 +1142,8 @@ describe("OrganisationsController", () => {
 
     it("should use update authorization when status changes to non-approved/rejected", async () => {
       const org = await OrganisationFactory.create({ status: "approved" });
-      const updateAttrs: OrganisationUpdateAttributes = { status: "pending" };
-      const updatedOrg = { ...org, status: "pending" };
+      const updateAttrs: OrganisationUpdateAttributes = { status: "pending-approval" };
+      const updatedOrg = { ...org, status: "pending-approval" };
 
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
@@ -1188,7 +1188,7 @@ describe("OrganisationsController", () => {
     });
 
     it("should not queue email if userId is null", async () => {
-      const org = await OrganisationFactory.create({ status: "pending" });
+      const org = await OrganisationFactory.create({ status: "pending-approval" });
       const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
       const updatedOrg = { ...org, status: "approved" };
 
@@ -1212,7 +1212,7 @@ describe("OrganisationsController", () => {
     });
 
     it("should handle email queueing errors gracefully", async () => {
-      const org = await OrganisationFactory.create({ status: "pending" });
+      const org = await OrganisationFactory.create({ status: "pending-approval" });
       const updateAttrs: OrganisationUpdateAttributes = { status: "approved" };
       const updatedOrg = { ...org, status: "approved" };
 

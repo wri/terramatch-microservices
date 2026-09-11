@@ -5,13 +5,13 @@ import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/c
 
 const ORGANISATION_TYPES = ["non-profit-organization", "for-profit-organization"] as const;
 type OrganisationType = (typeof ORGANISATION_TYPES)[number];
-const CREATE_ORGANISATION_STATUSES = ["draft", "pending"] as const;
+const CREATE_ORGANISATION_STATUSES = ["draft", "pending-approval"] as const;
 export type CreateOrganisationStatus = (typeof CREATE_ORGANISATION_STATUSES)[number];
 
 export class OrganisationCreateAttributes {
   @IsOptional()
   @IsIn(CREATE_ORGANISATION_STATUSES)
-  @ApiProperty({ enum: CREATE_ORGANISATION_STATUSES, required: false, default: "pending" })
+  @ApiProperty({ enum: CREATE_ORGANISATION_STATUSES, required: false, default: "pending-approval" })
   status?: CreateOrganisationStatus;
 
   @IsOptional()

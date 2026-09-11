@@ -1,6 +1,6 @@
 import { Project, Site, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { STARTED } from "@terramatch-microservices/database/constants/status";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class SitePolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -48,7 +48,7 @@ export class SitePolicy extends UserPermissionsPolicy {
           this.builder.can(["read", "delete", "create", "update", "uploadFiles", "deleteFiles", "updateFiles"], Site, {
             projectId: { $in: projectIds }
           });
-          this.builder.can("updateAnswers", Site, { projectId: { $in: projectIds }, status: STARTED });
+          this.builder.can("updateAnswers", Site, { projectId: { $in: projectIds }, status: DRAFT });
         }
       }
     }

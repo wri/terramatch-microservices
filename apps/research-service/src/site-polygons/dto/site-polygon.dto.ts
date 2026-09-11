@@ -12,7 +12,9 @@ import {
 } from "./indicators.dto";
 import {
   POLYGON_STATUSES,
+  POLYGON_VALIDATION_STATUSES,
   PolygonStatus,
+  PolygonValidationStatus,
   SITE_POLYGON_SUBMISSION_CYCLES
 } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
@@ -49,9 +51,11 @@ export class ReportingPeriodDto {
   treeSpecies: TreeSpeciesDto[];
 }
 
+export type CustomAttributesDto = Record<string, string | string[] | null>;
+
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonLightDto extends HybridSupportDto {
-  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[]) {
+  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[], customAttributes?: CustomAttributesDto) {
     super();
     if (sitePolygon != null) {
       populateDto<SitePolygonLightDto, SitePolygon>(this, sitePolygon, {
@@ -63,6 +67,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         projectCountry: sitePolygon.site?.project?.level0Project ?? null,
         ppcExternalId: sitePolygon.site?.ppcExternalId ?? null,
         indicators: indicators ?? [],
+        customAttributes: customAttributes ?? {},
         siteName: sitePolygon.site?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
         lightResource: true
@@ -176,11 +181,10 @@ export class SitePolygonLightDto extends HybridSupportDto {
 
   @ApiProperty({
     nullable: true,
-    type: String,
-    description: "Validation status of the site polygon",
-    maxLength: 255
+    enum: POLYGON_VALIDATION_STATUSES,
+    description: "Validation status of the site polygon. Null means validation has not started."
   })
-  validationStatus: string | null;
+  validationStatus: PolygonValidationStatus | null;
 
   @ApiProperty({
     nullable: true,
@@ -216,6 +220,14 @@ export class SitePolygonLightDto extends HybridSupportDto {
     description: "When this site polygon was soft-deleted. Only populated when deletedOnly is requested."
   })
   deletedAt: Date | null;
+
+  @ApiProperty({
+    type: Object,
+    description:
+      "Sparse map of framework-configured custom attribute values keyed by definition key. " +
+      "Only stored values are included (missing key means unset)."
+  })
+  customAttributes: CustomAttributesDto;
 }
 
 @JsonApiDto({ type: "sitePolygons" })
@@ -224,7 +236,8 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     sitePolygon: SitePolygon,
     indicators?: IndicatorDto[],
     establishmentTreeSpecies?: TreeSpeciesDto[],
-    reportingPeriods?: ReportingPeriodDto[]
+    reportingPeriods?: ReportingPeriodDto[],
+    customAttributes?: CustomAttributesDto
   ) {
     super();
 
@@ -237,6 +250,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       projectCountry: sitePolygon.site?.project?.level0Project ?? null,
       ppcExternalId: sitePolygon.site?.ppcExternalId ?? null,
       indicators: indicators ?? [],
+      customAttributes: customAttributes ?? {},
       siteName: sitePolygon.site?.name ?? undefined,
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],

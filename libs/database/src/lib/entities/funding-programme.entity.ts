@@ -14,7 +14,6 @@ import {
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
-  INTEGER,
   STRING,
   TEXT,
   UUID,
@@ -23,7 +22,6 @@ import {
 import { FrameworkKey, OrganisationType } from "../constants";
 import { Framework } from "./framework.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
-import { I18nItem } from "./i18n-item.entity";
 import { MediaConfiguration } from "../constants/media-owners";
 import { COMING_SOON, FundingProgrammeStatus } from "../constants/status";
 import { Stage } from "./stage.entity";
@@ -42,7 +40,7 @@ export class FundingProgramme extends Model<
     cover: { dbCollection: "cover", multiple: false, validation: "cover-image" }
   };
 
-  static readonly I18N_FIELDS = ["location"] as const;
+  static readonly I18N_FIELDS = ["name", "description", "location"] as const;
 
   @PrimaryKey
   @AutoIncrement
@@ -55,13 +53,6 @@ export class FundingProgramme extends Model<
 
   @Column(STRING)
   declare name: string;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare nameId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "name_id", constraints: false })
-  declare nameI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)
@@ -77,19 +68,8 @@ export class FundingProgramme extends Model<
   declare description: string;
 
   @AllowNull
-  @Column(INTEGER)
-  declare descriptionId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  declare descriptionI18nItem: I18nItem | null;
-
-  @AllowNull
   @Column(TEXT)
   declare location: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare locationId: number | null;
 
   @AllowNull
   @Column(TEXT)
@@ -98,9 +78,6 @@ export class FundingProgramme extends Model<
   @AllowNull
   @JsonColumn({ type: TEXT })
   declare organisationTypes: OrganisationType[] | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "location_id", constraints: false })
-  declare locationI18nItem: I18nItem | null;
 
   @HasMany(() => Stage, { foreignKey: "fundingProgrammeId", sourceKey: "uuid", constraints: false })
   declare stages: Stage[] | null;

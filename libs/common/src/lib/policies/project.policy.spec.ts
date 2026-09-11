@@ -52,10 +52,10 @@ describe("ProjectPolicy", () => {
     const user = await UserFactory.create({ organisationId: org.id });
     mockContextForUser(user, "manage-own");
 
-    const p1 = await ProjectFactory.create({ status: "started", organisationId: org.id });
-    const p2 = await ProjectFactory.create({ status: "started" });
-    const p3 = await ProjectFactory.create({ status: "started" });
-    const p4 = await ProjectFactory.create({ status: "awaiting-approval" });
+    const p1 = await ProjectFactory.create({ status: "draft", organisationId: org.id });
+    const p2 = await ProjectFactory.create({ status: "draft" });
+    const p3 = await ProjectFactory.create({ status: "draft" });
+    const p4 = await ProjectFactory.create({ status: "pending-approval" });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
     await expectAuthority(service, {
@@ -68,7 +68,7 @@ describe("ProjectPolicy", () => {
         // manage-own does not give permission to approve.
         ["approve", p1],
         [["read", "update", "delete", "deleteFiles"], p2],
-        // This project is not in the "started" state
+        // This project is not in the "draft" state
         ["delete", p4]
       ]
     });

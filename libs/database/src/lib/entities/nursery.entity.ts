@@ -13,6 +13,7 @@ import {
 } from "sequelize-typescript";
 import {
   BIGINT,
+  BOOLEAN,
   CreationOptional,
   DATE,
   InferAttributes,
@@ -31,7 +32,7 @@ import {
   APPROVED,
   EntityStatus,
   EntityStatusStates,
-  STARTED,
+  DRAFT,
   statusUpdateSequelizeHook,
   UpdateRequestStatus
 } from "../constants/status";
@@ -51,7 +52,7 @@ type NurseryMedia = "media" | "file" | "otherAdditionalDocuments" | "photos";
 @Scopes(() => ({
   project: (id: number) => ({ where: { projectId: id } }),
   approved: { where: { status: { [Op.in]: Nursery.APPROVED_STATUSES } } },
-  nonDraft: { where: { status: { [Op.ne]: STARTED } } }
+  nonDraft: { where: { status: { [Op.ne]: DRAFT } } }
 }))
 @Table({
   tableName: "v2_nurseries",
@@ -159,6 +160,9 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
   @AllowNull
   @JsonColumn()
   declare feedbackFields: string[] | null;
+
+  @Column({ type: BOOLEAN, allowNull: false, defaultValue: false })
+  declare isArchived: CreationOptional<boolean>;
 
   @AllowNull
   @Column(STRING)

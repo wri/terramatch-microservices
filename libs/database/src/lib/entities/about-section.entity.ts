@@ -47,6 +47,14 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   // Still named laravel type for legacy reasons, but the name doesn't need to follow that convention; just needs to be unique
   static readonly LARAVEL_TYPE = "AboutSection";
 
+  static readonly I18N_FIELDS = [
+    "header",
+    "title",
+    "description",
+    "contactSupportMessage",
+    "contactSupportSubject"
+  ] as const;
+
   @PrimaryKey
   @AutoIncrement
   @Column(BIGINT.UNSIGNED)
@@ -67,43 +75,18 @@ export class AboutSection extends Model<InferAttributes<AboutSection>, InferCrea
   @Column(TEXT)
   declare header: string;
 
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare headerId: number | null;
-
   @AllowNull
   @Column(TEXT)
   declare title: string | null;
 
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare titleId: number | null;
-
   @Column(TEXT)
   declare description: string | null;
-
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare descriptionId: number | null;
 
   @Column(TEXT)
   declare contactSupportMessage: string;
 
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare contactSupportMessageId: number | null;
-
   @Column(TEXT)
   declare contactSupportSubject: string;
-
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare contactSupportSubjectId: number | null;
 
   @HasMany(() => Link, {
     foreignKey: "linkableId",

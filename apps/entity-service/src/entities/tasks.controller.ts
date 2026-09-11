@@ -123,7 +123,7 @@ export class TasksController {
     } else if (nurseryReportNothingToReportUuids != null || siteReportNothingToReportUuids != null) {
       await this.tasksService.nothingToReportBulk(updatePayload.data.attributes, task);
     } else if (status != null) {
-      if (status === "awaiting-approval") {
+      if (status === "pending-approval") {
         await this.tasksService.submitForApproval(task);
         await task.save();
       } else {

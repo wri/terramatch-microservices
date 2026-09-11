@@ -113,19 +113,19 @@ describe("SiteProcessor", () => {
       const first = await SiteFactory.create({
         name: "first site",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const second = await SiteFactory.create({
         name: "second site",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const third = await SiteFactory.create({
         name: "third site",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const fourth = await SiteFactory.create({
@@ -135,9 +135,65 @@ describe("SiteProcessor", () => {
         projectId: p2.id
       });
 
-      await expectSites([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectSites([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectSites([fourth], { projectUuid: p2.uuid });
+    });
+
+    it("filters by the latest approved non-null plantingStatus", async () => {
+      const inProgress = await SiteFactory.create();
+      const completed = await SiteFactory.create();
+      const unapprovedNewer = await SiteFactory.create();
+      const nullLatestApproved = await SiteFactory.create();
+
+      await SiteReportFactory.create({
+        siteId: inProgress.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await SiteReportFactory.create({
+        siteId: inProgress.id,
+        status: "draft",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await SiteReportFactory.create({
+        siteId: completed.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await SiteReportFactory.create({
+        siteId: unapprovedNewer.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await SiteReportFactory.create({
+        siteId: unapprovedNewer.id,
+        status: "information-required",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: "completed"
+      });
+
+      await SiteReportFactory.create({
+        siteId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+        plantingStatus: "in-progress"
+      });
+      await SiteReportFactory.create({
+        siteId: nullLatestApproved.id,
+        status: "approved",
+        dueAt: DateTime.now().toJSDate(),
+        plantingStatus: null
+      });
+
+      await expectSites([inProgress, unapprovedNewer, nullLatestApproved], { plantingStatus: "in-progress" });
+      await expectSites([completed], { plantingStatus: "completed" });
     });
 
     it("should throw an error if the project uuid is not found", async () => {
@@ -244,6 +300,59 @@ describe("SiteProcessor", () => {
       const site = await processor.findOne(uuid);
       const { dto } = await processor.getFullDto(site!);
       expect(dto.landTenureApproach).toBe("Lease agreements with smallholders");
+    });
+
+    describe("plantingStatus", () => {
+      it("uses plantingStatus from the most recent approved report (by dueAt)", async () => {
+        const { id: siteId, uuid } = await SiteFactory.create();
+
+        await SiteReportFactory.create({
+          siteId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await SiteReportFactory.create({
+          siteId,
+          status: "draft",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: "completed"
+        });
+
+        const site = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(site!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        const { dto: lightDto } = await processor.getLightDto(site!);
+        expect(lightDto.plantingStatus).toBe("in-progress");
+
+        const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+        expect(indexDto.plantingStatus).toBe("in-progress");
+      });
+
+      it("ignores a newer approved report with null plantingStatus", async () => {
+        const { id: siteId, uuid } = await SiteFactory.create();
+
+        await SiteReportFactory.create({
+          siteId,
+          status: "approved",
+          dueAt: DateTime.now().minus({ months: 1 }).toJSDate(),
+          plantingStatus: "in-progress"
+        });
+        await SiteReportFactory.create({
+          siteId,
+          status: "approved",
+          dueAt: DateTime.now().toJSDate(),
+          plantingStatus: null
+        });
+
+        const site = await processor.findOne(uuid);
+        const { dto: fullDto } = await processor.getFullDto(site!);
+        expect(fullDto.plantingStatus).toBe("in-progress");
+
+        const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+        expect(indexDto.plantingStatus).toBe("in-progress");
+      });
     });
   });
 

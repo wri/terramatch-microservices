@@ -136,21 +136,21 @@ describe("NurseryReportProcessor", () => {
       const first = await NurseryReportFactory.create({
         title: "first nursery report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
       const second = await NurseryReportFactory.create({
         title: "second project report",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
       const third = await NurseryReportFactory.create({
         title: "third project report",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         frameworkKey: "ppc",
         nurseryId: n1.id
       });
@@ -167,7 +167,7 @@ describe("NurseryReportProcessor", () => {
       third.nursery = await third.$get("nursery");
       fourth.nursery = await fourth.$get("nursery");
 
-      await expectNurseryReports([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectNurseryReports([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectNurseryReports([first, third, fourth], { status: "approved" });
 
@@ -177,7 +177,7 @@ describe("NurseryReportProcessor", () => {
 
       await expectNurseryReports([first, second, third], { nurseryUuid: n1.uuid });
 
-      await expectNurseryReports([second], { status: "started", updateRequestStatus: "awaiting-approval" });
+      await expectNurseryReports([second], { status: "draft", updateRequestStatus: "pending-approval" });
 
       await expectNurseryReports([first, second, third], { projectUuid: p1.uuid });
 
@@ -330,9 +330,9 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should sort nursery reports by update request status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
-      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryReportA = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const nurseryReportB = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
+      const nurseryReportC = await NurseryReportFactory.create({ updateRequestStatus: "pending-approval" });
       await expectNurseryReports(
         [nurseryReportA, nurseryReportB, nurseryReportC],
         { sort: { field: "updateRequestStatus" } },
@@ -351,7 +351,7 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("should sort nursery reports by status", async () => {
-      const nurseryReportA = await NurseryReportFactory.create({ status: "started" });
+      const nurseryReportA = await NurseryReportFactory.create({ status: "draft" });
       const nurseryReportB = await NurseryReportFactory.create({ status: "approved" });
       const nurseryReportC = await NurseryReportFactory.create({ status: "approved" });
       await expectNurseryReports(
@@ -634,6 +634,33 @@ describe("NurseryReportProcessor", () => {
       expect(result1.projectName).toEqual(projects[0].name);
       expect(result1.organisationReadableType).toEqual("Non Profit Organization");
       expect(result1.organisationName).toEqual(org.name);
+    });
+
+    it("writes only the selected nursery reports to the CSV", async () => {
+      await NurseryReport.truncate();
+      const org = await OrganisationFactory.create({ type: "non-profit-organization" });
+      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" });
+      const nursery = await NurseryFactory.create({ projectId: project.id, frameworkKey: "terrafund" });
+      const reports = await NurseryReportFactory.createMany(3, { nurseryId: nursery.id, frameworkKey: "terrafund" });
+      await EntityFormFactory.nurseryReport(reports[0]).create();
+      jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
+
+      const addRow = jest.fn();
+      csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      await processor.exportAll({ uuids: [reports[0].uuid, reports[2].uuid] });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as NurseryReport).uuid).sort()).toEqual(
+        [reports[0].uuid, reports[2].uuid].sort()
+      );
+    });
+
+    it("returns early when selected nursery report uuids match nothing", async () => {
+      const localizeSpy = jest.spyOn(entitiesService(), "localizeText");
+      await processor.exportAll({ uuids: ["00000000-0000-4000-8000-000000000000"] });
+      expect(localizeSpy).not.toHaveBeenCalled();
     });
 
     it("filters for own projects", async () => {

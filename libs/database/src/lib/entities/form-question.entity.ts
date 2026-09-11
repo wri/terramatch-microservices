@@ -13,7 +13,6 @@ import {
   Unique
 } from "sequelize-typescript";
 import { BIGINT, BOOLEAN, INTEGER, Op, STRING, TEXT, TINYINT, UUID, UUIDV4 } from "sequelize";
-import { I18nItem } from "./i18n-item.entity";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormSection } from "./form-section.entity";
 import { InputType } from "../constants/linked-fields";
@@ -89,33 +88,12 @@ export class FormQuestion extends Model<FormQuestion> {
   declare label: string;
 
   @AllowNull
-  @Column(INTEGER)
-  declare labelId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "label_id", constraints: false })
-  declare labelI18nItem: I18nItem | null;
-
-  @AllowNull
   @Column(TEXT)
   declare description: string | null;
 
   @AllowNull
-  @Column(INTEGER)
-  declare descriptionId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "description_id", constraints: false })
-  declare descriptionI18nItem: I18nItem | null;
-
-  @AllowNull
   @Column(STRING)
   declare placeholder: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare placeholderId: number | null;
-
-  @BelongsTo(() => I18nItem, { foreignKey: "placeholder_id", constraints: false })
-  declare placeholderI18nItem: I18nItem | null;
 
   @AllowNull
   @Column(STRING)

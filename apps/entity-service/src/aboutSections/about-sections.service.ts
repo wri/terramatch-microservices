@@ -2,25 +2,16 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { AboutSection, AboutSectionType } from "@terramatch-microservices/database/entities/about-section.entity";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { cast, col, fn, Op, where } from "sequelize";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { AboutSectionDto, LinkDto, StoreAboutSectionAttributes } from "./dto/about-section.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { AboutSectionIndexQueryDto } from "./dto/about-section-index-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { groupBy, isEmpty, uniq, xor } from "lodash";
+import { groupBy, isEmpty, xor } from "lodash";
 import { Link } from "@terramatch-microservices/database/entities";
-import { InjectQueue } from "@nestjs/bullmq";
-import { Queue } from "bullmq";
-import {
-  ENTITY_SERVICE_EXPORT_QUEUE,
-  EntityServiceDelayedJobsProcessor
-} from "../jobs/entity-service-delayed-jobs.processor";
 
 @Injectable()
 export class AboutSectionsService {
-  constructor(@InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue) {}
-
   async findOne(type: AboutSectionType, framework: FrameworkKey) {
     return (await this.findForFramework(type, framework)) ?? (await this.findDefault(type));
   }
@@ -81,28 +72,6 @@ export class AboutSectionsService {
     );
 
     return document;
-  }
-
-  async getI18nLabels(section: AboutSection) {
-    section.links ??= await section.$get("links");
-    return uniq(
-      [
-        section.header,
-        section.title,
-        section.description,
-        section.contactSupportMessage,
-        section.contactSupportSubject,
-        ...section.links.map(({ title }) => title)
-      ].filter(isNotNull)
-    );
-  }
-
-  async pushTranslations(section: AboutSection) {
-    const i18nLabels = await this.getI18nLabels(section);
-    return await EntityServiceDelayedJobsProcessor.queuePushTranslations(this.exportQueue, section.uuid, i18nLabels, {
-      entity_type: "aboutSections",
-      entity_name: `type=${section.type}, frameworks=${isEmpty(section.frameworks) ? "default" : section.frameworks?.join(", ")}`
-    });
   }
 
   async store(attributes: StoreAboutSectionAttributes, section = new AboutSection()) {

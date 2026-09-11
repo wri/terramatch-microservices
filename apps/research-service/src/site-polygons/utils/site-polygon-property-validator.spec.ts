@@ -337,6 +337,40 @@ describe("SitePolygonPropertyValidator", () => {
       expect(result.targetSys).toBe("agroforest");
     });
 
+    it("should drop unknown target_sys values", () => {
+      const properties = {
+        target_sys: "jmmb"
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.targetSys).toBeNull();
+    });
+
+    it("should drop human-readable target_sys labels that are not allowlisted slugs", () => {
+      const properties = {
+        target_sys: "Open natural ecosystem or Grasslands"
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.targetSys).toBeNull();
+    });
+
+    it("should drop non-string target_sys without throwing", () => {
+      const properties = {
+        target_sys: false,
+        distr: 456,
+        practice: true
+      };
+
+      const result = validateSitePolygonProperties(properties);
+
+      expect(result.targetSys).toBeNull();
+      expect(result.distr).toBeNull();
+      expect(result.practice).toBeNull();
+    });
+
     it("should handle mixed data types", () => {
       const properties = {
         poly_name: 123,
@@ -367,40 +401,6 @@ describe("SitePolygonPropertyValidator", () => {
         source: {},
         submissionCycle: null
       });
-    });
-
-    it("should handle non-string values that cause trim errors", () => {
-      const properties = {
-        target_sys: false,
-        distr: 456,
-        practice: true
-      };
-
-      expect(() => validateSitePolygonProperties(properties)).toThrow();
-    });
-
-    it("should handle target_sys that becomes empty after trim", () => {
-      const properties = {
-        target_sys: "test"
-      };
-
-      const originalTrim = String.prototype.trim;
-      let trimCallCount = 0;
-      String.prototype.trim = jest.fn(function (this: string) {
-        trimCallCount++;
-        // First call (in the check) returns non-empty, second call returns empty
-        if (trimCallCount === 1) {
-          return "non-empty";
-        }
-        return "";
-      });
-
-      const result = validateSitePolygonProperties(properties);
-
-      expect(result.targetSys).toBeNull();
-
-      // Restore original trim
-      String.prototype.trim = originalTrim;
     });
 
     describe("extractAdditionalData", () => {

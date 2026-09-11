@@ -95,14 +95,14 @@ describe("AuditStatusService", () => {
       expect(result).toHaveLength(2);
     });
 
-    it("should transform status 'started' to 'Draft'", async () => {
+    it("should transform status 'draft' to 'Draft'", async () => {
       const project = await ProjectFactory.create();
-      await AuditStatusFactory.project(project).create({ status: "started" });
+      await AuditStatusFactory.project(project).create({ status: "draft" });
 
       const entity = await service.resolveEntity("projects", project.uuid);
       const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
-      expect(result[0].status).toBe("Draft");
+      expect(result[0].status).toBe("draft");
     });
 
     it("should include media attachments", async () => {
@@ -334,13 +334,13 @@ describe("AuditStatusService", () => {
       await AuditFactory.project(project).create({
         createdAt: oldDate,
         updatedAt: oldDate,
-        newValues: { status: "needs-more-information", feedback: "please-update" }
+        newValues: { status: "information-required", feedback: "please-update" }
       });
 
       const entity = await service.resolveEntity("projects", project.uuid);
       const result = await service.getAuditStatuses(entity, "projects", project.uuid);
 
-      expect(result[0].comment).toBe("needs more information: please update");
+      expect(result[0].comment).toBe("information required: please update");
     });
   });
 
@@ -383,7 +383,7 @@ describe("AuditStatusService", () => {
       });
 
       const result = await service.createAuditStatus(project, {
-        status: "needs-more-information",
+        status: "information-required",
         type: "change-request",
         isActive: true,
         requestRemoved: false
@@ -402,7 +402,7 @@ describe("AuditStatusService", () => {
     });
 
     it("does not update project EntityStatus for polygon-data-submission audits", async () => {
-      const project = await ProjectFactory.create({ status: "started" });
+      const project = await ProjectFactory.create({ status: "draft" });
       const user = await UserFactory.create();
 
       Object.defineProperty(entitiesService, "userId", {
@@ -416,7 +416,7 @@ describe("AuditStatusService", () => {
       });
 
       const reloadedProject = await project.reload();
-      expect(reloadedProject.status).toBe("started");
+      expect(reloadedProject.status).toBe("draft");
     });
   });
 
@@ -447,7 +447,7 @@ describe("AuditStatusService", () => {
       const project = await ProjectFactory.create();
       const auditStatus = await AuditStatusFactory.project(project).create({
         type: "change-request",
-        status: "needs-more-information",
+        status: "information-required",
         isActive: true,
         requestRemoved: false
       });
@@ -461,7 +461,7 @@ describe("AuditStatusService", () => {
 
       expect(reloaded.isActive).toBe(false);
       expect(reloaded.requestRemoved).toBe(true);
-      expect(reloaded.status).toBe("needs-more-information");
+      expect(reloaded.status).toBe("information-required");
     });
 
     it("should update the isRead field", async () => {

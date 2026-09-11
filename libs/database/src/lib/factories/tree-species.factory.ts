@@ -96,5 +96,21 @@ export const TreeSpeciesFactory = {
       speciesableType: SiteReport.LARAVEL_TYPE,
       speciesableId: (report?.id as number) ?? SiteReportFactory.associate("id"),
       collection: "non-tree"
+    })),
+
+  siteEstablished: (site?: Site) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: Site.LARAVEL_TYPE,
+      speciesableId: (site?.id as number) ?? SiteFactory.associate("id"),
+      collection: "established"
+    })),
+
+  siteReportEstablished: (report?: SiteReport) =>
+    FactoryGirl.define(TreeSpecies, async () => ({
+      ...(await defaultAttributesFactory()),
+      speciesableType: SiteReport.LARAVEL_TYPE,
+      speciesableId: (report?.id as number) ?? SiteReportFactory.associate("id"),
+      collection: "established"
     }))
 };

@@ -115,19 +115,19 @@ describe("NurseryProcessor", () => {
       const first = await NurseryFactory.create({
         name: "first nursery",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const second = await NurseryFactory.create({
         name: "second nursery",
-        status: "started",
-        updateRequestStatus: "awaiting-approval",
+        status: "draft",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const third = await NurseryFactory.create({
         name: "third nursery",
         status: "approved",
-        updateRequestStatus: "awaiting-approval",
+        updateRequestStatus: "pending-approval",
         projectId: p1.id
       });
       const fourth = await NurseryFactory.create({
@@ -137,7 +137,7 @@ describe("NurseryProcessor", () => {
         projectId: p2.id
       });
 
-      await expectNurseries([first, second, third], { updateRequestStatus: "awaiting-approval" });
+      await expectNurseries([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectNurseries([fourth], { projectUuid: p2.uuid });
     });
@@ -225,7 +225,7 @@ describe("NurseryProcessor", () => {
     });
 
     it("should sort nurseries by status in ascending and descending order", async () => {
-      const nurseryA = await NurseryFactory.create({ status: "started" });
+      const nurseryA = await NurseryFactory.create({ status: "draft" });
       const nurseryB = await NurseryFactory.create({ status: "approved" });
       const nurseryC = await NurseryFactory.create({ status: "approved" });
       await expectNurseries([nurseryA, nurseryB, nurseryC], { sort: { field: "status" } }, { sortField: "status" });
@@ -242,7 +242,7 @@ describe("NurseryProcessor", () => {
     });
 
     it("should sort nurseries by update request status in ascending and descending order", async () => {
-      const nurseryA = await NurseryFactory.create({ updateRequestStatus: "awaiting-approval" });
+      const nurseryA = await NurseryFactory.create({ updateRequestStatus: "pending-approval" });
       const nurseryB = await NurseryFactory.create({ updateRequestStatus: "approved" });
       const nurseryC = await NurseryFactory.create({ updateRequestStatus: "approved" });
       await expectNurseries(
@@ -372,7 +372,7 @@ describe("NurseryProcessor", () => {
     });
 
     it("should allow a non-admin to delete a draft nursery even if it has reports", async () => {
-      const nursery = await NurseryFactory.create({ status: "started" });
+      const nursery = await NurseryFactory.create({ status: "draft" });
       await NurseryReportFactory.create({ nurseryId: nursery.id });
       setMockedPermissions("manage-own");
       await processor.delete(nursery);

@@ -257,8 +257,28 @@ export class NurseryReportProcessor extends ReportProcessor<
     frameworkKey,
     projectUuid,
     nurseryId,
-    fileNamePrefix
+    fileNamePrefix,
+    uuids
   }: ExportAllOptions & { nurseryId?: number } = {}) {
+    if (uuids != null && uuids.length > 0) {
+      const reports = await NurseryReport.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        include: CSV_EXPORT_INCLUDES
+      });
+      if (reports.length === 0) return;
+      await this.entitiesService.authorize("read", reports);
+      frameworkKey ??= reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined;
+      if (frameworkKey == null) throw new InternalServerErrorException("Framework key not found");
+      const reportsLabel = await this.entitiesService.localizeText("nursery reports");
+      await this.exportReports(
+        frameworkKey,
+        target,
+        reports,
+        fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`)
+      );
+      return;
+    }
+
     const where: WhereOptions<NurseryReport> = {};
     if (nurseryId != null) {
       where["nurseryId"] = nurseryId;

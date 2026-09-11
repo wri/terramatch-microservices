@@ -24,7 +24,9 @@ export class ValidationDto {
           polygonUuid: "54aa2c7a-e139-4017-b86b-d904f4a3ed5c",
           message: "This geometry already exists in the project",
           sitePolygonUuid: "fd6cd4e8-0c56-45dc-8991-1cebfd3871ca",
-          sitePolygonName: "AREA_NAME"
+          sitePolygonName: "AREA_NAME",
+          siteUuid: "8f3c2b1a-4d5e-6f70-8192-a3b4c5d6e7f8",
+          siteName: "Site Name"
         }
       }
     ]

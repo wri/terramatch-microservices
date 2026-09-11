@@ -1,5 +1,4 @@
 import {
-  AllowNull,
   AutoIncrement,
   Column,
   DefaultScope,
@@ -38,6 +37,8 @@ import { LaravelModel, laravelType } from "../types/util";
 }))
 @Table({ tableName: "links", underscored: true, paranoid: true })
 export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<Link>> {
+  static readonly I18N_FIELDS = ["title"] as const;
+
   static for<T extends LaravelModel>(models: T | T[]) {
     return chainScope(this, "associations", models) as typeof Link;
   }
@@ -57,11 +58,6 @@ export class Link extends Model<InferAttributes<Link>, InferCreationAttributes<L
 
   @Column(TEXT)
   declare title: string;
-
-  // @deprecated
-  @AllowNull
-  @Column(BIGINT.UNSIGNED)
-  declare titleId: number | null;
 
   @Column(STRING)
   declare url: string;

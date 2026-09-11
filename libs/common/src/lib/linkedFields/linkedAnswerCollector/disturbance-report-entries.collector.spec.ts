@@ -1,7 +1,11 @@
 import { RelationResourceCollector } from "./index";
-import { DisturbanceReportEntryFactory, DisturbanceReportFactory } from "@terramatch-microservices/database/factories";
+import {
+  DisturbanceReportEntryFactory,
+  DisturbanceReportFactory,
+  SitePolygonFactory
+} from "@terramatch-microservices/database/factories";
 import { EmbeddedDisturbanceReportEntryDto } from "../../dto/disturbance-report-entry.dto";
-import { DisturbanceReportEntry, SiteReport } from "@terramatch-microservices/database/entities";
+import { Disturbance, DisturbanceReportEntry, SiteReport } from "@terramatch-microservices/database/entities";
 import { LinkedRelation } from "@terramatch-microservices/database/constants/linked-fields";
 import { CollectorTestHarness, getRelation } from "../../util/testing";
 
@@ -96,6 +100,51 @@ describe("DisturbanceReportEntriesCollector", () => {
         value: "large",
         inputType: "text"
       });
+    });
+
+    it("does not write disturbance_id while the report is draft", async () => {
+      const report = await DisturbanceReportFactory.create({ status: "draft" });
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+
+      await collector.syncRelation(
+        report,
+        field,
+        [
+          {
+            name: "polygon-affected",
+            value: `[[{"polyUuid":"${polygon.uuid}"}]]`,
+            inputType: "disturbanceAffectedPolygon"
+          }
+        ],
+        false
+      );
+
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBeNull();
+      expect(await Disturbance.for(report).findOne()).toBeNull();
+    });
+
+    it("writes disturbance_id when entries are saved on a submitted report", async () => {
+      const report = await DisturbanceReportFactory.create({ status: "pending-approval" });
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+
+      await collector.syncRelation(
+        report,
+        field,
+        [
+          {
+            name: "polygon-affected",
+            value: `[[{"polyUuid":"${polygon.uuid}"}]]`,
+            inputType: "disturbanceAffectedPolygon"
+          }
+        ],
+        false
+      );
+
+      const disturbance = await Disturbance.for(report).findOne();
+      expect(disturbance).not.toBeNull();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbance?.id);
     });
   });
 });

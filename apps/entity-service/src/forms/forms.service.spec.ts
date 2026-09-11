@@ -3,7 +3,6 @@ import { Response } from "express";
 import { FormsService } from "./forms.service";
 import { faker } from "@faker-js/faker";
 import { Test } from "@nestjs/testing";
-import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { NotFoundException } from "@nestjs/common";
@@ -16,7 +15,6 @@ import {
   FormSubmissionFactory,
   FormTableHeaderFactory,
   FundingProgrammeFactory,
-  I18nItemFactory,
   MediaFactory,
   OrganisationFactory,
   ProjectPitchFactory,
@@ -41,7 +39,6 @@ import { EntitiesService } from "../entities/entities.service";
 describe("FormsService", () => {
   let service: FormsService;
   let mediaService: DeepMocked<MediaService>;
-  let localizationService: DeepMocked<LocalizationService>;
   let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
@@ -51,7 +48,6 @@ describe("FormsService", () => {
 
     const module = await Test.createTestingModule({
       providers: [
-        { provide: LocalizationService, useValue: createMock<LocalizationService>() },
         { provide: MediaService, useValue: createMock<MediaService>() },
         { provide: CsvExportService, useValue: createMock<CsvExportService>() },
         {
@@ -63,7 +59,6 @@ describe("FormsService", () => {
     }).compile();
 
     service = await module.resolve(FormsService);
-    localizationService = module.get(LocalizationService);
     mediaService = module.get(MediaService);
     csvExportService = module.get(CsvExportService);
   });
@@ -346,7 +341,6 @@ describe("FormsService", () => {
   describe("store", () => {
     beforeEach(() => {
       mockUserContext({ userId: 123 });
-      localizationService.generateI18nId.mockResolvedValue(1);
     });
 
     it("creates a form from the attributes", async () => {
@@ -405,19 +399,15 @@ describe("FormsService", () => {
       expect(form.frameworkKey).toBe(attributes.frameworkKey);
       expect(form.type).toBe(attributes.type);
       expect(form.submissionMessage).toBe(attributes.submissionMessage);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.title, undefined);
 
       const sections = await FormSection.findAll({ where: { formId: form.uuid }, order: ["order"] });
       expect(sections).toHaveLength(2);
       expect(sections[0].order).toBe(0);
       expect(sections[0].title).toBe(attributes.sections![0].title);
       expect(sections[0].description).toBe(attributes.sections![0].description);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].title, undefined);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![0].description, undefined);
       expect(sections[1].order).toBe(1);
       expect(sections[1].title).toBe(attributes.sections![1].title);
       expect(sections[1].description).toBeNull();
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(attributes.sections![1].title, undefined);
 
       const section0Questions = await FormQuestion.findAll({
         where: { formSectionId: sections[0].id },
@@ -442,12 +432,10 @@ describe("FormsService", () => {
       expect(options[0].order).toBe(0);
       expect(options[0].slug).toBe(optionsAttributes[0].slug);
       expect(options[0].label).toBe(optionsAttributes[0].label);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[0].label, undefined);
       expect(options[1].order).toBe(1);
       expect(options[1].slug).toBe(optionsAttributes[1].slug);
       expect(options[1].label).toBe(optionsAttributes[1].label);
       expect(options[1].imageUrl).toBe(optionsAttributes[1].imageUrl);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(optionsAttributes[1].label, undefined);
 
       const section1Questions = await FormQuestion.findAll({
         where: { formSectionId: sections[1].id },
@@ -459,19 +447,10 @@ describe("FormsService", () => {
       expect(tableInput.order).toBe(0);
       expect(tableInput.label).toBe(section1QuestionAttributes[0].label);
       expect(tableInput.inputType).toBe("tableInput");
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(section1QuestionAttributes[0].label, undefined);
       const headers = await FormTableHeader.findAll({ where: { formQuestionId: tableInput.id }, order: ["order"] });
       expect(headers).toHaveLength(2);
       expect(headers[0].label).toBe(section1QuestionAttributes[0].tableHeaders![0]);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(
-        section1QuestionAttributes[0].tableHeaders![0],
-        undefined
-      );
       expect(headers[1].label).toBe(section1QuestionAttributes[0].tableHeaders![1]);
-      expect(localizationService.generateI18nId).toHaveBeenCalledWith(
-        section1QuestionAttributes[0].tableHeaders![1],
-        undefined
-      );
     });
 
     it("sets accept additional props on file inputs", async () => {
@@ -814,55 +793,6 @@ describe("FormsService", () => {
           organisationCover: [expect.objectContaining({ uuid: cover.uuid })],
           organisationLogo: [expect.objectContaining({ uuid: logo.uuid })]
         }
-      );
-    });
-  });
-
-  describe("getI18nIdsForForm", () => {
-    it("should return the I18n IDs for a form", async () => {
-      const i18nItem = await I18nItemFactory.create();
-      const form = await FormFactory.create({ titleId: i18nItem.id });
-      const section1 = await FormSectionFactory.form(form).create();
-      const section2 = await FormSectionFactory.form(form).create();
-      await FormQuestionFactory.section(section1).create();
-      await FormQuestionFactory.section(section2).create();
-      const i18nIds = await service.getI18nIdsForForm(form);
-      expect(i18nIds).toBeDefined();
-    });
-
-    it("includes tracking entryConfig labels from additionalProps", async () => {
-      const form = await FormFactory.create({ title: "Tracking Form" });
-      const section = await FormSectionFactory.form(form).create({ title: "Section" });
-      await FormQuestionFactory.section(section).create({
-        label: "Workdays",
-        inputType: "workdays",
-        additionalProps: {
-          entryConfigs: [
-            {
-              type: "gender",
-              title: "Custom Gender",
-              displayTrackingType: "People",
-              addNameLabel: "Add Ethnic Group",
-              subTypes: [{ subtype: "male", label: "Male" }]
-            }
-          ]
-        }
-      });
-
-      const labels = await service.getI18nIdsForForm(form);
-      expect(labels).toEqual(
-        expect.arrayContaining([
-          "Tracking Form",
-          "Section",
-          "Workdays",
-          "Custom Gender",
-          "People",
-          "Add Ethnic Group",
-          "Male",
-          "By: Custom Gender",
-          "Custom Gender Definition",
-          "Number of People"
-        ])
       );
     });
   });

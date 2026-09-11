@@ -5,7 +5,7 @@ import { SiteFactory } from "./site.factory";
 import { SiteReportFactory } from "./site-report.factory";
 
 const defaultAttributesFactory = async () => ({
-  status: "awaiting-approval"
+  status: "pending-approval"
 });
 
 export const UpdateRequestFactory = {

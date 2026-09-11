@@ -1,18 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Test, TestingModule } from "@nestjs/testing";
 import { LocalizationService } from "./localization.service";
-import {
-  Form,
-  FormOptionListOption,
-  FormQuestion,
-  FormQuestionOption,
-  FormSection,
-  FormTableHeader,
-  FundingProgramme,
-  I18nItem,
-  I18nTranslation,
-  LocalizationKey
-} from "@terramatch-microservices/database/entities";
+import { I18nItem, I18nTranslation, LocalizationKey } from "@terramatch-microservices/database/entities";
 import { faker } from "@faker-js/faker";
 import { ConfigService } from "@nestjs/config";
 import { createNativeInstance, normalizeLocale, t, tx } from "@transifex/native";
@@ -21,7 +10,7 @@ import { I18nTranslationFactory } from "@terramatch-microservices/database/facto
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { Dictionary, trim } from "lodash";
 import { NotFoundException } from "@nestjs/common";
-import { FormFactory, FormQuestionFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
+import { FormFactory, I18nItemFactory } from "@terramatch-microservices/database/factories";
 import { TransifexApiService } from "@terramatch-microservices/transifex-api";
 import { buildJsonApi } from "../util";
 import { FormTranslationDto } from "../dto/form-translation.dto";
@@ -279,37 +268,19 @@ describe("LocalizationService", () => {
 
   describe("cleanOldI18nItems", () => {
     it("should clean old I18nItems", async () => {
-      // Cleaning up the database
-      const entities = [
-        I18nItem,
-        Form,
-        FormSection,
-        FormQuestion,
-        FormQuestionOption,
-        FormTableHeader,
-        FormOptionListOption,
-        LocalizationKey,
-        FundingProgramme
-      ];
-      for (const entity of entities) {
-        // @ts-expect-error - entity is a model class
-        await entity.truncate();
-      }
-      // First form question with a label
-      const formQuestion = await FormQuestionFactory.section().create();
-      const firstLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
-      formQuestion.labelId = firstLabelI18nItem.id;
-      await formQuestion.save();
+      await I18nItem.truncate();
+      await LocalizationKey.truncate();
+
+      const keptItem = await I18nItemFactory.create({ shortValue: "kept" });
+      await LocalizationKeyFactory.create({ valueId: keptItem.id });
       const previousCount = await I18nItem.count();
-      // Here we typically replaced the old id with the new id
-      formQuestion.label = "testing";
-      const seconLabelI18nItem = await I18nItemFactory.create({ shortValue: formQuestion.label });
-      formQuestion.labelId = seconLabelI18nItem.id;
-      await formQuestion.save();
-      // cleaning up the old I18nItems
+
+      await I18nItemFactory.create({ shortValue: "orphan" });
+
       await service.cleanOldI18nItems();
       const afterCount = await I18nItem.count();
       expect(afterCount).toBe(previousCount);
+      expect(await I18nItem.findByPk(keptItem.id)).not.toBeNull();
     });
   });
 

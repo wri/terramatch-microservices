@@ -4,7 +4,6 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { NurseryFactory } from "./nursery.factory";
 import { TaskFactory } from "./task.factory";
-import { NO_UPDATE } from "../constants/status";
 
 export const NurseryReportFactory = FactoryGirl.define(NurseryReport, async () => {
   const dueAt = faker.date.past({ years: 2 });
@@ -14,6 +13,6 @@ export const NurseryReportFactory = FactoryGirl.define(NurseryReport, async () =
     taskId: TaskFactory.associate("id"),
     dueAt,
     submittedAt: faker.date.between({ from: dueAt, to: DateTime.fromJSDate(dueAt).plus({ days: 14 }).toJSDate() }),
-    updateRequestStatus: NO_UPDATE
+    updateRequestStatus: null
   };
 });

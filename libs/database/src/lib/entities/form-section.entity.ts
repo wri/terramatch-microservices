@@ -9,7 +9,7 @@ import {
   Table,
   Unique
 } from "sequelize-typescript";
-import { BIGINT, INTEGER, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
+import { BIGINT, STRING, TINYINT, UUID, UUIDV4 } from "sequelize";
 import { Form } from "./form.entity";
 import { FormQuestion } from "./form-question.entity";
 import { isLiteral, Subquery } from "../util/subquery.builder";
@@ -63,22 +63,10 @@ export class FormSection extends Model<FormSection> {
   declare title: string | null;
 
   @AllowNull
-  @Column(INTEGER)
-  declare titleId: number | null;
-
-  @AllowNull
   @Column(STRING)
   declare subtitle: string | null;
 
   @AllowNull
   @Column(STRING)
-  declare subtitleId: string | null;
-
-  @AllowNull
-  @Column(STRING)
   declare description: string | null;
-
-  @AllowNull
-  @Column(INTEGER)
-  declare descriptionId: number | null;
 }

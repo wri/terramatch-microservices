@@ -159,6 +159,11 @@ export class ProjectFullDto extends ProjectLightDto {
   })
   isTest: boolean;
 
+  @ApiProperty({
+    description: "When true, report generation is paused for this project. Does not archive child sites or nurseries."
+  })
+  isArchived: boolean;
+
   @ApiProperty({ nullable: true, type: String })
   feedback: string | null;
 

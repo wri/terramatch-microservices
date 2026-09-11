@@ -91,9 +91,9 @@ describe("OrganisationsService", () => {
     });
 
     it("should filter by status", async () => {
-      await OrganisationFactory.create({ status: "pending" });
+      await OrganisationFactory.create({ status: "pending-approval" });
       mockUserContext({ permissions: ["framework-test"] });
-      const result = await service.findMany({ status: "pending" });
+      const result = await service.findMany({ status: "pending-approval" });
       expect(result.organisations.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -171,14 +171,14 @@ describe("OrganisationsService", () => {
       const org = await OrganisationFactory.create();
       const updateAttrs: OrganisationUpdateAttributes = {
         name: "Updated Name",
-        status: "pending",
+        status: "pending-approval",
         phone: "1234567890"
       };
 
       const updated = await service.update(org, updateAttrs);
 
       expect(updated.name).toBe("Updated Name");
-      expect(updated.status).toBe("pending");
+      expect(updated.status).toBe("pending-approval");
       expect(updated.phone).toBe("1234567890");
     });
 

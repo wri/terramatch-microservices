@@ -1,3 +1,4 @@
+import { Response } from "express";
 import {
   Nursery,
   NurseryReport,
@@ -6,16 +7,27 @@ import {
   Seeding,
   Site,
   SiteReport,
+  Task,
   TreeSpecies,
   TreeSpeciesResearch
 } from "@terramatch-microservices/database/entities";
-import { Attributes, col, fn, Includeable, Op, WhereOptions } from "sequelize";
+import { Attributes, col, CreationAttributes, fn, Includeable, Op, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, uniq, uniqBy } from "lodash";
+import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
 import { SpeciesDto } from "./dto/species.dto";
+import { isoForFilename, normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
+import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { COMPLETE_REPORT_STATUSES, DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
+import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
+import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
+import { Readable } from "stream";
+import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -77,8 +89,73 @@ const countTreeCollection = (trees: Dictionary<TreeSpecies[]>) =>
     {} as PlantingCountMap
   );
 
+const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) => {
+  // map of tree name to taxon ID.
+  const taxonIds = (
+    await TreeSpeciesResearch.findAll({
+      where: { scientificName: { [Op.in]: trees } },
+      attributes: ["taxonId", "scientificName"]
+    })
+  ).reduce(
+    (acc, { taxonId, scientificName }) => ({
+      ...acc,
+      [scientificName]: taxonId
+    }),
+    {} as Dictionary<string>
+  );
+
+  // Check for any missing taxon IDs, and add a warning for the rows that are missing it.
+  for (const [index, treeName] of trees.entries()) {
+    if (taxonIds[treeName] == null) {
+      warnings.push(
+        new BulkUploadWarning(`Scientific name not found for tree species: ${treeName}`, "TAXON_ID_MISSING", {
+          variables: { treeName },
+          row: index + 2
+        })
+      );
+    }
+  }
+
+  return taxonIds;
+};
+
+const siteReportIdsByName = async (task: Task, sites: string[], warnings: BulkUploadWarning[]) => {
+  // map of site name to site report ID.
+  const siteIds = (
+    await task.$get("siteReports", {
+      attributes: ["id"],
+      where: { "$site.name$": { [Op.in]: sites }, status: { [Op.notIn]: COMPLETE_REPORT_STATUSES } },
+      include: [{ association: "site", attributes: ["name"], required: true }]
+    })
+  ).reduce(
+    (acc, { id, site }) => ({
+      ...acc,
+      [site?.name as string]: id
+    }),
+    {} as Dictionary<number>
+  );
+
+  // check for any missing sites and add a warning
+  for (const site of sites) {
+    if (siteIds[site] == null) {
+      warnings.push(
+        new BulkUploadWarning(`Site not found or report not editable: ${site}`, "SITE_NOT_FOUND", {
+          variables: { site }
+        })
+      );
+    }
+  }
+
+  return siteIds;
+};
+
 @Injectable()
 export class TreeService {
+  constructor(
+    private readonly localizationService: LocalizationService,
+    private readonly csvExportService: CsvExportService
+  ) {}
+
   async searchScientificNames(search: string) {
     return (
       await TreeSpeciesResearch.findAll({
@@ -331,6 +408,170 @@ export class TreeService {
     }
 
     return planting;
+  }
+
+  async getBulkImportCsv(task: Task, collection: BulkTreeCollection, response: Response) {
+    const project = await task.$get("project", { attributes: ["id", "name"] });
+    if (project == null) throw new BadRequestException("Task has no project");
+
+    const fileName = normalizedFileName(
+      await this.localizationService.localizeText(
+        `Bulk Tree Import for {project} - {collection} - reporting task due {dueAt}`,
+        UserContext.userLocale ?? "en-US",
+        { project: project.name, collection, dueAt: task.dueAt == null ? null : isoForFilename(task.dueAt, true) }
+      )
+    );
+
+    // map from site report id to site name so that if we have existing data to prefill, it's
+    // mapped by a report ID.
+    const siteReports = await task.$get("siteReports", {
+      where: { status: { [Op.in]: [DRAFT, DUE] } },
+      attributes: ["id"],
+      include: [{ association: "site", attributes: ["id", "name"], required: true }]
+    });
+    const columns = siteReports.reduce(
+      (columns, report) =>
+        report.site?.name == null
+          ? columns
+          : {
+              ...columns,
+              [`report${report.id}`]: report.site.name
+            },
+      { treeSpecies: "Tree Species" } as Dictionary<string>
+    );
+
+    const existingReportTrees = groupBy(
+      await TreeSpecies.visible()
+        .for(siteReports)
+        .collection(collection)
+        .findAll({ attributes: ["speciesableId", "name", "amount"] }),
+      "speciesableId"
+    );
+    const establishmentCollection = collection === "anr" || collection === "replanting" ? "tree-planted" : collection;
+    const trees = uniqBy(
+      [
+        ...(await TreeSpecies.for(project)
+          .collection(establishmentCollection)
+          .findAll({ attributes: ["name"] })),
+        ...(await TreeSpecies.for(siteReports.map(({ site }) => site).filter(isNotNull))
+          .collection(establishmentCollection)
+          .findAll({ attributes: ["name"] })),
+        ...Object.values(existingReportTrees).flat()
+      ],
+      "name"
+    );
+
+    await this.csvExportService.writeCsv(fileName, response, columns, async addRow => {
+      for (const { name } of trees) {
+        const row: Dictionary<string | number | null> = { treeSpecies: name };
+        for (const { id } of siteReports) {
+          row[`report${id}`] = existingReportTrees[id]?.find(tree => tree.name === name)?.amount ?? null;
+        }
+        addRow(row);
+      }
+    });
+  }
+
+  async bulkImportTreeCsv(task: Task, collection: BulkTreeCollection, csv: Express.Multer.File) {
+    const warnings: BulkUploadWarning[] = [];
+
+    if (csv.mimetype !== "text/csv") {
+      throw new TranslatableException("Uploaded file must be a CSV", "CSV_REQUIRED");
+    }
+
+    // Map of site name to trees to create
+    const treesToCreate: Dictionary<{ name: string; amount: number }[]> = {};
+    // List of tree species name by row
+    const trees: string[] = [];
+    let currentRow = 1; // starting at 1 to account for the header row.
+    await parseCsvStream(Readable.from(csv.buffer), async row => {
+      currentRow++;
+
+      const treeSpeciesName = row["Tree Species"];
+      if (treeSpeciesName == null) {
+        throw new TranslatableException("Tree Species column missing", "MISSING_CSV_COLUMN", {
+          column: "Tree Species"
+        });
+      }
+
+      trees.push(treeSpeciesName);
+
+      if (treeSpeciesName === "") {
+        warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
+        return;
+      }
+
+      for (const [siteName, amountString] of Object.entries(row)) {
+        if (siteName === "Tree Species" || isEmpty(amountString)) continue;
+
+        if (isEmpty(siteName)) {
+          warnings.push(new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { row: currentRow }));
+          continue;
+        }
+
+        const amount = Number.parseInt(amountString);
+        // Checking against the amount string catches decimal values because Number.parseInt("1.2") yields 1.
+        if (isNaN(amount) || amount < 0 || `${amount}` !== amountString) {
+          warnings.push(
+            new BulkUploadWarning(`Amount value not supported: ${amountString}`, "AMOUNT_UNSUPPORTED", {
+              row: currentRow,
+              variables: { amountString }
+            })
+          );
+          continue;
+        }
+
+        (treesToCreate[siteName] ??= []).push({ name: treeSpeciesName, amount });
+      }
+    });
+
+    const taxonIds = await taxonIdsByName(trees, warnings);
+    const siteReportIds = await siteReportIdsByName(task, Object.keys(treesToCreate), warnings);
+
+    const existingTrees = groupBy(
+      await TreeSpecies.collection(collection).siteReports(Object.values(siteReportIds)).findAll(),
+      "speciesableId"
+    );
+    const bulkTrees: CreationAttributes<TreeSpecies>[] = [];
+    const updatePromises: Promise<TreeSpecies>[] = [];
+    for (const [siteName, pendingTrees] of Object.entries(treesToCreate)) {
+      const speciesableId = siteReportIds[siteName];
+      if (speciesableId == null) continue; // skip creation if report not found
+
+      for (const { name, amount } of pendingTrees) {
+        const taxonId = taxonIds[name];
+        const existingTree = existingTrees[speciesableId]?.find(existingTree =>
+          taxonId == null ? name === existingTree.name : taxonId === existingTree.taxonId
+        );
+
+        if (existingTree == null) {
+          bulkTrees.push({
+            speciesableId,
+            speciesableType: SiteReport.LARAVEL_TYPE,
+            name,
+            taxonId,
+            amount,
+            collection
+          });
+        } else {
+          if (amount !== existingTree.amount || existingTree.hidden) {
+            updatePromises.push(existingTree.update({ amount, hidden: false }));
+          }
+        }
+      }
+    }
+
+    await Promise.all(updatePromises);
+    await TreeSpecies.bulkCreate(bulkTrees);
+
+    // Make sure that none of the affected reports are in "due" status. Have to do it individually
+    // so that the state machine processing happens.
+    await Promise.all(
+      (await task.$get("siteReports", { where: { status: DUE } })).map(report => report.update({ status: DRAFT }))
+    );
+
+    // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
+    return orderBy(warnings, ({ row }) => (row == null ? -1 : row));
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

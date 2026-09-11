@@ -123,6 +123,33 @@ describe("MediaProcessor", () => {
       await expectMediasEntries([media], "projectReports", projectReport.uuid);
     });
 
+    it("should coerce string dueAt to Date when loading project report media", async () => {
+      const project = await ProjectFactory.create();
+      const dueAt = new Date("2024-12-31T00:00:00.000Z");
+      const projectReport = await ProjectReportFactory.create({ projectId: project.id, dueAt });
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SiteReportFactory.create({ siteId: site.id, dueAt });
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      await NurseryReportFactory.create({ nurseryId: nursery.id, dueAt });
+      const media = await MediaFactory.projectReport(projectReport).create();
+
+      processor = service.createAssociationProcessor(
+        "projectReports",
+        projectReport.uuid,
+        "media",
+        {}
+      ) as MediaProcessor;
+
+      const entity = await processor.getBaseEntity();
+      Object.defineProperty(entity, "dueAt", {
+        configurable: true,
+        enumerable: true,
+        value: dueAt.toISOString()
+      });
+
+      await expectMediasEntries([media], "projectReports", projectReport.uuid);
+    });
+
     it("should include media entries for the site report associated to the processor at creation", async () => {
       const siteReport = await SiteReportFactory.create();
       const media = await MediaFactory.siteReport(siteReport).create();

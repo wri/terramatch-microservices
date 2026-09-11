@@ -76,6 +76,10 @@ describe("ValidationController", () => {
       validations: [siteValidation1, siteValidation2],
       total: 2
     }),
+    getProjectValidations: jest.fn().mockResolvedValue({
+      validations: [siteValidation1, siteValidation2],
+      total: 2
+    }),
     validatePolygonsBatch: jest.fn().mockResolvedValue(undefined),
     getSitePolygonUuids: jest.fn().mockResolvedValue(["polygon-1", "polygon-2"]),
     validateGeometries: jest.fn().mockResolvedValue([
@@ -199,6 +203,63 @@ describe("ValidationController", () => {
       const query = { criteriaId: 4 };
       await controller.getSiteValidation(siteUuid, query as unknown as SiteValidationQueryDto);
       expect(mockValidationService.getSiteValidations).toHaveBeenCalledWith(siteUuid, 100, 1, 4);
+    });
+  });
+
+  describe("getProjectValidation", () => {
+    const projectUuid = "project-uuid-123";
+
+    it("should return validation data for a project with default pagination", async () => {
+      const query: SiteValidationQueryDto = {};
+
+      const result = serialize(await controller.getProjectValidation(projectUuid, query));
+
+      expect(mockValidationService.getProjectValidations).toHaveBeenCalledWith(projectUuid, 100, 1, undefined);
+
+      expect(result.data).toBeDefined();
+      expect(result.data).toHaveLength(2);
+    });
+
+    it("should use pagination parameters when provided", async () => {
+      const query: SiteValidationQueryDto = {
+        page: {
+          size: 10,
+          number: 3
+        }
+      };
+
+      await controller.getProjectValidation(projectUuid, query);
+
+      expect(mockValidationService.getProjectValidations).toHaveBeenCalledWith(projectUuid, 10, 3, undefined);
+    });
+
+    it("should throw BadRequestException for invalid criteriaId", async () => {
+      const query = { criteriaId: "0" };
+      await expect(
+        controller.getProjectValidation(projectUuid, query as unknown as SiteValidationQueryDto)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException for non-integer criteriaId", async () => {
+      const query = { criteriaId: "1.5" };
+      await expect(
+        controller.getProjectValidation(projectUuid, query as unknown as SiteValidationQueryDto)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should use criteriaId when provided", async () => {
+      const query = { criteriaId: 4 };
+      await controller.getProjectValidation(projectUuid, query as unknown as SiteValidationQueryDto);
+      expect(mockValidationService.getProjectValidations).toHaveBeenCalledWith(projectUuid, 100, 1, 4);
+    });
+
+    it("should propagate NotFoundException when project does not exist", async () => {
+      mockValidationService.getProjectValidations.mockRejectedValueOnce(
+        new NotFoundException(`Project with UUID ${projectUuid} not found`)
+      );
+      const query: SiteValidationQueryDto = {};
+
+      await expect(controller.getProjectValidation(projectUuid, query)).rejects.toThrow(NotFoundException);
     });
   });
 

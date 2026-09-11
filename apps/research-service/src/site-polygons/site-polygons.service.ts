@@ -38,14 +38,21 @@ import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-
 import {
   INDICATOR_SLUGS,
   PolygonStatus,
+  POLYGON_APPROVED,
   POLYGON_DRAFT,
   POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
+  POLYGON_VALIDATION_PASSED,
+  POLYGON_VALIDATION_PARTIAL,
+  POLYGON_VALIDATION_FAILED,
+  POLYGON_VALIDATION_NOT_CHECKED,
   isPassingPolygonValidationStatus,
   POLYGON_VALIDATION_PASSING_STATUSES,
   VALIDATION_TYPES,
+  VALIDATION_CRITERIA_IDS,
   AuditStatusType
 } from "@terramatch-microservices/database/constants";
+import { SiteReviewRollupRow } from "./dto/site-review-rollup.dto";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
@@ -831,6 +838,80 @@ export class SitePolygonsService {
         );
       }
     }
+  }
+
+  /**
+   * Per-site review rollup for a project, in a single GROUP BY: O(sites), not O(polygons).
+   * Unlike getIndicatorRollup, this counts every active, non-deleted polygon regardless of
+   * status — the basis a reviewer needs, not the "approved only" basis the rest of TerraMatch
+   * reports on.
+   *
+   * site_polygon is LEFT JOINed (rather than an inner JOIN, and with no status filter on
+   * v2_sites) so that a site with zero active polygons — or a site that isn't approved yet —
+   * still returns a row with zero counts and null measurements. Dropping the row would assert
+   * the site does not exist, which is a stronger and falser claim than "nothing to review yet".
+   *
+   * deleted_at is filtered explicitly (raw SQL bypasses Sequelize's paranoid default), matching
+   * the fix applied to getIndicatorRollup.
+   */
+  async getSiteReviewRollup(projectUuid: string) {
+    const criteriaTable = CriteriaSite.tableName;
+    const query = `
+      SELECT
+        s.uuid AS siteUuid,
+        s.name AS siteName,
+        s.status AS siteStatus,
+        COUNT(sp.id) AS activeTotal,
+        SUM(CASE WHEN sp.validation_status = :passed THEN 1 ELSE 0 END) AS passed,
+        SUM(CASE WHEN sp.validation_status = :partial THEN 1 ELSE 0 END) AS partial,
+        SUM(CASE WHEN sp.validation_status = :failed THEN 1 ELSE 0 END) AS failed,
+        SUM(CASE WHEN sp.id IS NOT NULL AND (sp.validation_status IS NULL OR sp.validation_status = :notChecked)
+          THEN 1 ELSE 0 END) AS notChecked,
+        SUM(CASE WHEN sp.status = :approved THEN 1 ELSE 0 END) AS approved,
+        SUM(CASE WHEN sp.status = :pendingApproval THEN 1 ELSE 0 END) AS pendingApproval,
+        SUM(CASE WHEN sp.status = :draft THEN 1 ELSE 0 END) AS draft,
+        SUM(CASE WHEN sp.status = :informationRequired THEN 1 ELSE 0 END) AS informationRequired,
+        -- Correlated EXISTS: each check is a single index seek on
+        -- idx_criteria_site_criteria_valid_polygon (criteria_id, valid, polygon_id) — see the
+        -- migration that adds it. Without that index this is catastrophic on large sites (a full
+        -- criteria_site scan per polygon); with it, ~1 seek per polygon.
+        SUM(CASE WHEN EXISTS (
+          SELECT 1 FROM ${criteriaTable} cs
+          WHERE cs.polygon_id = sp.poly_id AND cs.criteria_id = :overlapping AND cs.valid = 0
+        ) THEN 1 ELSE 0 END) AS overlapCount,
+        SUM(sp.calc_area) AS hectares,
+        AVG(sp.lat) AS centroidLat,
+        AVG(sp.long) AS centroidLong
+      FROM v2_projects p
+      JOIN v2_sites s
+        ON s.project_id = p.id
+       AND s.deleted_at IS NULL
+      LEFT JOIN site_polygon sp
+        ON sp.site_id = s.uuid
+       AND sp.is_active = 1
+       AND sp.deleted_at IS NULL
+      WHERE p.uuid = :projectUuid
+        AND p.deleted_at IS NULL
+      GROUP BY s.uuid, s.name, s.status
+      ORDER BY s.name
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return (await SitePolygon.sequelize!.query(query, {
+      replacements: {
+        projectUuid,
+        passed: POLYGON_VALIDATION_PASSED,
+        partial: POLYGON_VALIDATION_PARTIAL,
+        failed: POLYGON_VALIDATION_FAILED,
+        notChecked: POLYGON_VALIDATION_NOT_CHECKED,
+        approved: POLYGON_APPROVED,
+        pendingApproval: POLYGON_PENDING_APPROVAL,
+        draft: POLYGON_DRAFT,
+        informationRequired: POLYGON_INFORMATION_REQUIRED,
+        overlapping: VALIDATION_CRITERIA_IDS.OVERLAPPING
+      },
+      type: QueryTypes.SELECT
+    })) as SiteReviewRollupRow[];
   }
 
   private createAuditStatusRecords(

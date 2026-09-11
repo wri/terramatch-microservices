@@ -66,7 +66,8 @@ jest.mock("@terramatch-microservices/database/entities", () => {
       findOne: jest.fn()
     },
     Project: {
-      findByPk: jest.fn()
+      findByPk: jest.fn(),
+      findOne: jest.fn()
     },
     AuditStatus: {
       bulkCreate: jest.fn()
@@ -362,6 +363,117 @@ describe("ValidationService", () => {
       expect(result.total).toBe(1); // Only polygon-1 has criteriaId=4 with valid=false
       expect(result.validations).toHaveLength(1);
       expect(result.validations[0].polygonUuid).toBe("polygon-1");
+    });
+  });
+
+  describe("getProjectValidations", () => {
+    const projectUuid = "project-uuid-123";
+    const polygonUuid1 = "polygon-uuid-123";
+    const polygonUuid2 = "polygon-uuid-456";
+
+    const mockCriteria = [
+      {
+        polygonId: polygonUuid1,
+        criteriaId: 1,
+        valid: true,
+        createdAt: new Date("2025-01-08T22:15:15.000Z"),
+        extraInfo: null
+      },
+      {
+        polygonId: polygonUuid1,
+        criteriaId: 4,
+        valid: false,
+        createdAt: new Date("2025-01-08T22:15:15.000Z"),
+        extraInfo: { reason: "Test" }
+      },
+      {
+        polygonId: polygonUuid2,
+        criteriaId: 1,
+        valid: true,
+        createdAt: new Date("2025-01-08T22:15:15.000Z"),
+        extraInfo: null
+      }
+    ];
+
+    it("should return validations for all polygons across all sites in a project", async () => {
+      (Project.findOne as jest.Mock).mockResolvedValue({ id: 5, uuid: projectUuid });
+      (Project.findByPk as jest.Mock).mockResolvedValue({ id: 5 });
+      (Site.findAll as jest.Mock).mockResolvedValue([{ uuid: "site-a" }, { uuid: "site-b" }]);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([
+        { polygonUuid: polygonUuid1 },
+        { polygonUuid: polygonUuid2 }
+      ]);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue(mockCriteria);
+
+      const result = await service.getProjectValidations(projectUuid, 100);
+
+      expect(Project.findOne).toHaveBeenCalledWith({
+        where: { uuid: projectUuid },
+        attributes: ["id"]
+      });
+      expect(CriteriaSite.findAll).toHaveBeenCalledWith({
+        where: { polygonId: [polygonUuid1, polygonUuid2] },
+        attributes: ["polygonId", "criteriaId", "valid", "createdAt", "extraInfo"],
+        order: [["createdAt", "DESC"]]
+      });
+
+      expect(result.validations).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.validations[0].polygonUuid).toBe(polygonUuid1);
+      expect(result.validations[1].polygonUuid).toBe(polygonUuid2);
+    });
+
+    it("should throw NotFoundException when the project does not exist", async () => {
+      (Project.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.getProjectValidations(projectUuid, 100)).rejects.toThrow(
+        new NotFoundException(`Project with UUID ${projectUuid} not found`)
+      );
+
+      expect(Site.findAll).not.toHaveBeenCalled();
+      expect(CriteriaSite.findAll).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for invalid page size before looking up the project", async () => {
+      await expect(service.getProjectValidations(projectUuid, 1001, 1)).rejects.toThrow(
+        new BadRequestException("Invalid page size: 1001")
+      );
+      expect(Project.findOne).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for invalid page number before looking up the project", async () => {
+      await expect(service.getProjectValidations(projectUuid, 10, 0)).rejects.toThrow(
+        new BadRequestException("Invalid page number: 0")
+      );
+      expect(Project.findOne).not.toHaveBeenCalled();
+    });
+
+    it("should return an empty result when the project has no active polygons", async () => {
+      (Project.findOne as jest.Mock).mockResolvedValue({ id: 5, uuid: projectUuid });
+      (Project.findByPk as jest.Mock).mockResolvedValue({ id: 5 });
+      (Site.findAll as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getProjectValidations(projectUuid, 100);
+
+      expect(result).toEqual({ validations: [], total: 0 });
+      expect(CriteriaSite.findAll).not.toHaveBeenCalled();
+    });
+
+    it("should filter by criteriaId when provided", async () => {
+      (Project.findOne as jest.Mock).mockResolvedValue({ id: 5, uuid: projectUuid });
+      (Project.findByPk as jest.Mock).mockResolvedValue({ id: 5 });
+      (Site.findAll as jest.Mock).mockResolvedValue([{ uuid: "site-a" }]);
+      (SitePolygon.findAll as jest.Mock).mockResolvedValue([
+        { polygonUuid: polygonUuid1 },
+        { polygonUuid: polygonUuid2 }
+      ]);
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue(mockCriteria);
+
+      const result = await service.getProjectValidations(projectUuid, 10, 1, 4);
+
+      expect(result.total).toBe(1);
+      expect(result.validations).toHaveLength(1);
+      expect(result.validations[0].polygonUuid).toBe(polygonUuid1);
     });
   });
 

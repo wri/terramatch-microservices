@@ -70,6 +70,8 @@ import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-up
 import { SitePolygonBulkAttributeUpdateBodyDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 import { isPolygonStatus } from "@terramatch-microservices/database/constants";
 import { isAdminSessionFromRoles } from "@terramatch-microservices/common/analytics/polygon-version-changed";
+import { SiteReviewRollupDto } from "./dto/site-review-rollup.dto";
+import { SiteReviewRollupQueryDto } from "./dto/site-review-rollup-query.dto";
 
 const MAX_PAGE_SIZE = 100 as const;
 
@@ -84,6 +86,7 @@ const MAX_PAGE_SIZE = 100 as const;
   ValidationDto,
   GeoJsonExportDto,
   SiteIndicatorRollupDto,
+  SiteReviewRollupDto,
   GeometryUploadComparisonSummaryDto
 )
 export class SitePolygonsController {
@@ -276,6 +279,40 @@ export class SitePolygonsController {
     const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
 
     return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
+  }
+
+  @Get("siteReviewRollup")
+  @ApiOperation({
+    operationId: "getSiteReviewRollup",
+    summary: "Per-site review rollup for a project",
+    description: `Returns one row per site in the project (including sites with zero active
+    polygons), aggregated in a single GROUP BY query: O(sites), not O(polygons). Intended for
+    large projects where paging every polygon client-side is untenable.
+
+    Unlike indicatorRollup, this counts every active, non-deleted polygon regardless of status —
+    the basis a reviewer needs — and reports validation-status and polygon-status buckets plus an
+    overlap count and a centroid marker (mean lat/long, not a boundary) instead of indicator
+    measurements.`
+  })
+  @JsonApiResponse([{ data: SiteReviewRollupDto }])
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  async getSiteReviewRollup(@Query() query: SiteReviewRollupQueryDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const rows = await this.sitePolygonService.getSiteReviewRollup(query.projectId);
+
+    const document = buildJsonApi(SiteReviewRollupDto);
+    for (const row of rows) {
+      document.addData(row.siteUuid, new SiteReviewRollupDto(row));
+    }
+
+    // Index metadata is not optional for a multi-resource response: the client's index connection
+    // resolves "loaded" from it, and without it the hook refetches forever.
+    return document.addIndex({
+      requestPath: `/research/v3/sitePolygons/siteReviewRollup${getStableRequestQuery(query)}`,
+      total: rows.length,
+      pageNumber: 1
+    });
   }
 
   @Get()

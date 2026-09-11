@@ -86,6 +86,47 @@ export class ValidationController {
       });
   }
 
+  @Get("projects/:projectUuid")
+  @ApiOperation({
+    operationId: "getProjectValidation",
+    summary: "Get validation data for all polygons across all sites in a project"
+  })
+  @JsonApiResponse(ValidationDto)
+  @ExceptionResponse(NotFoundException, {
+    description: "Project not found"
+  })
+  @ExceptionResponse(BadRequestException, {
+    description: "Invalid pagination parameters"
+  })
+  async getProjectValidation(@Param("projectUuid") projectUuid: string, @Query() query: SiteValidationQueryDto) {
+    const pageSize = query.page?.size ?? MAX_PAGE_SIZE;
+    const pageNumber = query.page?.number ?? 1;
+
+    const criteriaId = query.criteriaId != null ? (Number(query.criteriaId) as CriteriaId) : undefined;
+
+    if (criteriaId != null && (criteriaId < 1 || !Number.isInteger(criteriaId))) {
+      throw new BadRequestException("criteriaId must be a valid integer greater than or equal to 1");
+    }
+
+    const { validations, total } = await this.validationService.getProjectValidations(
+      projectUuid,
+      pageSize,
+      pageNumber,
+      criteriaId
+    );
+
+    return validations
+      .reduce(
+        (document, validation) => document.addData(validation.polygonUuid, validation).document,
+        buildJsonApi(ValidationDto)
+      )
+      .addIndex({
+        requestPath: `/validations/v3/projects/${projectUuid}${getStableRequestQuery(query)}`,
+        total,
+        pageNumber
+      });
+  }
+
   @Post("polygonValidations")
   @ApiOperation({
     operationId: "createPolygonValidations",

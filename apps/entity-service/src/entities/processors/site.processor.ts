@@ -158,6 +158,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       if (query[term] != null) builder.where({ [field]: query[term] });
     }
 
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ projectId: { [Op.in]: Project.forCohort(query.cohort) } });
+    }
+
     if (query.search != null || query.searchFilter != null) {
       builder.where({
         [Op.or]: [

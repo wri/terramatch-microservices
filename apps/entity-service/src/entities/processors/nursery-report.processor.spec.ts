@@ -184,6 +184,19 @@ describe("NurseryReportProcessor", () => {
       await expectNurseryReports([], { projectUuid: "123" });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const terrafundNursery = await NurseryFactory.create({ projectId: terrafundProject.id });
+      const ppcNursery = await NurseryFactory.create({ projectId: ppcProject.id });
+      const matching = await NurseryReportFactory.create({ nurseryId: terrafundNursery.id });
+      await NurseryReportFactory.create({ nurseryId: ppcNursery.id });
+
+      matching.nursery = await matching.$get("nursery");
+
+      await expectNurseryReports([matching], { cohort: ["terrafund"] });
+    });
+
     it("should throw an error if the nursery uuid is not found", async () => {
       await expect(processor.findMany({ nurseryUuid: "123" })).rejects.toThrow(BadRequestException);
     });

@@ -179,6 +179,19 @@ describe("SiteReportProcessor", () => {
       await expectSiteReports([first, second, third], { siteUuid: s1.uuid });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const terrafundSite = await SiteFactory.create({ projectId: terrafundProject.id });
+      const ppcSite = await SiteFactory.create({ projectId: ppcProject.id });
+      const matching = await SiteReportFactory.create({ siteId: terrafundSite.id });
+      await SiteReportFactory.create({ siteId: ppcSite.id });
+
+      matching.site = await matching.$get("site");
+
+      await expectSiteReports([matching], { cohort: ["terrafund"] });
+    });
+
     it("should throw an error if the site uuid is not found", async () => {
       await expect(processor.findMany({ siteUuid: "123" })).rejects.toThrow(BadRequestException);
     });

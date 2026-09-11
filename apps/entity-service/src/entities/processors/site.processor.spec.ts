@@ -140,6 +140,15 @@ describe("SiteProcessor", () => {
       await expectSites([fourth], { projectUuid: p2.uuid });
     });
 
+    it("filters by cohort", async () => {
+      const terrafundProject = await ProjectFactory.create({ cohort: "terrafund" });
+      const ppcProject = await ProjectFactory.create({ cohort: "ppc" });
+      const matching = await SiteFactory.create({ projectId: terrafundProject.id });
+      await SiteFactory.create({ projectId: ppcProject.id });
+
+      await expectSites([matching], { cohort: ["terrafund"] });
+    });
+
     it("filters by the latest approved non-null plantingStatus", async () => {
       const inProgress = await SiteFactory.create();
       const completed = await SiteFactory.create();

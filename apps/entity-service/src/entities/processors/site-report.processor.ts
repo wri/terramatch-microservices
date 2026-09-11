@@ -203,6 +203,10 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ "$site.project.cohort$": { [Op.in]: query.cohort } });
+    }
+
     if (query.taskId != null) {
       builder.where({ taskId: query.taskId });
     }

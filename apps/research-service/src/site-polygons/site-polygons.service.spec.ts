@@ -2078,7 +2078,11 @@ describe("SitePolygonsService", () => {
           overlapCount: "1",
           hectares: "12.5",
           centroidLat: "1.1",
-          centroidLong: "2.2"
+          centroidLong: "2.2",
+          bboxMinLat: "1.0",
+          bboxMaxLat: "1.2",
+          bboxMinLong: "2.0",
+          bboxMaxLong: "2.4"
         }
       ];
       const mockQuery = jest.fn().mockResolvedValue(rows);

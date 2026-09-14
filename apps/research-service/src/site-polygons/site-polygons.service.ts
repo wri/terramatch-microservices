@@ -876,7 +876,11 @@ export class SitePolygonsService {
         ) THEN 1 ELSE 0 END) AS overlapCount,
         SUM(sp.calc_area) AS hectares,
         AVG(sp.lat) AS centroidLat,
-        AVG(sp.long) AS centroidLong
+        AVG(sp.long) AS centroidLong,
+        MIN(sp.lat) AS bboxMinLat,
+        MAX(sp.lat) AS bboxMaxLat,
+        MIN(sp.long) AS bboxMinLong,
+        MAX(sp.long) AS bboxMaxLong
       FROM v2_projects p
       JOIN v2_sites s
         ON s.project_id = p.id

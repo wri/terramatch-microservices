@@ -23,6 +23,10 @@ export type SiteReviewRollupRow = {
   hectares: number | string | null;
   centroidLat: number | string | null;
   centroidLong: number | string | null;
+  bboxMinLat: number | string | null;
+  bboxMaxLat: number | string | null;
+  bboxMinLong: number | string | null;
+  bboxMaxLong: number | string | null;
 };
 
 const toNumber = (value: number | string | null | undefined) => {
@@ -57,6 +61,10 @@ export class SiteReviewRollupDto {
     this.hectares = toNumber(row.hectares);
     this.centroidLat = toNumber(row.centroidLat);
     this.centroidLong = toNumber(row.centroidLong);
+    this.bboxMinLat = toNumber(row.bboxMinLat);
+    this.bboxMaxLat = toNumber(row.bboxMaxLat);
+    this.bboxMinLong = toNumber(row.bboxMinLong);
+    this.bboxMaxLong = toNumber(row.bboxMaxLong);
   }
 
   @ApiProperty({ description: "UUID of the site this row rolls up." })
@@ -121,4 +129,21 @@ export class SiteReviewRollupDto {
     description: "Mean longitude over this site's active polygons; a marker, not a boundary. Null when there are none."
   })
   centroidLong: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description:
+      "Bounding box of this site's active-polygon centroids (min/max lat/long) — an approximate footprint for the rollup map. Degenerate (min == max) for a single-polygon site; null when there are none."
+  })
+  bboxMinLat: number | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Max latitude of the site's polygon-centroid bounding box." })
+  bboxMaxLat: number | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Min longitude of the site's polygon-centroid bounding box." })
+  bboxMinLong: number | null;
+
+  @ApiProperty({ nullable: true, type: Number, description: "Max longitude of the site's polygon-centroid bounding box." })
+  bboxMaxLong: number | null;
 }

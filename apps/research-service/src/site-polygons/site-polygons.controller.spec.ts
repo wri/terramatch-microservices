@@ -2311,7 +2311,11 @@ describe("SitePolygonsController", () => {
         overlapCount: 2,
         hectares: "123.45",
         centroidLat: "1.5",
-        centroidLong: "-2.5"
+        centroidLong: "-2.5",
+        bboxMinLat: "1.0",
+        bboxMaxLat: "2.0",
+        bboxMinLong: "-3.0",
+        bboxMaxLong: "-2.0"
       },
       {
         siteUuid: "site-uuid-2",
@@ -2329,7 +2333,11 @@ describe("SitePolygonsController", () => {
         overlapCount: 0,
         hectares: null,
         centroidLat: null,
-        centroidLong: null
+        centroidLong: null,
+        bboxMinLat: null,
+        bboxMaxLat: null,
+        bboxMinLong: null,
+        bboxMaxLong: null
       }
     ];
 

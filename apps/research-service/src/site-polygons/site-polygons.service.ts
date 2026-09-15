@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AuditStatus,
   CriteriaSite,
@@ -29,7 +29,6 @@ import {
   TreeSpeciesDto
 } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
-import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
@@ -53,6 +52,7 @@ import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
+import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -94,7 +94,6 @@ export class SitePolygonsService {
   }
 
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
-    const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } =
       (await SitePolygon.findOne({
         where: { uuid: sitePolygonUuid },
@@ -116,8 +115,7 @@ export class SitePolygonsService {
       })) ?? new IndicatorClass();
     if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
 
-    const DtoPrototype = INDICATOR_DTOS[indicatorSlug];
-    const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
+    const fields = apiAttributes(INDICATOR_DTOS[indicatorSlug]);
     Object.assign(model, pick(indicator, fields));
     await model.save({ transaction });
   }
@@ -499,7 +497,6 @@ export class SitePolygonsService {
     const results: Record<number, IndicatorDto[]> = {};
     if (sitePolygons.length === 0) return results;
 
-    const accessor = new ModelPropertiesAccessor();
     const sitePolygonIds = sitePolygons.map(({ id }) => id);
     const plantStartById = new Map(sitePolygons.map(sp => [sp.id, sp.plantStart]));
     const modelClasses = uniq(Object.values(INDICATOR_MODEL_CLASSES));
@@ -512,8 +509,7 @@ export class SitePolygonsService {
       let fields: string[] | undefined = undefined;
       for (const indicator of indicators) {
         if (fields === undefined) {
-          const DTO = INDICATOR_DTOS[indicator.indicatorSlug];
-          fields = accessor.getModelProperties(DTO.prototype as unknown as Type<unknown>);
+          fields = apiAttributes(INDICATOR_DTOS[indicator.indicatorSlug]);
         }
 
         results[indicator.sitePolygonId] ??= [];

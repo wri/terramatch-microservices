@@ -585,7 +585,7 @@ export class TreeService {
           const treeNames: string[] = [];
           for (const { name, amount } of treesToSync[reportIdMap[report.id]]) {
             treeNames.push(name);
-            const existingTree = existingTrees[report.id].find(tree => tree.name === name);
+            const existingTree = existingTrees[report.id]?.find(tree => tree.name === name);
             if (existingTree == null) {
               bulkTrees.push({
                 speciesableId: report.id,

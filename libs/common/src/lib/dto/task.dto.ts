@@ -1,8 +1,8 @@
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
+import { populateDto } from "./json-api-attributes";
 import { ApiProperty } from "@nestjs/swagger";
-import { JsonApiDto } from "@terramatch-microservices/common/decorators";
+import { JsonApiDto } from "../decorators";
 import { Task } from "@terramatch-microservices/database/entities";
-import { HybridSupportDto, HybridSupportProps } from "@terramatch-microservices/common/dto/hybrid-support.dto";
+import { HybridSupportDto, HybridSupportProps } from "./hybrid-support.dto";
 
 @JsonApiDto({ type: "tasks" })
 export class TaskLightDto extends HybridSupportDto {

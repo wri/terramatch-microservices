@@ -37,6 +37,7 @@ describe("PolygonAttributeDefinitionsController", () => {
 
     controller = module.get(PolygonAttributeDefinitionsController);
     policyService.authorize.mockResolvedValue(undefined);
+    Object.defineProperty(policyService, "permissions", { value: [], writable: true, configurable: true });
     const document = createMock<DocumentBuilder>();
     document.serialize.mockReturnValue({ data: [] } as never);
     service.addDto.mockResolvedValue(document);
@@ -52,7 +53,12 @@ describe("PolygonAttributeDefinitionsController", () => {
   });
 
   describe("index", () => {
-    it("authorizes against loaded definitions and returns the list", async () => {
+    it("requests all definitions (including inactive) for framework admins", async () => {
+      Object.defineProperty(policyService, "permissions", {
+        value: ["framework-ppc"],
+        writable: true,
+        configurable: true
+      });
       const definitions = await Promise.all([
         PolygonAttributeDefinitionFactory.create({ frameworkKey: "ppc" }),
         PolygonAttributeDefinitionFactory.create({ frameworkKey: "ppc", isActive: false })
@@ -62,9 +68,37 @@ describe("PolygonAttributeDefinitionsController", () => {
 
       await controller.index({ frameworkKey: "ppc" });
 
-      expect(service.findAll).toHaveBeenCalledWith("ppc");
+      expect(service.findAll).toHaveBeenCalledWith("ppc", false);
       expect(policyService.authorize).toHaveBeenCalledWith("read", definitions);
       expect(service.addDtos).toHaveBeenCalled();
+    });
+
+    it("requests active-only definitions for non framework-admin callers", async () => {
+      Object.defineProperty(policyService, "permissions", {
+        value: ["manage-own"],
+        writable: true,
+        configurable: true
+      });
+      const definition = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "ppc" });
+      createdDefinitionIds.push(definition.id);
+      service.findAll.mockResolvedValue([definition] as never);
+
+      await controller.index({ frameworkKey: "ppc" });
+
+      expect(service.findAll).toHaveBeenCalledWith("ppc", true);
+    });
+
+    it("treats admin permissions for a different framework as non-admin for this request", async () => {
+      Object.defineProperty(policyService, "permissions", {
+        value: ["framework-terrafund"],
+        writable: true,
+        configurable: true
+      });
+      service.findAll.mockResolvedValue([]);
+
+      await controller.index({ frameworkKey: "ppc" });
+
+      expect(service.findAll).toHaveBeenCalledWith("ppc", true);
     });
 
     it("authorizes a built instance when the list is empty so empty results are not a policy bypass", async () => {

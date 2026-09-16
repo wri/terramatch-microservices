@@ -265,7 +265,7 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.site?.exportId;
   }
 
-  get taskUuid() {
+  get taskUuid(): string | undefined {
     return this.task?.uuid;
   }
 

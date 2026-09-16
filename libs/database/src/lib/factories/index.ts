@@ -60,6 +60,7 @@ export * from "./tree-species.factory";
 export * from "./tree-species-research.factory";
 export * from "./update-request.factory";
 export * from "./user.factory";
+export * from "./user-task.factory";
 export * from "./task.factory";
 export * from "./form-question.factory";
 export * from "./impact-story.factory";

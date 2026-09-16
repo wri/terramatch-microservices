@@ -24,7 +24,7 @@ import { faker } from "@faker-js/faker";
 import { DateTime } from "luxon";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { buildJsonApi, Relationship, Resource } from "@terramatch-microservices/common/util";
-import { TaskFullDto } from "./dto/task.dto";
+import { TaskFullDto } from "@terramatch-microservices/common/dto/task.dto";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { APPROVED, PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";

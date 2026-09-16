@@ -31,6 +31,12 @@ type QueryModelType = {
   subquery: number[] | Literal;
 };
 
+function toDueAtDate(value: Date | string | null | undefined): Date | null {
+  if (value == null || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   readonly DTO = MediaDto;
 
@@ -95,15 +101,16 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
 
     const siteSubquery = Subquery.select(Site, "id").eq("projectId", projectReport.projectId);
     const nurserySubquery = Subquery.select(Nursery, "id").eq("projectId", projectReport.projectId);
+    const dueAt = toDueAtDate(projectReport.dueAt);
 
     let siteReports: SiteReport[] = [];
-    if (projectReport.dueAt != null) {
+    if (dueAt != null) {
       siteReports = await SiteReport.findAll({
         where: {
           [Op.and]: [
             { siteId: { [Op.in]: siteSubquery.literal } },
-            Sequelize.where(fn("MONTH", col("due_at")), projectReport.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), projectReport.dueAt.getFullYear())
+            Sequelize.where(fn("MONTH", col("due_at")), dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), dueAt.getFullYear())
           ]
         },
         attributes: ["id"]
@@ -113,13 +120,13 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     models.push({ modelType: SiteReport.LARAVEL_TYPE, subquery: siteReports.map(report => report.id) });
 
     let nurseryReports: NurseryReport[] = [];
-    if (projectReport.dueAt != null) {
+    if (dueAt != null) {
       nurseryReports = await NurseryReport.findAll({
         where: {
           [Op.and]: [
             { nurseryId: { [Op.in]: nurserySubquery.literal } },
-            Sequelize.where(fn("MONTH", col("due_at")), projectReport.dueAt.getMonth() + 1),
-            Sequelize.where(fn("YEAR", col("due_at")), projectReport.dueAt.getFullYear())
+            Sequelize.where(fn("MONTH", col("due_at")), dueAt.getMonth() + 1),
+            Sequelize.where(fn("YEAR", col("due_at")), dueAt.getFullYear())
           ]
         },
         attributes: ["id"]

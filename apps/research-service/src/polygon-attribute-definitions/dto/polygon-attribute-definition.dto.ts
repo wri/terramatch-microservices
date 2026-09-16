@@ -104,7 +104,7 @@ export class StorePolygonAttributeDefinitionOptionAttributes {
   @Transform(trimString)
   @IsNotEmpty()
   @IsString()
-  @ApiProperty({ description: "Option display label. On create, the stored value is camelCased from this label." })
+  @ApiProperty({ description: "Option display label. On create, the stored value is kebab-cased from this label." })
   label: string;
 }
 

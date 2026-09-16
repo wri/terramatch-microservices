@@ -1,15 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardProjectsQueryBuilder } from "./dashboard-query.builder";
-import { IndicatorOutputHectares, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
-import { Op } from "sequelize";
+import { Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 
 @Injectable()
 export class HectaresRestorationService {
   async getResults(query: DashboardQueryDto) {
-    const hectaresByRestoration = "restorationByStrategy";
-    const hectaresByTargetLandUseTypes = "restorationByLandUse";
-
     const projectsBuilder = new DashboardProjectsQueryBuilder(Project, [
       {
         association: "organisation",
@@ -19,15 +15,8 @@ export class HectaresRestorationService {
 
     const projectIds: number[] = await projectsBuilder.pluckIds();
     const projectPolygons = await this.getProjectPolygons(projectIds);
-    const polygonsIds = projectPolygons.map(polygon => polygon.id);
 
-    const restorationStrategiesRepresented = await this.getPolygonOutputHectares(hectaresByRestoration, polygonsIds);
-    const targetLandUseTypesRepresented = await this.getPolygonOutputHectares(
-      hectaresByTargetLandUseTypes,
-      polygonsIds
-    );
-
-    if (restorationStrategiesRepresented.length === 0 && targetLandUseTypesRepresented.length === 0) {
+    if (projectPolygons.length === 0) {
       return {
         restorationStrategiesRepresented: {},
         targetLandUseTypesRepresented: {}
@@ -35,8 +24,12 @@ export class HectaresRestorationService {
     }
 
     return {
-      restorationStrategiesRepresented: this.calculateGroupedHectares(restorationStrategiesRepresented),
-      targetLandUseTypesRepresented: this.calculateGroupedHectares(targetLandUseTypesRepresented)
+      restorationStrategiesRepresented: this.groupHectaresByKey(projectPolygons, polygon =>
+        this.normalizeTypeKey(polygon.practice)
+      ),
+      targetLandUseTypesRepresented: this.groupHectaresByKey(projectPolygons, polygon =>
+        this.normalizeTypeKey(polygon.targetSys)
+      )
     };
   }
 
@@ -45,72 +38,43 @@ export class HectaresRestorationService {
       return [];
     }
 
-    return await SitePolygon.findAll({
-      attributes: ["id"],
-      include: [
-        {
-          model: Site,
-          as: "site",
-          required: true,
-          attributes: ["id"],
-          where: {
-            status: {
-              [Op.in]: ["approved"]
-            }
-          },
-          include: [
-            {
-              model: Project,
-              as: "project",
-              required: true,
-              attributes: ["id"],
-              where: {
-                id: {
-                  [Op.in]: projectIds
-                }
-              }
-            }
-          ]
-        }
-      ],
-      where: {
-        status: "approved",
-        isActive: true
-      }
-    });
+    // Same population as TotalSectionHeaderService.getTotalHectaresSum
+    return await SitePolygon.active()
+      .approved()
+      .sites(Site.approvedUuidsProjectsSubquery(projectIds))
+      .findAll({
+        attributes: ["practice", "targetSys", "calcArea"]
+      });
   }
 
-  private async getPolygonOutputHectares(indicator: string, polygonIds: number[]) {
-    return await IndicatorOutputHectares.findAll({
-      where: {
-        sitePolygonId: { [Op.in]: polygonIds },
-        indicatorSlug: indicator
-      }
-    });
+  private normalizeTypeKey(fieldValue: string[] | string | null | undefined): string {
+    if (fieldValue == null) {
+      return "";
+    }
+
+    return (Array.isArray(fieldValue) ? fieldValue.join(",") : String(fieldValue))
+      .split(",")
+      .map(value => value.trim())
+      .filter(value => value.length > 0)
+      .join(",");
   }
 
-  private calculateGroupedHectares(polygonsToOutputHectares: IndicatorOutputHectares[]): Record<string, number> {
+  private groupHectaresByKey(
+    polygons: SitePolygon[],
+    getKey: (polygon: SitePolygon) => string
+  ): Record<string, number> {
     const hectaresRestored: Record<string, number> = {};
 
-    polygonsToOutputHectares.forEach(hectare => {
-      const decodedValue = hectare.value;
-      if (decodedValue != null) {
-        for (const [key, value] of Object.entries(decodedValue)) {
-          if (!(key in hectaresRestored)) {
-            hectaresRestored[key] = 0;
-          }
-
-          if (value != null && value !== "") {
-            const numericValue = typeof value === "number" ? value : parseFloat(value as string);
-            if (!isNaN(numericValue)) {
-              hectaresRestored[key] += numericValue;
-            }
-          }
-        }
+    for (const polygon of polygons) {
+      if (polygon.calcArea == null) {
+        continue;
       }
-    });
 
-    for (const key in hectaresRestored) {
+      const key = getKey(polygon);
+      hectaresRestored[key] = (hectaresRestored[key] ?? 0) + polygon.calcArea;
+    }
+
+    for (const key of Object.keys(hectaresRestored)) {
       hectaresRestored[key] = parseFloat(hectaresRestored[key].toFixed(3));
     }
 

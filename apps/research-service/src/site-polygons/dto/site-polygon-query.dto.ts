@@ -16,13 +16,20 @@ import { Type, TypeHelpOptions } from "class-transformer";
 import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
+import { SITE_POLYGON_SORT_FIELDS } from "../site-polygon-sort";
 
 export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
 export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
 
 class QuerySort {
-  @ApiProperty({ name: "sort[field]", required: false })
+  @ApiProperty({
+    name: "sort[field]",
+    required: false,
+    enum: SITE_POLYGON_SORT_FIELDS,
+    description: "Field to sort by. practice/distr use joined-code sort keys."
+  })
   @IsOptional()
+  @IsIn([...SITE_POLYGON_SORT_FIELDS])
   field?: string;
 
   @ApiProperty({ name: "sort[direction]", required: false, enum: ["ASC", "DESC"], default: "ASC" })

@@ -27,6 +27,8 @@ export const TASK_DUE_EVENT = "taskDue" as const;
 export const REPORT_REMINDER_EVENT = "reportReminder" as const;
 export const SITE_AND_NURSERY_REMINDER_EVENT = "siteAndNurseryReminder" as const;
 
+const IS_DEV = process.env["NODE_ENV"] === "development";
+
 type ScheduledJobData = { id: number; taskDefinition: ScheduledJobDefinition };
 
 @Processor("scheduled-jobs")
@@ -96,6 +98,8 @@ export class ScheduledJobsProcessor extends WorkerHost {
   }
 
   private async processReportReminder(reportReminder: ReportReminder) {
+    if (IS_DEV) return;
+
     this.logger.log(`processReportReminder ${JSON.stringify(reportReminder)}`);
     const { frameworkKey } = reportReminder;
     if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey)) {
@@ -125,6 +129,8 @@ export class ScheduledJobsProcessor extends WorkerHost {
   }
 
   private async processSiteAndNurseryReminder(siteAndNurseryReminder: SiteAndNurseryReminder) {
+    if (IS_DEV) return;
+
     this.logger.log(`processSiteAndNurseryReminder ${JSON.stringify(siteAndNurseryReminder)}`);
     const { frameworkKey } = siteAndNurseryReminder;
     if (frameworkKey !== "terrafund") {

@@ -12,6 +12,7 @@ import { EntitiesService, ProcessableEntity } from "./entities.service";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { getStateMachine } from "@terramatch-microservices/database/util/model-column-state-machine";
+import { entityAllowsChangeRequest } from "@terramatch-microservices/database/constants/status";
 
 @Controller("entities/v3/:entity/:uuid/updateRequest")
 export class UpdateRequestsController {
@@ -47,6 +48,12 @@ export class UpdateRequestsController {
     const attributes = updatePayload.data.attributes;
     if (attributes.status != null && attributes.status !== updateRequest.status) {
       await this.policyService.authorize("approve", model);
+
+      if (!entityAllowsChangeRequest(model.status)) {
+        throw new BadRequestException(
+          "Change requests can only be reviewed when the entity is approved or information-required"
+        );
+      }
 
       // Calling update() below when the status is approved kicks off a series of updates and model
       // changes through the entity status update event processor that require the entity data to be

@@ -15,7 +15,7 @@ import {
 } from "@nestjs/common";
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
-import { ApiOperation, ApiParam } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import {
   OrganisationLightDto,
   UserDto,
@@ -41,6 +41,7 @@ import { SendLoginDetailsResponseDto } from "../auth/dto/verification-user-respo
 import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -61,6 +62,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationLightDto]
 };
 
+@ApiExtraModels(UserTaskDto)
 @Controller("users/v3/users")
 export class UsersController {
   constructor(

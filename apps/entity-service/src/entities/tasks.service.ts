@@ -12,7 +12,6 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { TaskFullDto } from "./dto/task.dto";
 import { EntitiesService } from "./entities.service";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -25,6 +24,7 @@ import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
 import { filter } from "lodash";
+import { TaskFullDto } from "@terramatch-microservices/common/dto/task.dto";
 
 const FILTER_PROPS = {
   status: "status",

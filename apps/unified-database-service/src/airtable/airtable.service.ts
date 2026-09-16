@@ -6,6 +6,8 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { DateTime } from "luxon";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 
+const IS_DEV = process.env["NODE_ENV"] === "development";
+
 @Injectable()
 export class AirtableService {
   private readonly logger = new TMLogger(AirtableService.name);
@@ -35,6 +37,8 @@ export class AirtableService {
 
   @Cron(CronExpression.EVERY_DAY_AT_8PM)
   async handleDailyUpdate() {
+    if (IS_DEV) return;
+
     this.logger.log("Triggering daily update");
     await this.updateAll(DateTime.now().minus({ days: 2 }).toJSDate());
   }

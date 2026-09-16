@@ -67,15 +67,40 @@ describe("SitePolygonMapIndexService", () => {
   });
 
   describe("site scope", () => {
-    it("returns only uuid, polygonUuid and status for each polygon", async () => {
+    it("returns lean popup fields for each polygon", async () => {
       const site = await SiteFactory.create();
-      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved" });
+      const polygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        status: "approved",
+        polyName: "Riverbank North",
+        numTrees: 1200,
+        calcArea: 3.5,
+        validationStatus: "passed"
+      });
 
       const result = await getMapIndex({ siteId: [site.uuid] });
 
       expect(result.total).toBe(1);
-      expect(result.polygons).toEqual([{ uuid: polygon.uuid, polygonUuid: polygon.polygonUuid, status: "approved" }]);
-      expect(Object.keys(result.polygons[0]).sort()).toEqual(["polygonUuid", "status", "uuid"]);
+      expect(result.polygons).toEqual([
+        {
+          uuid: polygon.uuid,
+          polygonUuid: polygon.polygonUuid,
+          status: "approved",
+          name: "Riverbank North",
+          numTrees: 1200,
+          calcArea: 3.5,
+          validationStatus: "passed"
+        }
+      ]);
+      expect(Object.keys(result.polygons[0]).sort()).toEqual([
+        "calcArea",
+        "name",
+        "numTrees",
+        "polygonUuid",
+        "status",
+        "uuid",
+        "validationStatus"
+      ]);
     });
 
     it("excludes polygons from other sites", async () => {

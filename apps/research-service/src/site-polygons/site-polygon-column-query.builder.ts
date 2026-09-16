@@ -82,7 +82,9 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
   }
 
   hasStatuses(polygonStatuses?: PolygonStatus[]) {
-    if (polygonStatuses != null) this.where({ status: { [Op.in]: polygonStatuses } });
+    if (polygonStatuses != null && polygonStatuses.length > 0) {
+      this.where({ status: { [Op.in]: polygonStatuses } });
+    }
     return this;
   }
 

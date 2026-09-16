@@ -2353,8 +2353,24 @@ describe("SitePolygonsController", () => {
 
   describe("mapIndex", () => {
     const mapIndexDto = new SitePolygonMapIndexDto([
-      { uuid: "sp-1", polygonUuid: "poly-1", status: "approved" },
-      { uuid: "sp-2", polygonUuid: "poly-2", status: "draft" }
+      {
+        uuid: "sp-1",
+        polygonUuid: "poly-1",
+        status: "approved",
+        name: "Poly One",
+        numTrees: 100,
+        calcArea: 1.5,
+        validationStatus: "passed"
+      },
+      {
+        uuid: "sp-2",
+        polygonUuid: "poly-2",
+        status: "draft",
+        name: "Poly Two",
+        numTrees: null,
+        calcArea: null,
+        validationStatus: null
+      }
     ]);
 
     it("should throw UnauthorizedException when authorization fails", async () => {
@@ -2382,13 +2398,37 @@ describe("SitePolygonsController", () => {
         expect(result.data).toHaveProperty("id", getStableRequestQuery(query));
         expect(result.data.attributes).toEqual({
           polygons: [
-            { uuid: "sp-1", polygonUuid: "poly-1", status: "approved" },
-            { uuid: "sp-2", polygonUuid: "poly-2", status: "draft" }
+            {
+              uuid: "sp-1",
+              polygonUuid: "poly-1",
+              status: "approved",
+              name: "Poly One",
+              numTrees: 100,
+              calcArea: 1.5,
+              validationStatus: "passed"
+            },
+            {
+              uuid: "sp-2",
+              polygonUuid: "poly-2",
+              status: "draft",
+              name: "Poly Two",
+              numTrees: null,
+              calcArea: null,
+              validationStatus: null
+            }
           ],
           total: 2
         });
         const polygons = result.data.attributes.polygons as unknown as Array<Record<string, unknown>>;
-        expect(Object.keys(polygons[0]).sort()).toEqual(["polygonUuid", "status", "uuid"]);
+        expect(Object.keys(polygons[0]).sort()).toEqual([
+          "calcArea",
+          "name",
+          "numTrees",
+          "polygonUuid",
+          "status",
+          "uuid",
+          "validationStatus"
+        ]);
       }
     });
 

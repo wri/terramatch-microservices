@@ -1,6 +1,5 @@
 import { RunnableMigration } from "umzug";
 import { QueryInterface, STRING } from "sequelize";
-import { PROJECT_QA_STATUS_DEFAULT } from "../constants";
 
 const PROJECT_QA_STATUS_COLUMNS = [
   "project_qa_status1",
@@ -10,6 +9,8 @@ const PROJECT_QA_STATUS_COLUMNS = [
   "project_qa_status5"
 ] as const;
 
+const PROJECT_QA_STATUS_INITIAL_DEFAULT = "due";
+
 export const addProjectQaStatusColumns: RunnableMigration<QueryInterface> = {
   name: "202607131530-add-project-qa-status-columns",
 
@@ -18,7 +19,7 @@ export const addProjectQaStatusColumns: RunnableMigration<QueryInterface> = {
       await context.addColumn("v2_projects", column, {
         type: STRING(64),
         allowNull: false,
-        defaultValue: PROJECT_QA_STATUS_DEFAULT
+        defaultValue: PROJECT_QA_STATUS_INITIAL_DEFAULT
       });
     }
   },

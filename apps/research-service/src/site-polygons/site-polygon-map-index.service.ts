@@ -13,7 +13,17 @@ export class SitePolygonMapIndexService {
     const sitePolygons = await builder.execute();
 
     return new SitePolygonMapIndexDto(
-      sitePolygons.map(({ uuid, polygonUuid, status }): SitePolygonMapEntryDto => ({ uuid, polygonUuid, status }))
+      sitePolygons.map(
+        ({ uuid, polygonUuid, status, polyName, numTrees, calcArea, validationStatus }): SitePolygonMapEntryDto => ({
+          uuid,
+          polygonUuid,
+          status,
+          name: polyName ?? null,
+          numTrees: numTrees ?? null,
+          calcArea: calcArea ?? null,
+          validationStatus: validationStatus ?? null
+        })
+      )
     );
   }
 

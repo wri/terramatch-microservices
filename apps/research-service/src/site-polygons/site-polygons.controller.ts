@@ -257,8 +257,9 @@ export class SitePolygonsController {
     operationId: "sitePolygonsMapIndex",
     summary: "Get a sparse list of every site polygon in scope",
     description: `Returns one resource whose attributes hold the complete in-scope polygon list as
-    \`{ uuid, polygonUuid, status }\`, plus a \`total\`. There is no pagination: the payload stays small
-    because each row carries only the three fields a map needs to style and filter GeoServer tiles.
+    \`{ uuid, polygonUuid, status, name, numTrees, calcArea, validationStatus }\`, plus a \`total\`.
+    There is no pagination: the payload stays small because each row carries only the fields needed
+    to style GeoServer tiles and render map popups.
 
     Provide exactly one of siteId[] or projectId[]. The remaining workspace filters match the polygon
     table and map, including deletedOnly.`

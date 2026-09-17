@@ -2,6 +2,9 @@ import { BadRequestException } from "@nestjs/common";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
 
+const nonEmpty = <T>(value: T[] | null | undefined): T[] | undefined =>
+  value != null && value.length > 0 ? value : undefined;
+
 export async function applySitePolygonScopeFilters(
   builder: SitePolygonMapIndexQueryBuilder,
   query: SitePolygonMapIndexQueryDto
@@ -10,6 +13,12 @@ export async function applySitePolygonScopeFilters(
 
   if ((siteId == null) === (projectId == null)) {
     throw new BadRequestException("Exactly one of siteId[] or projectId[] must be provided.");
+  }
+  if (siteId != null && siteId.length === 0) {
+    throw new BadRequestException("siteId[] must contain at least one UUID.");
+  }
+  if (projectId != null && projectId.length === 0) {
+    throw new BadRequestException("projectId[] must contain at least one UUID.");
   }
   if (deletedOnly === true && (siteId == null || siteId.length !== 1)) {
     throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
@@ -34,25 +43,30 @@ export async function applySitePolygonScopeFilters(
   if (siteId != null) await builder.filterSiteUuids(siteId);
   else if (projectId != null) await builder.filterProjectUuids(projectId);
 
-  builder.hasStatuses(query.polygonStatus).modifiedSince(query.lastModifiedDate);
+  builder.hasStatuses(nonEmpty(query.polygonStatus)).modifiedSince(query.lastModifiedDate);
 
-  if (query.validationStatus != null) await builder.filterValidationStatus(query.validationStatus);
-  if (query.polygonUuid != null) await builder.filterPolygonUuids(query.polygonUuid);
+  const validationStatus = nonEmpty(query.validationStatus);
+  if (validationStatus != null) await builder.filterValidationStatus(validationStatus);
 
-  if (query.missingIndicator != null && query.missingIndicator.length > 0) {
-    builder.isMissingIndicators(query.missingIndicator);
-  } else if (query.presentIndicator != null && query.presentIndicator.length > 0) {
-    builder.hasPresentIndicators(query.presentIndicator);
+  const polygonUuid = nonEmpty(query.polygonUuid);
+  if (polygonUuid != null) await builder.filterPolygonUuids(polygonUuid);
+
+  const missingIndicator = nonEmpty(query.missingIndicator);
+  const presentIndicator = nonEmpty(query.presentIndicator);
+  if (missingIndicator != null) {
+    builder.isMissingIndicators(missingIndicator);
+  } else if (presentIndicator != null) {
+    builder.hasPresentIndicators(presentIndicator);
   }
 
   builder
     .filterPlantStartRange(query.plantStartFrom, query.plantStartTo)
-    .filterPractice(query.practice)
-    .filterDistr(query.distr)
-    .filterTargetSys(query.targetSys)
-    .filterSubmissionCycle(query.submissionCycle)
-    .filterSource(query.source)
+    .filterPractice(nonEmpty(query.practice))
+    .filterDistr(nonEmpty(query.distr))
+    .filterTargetSys(nonEmpty(query.targetSys))
+    .filterSubmissionCycle(nonEmpty(query.submissionCycle))
+    .filterSource(nonEmpty(query.source))
     .filterHasOverlap(query.hasOverlap);
 
-  if (query.search != null) await builder.addSearch(query.search, query.searchFields);
+  if (query.search != null) await builder.addSearch(query.search, nonEmpty(query.searchFields));
 }

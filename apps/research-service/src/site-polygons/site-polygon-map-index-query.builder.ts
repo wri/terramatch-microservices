@@ -4,7 +4,15 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.builder";
 
-export const MAP_INDEX_ATTRIBUTES = ["uuid", "polygonUuid", "status"] as const;
+export const MAP_INDEX_ATTRIBUTES = [
+  "uuid",
+  "polygonUuid",
+  "status",
+  "polyName",
+  "numTrees",
+  "calcArea",
+  "validationStatus"
+] as const;
 
 export class SitePolygonMapIndexQueryBuilder extends SitePolygonColumnQueryBuilder {
   constructor() {

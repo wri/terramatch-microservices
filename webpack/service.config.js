@@ -5,13 +5,14 @@ const webpack = require("webpack");
 const nodeExternals = require("webpack-node-externals");
 const { RunScriptWebpackPlugin } = require("run-script-webpack-plugin");
 
-module.exports = (options, argv) => {
-  const isDev = argv.mode === "development";
+module.exports = ({ projectRoot }, { mode }) => {
+  const isDev = mode === "development";
   const config = {
     output: {
-      path: join(__dirname, "../../dist/apps/job-service"),
+      path: join(__dirname, `../dist/${projectRoot}`),
       sourceMapFilename: "[file].map"
     },
+
     plugins: [
       new NxAppWebpackPlugin({
         target: "node",

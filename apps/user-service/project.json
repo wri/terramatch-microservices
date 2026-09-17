@@ -5,6 +5,8 @@
   "projectType": "application",
   "tags": [],
   "targets": {
-    "build-repl": {}
+    "build-repl": {},
+    "build": {},
+    "serve": {}
   }
 }

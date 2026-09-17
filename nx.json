@@ -48,14 +48,16 @@
   ],
   "targetDefaults": {
     "build": {
+      "cache": true,
+      "executor": "nx:run-commands",
       "options": {
-        "args": ["--config-node-env=production"]
+        "command": "webpack-cli build --config-node-env=production --env projectRoot={projectRoot} --config webpack/service.config.js"
       }
     },
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "NODE_ENV=development webpack --mode development --config {projectRoot}/webpack.config.js --watch"
+        "command": "NODE_ENV=development webpack --mode development --env projectRoot={projectRoot} --config webpack/service.config.js --watch"
       }
     },
     "lint": {
@@ -70,11 +72,9 @@
     },
     "build-repl": {
       "cache": true,
-      "executor": "@nx/webpack:webpack",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
       "options": {
-        "webpackConfig": "webpack/repl.config.js",
-        "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
+        "command": "webpack-cli build --config-node-env=production --env projectRoot={projectRoot} --config webpack/repl.config.js"
       }
     }
   },

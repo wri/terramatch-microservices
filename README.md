@@ -253,6 +253,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 - Set up the new `main.ts` similarly to existing services.
   - Make sure swagger docs are implemented
   - Pick a default local port that is unique from other services
+  - Make sure the hot module replacement support is added similar to other services
   - Make sure the top of `main.ts` has these two lines:
 
   ```
@@ -262,8 +263,8 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
   - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
-  - Remove `project.json`'s `"serve"` declaration.
-  - Update `webpack.config.js` to match existing service apps for hot module replacement support.
+  - Update `project.json` to contain empty "build-repl", "build" and "serve" targets similar to other services
+  - Remove `webpack.config.js`
 
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)

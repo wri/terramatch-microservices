@@ -7,21 +7,11 @@
   "targets": {
     "build-repl": {},
     "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
+      "executor": "nx:run-commands",
       "options": {
-        "buildTarget": "entity-service:build",
-        "runBuildTargetDependencies": false
+        "command": "NODE_ENV=development webpack --mode development --config apps/entity-service/webpack.config.js --watch"
       },
-      "configurations": {
-        "development": {
-          "buildTarget": "entity-service:build:development"
-        },
-        "production": {
-          "buildTarget": "entity-service:build:production"
-        }
-      }
+      "color": true
     }
   }
 }

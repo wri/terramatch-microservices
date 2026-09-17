@@ -1,55 +1,50 @@
 const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
 const { join } = require("path");
-const { composePlugins } = require("@nx/webpack");
+const webpack = require("webpack");
+const nodeExternals = require("webpack-node-externals");
+const { RunScriptWebpackPlugin } = require("run-script-webpack-plugin");
 
-module.exports = composePlugins(config => ({
-  ...config,
-  output: {
-    path: join(__dirname, "../../dist/apps/research-service"),
-    sourceMapFilename: "[file].map"
-  },
-  externalsPresets: {
-    node: true
-  },
-  externals: [
-    // Mark d3-delaunay as external so webpack doesn't try to bundle it
-    "d3-delaunay",
-    function ({ request }, callback) {
-      if (config.externals != null) {
-        if (typeof config.externals === "function") {
-          return config.externals({ request }, callback);
-        }
-        if (Array.isArray(config.externals)) {
-          for (const ext of config.externals) {
-            if (typeof ext === "function") {
-              const result = ext({ request }, callback);
-              if (result !== undefined) return;
-            }
-          }
-        }
-      }
-      callback();
-    }
-  ],
-  plugins: [
-    new NxAppWebpackPlugin({
-      target: "node",
-      compiler: "tsc",
-      main: "./src/main.ts",
-      tsConfig: "./tsconfig.app.json",
-      assets: ["./src/assets"],
-      optimization: false,
-      outputHashing: "none",
-      generatePackageJson: true,
-      sourceMap: true
-    }),
-    sentryWebpackPlugin({
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      org: "world-resources-institute-data-lab",
-      project: "terramatch-backend"
-    })
-  ],
+module.exports = (options, argv) => {
+  const isDev = argv.mode === "development";
+  const config = {
+    output: {
+      path: join(__dirname, "../../dist/apps/research-service"),
+      sourceMapFilename: "[file].map"
+    },
+    plugins: [
+      new NxAppWebpackPlugin({
+        target: "node",
+        compiler: "tsc",
+        main: "./src/main.ts",
+        tsConfig: "./tsconfig.app.json",
+        assets: ["./src/assets"],
+        optimization: false,
+        outputHashing: "none",
+        generatePackageJson: true,
+        sourceMap: true
+      })
+    ],
 
-  devtool: "source-map"
-}));
+    devtool: "source-map"
+  };
+
+  if (isDev) {
+    config.entry = ["webpack/hot/pull?100"];
+    config.externals = [nodeExternals({ allowlist: ["webpack/hot/poll?100"] })];
+    config.plugins.push(
+      new webpack.HotModuleReplacementPlugin(),
+      new RunScriptWebpackPlugin({ name: "main.js", autoRestart: false })
+    );
+  } else {
+    config.plugins.push(
+      sentryWebpackPlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "world-resources-institute-data-lab",
+        project: "terramatch-backend"
+      })
+    );
+  }
+
+  return config;
+};

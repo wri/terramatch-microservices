@@ -52,12 +52,6 @@
         "args": ["--config-node-env=production"]
       }
     },
-    "serve": {
-      "options": {
-        "args": ["--config-node-env=development"],
-        "inspect": false
-      }
-    },
     "lint": {
       "options": {
         "max-warnings": 0

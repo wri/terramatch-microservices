@@ -7,21 +7,11 @@
   "targets": {
     "build-repl": {},
     "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
+      "executor": "nx:run-commands",
       "options": {
-        "buildTarget": "unified-database-service:build",
-        "runBuildTargetDependencies": false
+        "command": "NODE_ENV=development webpack --mode development --config apps/unified-database-service/webpack.config.js --watch"
       },
-      "configurations": {
-        "development": {
-          "buildTarget": "unified-database-service:build:development"
-        },
-        "production": {
-          "buildTarget": "unified-database-service:build:production"
-        }
-      }
+      "color": true
     }
   }
 }

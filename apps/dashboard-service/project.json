@@ -7,21 +7,11 @@
   "targets": {
     "build-repl": {},
     "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
+      "executor": "nx:run-commands",
       "options": {
-        "buildTarget": "dashboard-service:build",
-        "runBuildTargetDependencies": false
+        "command": "NODE_ENV=development webpack --mode development --config apps/dashboard-service/webpack.config.js --watch"
       },
-      "configurations": {
-        "development": {
-          "buildTarget": "dashboard-service:build:development"
-        },
-        "production": {
-          "buildTarget": "dashboard-service:build:production"
-        }
-      }
+      "color": true
     }
   }
 }

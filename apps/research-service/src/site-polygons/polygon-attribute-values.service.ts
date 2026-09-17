@@ -7,6 +7,7 @@ import {
   SitePolygonAttributeValueData
 } from "@terramatch-microservices/database/entities";
 import { Op, Transaction } from "sequelize";
+import { DateTime } from "luxon";
 
 export type CustomAttributeMap = Record<string, SitePolygonAttributeValueData | null>;
 
@@ -261,6 +262,10 @@ export class PolygonAttributeValuesService {
       return trimmed;
     }
 
+    if (definition.inputType === "date") {
+      return this.normalizeDateValue(definition.key, rawValue, { throwOnInvalid: true });
+    }
+
     if (!Array.isArray(rawValue) && typeof rawValue !== "string") {
       throw new BadRequestException(
         `Custom attribute "${definition.key}" must be a string array, comma-separated string, or null`
@@ -297,8 +302,41 @@ export class PolygonAttributeValuesService {
       return allowedValues.has(trimmed) ? trimmed : null;
     }
 
+    if (definition.inputType === "date") {
+      return this.normalizeDateValue(definition.key, rawValue, { throwOnInvalid: false });
+    }
+
     const values = coerceToStringArray(rawValue);
     const filtered = values.filter(value => allowedValues.has(value));
     return filtered.length > 0 ? [...filtered].sort() : null;
+  }
+
+  private normalizeDateValue(
+    key: string,
+    rawValue: unknown,
+    { throwOnInvalid }: { throwOnInvalid: boolean }
+  ): string | null {
+    if (typeof rawValue !== "string") {
+      if (throwOnInvalid) {
+        throw new BadRequestException(`Custom attribute "${key}" must be a string or null`);
+      }
+      return null;
+    }
+
+    const trimmed = rawValue.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    const datePart = trimmed.split("T")[0];
+    const hasDateShape = /^\d{4}-\d{2}-\d{2}$/.test(datePart);
+    if (hasDateShape && DateTime.fromISO(datePart, { zone: "utc" }).isValid) {
+      return datePart;
+    }
+
+    if (throwOnInvalid) {
+      throw new BadRequestException(`Custom attribute "${key}" must be a valid date (YYYY-MM-DD)`);
+    }
+    return null;
   }
 }

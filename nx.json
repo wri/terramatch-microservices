@@ -52,6 +52,12 @@
         "args": ["--config-node-env=production"]
       }
     },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development webpack --mode development --config {projectRoot}/webpack.config.js --watch"
+      }
+    },
     "lint": {
       "options": {
         "max-warnings": 0
@@ -67,7 +73,7 @@
       "executor": "@nx/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "webpackConfig": "repl/webpack.config.js",
+        "webpackConfig": "webpack/repl.config.js",
         "outputPath": "{workspaceRoot}/dist/{projectRoot}-repl"
       }
     }

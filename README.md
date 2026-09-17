@@ -262,7 +262,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
   - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
-  - Update `project.json`'s `"serve"` declaration to use `nx:run-commands` to run `webpack` similar to other service apps.
+  - Remove `project.json`'s `"serve"` declaration.
   - Update `webpack.config.js` to match existing service apps for hot module replacement support.
 
 - Set up REPL access:

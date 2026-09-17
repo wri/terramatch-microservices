@@ -5,13 +5,6 @@
   "projectType": "application",
   "tags": [],
   "targets": {
-    "build-repl": {},
-    "serve": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "NODE_ENV=development webpack --mode development --config apps/research-service/webpack.config.js --watch"
-      },
-      "color": true
-    }
+    "build-repl": {}
   }
 }

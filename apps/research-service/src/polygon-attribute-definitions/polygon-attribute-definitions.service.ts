@@ -6,6 +6,7 @@ import {
   PolygonAttributeDefinitionOption,
   SitePolygonAttributeValue
 } from "@terramatch-microservices/database/entities";
+import { PolygonAttributeInputType } from "@terramatch-microservices/database/entities/polygon-attribute-definition.entity";
 import { col, fn, literal, Op, Transaction, UniqueConstraintError } from "sequelize";
 import {
   assertNotReservedAttributeKey,
@@ -49,6 +50,7 @@ export class PolygonAttributeDefinitionsService {
   async create(attributes: CreatePolygonAttributeDefinitionAttributes): Promise<DefinitionWithOptions> {
     const key = this.keyFromLabel(attributes.label);
     await this.assertUniqueKey(attributes.frameworkKey, key);
+    this.assertOptionsMatchInputType(attributes.inputType, attributes.options);
 
     try {
       return await this.inTransaction(async transaction => {
@@ -79,6 +81,8 @@ export class PolygonAttributeDefinitionsService {
     definition: DefinitionWithOptions,
     attributes: UpdatePolygonAttributeDefinitionAttributes
   ): Promise<DefinitionWithOptions> {
+    this.assertOptionsMatchInputType(definition.inputType, attributes.options);
+
     return await this.inTransaction(async transaction => {
       const payload: Partial<PolygonAttributeDefinition> = {};
       if (attributes.label != null) payload.label = attributes.label;
@@ -167,6 +171,22 @@ export class PolygonAttributeDefinitionsService {
 
   private duplicateKeyError(frameworkKey: FrameworkKey, key: string): BadRequestException {
     return new BadRequestException(`Attribute key "${key}" already exists for framework "${frameworkKey}"`);
+  }
+
+  private assertOptionsMatchInputType(
+    inputType: PolygonAttributeInputType,
+    options: StorePolygonAttributeDefinitionOptionAttributes[] | undefined
+  ): void {
+    if (inputType === "date") {
+      if (options != null && options.length > 0) {
+        throw new BadRequestException("Date attributes cannot have options");
+      }
+      return;
+    }
+
+    if (options != null && options.length === 0) {
+      throw new BadRequestException("At least one option is required");
+    }
   }
 
   private async replaceOptions(

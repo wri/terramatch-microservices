@@ -28,7 +28,7 @@ import { FrameworkKey } from "../constants";
 import { Framework } from "./framework.entity";
 import { PolygonAttributeDefinitionOption } from "./polygon-attribute-definition-option.entity";
 
-export const POLYGON_ATTRIBUTE_INPUT_TYPES = ["single_select", "multi_select"] as const;
+export const POLYGON_ATTRIBUTE_INPUT_TYPES = ["single_select", "multi_select", "date"] as const;
 export type PolygonAttributeInputType = (typeof POLYGON_ATTRIBUTE_INPUT_TYPES)[number];
 
 @DefaultScope(() => ({ order: ["order"] }))

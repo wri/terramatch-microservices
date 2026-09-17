@@ -1,7 +1,7 @@
 /* istanbul ignore file */
-import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
-import { pick } from "lodash";
+import { isFunction, isString, pick } from "lodash";
 import { Type } from "@nestjs/common";
+import { DECORATORS } from "@nestjs/swagger";
 
 // Some type shenanigans to represent a type that _only_ includes properties defined in the
 // included union type. This implementation was difficult to track down and get working. Found
@@ -56,9 +56,14 @@ export type Common<T> = Pick<T, CommonKeys<T>>;
 export const pickApiProperties = <Source, DTO>(source: Source, dtoClass: Type<DTO>) =>
   pick(source, apiAttributes(dtoClass)) as Common<Source | DTO>;
 
-export const apiAttributes = (dtoClass: Type) => {
-  const accessor = new ModelPropertiesAccessor();
-  return accessor.getModelProperties(dtoClass.prototype);
+export const apiAttributes = (dtoClass: Type): string[] => {
+  const prototype = dtoClass.prototype;
+  const properties = Reflect.getMetadata(DECORATORS.API_MODEL_PROPERTIES_ARRAY, prototype) ?? [];
+
+  return properties
+    .filter(isString)
+    .filter((key: string) => key.charAt(0) === ":" && !isFunction(prototype[key]))
+    .map((key: string) => key.slice(1));
 };
 
 // Require all props in the DTO that are not in the base model

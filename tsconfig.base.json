@@ -25,7 +25,10 @@
       "@terramatch-microservices/database/*": ["./libs/database/src/lib/*"],
       "@terramatch-microservices/tm-v3-cli": ["./tm-v3-cli/src/index.ts"],
       "@terramatch-microservices/transifex-api": ["./libs/transifex-api/src/index.ts"]
-    }
+    },
+    "strict": false,
+    "noUncheckedSideEffectImports": false,
+    "types": ["*"]
   },
   "exclude": ["node_modules", "tmp"]
 }

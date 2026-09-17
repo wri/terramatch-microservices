@@ -229,9 +229,6 @@ Deployment is handled via manual trigger of GitHub actions. There is one for ser
 ApiGateway only needs to be redeployed if its code changes; it does not need to be redeployed for updates to individual services
 to take effect.
 
-Once this project is live in production, we can explore continuous deployment to at least staging and prod envs on the staging
-and main branches.
-
 # Environment
 
 The Environment for a given service deployment is configured in Github Actions secrets / variables. Some are repo-wide, and
@@ -256,6 +253,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 - Set up the new `main.ts` similarly to existing services.
   - Make sure swagger docs are implemented
   - Pick a default local port that is unique from other services
+  - Make sure the hot module replacement support is added similar to other services
   - Make sure the top of `main.ts` has these two lines:
 
   ```
@@ -265,6 +263,8 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
   - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
+  - Update `project.json` to contain empty "build-repl", "build" and "serve" targets similar to other services
+  - Remove `webpack.config.js`
 
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)

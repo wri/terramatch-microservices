@@ -6,22 +6,7 @@
   "tags": [],
   "targets": {
     "build-repl": {},
-    "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
-      "options": {
-        "buildTarget": "user-service:build",
-        "runBuildTargetDependencies": false
-      },
-      "configurations": {
-        "development": {
-          "buildTarget": "user-service:build:development"
-        },
-        "production": {
-          "buildTarget": "user-service:build:production"
-        }
-      }
-    }
+    "build": {},
+    "serve": {}
   }
 }

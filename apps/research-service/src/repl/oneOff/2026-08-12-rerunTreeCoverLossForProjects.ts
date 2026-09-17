@@ -1,10 +1,16 @@
 import { getService } from "@terramatch-microservices/common/util/bootstrap-repl";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { IndicatorSlug, TreeCoverLossData } from "@terramatch-microservices/database/constants";
-import { IndicatorOutputTreeCoverLoss, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import {
+  IndicatorOutputHectares,
+  IndicatorOutputTreeCoverLoss,
+  Project,
+  Site,
+  SitePolygon
+} from "@terramatch-microservices/database/entities";
 import { chunk, groupBy } from "lodash";
 import ProgressBar from "progress";
-import { Op } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { buildTreeCoverLossValue } from "../../indicators/calculators/tree-cover-loss-value.util";
 import { IndicatorsService } from "../../indicators/indicators.service";
 
@@ -366,7 +372,9 @@ async function refreshFromGfw(
 
   for (const slug of slugs) {
     for (const batch of chunk(polygonUuids, batchSize)) {
-      const results = [];
+      const results: (
+        CreationAttributes<IndicatorOutputHectares> | CreationAttributes<IndicatorOutputTreeCoverLoss>
+      )[] = [];
 
       for (const polygonUuid of batch) {
         try {

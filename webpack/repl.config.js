@@ -1,11 +1,9 @@
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
 const { join } = require("path");
-const { composePlugins } = require("@nx/webpack");
 
-module.exports = composePlugins((config, { context }) => ({
-  ...config,
+module.exports = ({ projectRoot }) => ({
   output: {
-    path: join(__dirname, `../dist/apps/${context.projectName}-repl`)
+    path: join(__dirname, `../dist/${projectRoot}-repl`)
   },
   plugins: [
     new NxAppWebpackPlugin({
@@ -19,4 +17,4 @@ module.exports = composePlugins((config, { context }) => ({
       generatePackageJson: true
     })
   ]
-}));
+});

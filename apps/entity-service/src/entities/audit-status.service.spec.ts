@@ -288,6 +288,43 @@ describe("AuditStatusService", () => {
       expect(result.length).toBeGreaterThanOrEqual(1);
     });
 
+    it("returns comments from previous site polygon versions that share primaryUuid", async () => {
+      const site = await SiteFactory.create();
+      const previousVersion = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: previousVersion.primaryUuid,
+        isActive: true
+      });
+      const unrelatedPolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: true });
+
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: previousVersion.id,
+        type: "comment",
+        comment: "Keep this after versioning"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: activeVersion.id,
+        type: "comment",
+        comment: "Comment on the new version"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: unrelatedPolygon.id,
+        type: "comment",
+        comment: "Unrelated polygon comment"
+      } as InferCreationAttributes<AuditStatus>);
+
+      const entity = await service.resolveEntity("sitePolygons", activeVersion.uuid);
+      const result = await service.getAuditStatuses(entity, "sitePolygons", activeVersion.uuid);
+      const comments = result.filter(audit => audit.type === "comment").map(audit => audit.comment);
+
+      expect(comments).toEqual(expect.arrayContaining(["Keep this after versioning", "Comment on the new version"]));
+      expect(comments).not.toContain("Unrelated polygon comment");
+    });
+
     it("should throw NotFoundException for invalid entity type", async () => {
       await expect(service.resolveEntity("invalidType" as EntityType, "uuid")).rejects.toThrow(NotFoundException);
     });

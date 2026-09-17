@@ -162,13 +162,33 @@ export class AuditStatusService {
     entityUuid: string,
     typeFilter?: string[]
   ): Promise<AuditStatusDto[]> {
-    const data = await this.queryAuditData([entity], typeFilter);
+    const entities = await this.entitiesForAuditQuery(entity, entityType);
+    const data = await this.queryAuditData(entities, typeFilter);
     const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
     const dtos = await this.transformToDtos(data, attachmentsMap);
-    if (typeFilter != null && typeFilter.length > 0) {
+    if ((typeFilter != null && typeFilter.length > 0) || entityType === "sitePolygons") {
       return uniqBy(dtos, dto => dto.uuid);
     }
     return uniqBy(dtos, dto => `${dto.type ?? "__NULL_TYPE__"}::${dto.comment ?? "__NULL_COMMENT_KEY__"}`);
+  }
+
+  private async entitiesForAuditQuery(
+    entity: LaravelModel,
+    entityType: EntityType | "sitePolygons" | "submissions"
+  ): Promise<LaravelModel[]> {
+    if (entityType !== "sitePolygons" || !(entity instanceof SitePolygon)) {
+      return [entity];
+    }
+
+    if (entity.primaryUuid == null || entity.primaryUuid === "") {
+      return [entity];
+    }
+
+    const family = await SitePolygon.findAll({
+      where: { primaryUuid: entity.primaryUuid }
+    });
+
+    return family.length > 0 ? family : [entity];
   }
 
   private shouldSyncModelStatusFromAudit(

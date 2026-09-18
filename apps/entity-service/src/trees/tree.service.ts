@@ -125,7 +125,7 @@ const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) =>
       warnings.push(
         new BulkUploadWarning(`Scientific name not found for tree species: ${treeName}`, "TAXON_ID_MISSING", {
           variables: { treeName },
-          row: index + 2
+          location: { row: index + 2 }
         })
       );
     }
@@ -541,16 +541,26 @@ export class TreeService {
       }
 
       if (treeSpeciesName === "") {
-        warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
+        warnings.push(
+          new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", {
+            location: { row: currentRow }
+          })
+        );
         return;
       }
 
-      for (const [siteName, amountString] of Object.entries(row)) {
-        if (siteName === "Tree Species" || isEmpty(amountString)) continue;
+      Object.entries(row).forEach(([siteName, amountString], columnIndex) => {
+        if (siteName === "Tree Species" || isEmpty(amountString)) return;
 
         if (isEmpty(siteName)) {
-          warnings.push(new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { row: currentRow }));
-          continue;
+          const column = columnIndex + 1;
+          // Only add this warning if it hasn't already been caught.
+          if (warnings.find(({ code, location }) => location?.col === column && code === "SITE_NAME_MISSING") == null) {
+            warnings.push(
+              new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { location: { col: column } })
+            );
+          }
+          return;
         }
 
         const amount = isEmpty(amountString) ? null : Number.parseInt(amountString);
@@ -558,11 +568,11 @@ export class TreeService {
         if (amount != null && (isNaN(amount) || amount < 0 || `${amount}` !== amountString)) {
           warnings.push(
             new BulkUploadWarning(`Amount value not supported: ${amountString}`, "AMOUNT_UNSUPPORTED", {
-              row: currentRow,
+              location: { row: currentRow, col: columnIndex + 1 },
               variables: { amountString }
             })
           );
-          continue;
+          return;
         }
 
         // make sure the site is represented even if its trees all end up empty (in that case
@@ -571,7 +581,7 @@ export class TreeService {
         if (amount != null && amount > 0) {
           treesToSync[siteName].push({ name: treeSpeciesName, amount: amount ?? 0 });
         }
-      }
+      });
     });
 
     // This is N+1 and could be pretty slow for a project with a lot of sites. However, this service
@@ -676,8 +686,8 @@ export class TreeService {
       await TreeSpecies.bulkCreate(bulkTrees);
     }
 
-    // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
-    return orderBy(warnings, ({ row }) => (row == null ? -1 : row));
+    // Sort warnings by row - warnings with no location are usually higher priority and sort to the top.
+    return orderBy(warnings, ({ location }) => location?.row ?? location?.col ?? -1);
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

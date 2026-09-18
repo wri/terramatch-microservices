@@ -251,9 +251,8 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
 - In the root directory: `nx g @nx/nest:app apps/foo-service`
 - Set up the new `main.ts` similarly to existing services.
-  - Make sure swagger docs are implemented
+  - Use bootstrapService() as seen in other services
   - Pick a default local port that is unique from other services
-  - Make sure the hot module replacement support is added similar to other services
   - Make sure the top of `main.ts` has these two lines:
 
   ```

@@ -517,10 +517,11 @@ ${projectTree.name},,,7`;
       expect(reportTree.amount).toEqual(3);
       expect(reportTree.hidden).toEqual(false);
       const reportTrees = await TreeSpecies.for(report).visible().collection("anr").findAll();
-      expect(reportTrees.length).toEqual(2);
+      expect(reportTrees.length).toEqual(3);
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: projectTree.name, amount: 1 }));
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: reportTree.name, amount: 3 }));
-      expect(warnings.length).toBe(7);
+      expect(reportTrees).toContainEqual(expect.objectContaining({ name: siteTree.name, amount: 0 }));
+      expect(warnings.length).toBe(8);
       expect(warnings[0]).toMatchObject({ row: undefined, message: "Site not found or report not editable: Foo Site" });
       expect(warnings).toContainEqual(
         expect.objectContaining({

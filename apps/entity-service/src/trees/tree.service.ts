@@ -15,7 +15,19 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Attributes, col, CreationAttributes, fn, Includeable, Op, ProjectionAlias, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
+import {
+  Dictionary,
+  filter,
+  flatten,
+  flattenDeep,
+  groupBy,
+  isEmpty,
+  isString,
+  omit,
+  orderBy,
+  uniq,
+  uniqBy
+} from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
@@ -152,6 +164,9 @@ const siteReportNamesById = async (task: Task, sites: string[], warnings: BulkUp
   return siteIds;
 };
 
+const establishmentCollectionFromBulkCollection = (collection: BulkTreeCollection) =>
+  ["anr", "replanting", "established"].includes(collection) ? "tree-planted" : collection;
+
 @Injectable()
 export class TreeService {
   constructor(
@@ -180,7 +195,11 @@ export class TreeService {
     ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
   }
 
-  async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<SpeciesDto[]>> {
+  async getEstablishmentTrees(
+    entity: EstablishmentEntity,
+    uuidOrId: string | number,
+    collection?: BulkTreeCollection
+  ): Promise<Dictionary<SpeciesDto[]>> {
     if (entity === "siteReports" || entity === "nurseryReports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
@@ -191,18 +210,26 @@ export class TreeService {
         // the nested includes
         attributes: ["id"],
         include: [
-          ...treeAssociations(parentModel, ["name", "collection", "taxonId"]),
+          ...treeAssociations(
+            parentModel,
+            ["name", "collection", "taxonId"],
+            collection == null ? undefined : { collection }
+          ),
           {
             model: Project,
             // This id isn't necessary for the data we want to fetch, but sequelize requires it for
             // the nested includes
             attributes: ["id"],
-            include: treeAssociations(Project, ["name", "collection", "taxonId"])
+            include: treeAssociations(
+              Project,
+              ["name", "collection", "taxonId"],
+              collection == null ? undefined : { collection }
+            )
           }
         ]
       };
 
-      if (entity === "siteReports") {
+      if (entity === "siteReports" && collection == null) {
         include.include.push({
           required: false,
           association: "seedsPlanted",
@@ -212,7 +239,7 @@ export class TreeService {
       }
 
       const whereOptions = {
-        where: { uuid },
+        where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
         attributes: [],
         include: [include]
       };
@@ -238,7 +265,7 @@ export class TreeService {
       ) as Dictionary<TreeSpecies[]>;
 
       const treeNames = uniqueTreeNames(trees);
-      if (entity === "siteReports") {
+      if (entity === "siteReports" && collection == null) {
         treeNames["seeds"] = uniq(
           ((parent as Site).seedsPlanted ?? []).map(({ name, taxonId }) => ({ name: name ?? "", taxonId }))
         );
@@ -265,7 +292,7 @@ export class TreeService {
       }
 
       const whereOptions = {
-        where: { uuid },
+        where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
         attributes: ["frameworkKey"],
         include
       };
@@ -313,7 +340,11 @@ export class TreeService {
     }
   }
 
-  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap | undefined> {
+  async getPreviousPlanting(
+    entity: EstablishmentEntity,
+    uuidOrId: string | number,
+    collection?: BulkTreeCollection
+  ): Promise<PlantingCountMap | undefined> {
     if (!isReport(entity)) return undefined;
 
     let model: TreeReportModelType;
@@ -336,15 +367,21 @@ export class TreeService {
 
     // @ts-expect-error Can't narrow the union TreeReportModelType automatically
     const report: InstanceType<TreeReportModelType> = await model.findOne({
-      where: { uuid },
+      where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
       attributes: ["dueAt", model.PARENT_ID]
     });
     if (report == null) throw new NotFoundException();
 
-    const modelIncludes: Includeable[] = treeAssociations(model, ["taxonId", "name", "collection", "amount"], {
+    const treeAssociationWhere: WhereOptions = {
       amount: { [Op.gt]: 0 }
-    });
-    if (entity === "siteReports") {
+    };
+    if (collection != null) treeAssociationWhere.collection = collection;
+    const modelIncludes: Includeable[] = treeAssociations(
+      model,
+      ["taxonId", "name", "collection", "amount"],
+      treeAssociationWhere
+    );
+    if (entity === "siteReports" && collection == null) {
       modelIncludes.push({
         required: false,
         association: "seedsPlanted",
@@ -375,7 +412,7 @@ export class TreeService {
     );
 
     const planting = countTreeCollection(trees);
-    if (entity === "siteReports") {
+    if (entity === "siteReports" && collection == null) {
       planting["seeds"] = countPlants(
         filter(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted))) as Seeding[]
       );
@@ -449,9 +486,7 @@ export class TreeService {
       .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
       .collection(collection)
       .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
-    const establishmentCollection = ["anr", "replanting", "established"].includes(collection)
-      ? "tree-planted"
-      : collection;
+    const establishmentCollection = establishmentCollectionFromBulkCollection(collection);
     const projectEstablishmentTrees = await TreeSpecies.visible()
       .for(project)
       .collection(establishmentCollection)
@@ -538,13 +573,33 @@ export class TreeService {
       }
     });
 
+    // This is N+1 and could be pretty slow for a project with a lot of sites. However, this service
+    // method is called rarely and in this case we're letting it slide.
+    const establishmentCollection = establishmentCollectionFromBulkCollection(collection);
+    const reportIdMap = await siteReportNamesById(task, Object.keys(treesToSync), warnings);
+    for (const reportId of Object.keys(reportIdMap).map(Number)) {
+      const reportTrees = (treesToSync[reportIdMap[reportId]] ??= []);
+      const establishmentTrees = (
+        (await this.getEstablishmentTrees("siteReports", reportId, establishmentCollection))[establishmentCollection] ??
+        []
+      ).map(({ name }) => name);
+      const previousReportTrees = Object.keys(
+        (await this.getPreviousPlanting("siteReports", reportId, collection))?.[collection] ?? []
+      );
+      // Make sure that all of the trees that would be prepopulated in the FE exist in the resulting set
+      for (const treeName of uniq([...establishmentTrees, ...previousReportTrees])) {
+        if (reportTrees.find(({ name }) => name === treeName) == null) {
+          reportTrees.push({ name: treeName, amount: 0 });
+        }
+      }
+    }
+
     const treeNames = uniq(
       Object.values(treesToSync)
         .flat()
         .map(({ name }) => name)
     );
     const taxonIds = await taxonIdsByName(treeNames, warnings);
-    const reportIdMap = await siteReportNamesById(task, Object.keys(treesToSync), warnings);
 
     const siteReportIds = Object.keys(reportIdMap).map(id => Number.parseInt(id));
     if (siteReportIds.length > 0) {

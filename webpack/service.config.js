@@ -1,15 +1,15 @@
 const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const { NxAppWebpackPlugin } = require("@nx/webpack/app-plugin");
-const { join } = require("path");
 const webpack = require("webpack");
 const nodeExternals = require("webpack-node-externals");
 const { RunScriptWebpackPlugin } = require("run-script-webpack-plugin");
+const { workspaceRoot } = require("nx/src/devkit-exports");
 
 module.exports = ({ projectRoot }, { mode }) => {
   const isDev = mode === "development";
   const config = {
     output: {
-      path: join(__dirname, `../dist/${projectRoot}`),
+      path: `${workspaceRoot}/dist/${projectRoot}`,
       sourceMapFilename: "[file].map"
     },
 
@@ -23,7 +23,8 @@ module.exports = ({ projectRoot }, { mode }) => {
         optimization: false,
         outputHashing: "none",
         generatePackageJson: true,
-        sourceMap: true
+        sourceMap: true,
+        mergeExternals: true
       })
     ],
 
@@ -31,9 +32,18 @@ module.exports = ({ projectRoot }, { mode }) => {
   };
 
   if (isDev) {
-    config.entry = ["webpack/hot/pull?100"];
-    config.externals = [nodeExternals({ allowlist: ["webpack/hot/poll?100"] })];
     config.plugins.push(
+      {
+        apply: compiler => {
+          // we have to tweak the entry that NX created
+          compiler.options.entry.main.import.unshift("webpack/hot/poll?100");
+          // replace the nodeExternals that NX put in place - there cannot be multiple nodeExternals
+          // calls in the externals array
+          compiler.options.externals = [
+            nodeExternals({ modulesDir: `${workspaceRoot}/node_modules`, allowlist: ["webpack/hot/poll?100"] })
+          ];
+        }
+      },
       new webpack.HotModuleReplacementPlugin(),
       new RunScriptWebpackPlugin({ name: "main.js", autoRestart: false })
     );

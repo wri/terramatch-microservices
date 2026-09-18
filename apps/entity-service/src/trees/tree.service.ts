@@ -36,7 +36,7 @@ import { isoForFilename, normalizedFileName } from "@terramatch-microservices/co
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { isNotEmpty, isNotNull } from "@terramatch-microservices/database/types/array";
 import { COMPLETE_REPORT_STATUSES, DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
 import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
@@ -485,22 +485,23 @@ export class TreeService {
     const allReportingPeriodTrees = await TreeSpecies.visible()
       .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
       .collection(collection)
-      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+      .findAll({ attributes: [distinctNameAlias] });
     const establishmentCollection = establishmentCollectionFromBulkCollection(collection);
     const projectEstablishmentTrees = await TreeSpecies.visible()
       .for(project)
       .collection(establishmentCollection)
-      .findAll({ attributes: ["name"], order: [["name", "ASC"]] });
+      .findAll({ attributes: ["name"] });
     const siteEstablishmentTrees = await TreeSpecies.visible()
       .for(siteReports.map(({ site }) => site).filter(isNotNull))
       .collection(establishmentCollection)
-      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+      .findAll({ attributes: [distinctNameAlias] });
     const treeNames = uniqBy(
       [...projectEstablishmentTrees, ...siteEstablishmentTrees, ...allReportingPeriodTrees],
       "name"
     )
       .map(({ name }) => name)
-      .filter(name => !isEmpty(name)) as string[];
+      .filter(isNotEmpty)
+      .sort();
 
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()

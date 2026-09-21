@@ -372,10 +372,6 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
   declare completion: CreationOptional<number>;
 
   @AllowNull
-  @Column(DATE)
-  declare approvedAt: Date | null;
-
-  @AllowNull
   @Column(TEXT)
   declare sharedDriveLink: string | null;
 

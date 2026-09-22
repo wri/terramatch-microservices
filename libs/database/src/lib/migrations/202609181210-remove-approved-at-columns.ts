@@ -1,15 +1,16 @@
 import { RunnableMigration } from "umzug";
 import { DATEONLY, QueryInterface } from "sequelize";
 
-const TIMESTAMP_TABLES = ["financial_reports", "disturbance_reports", "srp_reports"] as const;
+const TABLES = ["v2_site_reports", "financial_reports", "disturbance_reports", "srp_reports"] as const;
 
 export const removeApprovedAtColumns: RunnableMigration<QueryInterface> = {
   name: "202609181210-remove-approved-at-columns",
 
   async up({ context }) {
-    await context.removeColumn("v2_site_reports", "approved_at");
-    for (const table of TIMESTAMP_TABLES) {
-      await context.removeColumn(table, "approved_at");
+    // removeColumn() hits a Sequelize + MariaDB driver bug (Cannot delete property 'meta').
+    // ALTER TABLE DROP matches the path used by changeColumn, which does not trigger it.
+    for (const table of TABLES) {
+      await context.sequelize.query(`ALTER TABLE \`${table}\` DROP COLUMN IF EXISTS \`approved_at\``);
     }
   },
 
@@ -18,7 +19,7 @@ export const removeApprovedAtColumns: RunnableMigration<QueryInterface> = {
       type: DATEONLY,
       allowNull: true
     });
-    for (const table of TIMESTAMP_TABLES) {
+    for (const table of ["financial_reports", "disturbance_reports", "srp_reports"] as const) {
       await context.addColumn(table, "approved_at", {
         type: "TIMESTAMP",
         allowNull: true

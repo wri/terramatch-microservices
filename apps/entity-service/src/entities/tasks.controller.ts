@@ -57,7 +57,7 @@ export class TasksController {
 
       await this.tasksService.loadReports(tasks);
       for (const task of tasks) {
-        await this.tasksService.addLightTaskDto(document, task, query.sideloadReports ?? false);
+        await this.tasksService.addLightTaskDto(document, task, query.sideloads ?? []);
       }
     }
 

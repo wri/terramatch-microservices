@@ -15,7 +15,7 @@ import { DocumentBuilder, ResourceBuilder } from "@terramatch-microservices/comm
 import { EntitiesService } from "./entities.service";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { TaskQueryDto } from "./dto/task-query.dto";
+import { TASK_SIDELOADS, TaskQueryDto, TaskSideload } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Attributes, Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -23,7 +23,7 @@ import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/c
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
-import { filter, groupBy } from "lodash";
+import { filter, groupBy, isEmpty, uniq } from "lodash";
 import { TaskFullDto, TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
 
 const FILTER_PROPS = {
@@ -109,10 +109,10 @@ export class TasksService {
     return task;
   }
 
-  async addLightTaskDto(document: DocumentBuilder, task: Task, sideloadReports: boolean) {
+  async addLightTaskDto(document: DocumentBuilder, task: Task, sideloads: TaskSideload[]) {
     const resource = document.addData(task.uuid, new TaskLightDto(task));
-    if (sideloadReports) {
-      await this.sideloadReports(document, resource, task);
+    if (!isEmpty(sideloads)) {
+      await this.sideloadReports(document, resource, task, uniq(sideloads));
     }
 
     return document;
@@ -256,9 +256,14 @@ export class TasksService {
       }
     }
   }
-  private async sideloadReports(document: DocumentBuilder, taskResource: ResourceBuilder, task: Task) {
+  private async sideloadReports(
+    document: DocumentBuilder,
+    taskResource: ResourceBuilder,
+    task: Task,
+    sideloadTypes?: TaskSideload[]
+  ) {
     await this.loadReports([task]);
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
+    for (const entityType of sideloadTypes ?? TASK_SIDELOADS) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       if (entityType === "projectReports") {
         if (task.projectReport != null) {

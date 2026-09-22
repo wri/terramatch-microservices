@@ -20,6 +20,7 @@ function makeStubProcessor(overrides: Partial<UserAssociationProcessor> = {}): U
     createPolicy: "update",
     updatePolicy: "update",
     approveRejectPolicy: "approveReject",
+    deletePolicy: "update",
     addDtos: jest.fn().mockResolvedValue(undefined),
     handleCreate: jest.fn().mockResolvedValue(undefined),
     handleDelete: jest.fn().mockResolvedValue(undefined),

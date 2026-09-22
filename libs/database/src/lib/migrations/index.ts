@@ -40,6 +40,9 @@ import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-
 import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
 import { createUserTasks } from "./202609041522-create-user-tasks";
 import { assignFundoFloraCohort2 } from "./202609171430-assign-fundo-flora-cohort-2";
+import { convertDeadlineAtToDate } from "./202609181200-convert-deadline-at-to-date";
+import { removeApprovedAtColumns } from "./202609181210-remove-approved-at-columns";
+import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-timestamp";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -81,5 +84,8 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addPolygonGeometryApprovedView,
   addBeneficiariesTrainingTotalColumn,
   createUserTasks,
-  assignFundoFloraCohort2
+  assignFundoFloraCohort2,
+  convertDeadlineAtToDate,
+  removeApprovedAtColumns,
+  convertDatetimeToTimestamp
 ];

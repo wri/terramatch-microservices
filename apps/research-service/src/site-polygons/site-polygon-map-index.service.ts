@@ -14,14 +14,24 @@ export class SitePolygonMapIndexService {
 
     return new SitePolygonMapIndexDto(
       sitePolygons.map(
-        ({ uuid, polygonUuid, status, polyName, numTrees, calcArea, validationStatus }): SitePolygonMapEntryDto => ({
+        ({
+          uuid,
+          polygonUuid,
+          status,
+          polyName,
+          numTrees,
+          calcArea,
+          validationStatus,
+          disturbance
+        }): SitePolygonMapEntryDto => ({
           uuid,
           polygonUuid,
           status,
           name: polyName ?? null,
           numTrees: numTrees ?? null,
           calcArea: calcArea ?? null,
-          validationStatus: validationStatus ?? null
+          validationStatus: validationStatus ?? null,
+          disturbanceReportUuid: disturbance?.getDisturbanceReportUuid() ?? null
         })
       )
     );

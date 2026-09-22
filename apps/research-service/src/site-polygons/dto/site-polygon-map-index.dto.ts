@@ -53,6 +53,15 @@ export class SitePolygonMapEntryDto {
     description: "Validation status. Null means validation has not started."
   })
   validationStatus: PolygonValidationStatus | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description:
+      "UUID of the linked DisturbanceReport when this polygon has a disturbance owned by a report. " +
+      "Use for /reports/disturbance-report/{uuid}."
+  })
+  disturbanceReportUuid: string | null;
 }
 
 @JsonApiDto({ type: "sitePolygonMapIndexes" })

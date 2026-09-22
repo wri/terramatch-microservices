@@ -7,7 +7,13 @@ import {
   IndicatorOutputTreeCoverFactory,
   LandscapeGeometryFactory
 } from "@terramatch-microservices/database/factories";
-import { CriteriaSite, SitePolygon, Site, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import {
+  CriteriaSite,
+  Disturbance,
+  SitePolygon,
+  Site,
+  PolygonGeometry
+} from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { BadRequestException } from "@nestjs/common";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -754,6 +760,25 @@ describe("SitePolygonQueryBuilder", () => {
       const siteInclude = includes.find(include => include.model === Site);
 
       expect(siteInclude?.required).toBe(true);
+    });
+
+    it("includes Disturbance with disturbanceReportUuid subquery attribute", () => {
+      const includes = ((
+        builder as unknown as {
+          findOptions: {
+            include: Array<{ model?: unknown; attributes?: unknown[] }>;
+          };
+        }
+      ).findOptions.include ?? []) as Array<{ model?: unknown; attributes?: unknown[] }>;
+      const disturbanceInclude = includes.find(include => include.model === Disturbance);
+
+      expect(disturbanceInclude).toBeDefined();
+      expect(disturbanceInclude?.attributes).toEqual(
+        expect.arrayContaining(["id", "disturbanceableId", "disturbanceableType"])
+      );
+      expect(
+        disturbanceInclude?.attributes?.some(attr => Array.isArray(attr) && attr[1] === "disturbanceReportUuid")
+      ).toBe(true);
     });
 
     it("includes PolygonGeometry by default", () => {

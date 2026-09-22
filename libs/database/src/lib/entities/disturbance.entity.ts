@@ -11,7 +11,8 @@ import {
   STRING,
   TEXT,
   UUID,
-  UUIDV4
+  UUIDV4,
+  literal
 } from "sequelize";
 import { Subquery } from "../util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
@@ -19,6 +20,8 @@ import { JsonColumn } from "../decorators/json-column.decorator";
 import { FormModel } from "../constants/entities";
 import { laravelType } from "../types/util";
 import { chainScope } from "../util/chain-scope";
+import { DisturbanceReport } from "./disturbance-report.entity";
+import { InternalServerErrorException } from "@nestjs/common";
 
 @Scopes(() => ({
   entity: (entity: FormModel) => ({
@@ -34,6 +37,13 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
   static readonly POLYMORPHIC_TYPE = "disturbanceableType";
   static readonly POLYMORPHIC_ID = "disturbanceableId";
 
+  static get sql() {
+    if (this.sequelize == null) {
+      throw new InternalServerErrorException("Disturbance model is missing sequelize connection");
+    }
+    return this.sequelize;
+  }
+
   static for(entity: FormModel) {
     return chainScope(this, "entity", entity) as typeof Disturbance;
   }
@@ -43,6 +53,20 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
       .eq("disturbanceableType", disturbanceableType)
       .in("disturbanceableId", disturbanceableIds)
       .eq("hidden", false).literal;
+  }
+
+  static disturbanceReportUuidAttribute(tableAlias = "disturbance"): [Literal, string] {
+    const typeLiteral = Disturbance.sql.escape(DisturbanceReport.LARAVEL_TYPE);
+    return [
+      literal(`(
+        SELECT \`uuid\` FROM \`disturbance_reports\`
+        WHERE \`id\` = \`${tableAlias}\`.\`disturbanceable_id\`
+          AND \`${tableAlias}\`.\`disturbanceable_type\` = ${typeLiteral}
+          AND \`deleted_at\` IS NULL
+        LIMIT 1
+      )`),
+      "disturbanceReportUuid"
+    ];
   }
 
   @PrimaryKey
@@ -61,6 +85,11 @@ export class Disturbance extends Model<InferAttributes<Disturbance>, InferCreati
   @AllowNull
   @Column(BIGINT.UNSIGNED)
   declare disturbanceableId: number | null;
+
+  getDisturbanceReportUuid(): string | null {
+    if (this.disturbanceableType !== DisturbanceReport.LARAVEL_TYPE) return null;
+    return (this.get("disturbanceReportUuid") as string | null | undefined) ?? null;
+  }
 
   @AllowNull
   @Column(DATE)

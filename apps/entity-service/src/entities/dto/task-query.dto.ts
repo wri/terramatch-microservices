@@ -14,4 +14,8 @@ export class TaskQueryDto extends IndexQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  sideloadReports?: boolean;
 }

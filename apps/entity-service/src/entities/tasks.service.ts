@@ -11,7 +11,7 @@ import {
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, ResourceBuilder } from "@terramatch-microservices/common/util";
 import { EntitiesService } from "./entities.service";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -23,8 +23,8 @@ import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/c
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
-import { filter } from "lodash";
-import { TaskFullDto } from "@terramatch-microservices/common/dto/task.dto";
+import { filter, groupBy } from "lodash";
+import { TaskFullDto, TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
 
 const FILTER_PROPS = {
   status: "status",
@@ -109,6 +109,15 @@ export class TasksService {
     return task;
   }
 
+  async addLightTaskDto(document: DocumentBuilder, task: Task, sideloadReports: boolean) {
+    const resource = document.addData(task.uuid, new TaskLightDto(task));
+    if (sideloadReports) {
+      await this.sideloadReports(document, resource, task);
+    }
+
+    return document;
+  }
+
   async addFullTaskDto(document: DocumentBuilder, task: Task) {
     const treesPlantedCount =
       (await TreeSpecies.visible()
@@ -117,21 +126,7 @@ export class TasksService {
         .sum("amount")) ?? 0;
 
     const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
-    await this.loadReports(task);
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      if (entityType === "projectReports") {
-        if (task.projectReport != null) {
-          const { id, dto } = await processor.getLightDto(task.projectReport);
-          taskResource.relateTo("projectReport", document.addData(id, dto));
-        }
-      } else {
-        for (const report of task[entityType] ?? []) {
-          const { id, dto } = await processor.getLightDto(report);
-          taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
-        }
-      }
-    }
+    await this.sideloadReports(document, taskResource, task);
 
     return document;
   }
@@ -143,7 +138,7 @@ export class TasksService {
       throw new BadRequestException('Task cannot transition to "pending-approval" status.');
     }
 
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     // First, make sure all the reports are either complete or are completable
     const reports: ReportModel[] = [...(task.siteReports ?? []), ...(task.nurseryReports ?? [])];
@@ -188,7 +183,7 @@ export class TasksService {
     await this.updateReportsStatus(SiteReport, siteReportApprovalUuids ?? [], APPROVED, taskId);
     await this.updateReportsStatus(NurseryReport, nurseryReportApprovalUuids ?? [], APPROVED, taskId);
 
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     const siteReports = filter(
       (siteReportApprovalUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
@@ -213,7 +208,7 @@ export class TasksService {
     { siteReportNothingToReportUuids, nurseryReportNothingToReportUuids }: TaskUpdateAttributes,
     task: Task
   ) {
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     const siteReports = filter(
       (siteReportNothingToReportUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
@@ -242,6 +237,43 @@ export class TasksService {
     );
   }
 
+  async loadReports(tasks: Task[]) {
+    const taskIds = tasks.map(({ id }) => id);
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
+      const processor = this.entitiesService.createEntityProcessor(entityType);
+      const { models } = await processor.findMany({ taskIds });
+      const byTask = groupBy(models, "taskId");
+      for (const task of tasks) {
+        const modelsForTask = byTask[task.id];
+        if (modelsForTask == null) continue;
+
+        if (entityType === "projectReports") {
+          if (modelsForTask.length > 0) this.logger.error(`More than one project report found for task ${task.id}`);
+          task.projectReport = modelsForTask[0] as ProjectReport;
+        } else {
+          task[entityType] = modelsForTask as NurseryReport[] & SiteReport[] & SrpReport[];
+        }
+      }
+    }
+  }
+  private async sideloadReports(document: DocumentBuilder, taskResource: ResourceBuilder, task: Task) {
+    await this.loadReports([task]);
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
+      const processor = this.entitiesService.createEntityProcessor(entityType);
+      if (entityType === "projectReports") {
+        if (task.projectReport != null) {
+          const { id, dto } = await processor.getLightDto(task.projectReport);
+          taskResource.relateTo("projectReport", document.addData(id, dto));
+        }
+      } else {
+        for (const report of task[entityType] ?? []) {
+          const { id, dto } = await processor.getLightDto(report);
+          taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
+        }
+      }
+    }
+  }
+
   private async updateReportsStatus<T extends ReportModel>(
     modelClass: ModelCtor<T>,
     uuids: string[],
@@ -267,20 +299,5 @@ export class TasksService {
       status: APPROVED,
       comment: feedback ?? null
     }));
-  }
-
-  private async loadReports(task: Task) {
-    if (task.projectReport != null) return;
-
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      const { models } = await processor.findMany({ taskId: task.id });
-      if (entityType === "projectReports") {
-        if (models.length > 1) this.logger.error(`More than one project report found for task ${task.id}`);
-        task.projectReport = models[0] as ProjectReport;
-      } else {
-        task[entityType] = models as NurseryReport[] & SiteReport[] & SrpReport[];
-      }
-    }
   }
 }

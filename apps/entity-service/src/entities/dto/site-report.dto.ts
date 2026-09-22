@@ -126,6 +126,9 @@ export class SiteReportLightDto extends EntityDto {
     description: "Sum of tree species amounts for collection 'anr' on this site report (disaggregated ANR reporting)"
   })
   totalTreesRegeneratingSpeciesCount: number | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  numTreesRegenerating: number | null;
 }
 
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
@@ -167,9 +170,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   approvedByLastName: string | null;
-
-  @ApiProperty({ nullable: true, type: Number })
-  numTreesRegenerating: number | null;
 
   @ApiProperty({ nullable: true, type: String })
   regenerationDescription: string | null;

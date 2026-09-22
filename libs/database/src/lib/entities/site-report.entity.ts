@@ -14,8 +14,10 @@ import {
 import {
   BIGINT,
   BOOLEAN,
+  col,
   CreationOptional,
   DATE,
+  fn,
   InferAttributes,
   InferCreationAttributes,
   INTEGER,
@@ -32,9 +34,9 @@ import { Seeding } from "./seeding.entity";
 import { FrameworkKey, PlantingStatus } from "../constants";
 import { Literal } from "sequelize/types/utils";
 import {
-  PENDING_APPROVAL,
   COMPLETE_REPORT_STATUSES,
   CompleteReportStatus,
+  PENDING_APPROVAL,
   ReportStatus,
   ReportStatusStates,
   statusUpdateSequelizeHook,
@@ -50,6 +52,7 @@ import { MediaConfiguration } from "../constants/media-owners";
 import { Dictionary } from "lodash";
 import { removeMedia } from "../hooks/remove-media";
 import { removeActions } from "../hooks/remove-actions";
+import { ComputedAttribute } from "../types/util";
 
 type ApprovedIdsSubqueryOptions = {
   dueAfter?: string | Date;
@@ -125,6 +128,31 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
       multiple: true,
       validation: "photos"
     }
+  };
+
+  static TOTAL_TREES_PLANTED_COUNT_ATTRIBUTE: ComputedAttribute = {
+    include: {
+      association: "treesPlanted",
+      where: { hidden: false },
+      attributes: [],
+      duplicating: false,
+      required: false
+    },
+    attribute: [fn("SUM", col("treesPlanted.amount")), "totalTreesPlantedCount"]
+  };
+  static TOTAL_SEEDS_PLANTED_COUNT_ATTRIBUTE: ComputedAttribute = {
+    include: {
+      association: "seedsPlanted",
+      where: { hidden: false },
+      attributes: [],
+      duplicating: false,
+      required: false
+    },
+    attribute: [fn("SUM", col("seedsPlanted.amount")), "totalSeedsPlantedCount"]
+  };
+  static TOTAL_TREES_REGENERATING_SPECIES_COUNT_ATTRIBUTE: ComputedAttribute = {
+    include: { association: "anrTrees", where: { hidden: false }, attributes: [], duplicating: false, required: false },
+    attribute: [fn("SUM", col("anrTrees.amount")), "totalTreesRegeneratingSpeciesCount"]
   };
 
   static incomplete() {
@@ -454,6 +482,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     return this.treesPlanted ?? [];
   }
 
+  get totalTreesPlantedCount(): number | null {
+    return this.getDataValue("totalTreesPlantedCount") ?? null;
+  }
+
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
     constraints: false,
@@ -467,6 +499,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     scope: { speciesable_type: SiteReport.LARAVEL_TYPE, collection: "anr" }
   })
   declare anrTrees: TreeSpecies[] | null;
+
+  get totalTreesRegeneratingSpeciesCount(): number | null {
+    return this.getDataValue("totalTreesRegeneratingSpeciesCount") ?? null;
+  }
 
   @HasMany(() => TreeSpecies, {
     foreignKey: "speciesableId",
@@ -488,6 +524,10 @@ export class SiteReport extends Model<InferAttributes<SiteReport>, InferCreation
     scope: { seedable_type: SiteReport.LARAVEL_TYPE }
   })
   declare seedsPlanted: Seeding[] | null;
+
+  get totalSeedsPlantedCount(): number | null {
+    return this.getDataValue("totalSeedsPlantedCount") ?? null;
+  }
 
   static siteUuidsForLatestApprovedPlantingStatus(plantingStatus: PlantingStatus) {
     if (SiteReport.sequelize == null) {

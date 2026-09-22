@@ -74,6 +74,13 @@ export class SiteLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "The associated project uuid"
+  })
+  projectUuid: string | null;
 }
 
 export type SiteMedia = Pick<SiteFullDto, keyof typeof Site.MEDIA>;
@@ -222,13 +229,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ type: () => MediaDto })
   stratificationForHeterogeneity: MediaDto;
-
-  @ApiProperty({
-    nullable: true,
-    type: String,
-    description: "The associated project uuid"
-  })
-  projectUuid: string | null;
 
   @ApiProperty({
     nullable: true,

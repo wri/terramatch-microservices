@@ -1,7 +1,7 @@
 import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
 import { Project } from "./project.entity";
-import { VerificationMethod } from "../constants/reseach-tree-count";
+import { VerificationMethod } from "../constants/research-tree-count";
 
 @Table({
   tableName: "rs_tree_count",

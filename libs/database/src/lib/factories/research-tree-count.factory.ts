@@ -2,7 +2,7 @@ import { FactoryGirl } from "factory-girl-ts";
 import { faker } from "@faker-js/faker";
 import { ResearchTreeCount } from "../entities";
 import { ProjectFactory } from "./project.factory";
-import { VERIFICATION_METHODS } from "../constants/reseach-tree-count";
+import { VERIFICATION_METHODS } from "../constants/research-tree-count";
 
 export const ResearchTreeCountFactory = FactoryGirl.define(ResearchTreeCount, async () => {
   const treeCountAdj = faker.number.int({ min: 1000, max: 100000 });

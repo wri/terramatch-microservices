@@ -11,7 +11,7 @@ import { Project, ResearchTreeCount } from "@terramatch-microservices/database/e
 import {
   VERIFICATION_METHODS,
   VerificationMethod
-} from "@terramatch-microservices/database/constants/reseach-tree-count";
+} from "@terramatch-microservices/database/constants/research-tree-count";
 
 export type ResearchTreeCountWithProject = ResearchTreeCount & { project: Pick<Project, "uuid"> };
 

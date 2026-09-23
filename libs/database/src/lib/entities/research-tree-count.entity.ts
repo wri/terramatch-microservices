@@ -1,4 +1,4 @@
-import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
 import { Project } from "./project.entity";
 import { VerificationMethod } from "../constants/reseach-tree-count";
@@ -13,6 +13,7 @@ export class ResearchTreeCount extends Model<
   @Column(BIGINT.UNSIGNED)
   declare id: CreationOptional<number>;
 
+  @Unique
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   declare projectId: number;

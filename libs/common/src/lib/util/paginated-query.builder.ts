@@ -12,7 +12,7 @@ import {
 } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
 import { flatten, isEmpty, isObject } from "lodash";
-import { NumberPage } from "../dto/page.dto";
+import { CursorPage, NumberPage } from "../dto/page.dto";
 import { ComputedAttribute } from "@terramatch-microservices/database/types/util";
 
 // Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
@@ -43,12 +43,25 @@ export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions)
 
 export const MAX_PAGE_SIZE = 100 as const;
 
+const validatePageSize = (pageSize: number) => {
+  if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+    throw new BadRequestException(`Invalid page size: ${pageSize}`);
+  }
+};
+
 export class PaginatedQueryBuilder<T extends Model> {
+  /**
+   * Validates the page size only; the caller is responsible for calling pageAfter() when page.after is set.
+   */
+  public static forCursorPage<T extends Model>(modelClass: ModelCtor<T>, page?: CursorPage, include?: Includeable[]) {
+    const pageSize = page?.size ?? MAX_PAGE_SIZE;
+    validatePageSize(pageSize);
+    return new PaginatedQueryBuilder(modelClass, pageSize, include);
+  }
+
   public static forNumberPage<T extends Model>(modelClass: ModelCtor<T>, page?: NumberPage, include?: Includeable[]) {
     const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
-      throw new BadRequestException(`Invalid page size: ${pageSize}`);
-    }
+    validatePageSize(pageSize);
     if (pageNumber < 1) {
       throw new BadRequestException(`Invalid page number: ${pageNumber}`);
     }
@@ -85,8 +98,12 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
-  async pageAfter(pageAfter: string) {
-    const instance = await this.MODEL.findOne({ where: { uuid: pageAfter } as WhereOptions, attributes: ["id"] });
+  /**
+   * By default, the cursor is the uuid of the last record on the previous page. Models without a
+   * uuid column may provide the where clause that finds the cursor record instead.
+   */
+  async pageAfter(pageAfter: string, where: WhereOptions = { uuid: pageAfter }) {
+    const instance = await this.MODEL.findOne({ where, attributes: ["id"] });
     if (instance == null) throw new BadRequestException(`No ${this.MODEL.name} found for uuid: ${pageAfter}`);
 
     // This gets combined into only the `execute` query, and ignored for the `paginationTotal` query,

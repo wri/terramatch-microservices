@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { pick } from "lodash";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { Project, ResearchTreeCount } from "@terramatch-microservices/database/entities";
+import { LandscapeGeometry, Project, ResearchTreeCount } from "@terramatch-microservices/database/entities";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
 import { ResearchTreeCountQueryDto } from "./dto/research-tree-count-query.dto";
 import {
@@ -67,6 +68,10 @@ export class ResearchTreeCountsService {
         projectId: { [Op.in]: Project.forUuid(query.page.after) }
       });
     }
+    const projectIds = await this.filteredProjectIds(query);
+    if (projectIds != null) builder.where({ projectId: { [Op.in]: projectIds } });
+    if (query.lastModifiedDate != null) builder.where({ updatedAt: { [Op.gte]: query.lastModifiedDate } });
+
     const treeCounts = (await builder.execute()) as ResearchTreeCountWithProject[];
     for (const treeCount of treeCounts) {
       document.addData(treeCount.project.uuid, new ResearchTreeCountDto(treeCount));
@@ -77,5 +82,44 @@ export class ResearchTreeCountsService {
       total: await builder.paginationTotal(),
       cursor: query.page?.after
     });
+  }
+
+  /**
+   * Combines all project-level filters into a single project id subquery. Returns undefined if no
+   * project-level filters were requested.
+   */
+  private async filteredProjectIds({
+    projectId,
+    projectShortNames,
+    projectCohort,
+    landscape
+  }: ResearchTreeCountQueryDto) {
+    const subquery = Subquery.select(Project, "id");
+    let filtered = false;
+    if (projectId != null && projectId.length > 0) {
+      subquery.in("uuid", projectId);
+      filtered = true;
+    }
+    if (projectShortNames != null && projectShortNames.length > 0) {
+      subquery.in("shortName", projectShortNames);
+      filtered = true;
+    }
+    if (projectCohort != null && projectCohort.length > 0) {
+      subquery.in("cohort", projectCohort);
+      filtered = true;
+    }
+    if (landscape != null) {
+      const landscapeGeometry = await LandscapeGeometry.findOne({
+        where: { slug: landscape },
+        attributes: ["landscape"]
+      });
+      if (landscapeGeometry == null) {
+        throw new BadRequestException(`Unrecognized landscape slug: ${landscape}`);
+      }
+      subquery.eq("landscape", landscapeGeometry.landscape);
+      filtered = true;
+    }
+
+    return filtered ? subquery.literal : undefined;
   }
 }

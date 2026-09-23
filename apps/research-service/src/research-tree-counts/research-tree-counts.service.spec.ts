@@ -3,7 +3,12 @@ import { Test } from "@nestjs/testing";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 import { Project, ResearchTreeCount } from "@terramatch-microservices/database/entities";
-import { ProjectFactory, ResearchTreeCountFactory } from "@terramatch-microservices/database/factories";
+import {
+  LandscapeGeometryFactory,
+  ProjectFactory,
+  ResearchTreeCountFactory
+} from "@terramatch-microservices/database/factories";
+import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { CreateResearchTreeCountAttributes, ResearchTreeCountDto } from "./dto/research-tree-count.dto";
 import { faker } from "@faker-js/faker";
 import { omit } from "lodash";
@@ -17,6 +22,9 @@ describe("ResearchTreeCountsService", () => {
     const module = await Test.createTestingModule({ providers: [ResearchTreeCountsService] }).compile();
     service = module.get(ResearchTreeCountsService);
   });
+
+  const addIndex = async (query: ResearchTreeCountQueryDto) =>
+    serialize(await service.addIndex(buildJsonApi(ResearchTreeCountDto, { pagination: "cursor" }), query));
 
   describe("findByProjectUuid", () => {
     it("returns the tree count for the project", async () => {
@@ -36,16 +44,16 @@ describe("ResearchTreeCountsService", () => {
   });
 
   describe("addIndex", () => {
-    const addIndex = async (query: ResearchTreeCountQueryDto) =>
-      serialize(await service.addIndex(buildJsonApi(ResearchTreeCountDto, { pagination: "cursor" }), query));
-
     it("returns a page of tree counts with the pagination total", async () => {
       await ResearchTreeCountFactory.createMany(3);
 
       const result = await addIndex({ page: { size: 2 } });
 
       expect(result.data).toHaveLength(2);
-      expect(result.meta.indices?.[0].total).toBe(await ResearchTreeCount.count());
+      // Tree counts for soft-deleted projects are excluded from the index.
+      expect(result.meta.indices?.[0].total).toBe(
+        await ResearchTreeCount.count({ include: [{ association: "project", attributes: [], required: true }] })
+      );
       for (const resource of result.data as Resource[]) {
         const treeCount = await service.findByProjectUuid(resource.id);
         expect(resource.meta?.page?.cursor).toBe(resource.id);
@@ -78,6 +86,85 @@ describe("ResearchTreeCountsService", () => {
 
     it("throws for an invalid page size", async () => {
       await expect(addIndex({ page: { size: 101 } })).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("addIndex filters", () => {
+    const indexIds = async (query: ResearchTreeCountQueryDto) =>
+      ((await addIndex(query)).data as Resource[]).map(({ id }) => id);
+
+    const createForProject = async (projectAttributes: Partial<Project> = {}) => {
+      const project = await ProjectFactory.create(projectAttributes);
+      const treeCount = await ResearchTreeCountFactory.create({ projectId: project.id });
+      return { project, treeCount };
+    };
+
+    it("filters by project uuid", async () => {
+      const { project: a } = await createForProject();
+      const { project: b } = await createForProject();
+      await createForProject();
+
+      expect((await indexIds({ projectId: [a.uuid, b.uuid] })).sort()).toEqual([a.uuid, b.uuid].sort());
+    });
+
+    it("filters by project short name", async () => {
+      const shortName = `short-${faker.string.alphanumeric(10)}`;
+      const { project } = await createForProject({ shortName });
+      await createForProject();
+
+      expect(await indexIds({ projectShortNames: [shortName] })).toEqual([project.uuid]);
+    });
+
+    it("filters by project cohort", async () => {
+      const cohort = `cohort-${faker.string.alphanumeric(10)}`;
+      const { project } = await createForProject({ cohort });
+      await createForProject();
+
+      expect(await indexIds({ projectCohort: [cohort] })).toEqual([project.uuid]);
+    });
+
+    it("filters by project landscape", async () => {
+      const landscape = await LandscapeGeometryFactory.create();
+      const { project } = await createForProject({ landscape: landscape.landscape });
+      await createForProject();
+
+      expect(await indexIds({ landscape: landscape.slug as LandscapeSlug })).toEqual([project.uuid]);
+    });
+
+    it("throws for an unrecognized landscape slug", async () => {
+      await expect(addIndex({ landscape: "does-not-exist-slug" as LandscapeSlug })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it("combines project filters", async () => {
+      const cohort = `cohort-${faker.string.alphanumeric(10)}`;
+      const { project } = await createForProject({ cohort });
+      const { project: otherCohortProject } = await createForProject();
+
+      expect(await indexIds({ projectCohort: [cohort], projectId: [project.uuid, otherCohortProject.uuid] })).toEqual([
+        project.uuid
+      ]);
+    });
+
+    it("filters by last modified date", async () => {
+      const cohort = `cohort-${faker.string.alphanumeric(10)}`;
+      const { treeCount: old } = await createForProject({ cohort });
+      const { project: recent } = await createForProject({ cohort });
+      // Sequelize won't write an explicit updatedAt through update(), so backdate with a raw query.
+      await old.sequelize.query("UPDATE rs_tree_count SET updated_at = :date WHERE id = :id", {
+        replacements: { date: new Date("2020-01-01"), id: old.id }
+      });
+
+      expect(await indexIds({ projectCohort: [cohort], lastModifiedDate: new Date("2021-01-01") })).toEqual([
+        recent.uuid
+      ]);
+    });
+
+    it("ignores empty filter arrays", async () => {
+      const { project } = await createForProject();
+
+      expect(await indexIds({ projectId: [], page: { after: undefined } })).toContain(project.uuid);
     });
   });
 

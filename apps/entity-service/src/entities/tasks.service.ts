@@ -98,7 +98,11 @@ export class TasksService {
     }
 
     for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS) as [keyof typeof FILTER_PROPS, string][]) {
-      if (query[filterProp] != null) {
+      if (filterProp === "projectUuid" && projectUuid != null) {
+        // In this case we have to use our local projectUuid that might have been calculated from a
+        // siteUuid or nurseryUuid query param.
+        builder.where({ [sqlProp]: projectUuid });
+      } else if (query[filterProp] != null) {
         builder.where({ [sqlProp]: query[filterProp] });
       }
     }

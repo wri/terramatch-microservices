@@ -213,7 +213,8 @@ export class SitePolygonMapIndexQueryDto {
     isArray: true,
     required: false,
     enum: SITE_POLYGON_SEARCH_FIELDS,
-    description: "Select the fields used by search."
+    description:
+      "Select the fields used by search. polygonUuid is always matched, even when it is omitted here."
   })
   @IsOptional()
   @IsArray()

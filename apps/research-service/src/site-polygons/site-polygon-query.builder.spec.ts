@@ -1,5 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonQueryBuilder } from "./site-polygon-query.builder";
+import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
 import {
   SitePolygonFactory,
   ProjectFactory,
@@ -258,6 +259,34 @@ describe("SitePolygonQueryBuilder", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(target.id);
+    });
+
+    it("should match a partial polygon UUID when fields include only polyName", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const target = await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Named Polygon" });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Other Polygon" });
+
+      await builder.addSearch(target.polygonUuid.slice(0, 8), ["polyName"]);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(target.id);
+    });
+
+    it("should match a partial polygon UUID on the map index when fields include only polyName", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const target = await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Named Polygon" });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Other Polygon" });
+
+      const mapBuilder = new SitePolygonMapIndexQueryBuilder();
+      await mapBuilder.filterSiteUuids([site.uuid]);
+      await mapBuilder.addSearch(target.polygonUuid.slice(0, 8), ["polyName"]);
+      const result = await mapBuilder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].uuid).toBe(target.uuid);
     });
   });
 

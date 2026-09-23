@@ -150,10 +150,9 @@ export class SitePolygonQueryBuilder extends SitePolygonColumnQueryBuilder {
       conditions.push({ polyName: { [Op.like]: `%${searchTerm}%` } });
     }
 
-    if (selectedFields.includes("polygonUuid")) {
-      conditions.push({ polygonUuid: { [Op.like]: `${searchTerm}%` } });
-      conditions.push({ polygonUuid: { [Op.like]: `%${searchTerm}%` } });
-    }
+    // Geometry UUID is always matched so a pasted UUID works when the client only requests a name field.
+    conditions.push({ polygonUuid: { [Op.like]: `${searchTerm}%` } });
+    conditions.push({ polygonUuid: { [Op.like]: `%${searchTerm}%` } });
 
     if (conditions.length === 0) {
       return this;

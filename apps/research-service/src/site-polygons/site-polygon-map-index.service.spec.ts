@@ -299,6 +299,20 @@ describe("SitePolygonMapIndexService", () => {
 
       expect(result.polygons.map(({ uuid }) => uuid)).toEqual([match.uuid]);
     });
+
+    it("matches a partial polygon geometry uuid when fields include only polyName", async () => {
+      const site = await SiteFactory.create();
+      const match = await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Named Polygon" });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, polyName: "Other Polygon" });
+
+      const result = await getMapIndex({
+        siteId: [site.uuid],
+        search: match.polygonUuid.slice(0, 8),
+        searchFields: ["polyName"]
+      });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([match.uuid]);
+    });
   });
 
   describe("deletedOnly", () => {

@@ -69,7 +69,7 @@ describe("SiteReportProcessor", () => {
       expect(models.map(({ id }) => id)).toEqual(sorted.map(({ id }) => id));
     }
 
-    it("should returns site reports", async () => {
+    it("should return site reports", async () => {
       const project = await ProjectFactory.create();
       const site = await SiteFactory.create({ projectId: project.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
@@ -197,7 +197,7 @@ describe("SiteReportProcessor", () => {
         report.site = await report.$get("site");
       }
 
-      await expectSiteReports(task1Reports, { taskId: task1.id }, { permissions: ["manage-own"] });
+      await expectSiteReports(task1Reports, { taskIds: [task1.id] }, { permissions: ["manage-own"] });
     });
 
     it("should sort site reports by project name", async () => {

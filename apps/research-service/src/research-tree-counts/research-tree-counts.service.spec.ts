@@ -11,7 +11,7 @@ import {
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { CreateResearchTreeCountAttributes, ResearchTreeCountDto } from "./dto/research-tree-count.dto";
 import { faker } from "@faker-js/faker";
-import { omit } from "lodash";
+import { omit, sortBy } from "lodash";
 import { ResearchTreeCountQueryDto } from "./dto/research-tree-count-query.dto";
 import { ResearchTreeCountsService } from "./research-tree-counts.service";
 
@@ -69,14 +69,22 @@ describe("ResearchTreeCountsService", () => {
     });
 
     it("returns the records after the page[after] project uuid", async () => {
-      const [first, second] = await ResearchTreeCountFactory.createMany(2);
-      const firstProject = await Project.findByPk(first.projectId, { attributes: ["uuid"] });
-      const secondProject = await Project.findByPk(second.projectId, { attributes: ["uuid"] });
+      // Scope to a unique cohort so rows created concurrently by other suites can't interleave.
+      const cohort = `cohort-${faker.string.alphanumeric(10)}`;
+      const created = await Promise.all(
+        [1, 2].map(async () => {
+          const project = await ProjectFactory.create({ cohort });
+          const treeCount = await ResearchTreeCountFactory.create({ projectId: project.id });
+          return { project, treeCount };
+        })
+      );
+      // The index pages in id order, and concurrent inserts don't guarantee creation order matches id order.
+      const [first, second] = sortBy(created, ({ treeCount }) => treeCount.id);
 
-      const result = await addIndex({ page: { size: 1, after: firstProject?.uuid } });
+      const result = await addIndex({ projectCohort: [cohort], page: { size: 1, after: first.project.uuid } });
 
-      expect((result.data as Resource[]).map(({ id }) => id)).toEqual([secondProject?.uuid]);
-      expect(result.meta.indices?.[0].cursor).toBe(firstProject?.uuid);
+      expect((result.data as Resource[]).map(({ id }) => id)).toEqual([second.project.uuid]);
+      expect(result.meta.indices?.[0].cursor).toBe(first.project.uuid);
     });
 
     it("throws if page[after] does not match a tree count", async () => {
@@ -162,9 +170,10 @@ describe("ResearchTreeCountsService", () => {
     });
 
     it("ignores empty filter arrays", async () => {
-      const { project } = await createForProject();
+      const cohort = `cohort-${faker.string.alphanumeric(10)}`;
+      const { project } = await createForProject({ cohort });
 
-      expect(await indexIds({ projectId: [], page: { after: undefined } })).toContain(project.uuid);
+      expect(await indexIds({ projectId: [], projectCohort: [cohort] })).toEqual([project.uuid]);
     });
   });
 

@@ -14,9 +14,17 @@ export class TaskQueryDto extends IndexQueryDto {
   @IsOptional()
   frameworkKey?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: "Only one of projectUuid, siteUuid and nurseryUuid may be provided" })
   @IsOptional()
   projectUuid?: string;
+
+  @ApiProperty({ required: false, description: "Only one of projectUuid, siteUuid and nurseryUuid may be provided" })
+  @IsOptional()
+  siteUuid?: string;
+
+  @ApiProperty({ required: false, description: "Only one of projectUuid, siteUuid and nurseryUuid may be provided" })
+  @IsOptional()
+  nurseryUuid?: string;
 
   @ApiProperty({
     required: false,

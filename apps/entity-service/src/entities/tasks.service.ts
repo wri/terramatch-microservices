@@ -2,9 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import {
   Action,
   AuditStatus,
+  Nursery,
   NurseryReport,
   ProjectReport,
   ProjectUser,
+  Site,
   SiteReport,
   SrpReport,
   Task,
@@ -23,8 +25,9 @@ import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/c
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
-import { filter, groupBy, isEmpty, uniq } from "lodash";
+import { filter, groupBy, uniq } from "lodash";
 import { TaskFullDto, TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const FILTER_PROPS = {
   status: "status",
@@ -42,6 +45,25 @@ export class TasksService {
   ) {}
 
   async getTasks(query: TaskQueryDto) {
+    let { projectUuid } = query;
+    const { siteUuid, nurseryUuid } = query;
+    if ([projectUuid, siteUuid, nurseryUuid].filter(isNotNull).length > 1) {
+      throw new BadRequestException("Only one of projectUuid, siteUuid and nurseryUuid may be provided");
+    }
+
+    if (siteUuid != null) {
+      projectUuid = (
+        await Site.findOne({ where: { uuid: siteUuid }, include: [{ association: "project", attributes: ["uuid"] }] })
+      )?.projectUuid;
+    } else if (nurseryUuid != null) {
+      projectUuid = (
+        await Nursery.findOne({
+          where: { uuid: nurseryUuid },
+          include: [{ association: "project", attributes: ["uuid"] }]
+        })
+      )?.projectUuid;
+    }
+
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
       // required: true avoids loading tasks attached to deleted projects or orgs
       { association: "organisation", attributes: ["name"], required: true },
@@ -57,7 +79,7 @@ export class TasksService {
     if (frameworkPermissions?.length > 0) {
       builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
     } else {
-      if (query.projectUuid == null) {
+      if (projectUuid == null) {
         const userId = this.policyService.userId;
         if (userId == null) throw new BadRequestException("Cannot get tasks without a user");
         // non-admin users should typically be filtering on a project, but to cover our bases,
@@ -111,9 +133,7 @@ export class TasksService {
 
   async addLightTaskDto(document: DocumentBuilder, task: Task, sideloads: TaskSideload[]) {
     const resource = document.addData(task.uuid, new TaskLightDto(task));
-    if (!isEmpty(sideloads)) {
-      await this.sideloadReports(document, resource, task, uniq(sideloads));
-    }
+    await this.sideloadReports(document, resource, task, uniq(sideloads));
 
     return document;
   }
@@ -238,12 +258,15 @@ export class TasksService {
   }
 
   async loadReports(tasks: Task[]) {
-    const taskIds = tasks.map(({ id }) => id);
+    const unloadedTasks = tasks.filter(({ projectReport }) => projectReport == null);
+    if (unloadedTasks.length === 0) return;
+
+    const taskIds = unloadedTasks.map(({ id }) => id);
     for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
       const processor = this.entitiesService.createEntityProcessor(entityType);
       const { models } = await processor.findMany({ taskIds });
       const byTask = groupBy(models, "taskId");
-      for (const task of tasks) {
+      for (const task of unloadedTasks) {
         const modelsForTask = byTask[task.id];
         if (modelsForTask == null) continue;
 
@@ -256,6 +279,7 @@ export class TasksService {
       }
     }
   }
+
   private async sideloadReports(
     document: DocumentBuilder,
     taskResource: ResourceBuilder,
@@ -263,18 +287,33 @@ export class TasksService {
     sideloadTypes?: TaskSideload[]
   ) {
     await this.loadReports([task]);
-    for (const entityType of sideloadTypes ?? TASK_SIDELOADS) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      if (entityType === "projectReports") {
-        if (task.projectReport != null) {
-          const { id, dto } = await processor.getLightDto(task.projectReport);
-          taskResource.relateTo("projectReport", document.addData(id, dto));
+
+    const getRelations = async (entityType: TaskSideload) => {
+      const relations: { id: string; type: string }[] = [];
+      const reports = ((entityType === "projectReports" ? [task.projectReport] : task[entityType]) ?? []).filter(
+        isNotNull
+      );
+
+      if (sideloadTypes == null || sideloadTypes.includes(entityType)) {
+        const processor = this.entitiesService.createEntityProcessor(entityType);
+        for (const report of reports) {
+          const { id, dto } = await processor.getLightDto(report);
+          relations.push(document.addData(id, dto));
         }
       } else {
-        for (const report of task[entityType] ?? []) {
-          const { id, dto } = await processor.getLightDto(report);
-          taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
+        // If the request doesn't ask for this sideload type, don't generate the DTO and add it to the
+        // document. We do still want the list of relations to be sent to the client though.
+        for (const report of reports) {
+          relations.push({ id: report.uuid, type: entityType });
         }
+      }
+
+      return relations;
+    };
+
+    for (const entityType of TASK_SIDELOADS) {
+      for (const relation of await getRelations(entityType)) {
+        taskResource.relateTo(entityType, relation, { forceMultiple: entityType !== "projectReports" });
       }
     }
   }

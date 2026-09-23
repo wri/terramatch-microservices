@@ -174,7 +174,11 @@ export class SiteReportProcessor extends ReportProcessor<
 
     const entityAttributes = Object.keys(SiteReport.getAttributes());
     builder
-      .attributes([...apiAttributes(SiteReportLightDto).filter(attr => entityAttributes.includes(attr)), "taskId"])
+      .attributes([
+        "id",
+        "taskId",
+        ...apiAttributes(SiteReportLightDto).filter(attr => entityAttributes.includes(attr))
+      ])
       .addComputedAttribute(SiteReport.TOTAL_TREES_PLANTED_COUNT_ATTRIBUTE)
       .addComputedAttribute(SiteReport.TOTAL_SEEDS_PLANTED_COUNT_ATTRIBUTE)
       .addComputedAttribute(SiteReport.TOTAL_TREES_REGENERATING_SPECIES_COUNT_ATTRIBUTE)

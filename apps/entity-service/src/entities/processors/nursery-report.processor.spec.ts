@@ -202,7 +202,7 @@ describe("NurseryReportProcessor", () => {
         report.nursery = await report.$get("nursery");
       }
 
-      await expectNurseryReports(task1Reports, { taskId: task1.id }, { permissions: ["manage-own"] });
+      await expectNurseryReports(task1Reports, { taskIds: [task1.id] }, { permissions: ["manage-own"] });
     });
 
     it("should sort nursery reports by project name", async () => {

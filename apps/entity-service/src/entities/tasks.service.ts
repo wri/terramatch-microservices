@@ -317,7 +317,11 @@ export class TasksService {
 
     for (const entityType of TASK_SIDELOADS) {
       for (const relation of await getRelations(entityType)) {
-        taskResource.relateTo(entityType, relation, { forceMultiple: entityType !== "projectReports" });
+        if (entityType === "projectReports") {
+          taskResource.relateTo("projectReport", relation);
+        } else {
+          taskResource.relateTo(entityType, relation, { forceMultiple: true });
+        }
       }
     }
   }

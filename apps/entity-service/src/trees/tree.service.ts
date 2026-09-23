@@ -501,7 +501,7 @@ export class TreeService {
     )
       .map(({ name }) => name)
       .filter(isNotEmpty)
-      .sort();
+      .sort((first, second) => first.localeCompare(second, undefined, { caseFirst: "upper" }));
 
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()

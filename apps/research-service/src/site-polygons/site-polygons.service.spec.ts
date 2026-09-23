@@ -36,7 +36,7 @@ import { IndicatorHectaresDto, IndicatorTreeCountDto, IndicatorTreeCoverLossDto 
 import { IndicatorDto, SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
-import { Op } from "sequelize";
+import { InferCreationAttributes, Op } from "sequelize";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
@@ -1175,6 +1175,63 @@ describe("SitePolygonsService", () => {
         expect.arrayContaining([polygonGeometry2.uuid]),
         expect.anything()
       );
+    });
+
+    it("reassigns comments to the oldest remaining version when the base is deleted", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const baseGeometry = await PolygonGeometryFactory.create();
+      const middleGeometry = await PolygonGeometryFactory.create();
+      const activeGeometry = await PolygonGeometryFactory.create();
+      const primaryUuid = crypto.randomUUID();
+
+      const baseVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: baseGeometry.uuid,
+        uuid: primaryUuid,
+        primaryUuid,
+        isActive: false,
+        createdAt: new Date("2024-01-01")
+      });
+      const middleVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: middleGeometry.uuid,
+        primaryUuid,
+        isActive: false,
+        createdAt: new Date("2024-03-01")
+      });
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: activeGeometry.uuid,
+        primaryUuid,
+        isActive: true,
+        createdAt: new Date("2024-06-01")
+      });
+
+      const comment = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: baseVersion.id,
+        type: "comment",
+        comment: "Keep after deleting the base"
+      } as InferCreationAttributes<AuditStatus>);
+      const statusAudit = await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: baseVersion.id,
+        type: "status",
+        status: "draft"
+      } as InferCreationAttributes<AuditStatus>);
+
+      await service.deleteSingleVersion(baseVersion.uuid);
+
+      await comment.reload();
+      expect(comment.auditableId).toBe(middleVersion.id);
+      expect(comment.deletedAt).toBeNull();
+
+      await statusAudit.reload({ paranoid: false });
+      expect(statusAudit.deletedAt).not.toBeNull();
+
+      const reloadedActive = await SitePolygon.findOne({ where: { uuid: activeVersion.uuid } });
+      expect(reloadedActive).not.toBeNull();
     });
 
     it("should not delete shared geometry when other versions use it", async () => {

@@ -2360,7 +2360,8 @@ describe("SitePolygonsController", () => {
         name: "Poly One",
         numTrees: 100,
         calcArea: 1.5,
-        validationStatus: "passed"
+        validationStatus: "passed",
+        disturbanceReportUuid: null
       },
       {
         uuid: "sp-2",
@@ -2369,7 +2370,8 @@ describe("SitePolygonsController", () => {
         name: "Poly Two",
         numTrees: null,
         calcArea: null,
-        validationStatus: null
+        validationStatus: null,
+        disturbanceReportUuid: "report-uuid-1"
       }
     ]);
 
@@ -2405,7 +2407,8 @@ describe("SitePolygonsController", () => {
               name: "Poly One",
               numTrees: 100,
               calcArea: 1.5,
-              validationStatus: "passed"
+              validationStatus: "passed",
+              disturbanceReportUuid: null
             },
             {
               uuid: "sp-2",
@@ -2414,7 +2417,8 @@ describe("SitePolygonsController", () => {
               name: "Poly Two",
               numTrees: null,
               calcArea: null,
-              validationStatus: null
+              validationStatus: null,
+              disturbanceReportUuid: "report-uuid-1"
             }
           ],
           total: 2
@@ -2422,6 +2426,7 @@ describe("SitePolygonsController", () => {
         const polygons = result.data.attributes.polygons as unknown as Array<Record<string, unknown>>;
         expect(Object.keys(polygons[0]).sort()).toEqual([
           "calcArea",
+          "disturbanceReportUuid",
           "name",
           "numTrees",
           "polygonUuid",

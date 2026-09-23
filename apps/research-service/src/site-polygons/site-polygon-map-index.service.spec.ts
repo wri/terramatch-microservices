@@ -1,7 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
-import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/entities";
+import { CriteriaSite, Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
 import {
+  DisturbanceFactory,
+  DisturbanceReportFactory,
   IndicatorOutputTreeCoverFactory,
   ProjectFactory,
   SiteFactory,
@@ -29,6 +31,7 @@ describe("SitePolygonMapIndexService", () => {
   afterEach(async () => {
     await CriteriaSite.truncate();
     await SitePolygon.truncate();
+    await Disturbance.truncate();
   });
 
   describe("scope validation", () => {
@@ -89,11 +92,13 @@ describe("SitePolygonMapIndexService", () => {
           name: "Riverbank North",
           numTrees: 1200,
           calcArea: 3.5,
-          validationStatus: "passed"
+          validationStatus: "passed",
+          disturbanceReportUuid: null
         }
       ]);
       expect(Object.keys(result.polygons[0]).sort()).toEqual([
         "calcArea",
+        "disturbanceReportUuid",
         "name",
         "numTrees",
         "polygonUuid",
@@ -101,6 +106,38 @@ describe("SitePolygonMapIndexService", () => {
         "uuid",
         "validationStatus"
       ]);
+    });
+
+    it("exposes disturbanceReportUuid for report-linked disturbances", async () => {
+      const site = await SiteFactory.create();
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const polygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+
+      const result = await getMapIndex({ siteId: [site.uuid] });
+
+      expect(result.polygons).toEqual([
+        expect.objectContaining({
+          uuid: polygon.uuid,
+          disturbanceReportUuid: report.uuid
+        })
+      ]);
+    });
+
+    it("returns null disturbanceReportUuid for site-owned disturbances", async () => {
+      const site = await SiteFactory.create();
+      const disturbance = await DisturbanceFactory.site(site).create();
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+
+      const result = await getMapIndex({ siteId: [site.uuid] });
+
+      expect(result.polygons[0].disturbanceReportUuid).toBeNull();
     });
 
     it("excludes polygons from other sites", async () => {

@@ -325,7 +325,7 @@ export class SitePolygonsService {
 
       const allVersions = await SitePolygon.findAll({
         where: { primaryUuid: sitePolygon.primaryUuid },
-        attributes: ["id", "uuid", "isActive", "polygonUuid", "pointUuid"],
+        attributes: ["id", "uuid", "isActive", "polygonUuid", "pointUuid", "createdAt"],
         transaction
       });
 
@@ -369,6 +369,21 @@ export class SitePolygonsService {
         where: { sitePolygonUuid: uuid },
         transaction
       });
+
+      const commentAnchor = this.findRemainingCommentAnchor(sitePolygon, allVersions);
+      if (commentAnchor != null) {
+        await AuditStatus.update(
+          { auditableId: commentAnchor.id },
+          {
+            where: {
+              auditableType: SitePolygon.LARAVEL_TYPE,
+              auditableId: sitePolygon.id,
+              type: "comment"
+            },
+            transaction
+          }
+        );
+      }
 
       await AuditStatus.destroy({
         where: {
@@ -416,6 +431,27 @@ export class SitePolygonsService {
         await this.polygonGeometryService.bulkUpdateProjectCentroids([polygonUuid], transaction);
       }
     });
+  }
+
+  private findRemainingCommentAnchor(deletedVersion: SitePolygon, allVersions: SitePolygon[]): SitePolygon | null {
+    const remaining = allVersions.filter(version => version.uuid !== deletedVersion.uuid);
+    if (remaining.length === 0) {
+      return null;
+    }
+
+    const base = remaining.find(version => version.uuid === deletedVersion.primaryUuid);
+    if (base != null) {
+      return base;
+    }
+
+    return [...remaining].sort((left, right) => {
+      const leftCreated = left.createdAt?.getTime() ?? left.id;
+      const rightCreated = right.createdAt?.getTime() ?? right.id;
+      if (leftCreated !== rightCreated) {
+        return leftCreated - rightCreated;
+      }
+      return left.id - right.id;
+    })[0];
   }
 
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {

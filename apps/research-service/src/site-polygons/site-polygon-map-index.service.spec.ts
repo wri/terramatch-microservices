@@ -268,6 +268,21 @@ describe("SitePolygonMapIndexService", () => {
       expect(result.polygons.map(({ uuid }) => uuid)).toEqual([overlapping.uuid]);
     });
 
+    it("filters to polygons with a disturbance when hasDisturbance is true", async () => {
+      const site = await SiteFactory.create();
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const disturbed = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      const result = await getMapIndex({ siteId: [site.uuid], hasDisturbance: true });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([disturbed.uuid]);
+    });
+
     it("filters to polygons missing an indicator", async () => {
       const site = await SiteFactory.create();
       const withIndicator = await SitePolygonFactory.create({ siteUuid: site.uuid });

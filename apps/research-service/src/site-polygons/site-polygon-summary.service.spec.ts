@@ -2,11 +2,18 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
 import {
   CriteriaSite,
+  Disturbance,
   IndicatorOutputHectares,
   IndicatorOutputTreeCoverLoss,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { ProjectFactory, SiteFactory, SitePolygonFactory } from "@terramatch-microservices/database/factories";
+import {
+  DisturbanceFactory,
+  DisturbanceReportFactory,
+  ProjectFactory,
+  SiteFactory,
+  SitePolygonFactory
+} from "@terramatch-microservices/database/factories";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { SitePolygonSummaryService } from "./site-polygon-summary.service";
@@ -32,6 +39,7 @@ describe("SitePolygonSummaryService", () => {
     await IndicatorOutputTreeCoverLoss.truncate();
     await IndicatorOutputHectares.truncate();
     await SitePolygon.truncate();
+    await Disturbance.truncate();
   });
 
   describe("scope validation", () => {
@@ -141,6 +149,24 @@ describe("SitePolygonSummaryService", () => {
       } as CriteriaSite);
 
       const result = await getSummary({ siteId: [site.uuid], hasOverlap: true });
+
+      expect(result.totalPolygons).toBe(1);
+      expect(result.sumNumTrees).toBe(1);
+    });
+
+    it("respects hasDisturbance filter", async () => {
+      const site = await SiteFactory.create();
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id,
+        numTrees: 1,
+        calcArea: 1
+      });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 9, calcArea: 9, disturbanceId: null });
+
+      const result = await getSummary({ siteId: [site.uuid], hasDisturbance: true });
 
       expect(result.totalPolygons).toBe(1);
       expect(result.sumNumTrees).toBe(1);

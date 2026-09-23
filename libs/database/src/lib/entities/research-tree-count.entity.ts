@@ -1,9 +1,15 @@
-import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table, Unique } from "sequelize-typescript";
+import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
 import { Project } from "./project.entity";
 import { VerificationMethod } from "../constants/reseach-tree-count";
 
-@Table({ tableName: "rs_tree_count", underscored: true, paranoid: true })
+@Table({
+  tableName: "rs_tree_count",
+  underscored: true,
+  paranoid: true,
+  // @Index doesn't work with underscored column names
+  indexes: [{ name: "rs_tree_count_project_id_index", fields: ["project_id"] }]
+})
 export class ResearchTreeCount extends Model<
   InferAttributes<ResearchTreeCount>,
   InferCreationAttributes<ResearchTreeCount>
@@ -13,7 +19,6 @@ export class ResearchTreeCount extends Model<
   @Column(BIGINT.UNSIGNED)
   declare id: CreationOptional<number>;
 
-  @Unique
   @ForeignKey(() => Project)
   @Column(BIGINT.UNSIGNED)
   declare projectId: number;

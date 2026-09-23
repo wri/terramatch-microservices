@@ -20,19 +20,19 @@ describe("ResearchTreeCountPolicy", () => {
     jest.restoreAllMocks();
   });
 
-  it("allows reading tree counts with polygons-manage", async () => {
+  it("allows managing tree counts with polygons-manage", async () => {
     const user = await UserFactory.create();
     mockContextForUser(user, "polygons-manage");
 
-    await expectCan(service, "read", ResearchTreeCount);
-    await expectCan(service, "read", await ResearchTreeCountFactory.build());
+    await expectCan(service, ["read", "create"], ResearchTreeCount);
+    await expectCan(service, ["read", "update", "delete"], await ResearchTreeCountFactory.build());
   });
 
-  it("disallows reading tree counts without polygons-manage", async () => {
+  it("disallows managing tree counts without polygons-manage", async () => {
     const user = await UserFactory.create();
     mockContextForUser(user, "projects-read");
 
-    await expectCannot(service, "read", ResearchTreeCount);
-    await expectCannot(service, "read", await ResearchTreeCountFactory.build());
+    await expectCannot(service, ["read", "create"], ResearchTreeCount);
+    await expectCannot(service, ["read", "update", "delete"], await ResearchTreeCountFactory.build());
   });
 });

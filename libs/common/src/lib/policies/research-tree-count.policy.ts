@@ -4,7 +4,7 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 export class ResearchTreeCountPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.permissions.includes("polygons-manage")) {
-      this.builder.can("read", ResearchTreeCount);
+      this.builder.can(["read", "create", "update", "delete"], ResearchTreeCount);
     }
   }
 }

@@ -43,6 +43,7 @@ import { assignFundoFloraCohort2 } from "./202609171430-assign-fundo-flora-cohor
 import { convertDeadlineAtToDate } from "./202609181200-convert-deadline-at-to-date";
 import { removeApprovedAtColumns } from "./202609181210-remove-approved-at-columns";
 import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-timestamp";
+import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -87,5 +88,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   assignFundoFloraCohort2,
   convertDeadlineAtToDate,
   removeApprovedAtColumns,
-  convertDatetimeToTimestamp
+  convertDatetimeToTimestamp,
+  createRsTreeCount
 ];

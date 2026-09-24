@@ -66,7 +66,8 @@ export async function applySitePolygonScopeFilters(
     .filterTargetSys(nonEmpty(query.targetSys))
     .filterSubmissionCycle(nonEmpty(query.submissionCycle))
     .filterSource(nonEmpty(query.source))
-    .filterHasOverlap(query.hasOverlap);
+    .filterHasOverlap(query.hasOverlap)
+    .filterHasDisturbance(query.hasDisturbance);
 
   if (query.search != null) await builder.addSearch(query.search, nonEmpty(query.searchFields));
 }

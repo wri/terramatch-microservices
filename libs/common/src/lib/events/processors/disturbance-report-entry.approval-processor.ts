@@ -86,12 +86,14 @@ export const syncDisturbanceReportPolygons = async (entity: unknown) => {
   }
 
   // Remove disturbance id from all polygons that were previously assigned to this disturbance
+  // (covers polygons removed from this report on a resubmission).
   await SitePolygon.disturbance(disturbance.id).active().update({ disturbanceId: null }, { where: {} });
 
-  // Add the disturbance id to all affected polygons that were not already assigned a disturbance
-  await SitePolygon.forUuids(affectedPolygonUuids)
-    .active()
-    .update({ disturbanceId: disturbance.id }, { where: { disturbanceId: null } });
+  // Point every affected polygon at this disturbance, overwriting any older report's link. A
+  // polygon can legitimately appear in more than one disturbance report over time
+  // the most recently submitted/approved report always owns disturbance_id so
+  // "View Report" reflects the latest one. TM-3941
+  await SitePolygon.forUuids(affectedPolygonUuids).active().update({ disturbanceId: disturbance.id }, { where: {} });
 };
 
 export const getEntryData = (entries: DisturbanceReportEntry[]) => {

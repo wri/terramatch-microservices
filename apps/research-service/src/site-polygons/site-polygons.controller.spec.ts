@@ -2360,21 +2360,27 @@ describe("SitePolygonsController", () => {
       {
         uuid: "sp-1",
         polygonUuid: "poly-1",
+        siteId: "site-1",
         status: "approved",
         name: "Poly One",
         numTrees: 100,
         calcArea: 1.5,
         validationStatus: "passed",
+        practice: ["tree-planting"],
+        targetSys: "natural-forest",
         disturbanceReportUuid: null
       },
       {
         uuid: "sp-2",
         polygonUuid: "poly-2",
+        siteId: "site-1",
         status: "draft",
         name: "Poly Two",
         numTrees: null,
         calcArea: null,
         validationStatus: null,
+        practice: null,
+        targetSys: null,
         disturbanceReportUuid: "report-uuid-1"
       }
     ]);
@@ -2407,21 +2413,27 @@ describe("SitePolygonsController", () => {
             {
               uuid: "sp-1",
               polygonUuid: "poly-1",
+              siteId: "site-1",
               status: "approved",
               name: "Poly One",
               numTrees: 100,
               calcArea: 1.5,
               validationStatus: "passed",
+              practice: ["tree-planting"],
+              targetSys: "natural-forest",
               disturbanceReportUuid: null
             },
             {
               uuid: "sp-2",
               polygonUuid: "poly-2",
+              siteId: "site-1",
               status: "draft",
               name: "Poly Two",
               numTrees: null,
               calcArea: null,
               validationStatus: null,
+              practice: null,
+              targetSys: null,
               disturbanceReportUuid: "report-uuid-1"
             }
           ],
@@ -2434,7 +2446,10 @@ describe("SitePolygonsController", () => {
           "name",
           "numTrees",
           "polygonUuid",
+          "practice",
+          "siteId",
           "status",
+          "targetSys",
           "uuid",
           "validationStatus"
         ]);

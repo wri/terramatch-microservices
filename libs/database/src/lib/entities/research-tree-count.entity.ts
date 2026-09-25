@@ -1,4 +1,13 @@
-import { AutoIncrement, BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
+import {
+  AllowNull,
+  AutoIncrement,
+  BelongsTo,
+  Column,
+  ForeignKey,
+  Model,
+  PrimaryKey,
+  Table
+} from "sequelize-typescript";
 import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, INTEGER, STRING } from "sequelize";
 import { Project } from "./project.entity";
 import { VerificationMethod } from "../constants/research-tree-count";
@@ -32,8 +41,9 @@ export class ResearchTreeCount extends Model<
   @Column(INTEGER)
   declare reportedCount: number;
 
+  @AllowNull
   @Column(INTEGER)
-  declare treeCountAdj: number;
+  declare treeCountAdj: number | null;
 
   @Column(INTEGER)
   declare upperBounds: number;

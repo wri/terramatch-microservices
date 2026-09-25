@@ -44,6 +44,7 @@ import { convertDeadlineAtToDate } from "./202609181200-convert-deadline-at-to-d
 import { removeApprovedAtColumns } from "./202609181210-remove-approved-at-columns";
 import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-timestamp";
 import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
+import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-adj-nullable";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -89,5 +90,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   convertDeadlineAtToDate,
   removeApprovedAtColumns,
   convertDatetimeToTimestamp,
-  createRsTreeCount
+  createRsTreeCount,
+  makeRsTreeCountAdjNullable
 ];

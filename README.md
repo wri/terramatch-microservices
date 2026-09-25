@@ -289,14 +289,17 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
 To set up the local testing database, run the `./bin/setup-test-database.sh` script. This script assumes that the
 `wri-terramatch-api` project is checked out in the same parent directory as this one. The script may be run
-again at any time to clear out the test database records and schema.
+again at any time to clear out the test database records and schema. Each project with a `test` target gets its own
+test database (e.g. `terramatch_microservices_test_entity_service`) so that projects' tests may run in parallel. The
+schema is synced into the `database` project's DB and then copied to the others, so re-run the script after adding a
+new project with tests.
 
 `setup-jest.ts` is responsible for creating the Sequelize connection for all tests.
 
 `sync-sequelize.ts` creates database tables according to the schema declared in the `entity.ts` files in this codebase. Care should be
 taken to make sure that the schema is set up in this codebase such that the database tables are created with the same
 types and indices as in the primary database controlled by the Laravel backend. This hook is only run for the database
-test.
+and research-service tests.
 
 Factories may be used to create entries in the database for testing. See `user.factory.ts`, and uses of `UserFactory` for
 an example.

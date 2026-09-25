@@ -4,7 +4,8 @@ import {
   SitePolygon,
   PolygonUpdates,
   PolygonGeometry,
-  SitePolygonAttributeValue
+  SitePolygonAttributeValue,
+  Disturbance
 } from "@terramatch-microservices/database/entities";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
 import { Transaction, Op } from "sequelize";
@@ -769,7 +770,19 @@ describe("SitePolygonVersioningService", () => {
       expect(SitePolygon.findAll).toHaveBeenCalledWith({
         where: { primaryUuid: "primary-uuid" },
         order: [["createdAt", "DESC"]],
-        include: [{ model: PolygonGeometry, attributes: ["uuid"] }]
+        include: [
+          { model: PolygonGeometry, attributes: ["uuid"] },
+          {
+            model: Disturbance,
+            attributes: [
+              "id",
+              "disturbanceableId",
+              "disturbanceableType",
+              Disturbance.disturbanceReportUuidAttribute()
+            ],
+            required: false
+          }
+        ]
       });
     });
   });

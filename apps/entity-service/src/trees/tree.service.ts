@@ -15,7 +15,19 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { Attributes, col, CreationAttributes, fn, Includeable, Op, ProjectionAlias, WhereOptions } from "sequelize";
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
-import { Dictionary, filter, flatten, flattenDeep, groupBy, isEmpty, omit, orderBy, uniq, uniqBy } from "lodash";
+import {
+  Dictionary,
+  filter,
+  flatten,
+  flattenDeep,
+  groupBy,
+  isEmpty,
+  isString,
+  omit,
+  orderBy,
+  uniq,
+  uniqBy
+} from "lodash";
 import { EntityType, REPORT_TYPES, ReportType } from "@terramatch-microservices/database/constants/entities";
 import { FRAMEWORK_KEYS_TF, FrameworkKeyTF, PPC } from "@terramatch-microservices/database/constants/framework";
 import { PlantingCountDto, PlantingCountMap } from "./dto/planting-count.dto";
@@ -24,7 +36,7 @@ import { isoForFilename, normalizedFileName } from "@terramatch-microservices/co
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
+import { isNotEmpty, isNotNull } from "@terramatch-microservices/database/types/array";
 import { COMPLETE_REPORT_STATUSES, DRAFT, DUE } from "@terramatch-microservices/database/constants/status";
 import { BulkTreeCollection, BulkUploadWarning } from "./dto/tree-bulk-upload.dto";
 import { parseCsvStream } from "@terramatch-microservices/common/file/file.service";
@@ -113,7 +125,7 @@ const taxonIdsByName = async (trees: string[], warnings: BulkUploadWarning[]) =>
       warnings.push(
         new BulkUploadWarning(`Scientific name not found for tree species: ${treeName}`, "TAXON_ID_MISSING", {
           variables: { treeName },
-          row: index + 2
+          location: { row: index + 2 }
         })
       );
     }
@@ -152,6 +164,9 @@ const siteReportNamesById = async (task: Task, sites: string[], warnings: BulkUp
   return siteIds;
 };
 
+const establishmentCollectionFromBulkCollection = (collection: BulkTreeCollection) =>
+  ["anr", "replanting", "established"].includes(collection) ? "tree-planted" : collection;
+
 @Injectable()
 export class TreeService {
   constructor(
@@ -180,7 +195,11 @@ export class TreeService {
     ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
   }
 
-  async getEstablishmentTrees(entity: EstablishmentEntity, uuid: string): Promise<Dictionary<SpeciesDto[]>> {
+  async getEstablishmentTrees(
+    entity: EstablishmentEntity,
+    uuidOrId: string | number,
+    collection?: BulkTreeCollection
+  ): Promise<Dictionary<SpeciesDto[]>> {
     if (entity === "siteReports" || entity === "nurseryReports") {
       // For site and nursery reports, we fetch both the establishment species on the parent entity
       // and on the Project
@@ -191,18 +210,26 @@ export class TreeService {
         // the nested includes
         attributes: ["id"],
         include: [
-          ...treeAssociations(parentModel, ["name", "collection", "taxonId"]),
+          ...treeAssociations(
+            parentModel,
+            ["name", "collection", "taxonId"],
+            collection == null ? undefined : { collection }
+          ),
           {
             model: Project,
             // This id isn't necessary for the data we want to fetch, but sequelize requires it for
             // the nested includes
             attributes: ["id"],
-            include: treeAssociations(Project, ["name", "collection", "taxonId"])
+            include: treeAssociations(
+              Project,
+              ["name", "collection", "taxonId"],
+              collection == null ? undefined : { collection }
+            )
           }
         ]
       };
 
-      if (entity === "siteReports") {
+      if (entity === "siteReports" && collection == null) {
         include.include.push({
           required: false,
           association: "seedsPlanted",
@@ -212,7 +239,7 @@ export class TreeService {
       }
 
       const whereOptions = {
-        where: { uuid },
+        where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
         attributes: [],
         include: [include]
       };
@@ -238,7 +265,7 @@ export class TreeService {
       ) as Dictionary<TreeSpecies[]>;
 
       const treeNames = uniqueTreeNames(trees);
-      if (entity === "siteReports") {
+      if (entity === "siteReports" && collection == null) {
         treeNames["seeds"] = uniq(
           ((parent as Site).seedsPlanted ?? []).map(({ name, taxonId }) => ({ name: name ?? "", taxonId }))
         );
@@ -265,7 +292,7 @@ export class TreeService {
       }
 
       const whereOptions = {
-        where: { uuid },
+        where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
         attributes: ["frameworkKey"],
         include
       };
@@ -313,7 +340,11 @@ export class TreeService {
     }
   }
 
-  async getPreviousPlanting(entity: EstablishmentEntity, uuid: string): Promise<PlantingCountMap | undefined> {
+  async getPreviousPlanting(
+    entity: EstablishmentEntity,
+    uuidOrId: string | number,
+    collection?: BulkTreeCollection
+  ): Promise<PlantingCountMap | undefined> {
     if (!isReport(entity)) return undefined;
 
     let model: TreeReportModelType;
@@ -336,15 +367,21 @@ export class TreeService {
 
     // @ts-expect-error Can't narrow the union TreeReportModelType automatically
     const report: InstanceType<TreeReportModelType> = await model.findOne({
-      where: { uuid },
+      where: isString(uuidOrId) ? { uuid: uuidOrId } : { id: uuidOrId },
       attributes: ["dueAt", model.PARENT_ID]
     });
     if (report == null) throw new NotFoundException();
 
-    const modelIncludes: Includeable[] = treeAssociations(model, ["taxonId", "name", "collection", "amount"], {
+    const treeAssociationWhere: WhereOptions = {
       amount: { [Op.gt]: 0 }
-    });
-    if (entity === "siteReports") {
+    };
+    if (collection != null) treeAssociationWhere.collection = collection;
+    const modelIncludes: Includeable[] = treeAssociations(
+      model,
+      ["taxonId", "name", "collection", "amount"],
+      treeAssociationWhere
+    );
+    if (entity === "siteReports" && collection == null) {
       modelIncludes.push({
         required: false,
         association: "seedsPlanted",
@@ -375,7 +412,7 @@ export class TreeService {
     );
 
     const planting = countTreeCollection(trees);
-    if (entity === "siteReports") {
+    if (entity === "siteReports" && collection == null) {
       planting["seeds"] = countPlants(
         filter(flatten((records as SiteReport[]).map(({ seedsPlanted }) => seedsPlanted))) as Seeding[]
       );
@@ -448,24 +485,23 @@ export class TreeService {
     const allReportingPeriodTrees = await TreeSpecies.visible()
       .siteReports(SiteReport.idsSubquery(Site.idsSubquery(project.id)))
       .collection(collection)
-      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
-    const establishmentCollection = ["anr", "replanting", "established"].includes(collection)
-      ? "tree-planted"
-      : collection;
+      .findAll({ attributes: [distinctNameAlias] });
+    const establishmentCollection = establishmentCollectionFromBulkCollection(collection);
     const projectEstablishmentTrees = await TreeSpecies.visible()
       .for(project)
       .collection(establishmentCollection)
-      .findAll({ attributes: ["name"], order: [["name", "ASC"]] });
+      .findAll({ attributes: ["name"] });
     const siteEstablishmentTrees = await TreeSpecies.visible()
       .for(siteReports.map(({ site }) => site).filter(isNotNull))
       .collection(establishmentCollection)
-      .findAll({ attributes: [distinctNameAlias], order: [["name", "ASC"]] });
+      .findAll({ attributes: [distinctNameAlias] });
     const treeNames = uniqBy(
       [...projectEstablishmentTrees, ...siteEstablishmentTrees, ...allReportingPeriodTrees],
       "name"
     )
       .map(({ name }) => name)
-      .filter(name => !isEmpty(name)) as string[];
+      .filter(isNotEmpty)
+      .sort((first, second) => first.localeCompare(second, undefined, { caseFirst: "upper" }));
 
     const existingReportTrees = groupBy(
       await TreeSpecies.visible()
@@ -505,16 +541,26 @@ export class TreeService {
       }
 
       if (treeSpeciesName === "") {
-        warnings.push(new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", { row: currentRow }));
+        warnings.push(
+          new BulkUploadWarning("Tree Species name missing", "TREE_NAME_MISSING", {
+            location: { row: currentRow }
+          })
+        );
         return;
       }
 
-      for (const [siteName, amountString] of Object.entries(row)) {
-        if (siteName === "Tree Species" || isEmpty(amountString)) continue;
+      Object.entries(row).forEach(([siteName, amountString], columnIndex) => {
+        if (siteName === "Tree Species" || isEmpty(amountString)) return;
 
         if (isEmpty(siteName)) {
-          warnings.push(new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { row: currentRow }));
-          continue;
+          const column = columnIndex + 1;
+          // Only add this warning if it hasn't already been caught.
+          if (warnings.find(({ code, location }) => location?.col === column && code === "SITE_NAME_MISSING") == null) {
+            warnings.push(
+              new BulkUploadWarning("Site name missing", "SITE_NAME_MISSING", { location: { col: column } })
+            );
+          }
+          return;
         }
 
         const amount = isEmpty(amountString) ? null : Number.parseInt(amountString);
@@ -522,11 +568,11 @@ export class TreeService {
         if (amount != null && (isNaN(amount) || amount < 0 || `${amount}` !== amountString)) {
           warnings.push(
             new BulkUploadWarning(`Amount value not supported: ${amountString}`, "AMOUNT_UNSUPPORTED", {
-              row: currentRow,
+              location: { row: currentRow, col: columnIndex + 1 },
               variables: { amountString }
             })
           );
-          continue;
+          return;
         }
 
         // make sure the site is represented even if its trees all end up empty (in that case
@@ -535,8 +581,29 @@ export class TreeService {
         if (amount != null && amount > 0) {
           treesToSync[siteName].push({ name: treeSpeciesName, amount: amount ?? 0 });
         }
-      }
+      });
     });
+
+    // This is N+1 and could be pretty slow for a project with a lot of sites. However, this service
+    // method is called rarely and in this case we're letting it slide.
+    const establishmentCollection = establishmentCollectionFromBulkCollection(collection);
+    const reportIdMap = await siteReportNamesById(task, Object.keys(treesToSync), warnings);
+    for (const reportId of Object.keys(reportIdMap).map(Number)) {
+      const reportTrees = (treesToSync[reportIdMap[reportId]] ??= []);
+      const establishmentTrees = (
+        (await this.getEstablishmentTrees("siteReports", reportId, establishmentCollection))[establishmentCollection] ??
+        []
+      ).map(({ name }) => name);
+      const previousReportTrees = Object.keys(
+        (await this.getPreviousPlanting("siteReports", reportId, collection))?.[collection] ?? []
+      );
+      // Make sure that all of the trees that would be prepopulated in the FE exist in the resulting set
+      for (const treeName of uniq([...establishmentTrees, ...previousReportTrees])) {
+        if (reportTrees.find(({ name }) => name === treeName) == null) {
+          reportTrees.push({ name: treeName, amount: 0 });
+        }
+      }
+    }
 
     const treeNames = uniq(
       Object.values(treesToSync)
@@ -544,7 +611,6 @@ export class TreeService {
         .map(({ name }) => name)
     );
     const taxonIds = await taxonIdsByName(treeNames, warnings);
-    const reportIdMap = await siteReportNamesById(task, Object.keys(treesToSync), warnings);
 
     const siteReportIds = Object.keys(reportIdMap).map(id => Number.parseInt(id));
     if (siteReportIds.length > 0) {
@@ -620,8 +686,8 @@ export class TreeService {
       await TreeSpecies.bulkCreate(bulkTrees);
     }
 
-    // Sort warnings by row - warnings with no row are usually higher priority and sort to the top.
-    return orderBy(warnings, ({ row }) => (row == null ? -1 : row));
+    // Sort warnings by row - warnings with no location are usually higher priority and sort to the top.
+    return orderBy(warnings, ({ location }) => location?.row ?? location?.col ?? -1);
   }
 
   private async getProjectNurserySeedlingPlanting(projectUuid: string): Promise<Dictionary<PlantingCountDto>> {

@@ -107,9 +107,6 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
   title: string | null;
 
   @ApiProperty({ nullable: true, type: Date })
-  approvedAt: Date | null;
-
-  @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
   @ApiProperty({ nullable: true, type: Date })

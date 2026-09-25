@@ -2,16 +2,18 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import {
   Attributes,
   Filterable,
-  FindAttributeOptions,
   FindOptions,
+  GroupOption,
   Includeable,
   Op,
   OrderItem,
+  ProjectionAlias,
   WhereOptions
 } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
-import { flatten, isObject } from "lodash";
-import { NumberPage } from "../dto/page.dto";
+import { flatten, isEmpty, isObject } from "lodash";
+import { CursorPage, NumberPage } from "../dto/page.dto";
+import { ComputedAttribute } from "@terramatch-microservices/database/types/util";
 
 // Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
 // from model.js in the code paths where multiple scopes can be combined with a query's WhereOptions to
@@ -41,12 +43,25 @@ export function combineWheresWithAnd(whereA: WhereOptions, whereB: WhereOptions)
 
 export const MAX_PAGE_SIZE = 100 as const;
 
+const validatePageSize = (pageSize: number) => {
+  if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
+    throw new BadRequestException(`Invalid page size: ${pageSize}`);
+  }
+};
+
 export class PaginatedQueryBuilder<T extends Model> {
+  /**
+   * Validates the page size only; the caller is responsible for calling pageAfter() when page.after is set.
+   */
+  public static forCursorPage<T extends Model>(modelClass: ModelCtor<T>, page?: CursorPage, include?: Includeable[]) {
+    const pageSize = page?.size ?? MAX_PAGE_SIZE;
+    validatePageSize(pageSize);
+    return new PaginatedQueryBuilder(modelClass, pageSize, include);
+  }
+
   public static forNumberPage<T extends Model>(modelClass: ModelCtor<T>, page?: NumberPage, include?: Includeable[]) {
     const { size: pageSize = MAX_PAGE_SIZE, number: pageNumber = 1 } = page ?? {};
-    if (pageSize > MAX_PAGE_SIZE || pageSize < 1) {
-      throw new BadRequestException(`Invalid page size: ${pageSize}`);
-    }
+    validatePageSize(pageSize);
     if (pageNumber < 1) {
       throw new BadRequestException(`Invalid page number: ${pageNumber}`);
     }
@@ -62,6 +77,7 @@ export class PaginatedQueryBuilder<T extends Model> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
+  protected computedAttributes: ComputedAttribute[];
   protected pageAfterId: number | undefined;
 
   constructor(
@@ -82,8 +98,12 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
-  async pageAfter(pageAfter: string) {
-    const instance = await this.MODEL.findOne({ where: { uuid: pageAfter } as WhereOptions, attributes: ["id"] });
+  /**
+   * By default, the cursor is the uuid of the last record on the previous page. Models without a
+   * uuid column may provide the where clause that finds the cursor record instead.
+   */
+  async pageAfter(pageAfter: string, where: WhereOptions = { uuid: pageAfter }) {
+    const instance = await this.MODEL.findOne({ where, attributes: ["id"] });
     if (instance == null) throw new BadRequestException(`No ${this.MODEL.name} found for uuid: ${pageAfter}`);
 
     // This gets combined into only the `execute` query, and ignored for the `paginationTotal` query,
@@ -100,8 +120,27 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
-  attributes(attributes: FindAttributeOptions) {
+  attributes(attributes: (string | ProjectionAlias)[]) {
     this.findOptions.attributes = attributes;
+    return this;
+  }
+
+  /**
+   * Use with caution! Two things to note:
+   *  1) This will cause the `attributes` member of findOptions to be set at the time of the
+   *     execute() query, which means that the default behavior of fetching all attributes will
+   *     not happen. If attributes other than the computed attributes are required on this query,
+   *     they must be set with the `attributes()` method on this builder.
+   *  2) Computed attributes typically require a GROUP BY clause (usually the primary key on the
+   *     model), which must be set with the `group()` method on this builder.
+   */
+  addComputedAttribute(attribute: ComputedAttribute) {
+    (this.computedAttributes ??= []).push(attribute);
+    return this;
+  }
+
+  group(group: GroupOption) {
+    this.findOptions.group = group;
     return this;
   }
 
@@ -113,6 +152,16 @@ export class PaginatedQueryBuilder<T extends Model> {
 
   async execute() {
     const findOptions = { ...this.findOptions };
+    if (!isEmpty(this.computedAttributes)) {
+      findOptions.include = [
+        ...((findOptions.include ?? []) as Includeable[]),
+        ...this.computedAttributes.map(({ include }) => include)
+      ];
+      findOptions.attributes = [
+        ...((findOptions.attributes ?? []) as (string | ProjectionAlias)[]),
+        ...this.computedAttributes.map(({ attribute }) => attribute)
+      ];
+    }
     if (this.pageAfterId != null) {
       findOptions.where = combineWheresWithAnd(findOptions.where ?? {}, { id: { [Op.gt]: this.pageAfterId } });
     }
@@ -120,6 +169,8 @@ export class PaginatedQueryBuilder<T extends Model> {
   }
 
   async paginationTotal() {
-    return await this.MODEL.count({ distinct: true, ...this.findOptions });
+    const findOptions = { distinct: true, ...this.findOptions, attributes: [] };
+    delete findOptions["group"];
+    return await this.MODEL.count(findOptions);
   }
 }

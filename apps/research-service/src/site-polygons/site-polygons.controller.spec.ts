@@ -95,6 +95,7 @@ describe("SitePolygonsController", () => {
     filterTargetSys: jest.Mock;
     filterSource: jest.Mock;
     filterHasOverlap: jest.Mock;
+    filterHasDisturbance: jest.Mock;
   }
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
@@ -121,7 +122,8 @@ describe("SitePolygonsController", () => {
       filterSubmissionCycle: jest.fn().mockReturnThis(),
       filterTargetSys: jest.fn().mockReturnThis(),
       filterSource: jest.fn().mockReturnThis(),
-      filterHasOverlap: jest.fn().mockReturnThis()
+      filterHasOverlap: jest.fn().mockReturnThis(),
+      filterHasDisturbance: jest.fn().mockReturnThis()
     } as unknown as MockQueryBuilder;
 
     builder.filterProjectUuids.mockResolvedValue(builder);
@@ -510,7 +512,8 @@ describe("SitePolygonsController", () => {
         targetSys: ["mangrove", "urban-forest"],
         submissionCycle: ["1", "3"],
         source: ["terramatch", "greenhouse"],
-        hasOverlap: true
+        hasOverlap: true,
+        hasDisturbance: true
       });
 
       expect(builder.filterPlantStartRange).toHaveBeenCalledWith(from, to);
@@ -520,6 +523,7 @@ describe("SitePolygonsController", () => {
       expect(builder.filterSubmissionCycle).toHaveBeenCalledWith(["1", "3"]);
       expect(builder.filterSource).toHaveBeenCalledWith(["terramatch", "greenhouse"]);
       expect(builder.filterHasOverlap).toHaveBeenCalledWith(true);
+      expect(builder.filterHasDisturbance).toHaveBeenCalledWith(true);
     });
 
     it("should throw when plantStartFrom is after plantStartTo", async () => {
@@ -2356,20 +2360,28 @@ describe("SitePolygonsController", () => {
       {
         uuid: "sp-1",
         polygonUuid: "poly-1",
+        siteId: "site-1",
         status: "approved",
         name: "Poly One",
         numTrees: 100,
         calcArea: 1.5,
-        validationStatus: "passed"
+        validationStatus: "passed",
+        practice: ["tree-planting"],
+        targetSys: "natural-forest",
+        disturbanceReportUuid: null
       },
       {
         uuid: "sp-2",
         polygonUuid: "poly-2",
+        siteId: "site-1",
         status: "draft",
         name: "Poly Two",
         numTrees: null,
         calcArea: null,
-        validationStatus: null
+        validationStatus: null,
+        practice: null,
+        targetSys: null,
+        disturbanceReportUuid: "report-uuid-1"
       }
     ]);
 
@@ -2401,20 +2413,28 @@ describe("SitePolygonsController", () => {
             {
               uuid: "sp-1",
               polygonUuid: "poly-1",
+              siteId: "site-1",
               status: "approved",
               name: "Poly One",
               numTrees: 100,
               calcArea: 1.5,
-              validationStatus: "passed"
+              validationStatus: "passed",
+              practice: ["tree-planting"],
+              targetSys: "natural-forest",
+              disturbanceReportUuid: null
             },
             {
               uuid: "sp-2",
               polygonUuid: "poly-2",
+              siteId: "site-1",
               status: "draft",
               name: "Poly Two",
               numTrees: null,
               calcArea: null,
-              validationStatus: null
+              validationStatus: null,
+              practice: null,
+              targetSys: null,
+              disturbanceReportUuid: "report-uuid-1"
             }
           ],
           total: 2
@@ -2422,10 +2442,14 @@ describe("SitePolygonsController", () => {
         const polygons = result.data.attributes.polygons as unknown as Array<Record<string, unknown>>;
         expect(Object.keys(polygons[0]).sort()).toEqual([
           "calcArea",
+          "disturbanceReportUuid",
           "name",
           "numTrees",
           "polygonUuid",
+          "practice",
+          "siteId",
           "status",
+          "targetSys",
           "uuid",
           "validationStatus"
         ]);

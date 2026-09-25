@@ -11,6 +11,8 @@ import {
 import { Role } from "aws-cdk-lib/aws-iam";
 import { upperFirst } from "lodash";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
+import { HostedZone } from "aws-cdk-lib/aws-route53";
+import { ListenerCertificate } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 
 const extractFromEnv = (...names: string[]) =>
   names.map(name => {
@@ -50,6 +52,10 @@ const RIGHTSIZE_RECOMMENDATIONS: Record<string, Record<string, ApplicationLoadBa
 const SOCKET_SERVICE = "user-service";
 const TERRAMATCH_ORG_CERTIFICATE_ARN =
   "arn:aws:acm:eu-west-1:603634817705:certificate/9b5ba349-6969-4013-9868-95f69312d2c4";
+const MARKETPLACE_API_ZONE_NAME = "wri-restoration-marketplace-api.com";
+const MARKETPLACE_API_ZONE_ID = "Z060717237NZEF5G1LBC6";
+const MARKETPLACE_API_CERTIFICATE_ARN =
+  "arn:aws:acm:eu-west-1:603634817705:certificate/66b77483-46c3-496b-b66b-8f8a238f1e34";
 
 const customizeFargate = (service: string, env: string, props: Mutable<ApplicationLoadBalancedFargateServiceProps>) => {
   const recommendation = RIGHTSIZE_RECOMMENDATIONS[service]?.[env];
@@ -142,6 +148,12 @@ export class ServiceStack extends Stack {
         "*.terramatch.org certificate",
         TERRAMATCH_ORG_CERTIFICATE_ARN
       );
+      // Creates an alias A record that follows the ALB, so the public hostname survives ALB replacement.
+      serviceProps.domainName = `${service}-${env}.${MARKETPLACE_API_ZONE_NAME}`;
+      serviceProps.domainZone = HostedZone.fromHostedZoneAttributes(this, MARKETPLACE_API_ZONE_NAME, {
+        hostedZoneId: MARKETPLACE_API_ZONE_ID,
+        zoneName: MARKETPLACE_API_ZONE_NAME
+      });
     }
 
     // Create a load-balanced Fargate service and make it public
@@ -158,6 +170,9 @@ export class ServiceStack extends Stack {
     fargateService.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "45");
     if (service === SOCKET_SERVICE) {
       fargateService.targetGroup.enableCookieStickiness(Duration.days(1));
+      fargateService.listener.addCertificates(`*.${MARKETPLACE_API_ZONE_NAME} certificate`, [
+        ListenerCertificate.fromArn(MARKETPLACE_API_CERTIFICATE_ARN)
+      ]);
     }
     Tags.of(fargateService.loadBalancer).add("service", `${service}-${env}`);
   }

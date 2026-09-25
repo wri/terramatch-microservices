@@ -229,9 +229,6 @@ Deployment is handled via manual trigger of GitHub actions. There is one for ser
 ApiGateway only needs to be redeployed if its code changes; it does not need to be redeployed for updates to individual services
 to take effect.
 
-Once this project is live in production, we can explore continuous deployment to at least staging and prod envs on the staging
-and main branches.
-
 # Environment
 
 The Environment for a given service deployment is configured in Github Actions secrets / variables. Some are repo-wide, and
@@ -254,7 +251,7 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
 - In the root directory: `nx g @nx/nest:app apps/foo-service`
 - Set up the new `main.ts` similarly to existing services.
-  - Make sure swagger docs are implemented
+  - Use bootstrapService() as seen in other services
   - Pick a default local port that is unique from other services
   - Make sure the top of `main.ts` has these two lines:
 
@@ -265,6 +262,8 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
   - Add the `SentryModule` and `SentryGlobalFilter` to your main `app.module.ts`. See an existing service for an example.
   - Add the `HealthModule` to your main `app.module.ts`. You will likely need `CommonModule` as well.
+  - Update `project.json` to contain empty "build-repl", "build" and "serve" targets similar to other services
+  - Remove `webpack.config.js`
 
 - Set up REPL access:
   - Copy `repl.ts` from an existing service (and modify to specify the new service's name)
@@ -290,14 +289,17 @@ addresses, API tokens, etc) may be included in Variables, and must instead be in
 
 To set up the local testing database, run the `./bin/setup-test-database.sh` script. This script assumes that the
 `wri-terramatch-api` project is checked out in the same parent directory as this one. The script may be run
-again at any time to clear out the test database records and schema.
+again at any time to clear out the test database records and schema. Each project with a `test` target gets its own
+test database (e.g. `terramatch_microservices_test_entity_service`) so that projects' tests may run in parallel. The
+schema is synced into the `database` project's DB and then copied to the others, so re-run the script after adding a
+new project with tests.
 
 `setup-jest.ts` is responsible for creating the Sequelize connection for all tests.
 
 `sync-sequelize.ts` creates database tables according to the schema declared in the `entity.ts` files in this codebase. Care should be
 taken to make sure that the schema is set up in this codebase such that the database tables are created with the same
 types and indices as in the primary database controlled by the Laravel backend. This hook is only run for the database
-test.
+and research-service tests.
 
 Factories may be used to create entries in the database for testing. See `user.factory.ts`, and uses of `UserFactory` for
 an example.

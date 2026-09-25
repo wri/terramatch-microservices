@@ -19,7 +19,6 @@ const COLUMNS: ColumnMapping<FinancialReport, FinancialReportAssociations>[] = [
     airtableColumn: "yearOfReport",
     valueMap: async ({ yearOfReport }) => `${yearOfReport}`
   },
-  "approvedAt",
   "submittedAt",
   "dueAt"
 ];

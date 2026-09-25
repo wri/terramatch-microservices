@@ -5,9 +5,17 @@ import {
   ProjectFactory,
   SiteFactory,
   IndicatorOutputTreeCoverFactory,
-  LandscapeGeometryFactory
+  LandscapeGeometryFactory,
+  DisturbanceFactory,
+  DisturbanceReportFactory
 } from "@terramatch-microservices/database/factories";
-import { CriteriaSite, SitePolygon, Site, PolygonGeometry } from "@terramatch-microservices/database/entities";
+import {
+  CriteriaSite,
+  Disturbance,
+  SitePolygon,
+  Site,
+  PolygonGeometry
+} from "@terramatch-microservices/database/entities";
 import { VALIDATION_CRITERIA_IDS } from "@terramatch-microservices/database/constants";
 import { BadRequestException } from "@nestjs/common";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
@@ -27,6 +35,7 @@ describe("SitePolygonQueryBuilder", () => {
   afterEach(async () => {
     await CriteriaSite.truncate();
     await SitePolygon.truncate();
+    await Disturbance.truncate();
   });
   describe("filterProjectShortNames", () => {
     it("should filter by project short names", async () => {
@@ -469,6 +478,37 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("filterHasDisturbance", () => {
+    it("should return only polygons with a disturbance when enabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const disturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: disturbance.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      builder.filterHasDisturbance(true);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(disturbed.id);
+    });
+
+    it("should not filter polygons when disabled", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const disturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: disturbance.id });
+      const undisturbed = await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      builder.filterHasDisturbance(false);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([disturbed.id, undisturbed.id].sort());
+    });
+  });
+
   describe("combined attribute filters", () => {
     it("should AND hasStatuses with filterPractice", async () => {
       const project = await ProjectFactory.create();
@@ -568,6 +608,18 @@ describe("SitePolygonQueryBuilder", () => {
       const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
 
       builder.filterHasOverlap(undefined);
+      const result = await builder.execute();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(polygon.id);
+    });
+
+    it("filterHasDisturbance should not filter when flag is undefined", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      builder.filterHasDisturbance(undefined);
       const result = await builder.execute();
 
       expect(result).toHaveLength(1);
@@ -754,6 +806,25 @@ describe("SitePolygonQueryBuilder", () => {
       const siteInclude = includes.find(include => include.model === Site);
 
       expect(siteInclude?.required).toBe(true);
+    });
+
+    it("includes Disturbance with disturbanceReportUuid subquery attribute", () => {
+      const includes = ((
+        builder as unknown as {
+          findOptions: {
+            include: Array<{ model?: unknown; attributes?: unknown[] }>;
+          };
+        }
+      ).findOptions.include ?? []) as Array<{ model?: unknown; attributes?: unknown[] }>;
+      const disturbanceInclude = includes.find(include => include.model === Disturbance);
+
+      expect(disturbanceInclude).toBeDefined();
+      expect(disturbanceInclude?.attributes).toEqual(
+        expect.arrayContaining(["id", "disturbanceableId", "disturbanceableType"])
+      );
+      expect(
+        disturbanceInclude?.attributes?.some(attr => Array.isArray(attr) && attr[1] === "disturbanceReportUuid")
+      ).toBe(true);
     });
 
     it("includes PolygonGeometry by default", () => {

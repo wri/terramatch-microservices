@@ -4,7 +4,11 @@ import {
   POLYGON_STATUSES,
   POLYGON_VALIDATION_STATUSES,
   PolygonStatus,
-  PolygonValidationStatus
+  PolygonValidationStatus,
+  SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_TARGET_SYSTEMS,
+  SitePolygonPractice,
+  SitePolygonTargetSystem
 } from "@terramatch-microservices/database/constants";
 
 export class SitePolygonMapEntryDto {
@@ -17,6 +21,13 @@ export class SitePolygonMapEntryDto {
     description: "UUID of the associated polygon geometry. Used to match features in GeoServer tiles."
   })
   polygonUuid: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: "UUID of the parent site. Used for map popup navigation from project-scoped maps."
+  })
+  siteId: string | null;
 
   @ApiProperty({
     enum: POLYGON_STATUSES,
@@ -53,6 +64,31 @@ export class SitePolygonMapEntryDto {
     description: "Validation status. Null means validation has not started."
   })
   validationStatus: PolygonValidationStatus | null;
+
+  @ApiProperty({
+    nullable: true,
+    isArray: true,
+    enum: SITE_POLYGON_PRACTICES,
+    description: "Restoration practice slug(s) shown in overview map popups."
+  })
+  practice: SitePolygonPractice[] | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    enum: SITE_POLYGON_TARGET_SYSTEMS,
+    description: "Target land use system slug shown in overview map popups."
+  })
+  targetSys: SitePolygonTargetSystem | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description:
+      "UUID of the linked DisturbanceReport when this polygon has a disturbance owned by a report. " +
+      "Use for /reports/disturbance-report/{uuid}."
+  })
+  disturbanceReportUuid: string | null;
 }
 
 @JsonApiDto({ type: "sitePolygonMapIndexes" })

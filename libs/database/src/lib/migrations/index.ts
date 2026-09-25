@@ -39,6 +39,12 @@ import { addBeneficiariesTrainingTotalColumn } from "./202608251300-add-benefici
 import { addOrderToPolygonAttributeDefinitions } from "./202608191100-add-order-to-polygon-attribute-definitions";
 import { removeIsRequiredFromPolygonAttributeDefinitions } from "./202608211200-remove-is-required-from-polygon-attribute-definitions";
 import { createUserTasks } from "./202609041522-create-user-tasks";
+import { assignFundoFloraCohort2 } from "./202609171430-assign-fundo-flora-cohort-2";
+import { convertDeadlineAtToDate } from "./202609181200-convert-deadline-at-to-date";
+import { removeApprovedAtColumns } from "./202609181210-remove-approved-at-columns";
+import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-timestamp";
+import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
+import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-adj-nullable";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -79,5 +85,11 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   convertDueAtToDate,
   addPolygonGeometryApprovedView,
   addBeneficiariesTrainingTotalColumn,
-  createUserTasks
+  createUserTasks,
+  assignFundoFloraCohort2,
+  convertDeadlineAtToDate,
+  removeApprovedAtColumns,
+  convertDatetimeToTimestamp,
+  createRsTreeCount,
+  makeRsTreeCountAdjNullable
 ];

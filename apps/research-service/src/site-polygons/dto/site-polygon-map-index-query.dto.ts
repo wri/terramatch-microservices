@@ -197,6 +197,17 @@ export class SitePolygonMapIndexQueryDto {
     required: false,
     default: false,
     type: "boolean",
+    description: "Filter to polygons linked to a disturbance (disturbance_id IS NOT NULL)."
+  })
+  @IsOptional()
+  @IsBoolean()
+  @TransformBooleanString()
+  hasDisturbance?: boolean;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
     description: "Soft-deleted polygons for one site. Requires exactly one siteId[] value."
   })
   @IsOptional()

@@ -43,3 +43,4 @@ export { clearNothingToReportReports } from "./2026-08-17-clearNothingToReportRe
 export { backfillPpcProjectLandUseAndStrategy } from "./2026-08-18-backfillPpcProjectLandUseAndStrategy";
 export { importInvestmentData } from "./2026-09-03-importInvestmentData";
 export { updateInvestmentSplitsAmount } from "./2026-09-03-updateInvestmentSplitsAmount";
+export { reassignPolygonCommentsToBase } from "./2026-09-21-reassignPolygonCommentsToBase";

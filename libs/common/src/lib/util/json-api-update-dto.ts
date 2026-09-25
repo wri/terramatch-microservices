@@ -10,10 +10,9 @@ import {
   IsUUID,
   ValidateNested
 } from "class-validator";
-import { ApiExtraModels, ApiProperty, getSchemaPath } from "@nestjs/swagger";
+import { ApiExtraModels, ApiProperty, DECORATORS, getSchemaPath } from "@nestjs/swagger";
 import { DiscriminatorDescriptor, Type } from "class-transformer";
 import { InternalServerErrorException } from "@nestjs/common";
-import { DECORATORS } from "@nestjs/swagger/dist/constants";
 
 function UuidDataDto<T>(type: string, AttributesDto: new () => T) {
   class DataDto {

@@ -48,6 +48,15 @@ describe("PolygonAttributeValuesService", () => {
     ]
   };
 
+  const dateDefinition = {
+    id: 3,
+    key: "monitoringVisitDate",
+    inputType: "date",
+    isActive: true,
+    frameworkKey: "ppc",
+    options: []
+  };
+
   describe("getMapsByPolygonUuids", () => {
     it("returns sparse maps keyed by polygon uuid and definition key", async () => {
       jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([
@@ -197,6 +206,67 @@ describe("PolygonAttributeValuesService", () => {
         BadRequestException
       );
     });
+
+    it("upserts a plain YYYY-MM-DD date value", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+      jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.upsert("poly-uuid", "ppc", { monitoringVisitDate: "2021-12-02" }, mockTransaction);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 3, value: "2021-12-02" }],
+        { transaction: mockTransaction, updateOnDuplicate: ["value"] }
+      );
+    });
+
+    it("normalizes a full ISO datetime to date-only, like Plant Start Date", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+      jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.upsert("poly-uuid", "ppc", { monitoringVisitDate: "2021-12-02T00:00:00.000Z" }, mockTransaction);
+
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 3, value: "2021-12-02" }],
+        { transaction: mockTransaction, updateOnDuplicate: ["value"] }
+      );
+    });
+
+    it("clears a date value when an empty string is sent", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+      const destroySpy = jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(1);
+      const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+
+      await service.upsert("poly-uuid", "ppc", { monitoringVisitDate: "" }, mockTransaction);
+
+      expect(destroySpy).toHaveBeenCalled();
+      expect(bulkCreateSpy).not.toHaveBeenCalled();
+    });
+
+    it("rejects a malformed date value", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+
+      await expect(
+        service.upsert("poly-uuid", "ppc", { monitoringVisitDate: "not-a-date" }, mockTransaction)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects a date value with an invalid calendar day", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+
+      await expect(
+        service.upsert("poly-uuid", "ppc", { monitoringVisitDate: "2021-02-30" }, mockTransaction)
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects a non-string date value", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+
+      await expect(
+        service.upsert("poly-uuid", "ppc", { monitoringVisitDate: 123 as never }, mockTransaction)
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("bulkUpsert", () => {
@@ -329,6 +399,30 @@ describe("PolygonAttributeValuesService", () => {
       );
 
       expect(matched).toEqual({ anrSubcategory: null, strata: ["a"] });
+    });
+
+    it("keeps a valid date value and normalizes a full ISO datetime on upload", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ monitoringVisitDate: "2021-12-02T00:00:00.000Z" }],
+        "ppc",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ monitoringVisitDate: "2021-12-02" });
+    });
+
+    it("drops an invalid date value without throwing, like Plant Start Date upload", async () => {
+      jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([dateDefinition] as never);
+
+      const [matched] = await service.pickMatchingFromPropertiesBatch(
+        [{ monitoringVisitDate: "not-a-date" }],
+        "ppc",
+        mockTransaction
+      );
+
+      expect(matched).toEqual({ monitoringVisitDate: null });
     });
   });
 

@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsIn, IsInt, IsOptional, IsUUID } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsUUID, ValidateIf } from "class-validator";
 import {
   CreateDataDto,
   JsonApiBodyDto,
@@ -32,8 +32,8 @@ export class ResearchTreeCountDto {
   @ApiProperty()
   reportedCount: number;
 
-  @ApiProperty()
-  treeCountAdj: number;
+  @ApiProperty({ nullable: true, type: Number })
+  treeCountAdj: number | null;
 
   @ApiProperty()
   upperBounds: number;
@@ -48,28 +48,32 @@ export class ResearchTreeCountDto {
   updatedAt: Date;
 }
 
+// Unlike @IsOptional(), this still validates null, so the non-nullable fields reject it.
+const isProvided = (_: object, value: unknown) => value !== undefined;
+
 export class UpdateResearchTreeCountAttributes {
-  @IsOptional()
+  @ValidateIf(isProvided)
   @IsIn(VERIFICATION_METHODS)
   @ApiProperty({ enum: VERIFICATION_METHODS, required: false })
   verificationMethod?: VerificationMethod;
 
-  @IsOptional()
+  @ValidateIf(isProvided)
   @IsInt()
   @ApiProperty({ required: false })
   reportedCount?: number;
 
+  // @IsOptional() also lets null through, which clears the value.
   @IsOptional()
   @IsInt()
-  @ApiProperty({ required: false })
-  treeCountAdj?: number;
+  @ApiProperty({ required: false, nullable: true, type: Number, description: "Send null to clear the value" })
+  treeCountAdj?: number | null;
 
-  @IsOptional()
+  @ValidateIf(isProvided)
   @IsInt()
   @ApiProperty({ required: false })
   upperBounds?: number;
 
-  @IsOptional()
+  @ValidateIf(isProvided)
   @IsInt()
   @ApiProperty({ required: false })
   lowerBounds?: number;
@@ -88,9 +92,10 @@ export class CreateResearchTreeCountAttributes {
   @ApiProperty()
   reportedCount: number;
 
+  @IsOptional()
   @IsInt()
-  @ApiProperty()
-  treeCountAdj: number;
+  @ApiProperty({ required: false })
+  treeCountAdj?: number;
 
   @IsInt()
   @ApiProperty()

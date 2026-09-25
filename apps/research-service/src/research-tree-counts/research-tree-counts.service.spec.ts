@@ -198,6 +198,16 @@ describe("ResearchTreeCountsService", () => {
       expect(stored).toMatchObject({ ...omit(attributes(project.uuid), "projectUuid"), projectId: project.id });
     });
 
+    it("creates the tree count without an adjusted tree count", async () => {
+      const project = await ProjectFactory.create();
+
+      await service.create(omit(attributes(project.uuid), "treeCountAdj"));
+
+      const stored = await service.findByProjectUuid(project.uuid);
+      expect(stored.treeCountAdj).toBeNull();
+      expect(new ResearchTreeCountDto(stored).treeCountAdj).toBeNull();
+    });
+
     it("throws if the project does not exist", async () => {
       await expect(service.create(attributes(faker.string.uuid()))).rejects.toThrow(BadRequestException);
     });
@@ -233,6 +243,16 @@ describe("ResearchTreeCountsService", () => {
       expect(original.treeCountAdj).toBe(42);
       expect(original.reportedCount).toBe(treeCount.reportedCount);
       expect(original.projectId).toBe(project.id);
+    });
+
+    it("clears the adjusted tree count when null is provided", async () => {
+      const project = await ProjectFactory.create();
+      const original = await ResearchTreeCountFactory.create({ projectId: project.id });
+
+      await service.update(await service.findByProjectUuid(project.uuid), { treeCountAdj: null });
+
+      await original.reload();
+      expect(original.treeCountAdj).toBeNull();
     });
   });
 

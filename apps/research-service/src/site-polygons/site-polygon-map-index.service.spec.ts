@@ -78,7 +78,9 @@ describe("SitePolygonMapIndexService", () => {
         polyName: "Riverbank North",
         numTrees: 1200,
         calcArea: 3.5,
-        validationStatus: "passed"
+        validationStatus: "passed",
+        practice: ["tree-planting"],
+        targetSys: "natural-forest"
       });
 
       const result = await getMapIndex({ siteId: [site.uuid] });
@@ -88,11 +90,14 @@ describe("SitePolygonMapIndexService", () => {
         {
           uuid: polygon.uuid,
           polygonUuid: polygon.polygonUuid,
+          siteId: site.uuid,
           status: "approved",
           name: "Riverbank North",
           numTrees: 1200,
           calcArea: 3.5,
           validationStatus: "passed",
+          practice: ["tree-planting"],
+          targetSys: "natural-forest",
           disturbanceReportUuid: null
         }
       ]);
@@ -102,7 +107,10 @@ describe("SitePolygonMapIndexService", () => {
         "name",
         "numTrees",
         "polygonUuid",
+        "practice",
+        "siteId",
         "status",
+        "targetSys",
         "uuid",
         "validationStatus"
       ]);

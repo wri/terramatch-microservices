@@ -7,11 +7,14 @@ import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.build
 export const MAP_INDEX_ATTRIBUTES = [
   "uuid",
   "polygonUuid",
+  "siteUuid",
   "status",
   "polyName",
   "numTrees",
   "calcArea",
-  "validationStatus"
+  "validationStatus",
+  "practice",
+  "targetSys"
 ] as const;
 
 export class SitePolygonMapIndexQueryBuilder extends SitePolygonColumnQueryBuilder {

@@ -156,6 +156,21 @@ describe("FinancialReportProcessor", () => {
       expect(result.paginationTotal).toBe(5);
     });
 
+    it("should restrict monitoring partners to the organisation of the project they monitor", async () => {
+      const organisation1 = await OrganisationFactory.create();
+      const organisation2 = await OrganisationFactory.create();
+      const reports1 = await FinancialReportFactory.org(organisation1).createMany(2);
+      await FinancialReportFactory.org(organisation2).createMany(2);
+
+      const otherOrganisation = await OrganisationFactory.create();
+      jest.spyOn(User, "findOne").mockResolvedValue({
+        organisationId: otherOrganisation.id,
+        projects: [{ organisationId: organisation1.id, ProjectUser: { isMonitoring: true } }]
+      } as User);
+
+      await expectFinancialReports(reports1, {});
+    });
+
     it("should restrict project managers to their organisation", async () => {
       const organisation1 = await OrganisationFactory.create();
       const organisation2 = await OrganisationFactory.create();

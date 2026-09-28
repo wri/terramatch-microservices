@@ -2,6 +2,11 @@ import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { FinancialReport, User } from "@terramatch-microservices/database/entities";
 import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 
+export const monitoredOrganisationIds = (user: User | null | undefined) =>
+  (user?.projects ?? []).flatMap(project =>
+    project.ProjectUser?.isMonitoring === true && project.organisationId != null ? [project.organisationId] : []
+  );
+
 export class FinancialReportPolicy extends UserPermissionsPolicy {
   async addRules() {
     if (this.frameworks.length > 0) {
@@ -44,6 +49,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
     if (user?.primaryRole === "project-manager" && user.organisationId != null) {
       organisationIds.push(user.organisationId as number);
     }
+    organisationIds.push(...monitoredOrganisationIds(user));
     if (organisationIds.length > 0) {
       this.builder.can("read", FinancialReport, { organisationId: { $in: organisationIds } });
     }
@@ -57,7 +63,11 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       where: { id: this.userId },
       attributes: ["id", "organisationId"],
       include: [
-        { association: "projects", attributes: ["organisationId"] },
+        {
+          association: "projects",
+          attributes: ["organisationId"],
+          through: { attributes: ["isMonitoring"] }
+        },
         { association: "roles", attributes: ["name"] }
       ]
     }));

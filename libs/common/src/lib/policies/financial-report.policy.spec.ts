@@ -176,6 +176,25 @@ describe("FinancialReportPolicy", () => {
     });
   });
 
+  it("allows a project developer to read a followed organisation they do not monitor", async () => {
+    const projectOrg = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: null });
+    const project = await ProjectFactory.create({ organisationId: projectOrg.id });
+    await ProjectUserFactory.create({
+      userId: user.id,
+      projectId: project.id,
+      isMonitoring: false,
+      isManaging: false
+    });
+    mockContextForUser(user, "manage-own");
+
+    const visible = await FinancialReportFactory.org(projectOrg).create();
+    const hidden = await FinancialReportFactory.org().create();
+    await expectCan(service, "read", visible);
+    await expectCannot(service, "delete", visible);
+    await expectCannot(service, "read", hidden);
+  });
+
   it("does not allow read for a project member who is not monitoring that organisation", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: null });

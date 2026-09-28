@@ -1,10 +1,5 @@
-import {
-  FinancialIndicator,
-  FinancialReport,
-  FundingType,
-  Media,
-  User
-} from "@terramatch-microservices/database/entities";
+import { FinancialIndicator, FinancialReport, FundingType, Media } from "@terramatch-microservices/database/entities";
+import { readableFinancialReportOrganisationIds } from "@terramatch-microservices/common/policies/financial-report.policy";
 import { ExportAllOptions, ReportProcessor } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
@@ -18,7 +13,6 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
-import { monitoredOrganisationIds } from "@terramatch-microservices/common/policies/financial-report.policy";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
 
@@ -87,31 +81,11 @@ export class FinancialReportProcessor extends ReportProcessor<
 
     const userId = this.entitiesService.userId;
     const permissions = this.entitiesService.permissions;
-    if (userId != null) {
-      const user = await User.findOne({
-        where: { id: userId },
-        attributes: ["organisationId"],
-        include: [
-          { association: "roles", attributes: ["name"] },
-          {
-            association: "projects",
-            attributes: ["organisationId"],
-            through: { attributes: ["isMonitoring"] }
-          }
-        ]
-      });
-
-      const organisationIds: number[] = [];
-      if (permissions?.includes("projects-manage")) {
-        const projectsOrganisationIds = [...((user?.projects ?? []).map(({ organisationId }) => organisationId) ?? [])];
-        if (projectsOrganisationIds.length > 0) {
-          organisationIds.push(...projectsOrganisationIds.filter((id): id is number => id !== null));
-        }
-      }
-      if (user?.primaryRole === "project-manager" && user.organisationId != null) {
-        organisationIds.push(user.organisationId as number);
-      }
-      organisationIds.push(...monitoredOrganisationIds(user));
+    const seesAllOrganisations =
+      permissions?.includes("reports-manage") === true ||
+      permissions?.some(permission => permission.startsWith("framework-")) === true;
+    if (userId != null && !seesAllOrganisations) {
+      const organisationIds = await readableFinancialReportOrganisationIds(userId, permissions);
       if (organisationIds.length > 0) {
         builder.where({ organisationId: { [Op.in]: organisationIds } });
       }

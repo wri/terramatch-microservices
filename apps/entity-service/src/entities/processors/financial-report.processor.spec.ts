@@ -5,6 +5,8 @@ import {
   FundingType,
   Media,
   Organisation,
+  Project,
+  ProjectUser,
   User
 } from "@terramatch-microservices/database/entities";
 import { DeepMocked } from "@golevelup/ts-jest";
@@ -17,7 +19,9 @@ import {
   FinancialReportFactory,
   FundingTypeFactory,
   MediaFactory,
-  OrganisationFactory
+  OrganisationFactory,
+  ProjectFactory,
+  ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
 import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -169,6 +173,50 @@ describe("FinancialReportProcessor", () => {
       } as User);
 
       await expectFinancialReports(reports1, {});
+    });
+
+    function currentUserId() {
+      const userId = entitiesService().userId;
+      if (userId == null) throw new Error("Expected an authenticated user");
+      return userId;
+    }
+
+    it("includes a project organisation for a project developer who is not monitoring it", async () => {
+      jest.spyOn(User, "findOne").mockRestore();
+      const userId = currentUserId();
+      const ownOrg = await OrganisationFactory.create();
+      const followedOrg = await OrganisationFactory.create();
+      const otherOrg = await OrganisationFactory.create();
+      await User.update({ organisationId: ownOrg.id }, { where: { id: userId } });
+      const project = await ProjectFactory.create({ organisationId: followedOrg.id });
+      await ProjectUserFactory.create({
+        userId,
+        projectId: project.id,
+        isMonitoring: false,
+        isManaging: false
+      });
+
+      const ownReport = await FinancialReportFactory.org(ownOrg).create();
+      const followedReport = await FinancialReportFactory.org(followedOrg).create();
+      await FinancialReportFactory.org(otherOrg).create();
+
+      await expectFinancialReports([ownReport, followedReport], {}, { permissions: ["manage-own"] });
+
+      await ProjectUser.destroy({ where: { userId } });
+      await Project.destroy({ where: { id: project.id }, force: true });
+      await User.update({ organisationId: null }, { where: { id: userId } });
+    });
+
+    it("does not narrow framework admins to monitored organisations", async () => {
+      jest.spyOn(User, "findOne").mockRestore();
+      const organisation1 = await OrganisationFactory.create();
+      const organisation2 = await OrganisationFactory.create();
+      const reports = [
+        await FinancialReportFactory.org(organisation1).create(),
+        await FinancialReportFactory.org(organisation2).create()
+      ];
+
+      await expectFinancialReports(reports, {}, { permissions: ["framework-ppc"] });
     });
 
     it("should restrict project managers to their organisation", async () => {

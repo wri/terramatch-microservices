@@ -82,9 +82,6 @@ export class NurseryLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
-
-  @ApiProperty({ nullable: true, type: String })
-  projectUuid: string | null;
 }
 
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
@@ -123,6 +120,9 @@ export class NurseryFullDto extends NurseryLightDto {
 
   @ApiProperty({ nullable: true, type: Number })
   overdueNurseryReportsTotal: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  projectUuid: string | null;
 
   @ApiProperty({ type: () => MediaDto, isArray: true })
   media: MediaDto[];

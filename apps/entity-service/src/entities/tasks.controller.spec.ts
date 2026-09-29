@@ -7,6 +7,7 @@ import { TaskQueryDto } from "./dto/task-query.dto";
 import { TaskFactory } from "@terramatch-microservices/database/factories";
 import { Task } from "@terramatch-microservices/database/entities";
 import { BadRequestException } from "@nestjs/common";
+import { Resource } from "@terramatch-microservices/common/util";
 import { TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
 import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 
@@ -57,7 +58,8 @@ describe("TasksController", () => {
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("tasks");
-      expect(service.addLightTaskDto).toHaveBeenCalledTimes(2);
+      expect(result.data).toHaveLength(2);
+      expect((result.data as Resource[])[0].attributes.lightResource).toBe(true);
     });
   });
 

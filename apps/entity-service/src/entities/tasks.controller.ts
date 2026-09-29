@@ -35,19 +35,7 @@ export class TasksController {
     operationId: "taskIndex",
     summary: "Get a paginated and filtered list of tasks"
   })
-  @JsonApiResponse({
-    data: {
-      type: TaskLightDto,
-      relationships: [
-        { name: "projectReport", type: ProjectReportLightDto },
-        { name: "siteReports", type: SiteReportLightDto, multiple: true },
-        { name: "nurseryReports", type: NurseryReportLightDto, multiple: true },
-        { name: "srpReports", type: SrpReportLightDto, multiple: true }
-      ]
-    },
-    included: [ProjectReportLightDto, SiteReportLightDto, NurseryReportLightDto, SrpReportLightDto],
-    pagination: "number"
-  })
+  @JsonApiResponse({ data: TaskLightDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async taskIndex(@Query() query: TaskQueryDto) {
     const { tasks, total } = await this.tasksService.getTasks(query);
@@ -55,9 +43,8 @@ export class TasksController {
     if (tasks.length !== 0) {
       await this.policyService.authorize("read", tasks);
 
-      await this.tasksService.loadReports(tasks);
       for (const task of tasks) {
-        await this.tasksService.addLightTaskDto(document, task, query.sideloads ?? []);
+        document.addData(task.uuid, new TaskLightDto(task));
       }
     }
 

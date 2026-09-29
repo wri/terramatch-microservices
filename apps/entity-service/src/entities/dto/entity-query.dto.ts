@@ -124,12 +124,11 @@ export class EntityQueryDto extends IndexQueryDto {
 
   @ApiProperty({
     required: false,
-    isArray: true,
     type: Number,
     description: "Filter reports by task ID (used to get site/nursery reports for a specific reporting period)"
   })
   @IsOptional()
-  taskIds?: number[];
+  taskId?: number;
 
   @ApiProperty({
     required: false,

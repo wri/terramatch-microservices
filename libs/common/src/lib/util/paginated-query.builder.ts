@@ -2,18 +2,16 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import {
   Attributes,
   Filterable,
+  FindAttributeOptions,
   FindOptions,
-  GroupOption,
   Includeable,
   Op,
   OrderItem,
-  ProjectionAlias,
   WhereOptions
 } from "sequelize";
 import { BadRequestException } from "@nestjs/common";
-import { flatten, isEmpty, isObject } from "lodash";
+import { flatten, isObject } from "lodash";
 import { CursorPage, NumberPage } from "../dto/page.dto";
-import { ComputedAttribute } from "@terramatch-microservices/database/types/util";
 
 // Some utilities copied from the un-exported bowels of Sequelize to help merge where clauses. Pulled
 // from model.js in the code paths where multiple scopes can be combined with a query's WhereOptions to
@@ -77,7 +75,6 @@ export class PaginatedQueryBuilder<T extends Model> {
   protected findOptions: FindOptions<Attributes<T>> = {
     order: ["id"]
   };
-  protected computedAttributes: ComputedAttribute[];
   protected pageAfterId: number | undefined;
 
   constructor(
@@ -120,27 +117,8 @@ export class PaginatedQueryBuilder<T extends Model> {
     return this;
   }
 
-  attributes(attributes: (string | ProjectionAlias)[]) {
+  attributes(attributes: FindAttributeOptions) {
     this.findOptions.attributes = attributes;
-    return this;
-  }
-
-  /**
-   * Use with caution! Two things to note:
-   *  1) This will cause the `attributes` member of findOptions to be set at the time of the
-   *     execute() query, which means that the default behavior of fetching all attributes will
-   *     not happen. If attributes other than the computed attributes are required on this query,
-   *     they must be set with the `attributes()` method on this builder.
-   *  2) Computed attributes typically require a GROUP BY clause (usually the primary key on the
-   *     model), which must be set with the `group()` method on this builder.
-   */
-  addComputedAttribute(attribute: ComputedAttribute) {
-    (this.computedAttributes ??= []).push(attribute);
-    return this;
-  }
-
-  group(group: GroupOption) {
-    this.findOptions.group = group;
     return this;
   }
 
@@ -152,16 +130,6 @@ export class PaginatedQueryBuilder<T extends Model> {
 
   async execute() {
     const findOptions = { ...this.findOptions };
-    if (!isEmpty(this.computedAttributes)) {
-      findOptions.include = [
-        ...((findOptions.include ?? []) as Includeable[]),
-        ...this.computedAttributes.map(({ include }) => include)
-      ];
-      findOptions.attributes = [
-        ...((findOptions.attributes ?? []) as (string | ProjectionAlias)[]),
-        ...this.computedAttributes.map(({ attribute }) => attribute)
-      ];
-    }
     if (this.pageAfterId != null) {
       findOptions.where = combineWheresWithAnd(findOptions.where ?? {}, { id: { [Op.gt]: this.pageAfterId } });
     }
@@ -169,8 +137,6 @@ export class PaginatedQueryBuilder<T extends Model> {
   }
 
   async paginationTotal() {
-    const findOptions = { distinct: true, ...this.findOptions, attributes: [] };
-    delete findOptions["group"];
-    return await this.MODEL.count(findOptions);
+    return await this.MODEL.count({ distinct: true, ...this.findOptions });
   }
 }

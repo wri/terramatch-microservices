@@ -26,7 +26,6 @@ import { Archiver } from "archiver";
 import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
 import { Literal } from "sequelize/types/utils";
-import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["treeSpecies"];
 
@@ -34,6 +33,7 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
   "updateRequestStatus",
   "frameworkKey",
+  "siteUuid",
   "organisationUuid",
   "country",
   "projectUuid",
@@ -120,20 +120,8 @@ export class SiteReportProcessor extends ReportProcessor<
   readonly FULL_DTO = SiteReportFullDto;
 
   async findOne(uuid: string) {
-    const entityAttributes = Object.keys(SiteReport.getAttributes());
-    const computedAttributes = [
-      SiteReport.TOTAL_TREES_REGENERATING_SPECIES_COUNT_ATTRIBUTE,
-      SiteReport.TOTAL_SEEDS_PLANTED_COUNT_ATTRIBUTE,
-      SiteReport.TOTAL_TREES_PLANTED_COUNT_ATTRIBUTE
-    ];
     return await SiteReport.findOne({
       where: { uuid },
-      attributes: [
-        "id",
-        "taskId",
-        ...apiAttributes(SiteReportFullDto).filter(attr => entityAttributes.includes(attr)),
-        ...computedAttributes.map(({ attribute }) => attribute)
-      ],
       include: [
         {
           association: "site",
@@ -148,41 +136,26 @@ export class SiteReportProcessor extends ReportProcessor<
         },
         { association: "task", attributes: ["uuid"] },
         { association: "createdByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
-        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] },
-        ...computedAttributes.map(({ include }) => include)
+        { association: "approvedByUser", attributes: ["id", "uuid", "firstName", "lastName"] }
       ],
       group: "SiteReport.id"
     });
   }
 
   async findMany(query: EntityQueryDto) {
-    const associations: Includeable[] = [
-      {
-        association: "site",
-        attributes: ["id", "uuid", "name"],
-        include: [
-          {
-            association: "project",
-            attributes: ["id", "uuid", "name"],
-            include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }]
-          }
-        ]
-      },
-      { association: "task", attributes: ["uuid"] }
-    ];
+    const siteAssociation: Includeable = {
+      association: "site",
+      attributes: ["id", "uuid", "name"],
+      include: [
+        {
+          association: "project",
+          attributes: ["id", "uuid", "name"],
+          include: [{ association: "organisation", attributes: ["id", "uuid", "name"] }]
+        }
+      ]
+    };
+    const associations = [siteAssociation];
     const builder = await this.entitiesService.buildQuery(SiteReport, query, associations);
-
-    const entityAttributes = Object.keys(SiteReport.getAttributes());
-    builder
-      .attributes([
-        "id",
-        "taskId",
-        ...apiAttributes(SiteReportLightDto).filter(attr => entityAttributes.includes(attr))
-      ])
-      .addComputedAttribute(SiteReport.TOTAL_TREES_PLANTED_COUNT_ATTRIBUTE)
-      .addComputedAttribute(SiteReport.TOTAL_SEEDS_PLANTED_COUNT_ATTRIBUTE)
-      .addComputedAttribute(SiteReport.TOTAL_TREES_REGENERATING_SPECIES_COUNT_ATTRIBUTE)
-      .group("SiteReport.id");
 
     if (query.sort?.field != null) {
       const direction = query.sort.direction ?? "ASC";
@@ -232,8 +205,8 @@ export class SiteReportProcessor extends ReportProcessor<
       }
     }
 
-    if (query.taskIds != null && query.taskIds.length > 0) {
-      builder.where({ taskId: query.taskIds });
+    if (query.taskId != null) {
+      builder.where({ taskId: query.taskId });
     }
 
     if (query.search != null) {
@@ -274,10 +247,15 @@ export class SiteReportProcessor extends ReportProcessor<
     const siteReportId = siteReport.id;
     const reportTitle = await this.getReportTitle(siteReport);
     const projectReportTitle = await this.getProjectReportTitle(siteReport);
+    const totalTreesPlantedCount =
+      (await TreeSpecies.visible().collection("tree-planted").siteReports([siteReportId]).sum("amount")) ?? 0;
+    const totalSeedsPlantedCount = (await Seeding.visible().siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalNonTreeSpeciesPlantedCount =
       (await TreeSpecies.visible().collection("non-tree").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalTreeReplantingCount =
       (await TreeSpecies.visible().collection("replanting").siteReports([siteReportId]).sum("amount")) ?? 0;
+    const totalTreesRegeneratingSpeciesCount =
+      (await TreeSpecies.visible().collection("anr").siteReports([siteReportId]).sum("amount")) ?? 0;
     const totalInvasiveTreesCount =
       (await TreeSpecies.visible().collection("invasive").siteReports([siteReportId]).sum("amount")) ?? 0;
     const mediaCollection = await Media.for(siteReport).findAll();
@@ -290,6 +268,9 @@ export class SiteReportProcessor extends ReportProcessor<
       reportTitle,
       projectReportTitle,
       projectReportUuid,
+      totalTreesPlantedCount,
+      totalTreesRegeneratingSpeciesCount,
+      totalSeedsPlantedCount,
       totalNonTreeSpeciesPlantedCount,
       totalTreeReplantingCount,
       totalInvasiveTreesCount,
@@ -308,7 +289,8 @@ export class SiteReportProcessor extends ReportProcessor<
 
   async getLightDto(siteReport: SiteReport) {
     const reportTitle = await this.getReportTitle(siteReport);
-    const projectReportUuid = await this.getProjectReportUuid(siteReport.taskId);
+    const projectReportUuid =
+      (await ProjectReport.findOne({ where: { taskId: siteReport.taskId }, attributes: ["uuid"] }))?.uuid ?? null;
     return {
       id: siteReport.uuid,
       dto: new SiteReportLightDto(siteReport, { reportTitle, projectReportUuid: projectReportUuid })
@@ -502,14 +484,5 @@ export class SiteReportProcessor extends ReportProcessor<
     const paidOtherActivityDescription = demographicDescription ?? siteReport.paidOtherActivityDescription ?? null;
 
     return { paidOtherActivityDescription };
-  }
-
-  protected _projectReportUuids: Dictionary<string | null> = {};
-  protected async getProjectReportUuid(taskId: number) {
-    if (this._projectReportUuids[taskId] === undefined) {
-      this._projectReportUuids[taskId] =
-        (await ProjectReport.findOne({ where: { taskId }, attributes: ["uuid"] }))?.uuid ?? null;
-    }
-    return this._projectReportUuids[taskId];
   }
 }

@@ -183,8 +183,8 @@ export class NurseryReportProcessor extends ReportProcessor<
       }
     });
 
-    if (query.taskId != null) {
-      builder.where({ taskId: query.taskId });
+    if (query.taskIds != null && query.taskIds.length > 0) {
+      builder.where({ taskId: query.taskIds });
     }
 
     if (query.search != null) {

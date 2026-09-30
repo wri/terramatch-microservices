@@ -153,6 +153,14 @@ export class EntityStatusUpdate extends EventProcessor {
       return;
     }
 
+    if (baseModel.status === DRAFT || baseModel.status === DUE) {
+      if (baseModel.updateRequestStatus != null) {
+        baseModel.updateRequestStatus = null;
+        await baseModel.save();
+      }
+      return;
+    }
+
     baseModel.updateRequestStatus = updateRequest.status;
     if (updateRequest.status === APPROVED) {
       baseModel.status = APPROVED;

@@ -66,7 +66,8 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
   it("should avoid status email and actions for non-entities", async () => {
     mockUserContext();
-    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.project().create());
+    const project = await ProjectFactory.create({ status: APPROVED });
+    const processor = new EntityStatusUpdate(eventService, await UpdateRequestFactory.project(project).create());
     const statusUpdateSpy = jest.spyOn(processor as any, "sendStatusUpdateEmail");
     const updateActionsSpy = jest.spyOn(processor as any, "updateActions");
     const createAuditStatusSpy = jest.spyOn(processor as any, "createAuditStatus");
@@ -364,6 +365,18 @@ describe("EntityStatusUpdate EventProcessor", () => {
         `Pending Approval: ${getLinkedFieldConfig("site-rep-survival-calculation")?.field.label}`
       );
       expect(pmEmailSpy).toHaveBeenCalledWith("siteReports", expect.objectContaining({ uuid: siteReport.uuid }));
+    });
+
+    it("clears a change request status stamped onto a draft report", async () => {
+      const siteReport = await SiteReportFactory.create({ status: DRAFT, updateRequestStatus: null });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({ status: PENDING_APPROVAL });
+      await siteReport.update({ updateRequestStatus: PENDING_APPROVAL });
+
+      await new EntityStatusUpdate(eventService, updateRequest).handle();
+      await siteReport.reload();
+
+      expect(siteReport.status).toBe(DRAFT);
+      expect(siteReport.updateRequestStatus).toBeNull();
     });
   });
 

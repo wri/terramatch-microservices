@@ -172,6 +172,18 @@ describe("EntityProcessor", () => {
       expect(project.updateRequestStatus).toBeNull();
     });
 
+    it("submits a draft site report that still shows a pending change request", async () => {
+      const siteReport = await SiteReportFactory.create({
+        status: "draft",
+        updateRequestStatus: "pending-approval"
+      });
+      const updateRequest = await UpdateRequestFactory.siteReport(siteReport).create({ status: "pending-approval" });
+      await createProcessor("siteReports").update(siteReport, { status: "pending-approval" });
+      expect(siteReport.status).toBe("pending-approval");
+      expect(siteReport.updateRequestStatus).toBeNull();
+      expect(await UpdateRequest.findByPk(updateRequest.id)).toBeNull();
+    });
+
     it("clears updateRequestStatus when requesting more information on pending-approval", async () => {
       const project = await ProjectFactory.create({
         status: "pending-approval",

@@ -1,9 +1,8 @@
 /* istanbul ignore file */
 import { applyDecorators, HttpException, Type } from "@nestjs/common";
-import { ApiResponse, ApiResponseOptions } from "@nestjs/swagger";
+import { ApiResponse, ApiResponseOptions, ReferenceObject, SchemaObject } from "@nestjs/swagger";
 import { Dictionary } from "lodash";
 import { TranslatableException } from "../exceptions/translatable.exception";
-import { ReferenceObject, SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
 
 type Exception<T extends HttpException> = Type<T>;
 

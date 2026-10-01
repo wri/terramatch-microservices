@@ -61,6 +61,7 @@ export * from "./project-pitch.entity";
 export * from "./project-polygon.entity";
 export * from "./project-report.entity";
 export * from "./project-user.entity";
+export * from "./research-tree-count.entity";
 export * from "./role.entity";
 export * from "./role-has-permission.entity";
 export * from "./saved-export.entity";

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { AuditStatusService } from "./audit-status.service";
@@ -288,6 +289,113 @@ describe("AuditStatusService", () => {
       expect(result.length).toBeGreaterThanOrEqual(1);
     });
 
+    it("returns comments from previous site polygon versions that share primaryUuid", async () => {
+      const site = await SiteFactory.create();
+      const previousVersion = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: previousVersion.primaryUuid,
+        isActive: true
+      });
+      const unrelatedPolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: true });
+
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: previousVersion.id,
+        type: "comment",
+        comment: "Keep this after versioning"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: activeVersion.id,
+        type: "comment",
+        comment: "Comment on the new version"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: unrelatedPolygon.id,
+        type: "comment",
+        comment: "Unrelated polygon comment"
+      } as InferCreationAttributes<AuditStatus>);
+
+      const entity = await service.resolveEntity("sitePolygons", activeVersion.uuid);
+      const result = await service.getAuditStatuses(entity, "sitePolygons", activeVersion.uuid, ["comment"]);
+      const comments = result.map(audit => audit.comment);
+
+      expect(comments).toEqual(expect.arrayContaining(["Keep this after versioning", "Comment on the new version"]));
+      expect(comments).not.toContain("Unrelated polygon comment");
+    });
+
+    it("does not return other versions' non-comment audits when the family is not requested", async () => {
+      const site = await SiteFactory.create();
+      const previousVersion = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: previousVersion.primaryUuid,
+        isActive: true
+      });
+
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: previousVersion.id,
+        type: "status",
+        status: "draft",
+        comment: "Old version status"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: activeVersion.id,
+        type: "status",
+        status: "approved",
+        comment: "Current version status"
+      } as InferCreationAttributes<AuditStatus>);
+
+      const entity = await service.resolveEntity("sitePolygons", activeVersion.uuid);
+      const result = await service.getAuditStatuses(entity, "sitePolygons", activeVersion.uuid);
+      const comments = result.map(audit => audit.comment);
+
+      expect(comments).toContain("Current version status");
+      expect(comments).not.toContain("Old version status");
+    });
+
+    it("returns family comments when type filter is omitted", async () => {
+      const site = await SiteFactory.create();
+      const previousVersion = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const activeVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: previousVersion.primaryUuid,
+        isActive: true
+      });
+
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: previousVersion.id,
+        type: "comment",
+        comment: "Comment on the base"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: previousVersion.id,
+        type: "status",
+        status: "draft",
+        comment: "Old version status"
+      } as InferCreationAttributes<AuditStatus>);
+      await AuditStatus.create({
+        auditableType: SitePolygon.LARAVEL_TYPE,
+        auditableId: activeVersion.id,
+        type: "status",
+        status: "approved",
+        comment: "Current version status"
+      } as InferCreationAttributes<AuditStatus>);
+
+      const entity = await service.resolveEntity("sitePolygons", activeVersion.uuid);
+      const result = await service.getAuditStatuses(entity, "sitePolygons", activeVersion.uuid);
+      const comments = result.map(audit => audit.comment);
+
+      expect(comments).toEqual(expect.arrayContaining(["Comment on the base", "Current version status"]));
+      expect(comments).not.toContain("Old version status");
+    });
+
     it("should throw NotFoundException for invalid entity type", async () => {
       await expect(service.resolveEntity("invalidType" as EntityType, "uuid")).rejects.toThrow(NotFoundException);
     });
@@ -417,6 +525,81 @@ describe("AuditStatusService", () => {
 
       const reloadedProject = await project.reload();
       expect(reloadedProject.status).toBe("draft");
+    });
+
+    it("attaches site polygon comments to the base polygon instead of the current version", async () => {
+      const site = await SiteFactory.create();
+      const basePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const currentVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: basePolygon.primaryUuid,
+        isActive: true
+      });
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      const result = await service.createAuditStatus(currentVersion, {
+        type: "comment",
+        comment: "Belongs to the polygon family"
+      });
+
+      expect(result.auditableId).toBe(basePolygon.id);
+      expect(result.auditableType).toBe(SitePolygon.LARAVEL_TYPE);
+      expect(result.type).toBe("comment");
+    });
+
+    it("attaches comments to the oldest remaining version when the base polygon is missing", async () => {
+      const site = await SiteFactory.create();
+      const oldestVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        isActive: false,
+        createdAt: new Date("2024-01-01")
+      });
+      const currentVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: oldestVersion.primaryUuid,
+        isActive: true,
+        createdAt: new Date("2024-06-01")
+      });
+      await oldestVersion.update({ uuid: crypto.randomUUID() });
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      const result = await service.createAuditStatus(currentVersion, {
+        type: "comment",
+        comment: "Anchor to the oldest remaining version"
+      });
+
+      expect(result.auditableId).toBe(oldestVersion.id);
+      expect(result.auditableId).not.toBe(currentVersion.id);
+    });
+
+    it("keeps non-comment site polygon audits on the current version", async () => {
+      const site = await SiteFactory.create();
+      const basePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false });
+      const currentVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: basePolygon.primaryUuid,
+        isActive: true
+      });
+      const user = await UserFactory.create();
+
+      Object.defineProperty(entitiesService, "userId", {
+        get: () => user.id
+      });
+
+      const result = await service.createAuditStatus(currentVersion, {
+        type: "status",
+        status: "approved"
+      });
+
+      expect(result.auditableId).toBe(currentVersion.id);
     });
   });
 

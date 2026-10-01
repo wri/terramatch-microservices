@@ -162,13 +162,92 @@ export class AuditStatusService {
     entityUuid: string,
     typeFilter?: string[]
   ): Promise<AuditStatusDto[]> {
-    const data = await this.queryAuditData([entity], typeFilter);
+    const entities = await this.entitiesForAuditQuery(entity, entityType, typeFilter);
+    const data = await this.queryAuditData(entities, typeFilter);
+    this.restrictSitePolygonFamilyAudits(entity, entityType, typeFilter, data);
     const attachmentsMap = await this.loadMediaAttachments(data.modernAuditStatuses, entityType, entityUuid);
     const dtos = await this.transformToDtos(data, attachmentsMap);
-    if (typeFilter != null && typeFilter.length > 0) {
+    if ((typeFilter != null && typeFilter.length > 0) || entityType === "sitePolygons") {
       return uniqBy(dtos, dto => dto.uuid);
     }
     return uniqBy(dtos, dto => `${dto.type ?? "__NULL_TYPE__"}::${dto.comment ?? "__NULL_COMMENT_KEY__"}`);
+  }
+
+  private wantsSitePolygonFamilyComments(typeFilter?: string[]): boolean {
+    return typeFilter == null || typeFilter.length === 0 || typeFilter.includes("comment");
+  }
+
+  private isCommentOnlyTypeFilter(typeFilter?: string[]): boolean {
+    return typeFilter != null && typeFilter.length > 0 && typeFilter.every(type => type === "comment");
+  }
+
+  private restrictSitePolygonFamilyAudits(
+    entity: LaravelModel,
+    entityType: EntityType | "sitePolygons" | "submissions",
+    typeFilter: string[] | undefined,
+    data: RawAuditData
+  ): void {
+    if (entityType !== "sitePolygons" || !(entity instanceof SitePolygon) || this.isCommentOnlyTypeFilter(typeFilter)) {
+      return;
+    }
+
+    data.modernAuditStatuses = data.modernAuditStatuses.filter(
+      audit => audit.type === "comment" || audit.auditableId === entity.id
+    );
+    data.legacyAudits = data.legacyAudits.filter(audit => audit.auditableId === entity.id);
+  }
+
+  private async entitiesForAuditQuery(
+    entity: LaravelModel,
+    entityType: EntityType | "sitePolygons" | "submissions",
+    typeFilter?: string[]
+  ): Promise<LaravelModel[]> {
+    if (entityType !== "sitePolygons" || !(entity instanceof SitePolygon)) {
+      return [entity];
+    }
+
+    if (!this.wantsSitePolygonFamilyComments(typeFilter)) {
+      return [entity];
+    }
+
+    if (entity.primaryUuid == null || entity.primaryUuid === "") {
+      return [entity];
+    }
+
+    const family = await SitePolygon.findAll({
+      where: { primaryUuid: entity.primaryUuid }
+    });
+
+    return family.length > 0 ? family : [entity];
+  }
+
+  private async findSitePolygonCommentAnchor(primaryUuid: string): Promise<SitePolygon | null> {
+    const basePolygon = await SitePolygon.findOne({
+      where: { uuid: primaryUuid }
+    });
+    if (basePolygon != null) {
+      return basePolygon;
+    }
+
+    return SitePolygon.findOne({
+      where: { primaryUuid },
+      order: [
+        ["createdAt", "ASC"],
+        ["id", "ASC"]
+      ]
+    });
+  }
+
+  private async resolveSitePolygonCommentTarget(entity: LaravelModel, type?: string | null): Promise<LaravelModel> {
+    if (type !== "comment" || !(entity instanceof SitePolygon)) {
+      return entity;
+    }
+
+    if (entity.primaryUuid == null || entity.primaryUuid === "" || entity.uuid === entity.primaryUuid) {
+      return entity;
+    }
+
+    return (await this.findSitePolygonCommentAnchor(entity.primaryUuid)) ?? entity;
   }
 
   private shouldSyncModelStatusFromAudit(
@@ -219,8 +298,9 @@ export class AuditStatusService {
       throw new NotFoundException("User not found");
     }
 
-    const auditableType = laravelType(entity);
-    const auditableId = entity.id;
+    const auditableEntity = await this.resolveSitePolygonCommentTarget(entity, attributes.type);
+    const auditableType = laravelType(auditableEntity);
+    const auditableId = auditableEntity.id;
 
     if (attributes.type === "change-request") {
       await AuditStatus.update(

@@ -258,6 +258,17 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     required: false,
     default: false,
     type: "boolean",
+    description: "Filter to polygons linked to a disturbance (disturbance_id IS NOT NULL)."
+  })
+  @IsOptional()
+  @IsBoolean()
+  @TransformBooleanString()
+  hasDisturbance?: boolean;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    type: "boolean",
     description: "Soft-deleted polygons for one site. Search is supported; other filters are ignored."
   })
   @IsOptional()

@@ -1,7 +1,6 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "@nestjs/config";
-import * as Mail from "nodemailer/lib/mailer";
 import { Dictionary, isString } from "lodash";
 import { LocalizationService } from "../localization/localization.service";
 import { User } from "@terramatch-microservices/database/entities";
@@ -65,7 +64,7 @@ export class EmailService {
 
   async sendEmail(to: string | string[], subject: string, body: string) {
     const headers = {} as { [p: string]: string | string[] | { prepared: boolean; value: string } };
-    const mailOptions: Mail.Options = {
+    const mailOptions: nodemailer.SendMailOptions = {
       from: this.configService.get<string>("MAIL_FROM_ADDRESS"),
       to,
       subject,

@@ -3,7 +3,8 @@ import {
   SitePolygon,
   PolygonUpdates,
   PolygonGeometry,
-  SitePolygonAttributeValue
+  SitePolygonAttributeValue,
+  Disturbance
 } from "@terramatch-microservices/database/entities";
 import { Op, Transaction } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
@@ -312,7 +313,14 @@ export class SitePolygonVersioningService {
     return SitePolygon.findAll({
       where: { primaryUuid },
       order: [["createdAt", "DESC"]],
-      include: [{ model: PolygonGeometry, attributes: ["uuid"] }]
+      include: [
+        { model: PolygonGeometry, attributes: ["uuid"] },
+        {
+          model: Disturbance,
+          attributes: ["id", "disturbanceableId", "disturbanceableType", Disturbance.disturbanceReportUuidAttribute()],
+          required: false
+        }
+      ]
     });
   }
 

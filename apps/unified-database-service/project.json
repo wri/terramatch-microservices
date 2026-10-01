@@ -6,22 +6,7 @@
   "tags": [],
   "targets": {
     "build-repl": {},
-    "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
-      "options": {
-        "buildTarget": "unified-database-service:build",
-        "runBuildTargetDependencies": false
-      },
-      "configurations": {
-        "development": {
-          "buildTarget": "unified-database-service:build:development"
-        },
-        "production": {
-          "buildTarget": "unified-database-service:build:production"
-        }
-      }
-    }
+    "build": {},
+    "serve": {}
   }
 }

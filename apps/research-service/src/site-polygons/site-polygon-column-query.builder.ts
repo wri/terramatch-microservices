@@ -152,6 +152,12 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
     return this;
   }
 
+  filterHasDisturbance(hasDisturbance?: boolean) {
+    if (hasDisturbance !== true) return this;
+    this.where({ disturbanceId: { [Op.ne]: null } });
+    return this;
+  }
+
   isMissingIndicators(indicatorSlugs?: IndicatorSlug[]) {
     if (indicatorSlugs != null) {
       const literals = uniq(indicatorSlugs).map(slug => {

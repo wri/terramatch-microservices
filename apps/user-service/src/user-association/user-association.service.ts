@@ -45,6 +45,7 @@ export interface UserAssociationProcessor {
   readonly createPolicy: string;
   readonly updatePolicy: string;
   readonly approveRejectPolicy: string;
+  readonly deletePolicy: string;
   addDtos(document: DocumentBuilder, query: UserAssociationQueryDto): Promise<void>;
   handleCreate(document: DocumentBuilder, body: UserAssociationCreateBody | undefined, userId: number): Promise<void>;
   handleDelete(uuids: string[]): Promise<void>;
@@ -84,6 +85,7 @@ export class UserAssociationService {
         createPolicy: "update",
         updatePolicy: "update",
         approveRejectPolicy: "update",
+        deletePolicy: "update",
         addDtos: async (document, query) => {
           const project = (await loadEntity()) as Project;
           const projectUsers = await this.query(project, query);
@@ -113,6 +115,8 @@ export class UserAssociationService {
       createPolicy: "joinRequest",
       updatePolicy: "update",
       approveRejectPolicy: "approveReject",
+      // Team removal is available to anyone who can open the organisation, including project partners.
+      deletePolicy: "read",
       addDtos: async (document, query) => {
         const org = (await loadEntity()) as Organisation;
         const orgUsers = await this.queryOrg(org, query);
@@ -348,11 +352,23 @@ export class UserAssociationService {
   async deleteBulkOrgUserAssociations(organisationId: number, uuids: string[]) {
     const users = await User.findAll({
       where: { uuid: { [Op.in]: uuids } },
-      attributes: ["id", "uuid", "emailAddress"]
+      attributes: ["id", "uuid", "emailAddress", "organisationId"]
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
     await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
+
+    // Approved and invited members stay visible through users.organisation_id, not only organisation_user.
+    const homeMemberIds = users
+      .filter(user => user.organisationId != null && Number(user.organisationId) === Number(organisationId))
+      .map(user => user.id);
+    if (homeMemberIds.length > 0) {
+      await User.update({ organisationId: null }, { where: { id: { [Op.in]: homeMemberIds } } });
+    }
+
+    await OrganisationInvite.destroy({
+      where: { organisationId, emailAddress: { [Op.in]: users.map(user => user.emailAddress) } }
+    });
     return users.map(user => user.uuid);
   }
 

@@ -101,9 +101,6 @@ export class SrpReportFullDto extends SrpReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  approvedAt: Date | null;
-
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
 

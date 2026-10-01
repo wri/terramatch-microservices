@@ -517,14 +517,18 @@ ${projectTree.name},,,7`;
       expect(reportTree.amount).toEqual(3);
       expect(reportTree.hidden).toEqual(false);
       const reportTrees = await TreeSpecies.for(report).visible().collection("anr").findAll();
-      expect(reportTrees.length).toEqual(2);
+      expect(reportTrees.length).toEqual(3);
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: projectTree.name, amount: 1 }));
       expect(reportTrees).toContainEqual(expect.objectContaining({ name: reportTree.name, amount: 3 }));
+      expect(reportTrees).toContainEqual(expect.objectContaining({ name: siteTree.name, amount: 0 }));
       expect(warnings.length).toBe(7);
-      expect(warnings[0]).toMatchObject({ row: undefined, message: "Site not found or report not editable: Foo Site" });
+      expect(warnings[0]).toMatchObject({
+        location: undefined,
+        message: "Site not found or report not editable: Foo Site"
+      });
       expect(warnings).toContainEqual(
         expect.objectContaining({
-          row: 2,
+          location: { row: 2 },
           code: "TAXON_ID_MISSING",
           variables: { treeName: projectTree.name },
           message: `Scientific name not found for tree species: ${projectTree.name}`
@@ -532,7 +536,7 @@ ${projectTree.name},,,7`;
       );
       expect(warnings).toContainEqual(
         expect.objectContaining({
-          row: 3,
+          location: { row: 3, col: 2 },
           code: "AMOUNT_UNSUPPORTED",
           variables: { amountString: "-2" },
           message: "Amount value not supported: -2"
@@ -540,7 +544,7 @@ ${projectTree.name},,,7`;
       );
       expect(warnings).toContainEqual(
         expect.objectContaining({
-          row: 5,
+          location: { col: 3 },
           message: "Site name missing",
           code: "SITE_NAME_MISSING",
           variables: undefined
@@ -548,7 +552,7 @@ ${projectTree.name},,,7`;
       );
       expect(warnings).toContainEqual(
         expect.objectContaining({
-          row: 6,
+          location: { row: 6 },
           message: "Tree Species name missing",
           code: "TREE_NAME_MISSING",
           variables: undefined

@@ -70,6 +70,7 @@ export class SitePolygonLightDto extends HybridSupportDto {
         customAttributes: customAttributes ?? {},
         siteName: sitePolygon.site?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
+        disturbanceReportUuid: sitePolygon?.disturbance?.getDisturbanceReportUuid() ?? null,
         lightResource: true
       });
     }
@@ -206,6 +207,15 @@ export class SitePolygonLightDto extends HybridSupportDto {
   disturbanceableId: number | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      "UUID of the DisturbanceReport linked via disturbance, when disturbanceableType is DisturbanceReport. " +
+      "Use for /reports/disturbance-report/{uuid}."
+  })
+  disturbanceReportUuid: string | null;
+
+  @ApiProperty({
     type: Boolean,
     description: "Whether the site polygon is active"
   })
@@ -256,6 +266,7 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],
       disturbanceableId: sitePolygon.disturbance?.disturbanceableId ?? null,
+      disturbanceReportUuid: sitePolygon.disturbance?.getDisturbanceReportUuid() ?? null,
       lightResource: false
     });
   }

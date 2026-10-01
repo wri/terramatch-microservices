@@ -187,3 +187,4 @@ docker/geoserver/geoserver_data/temp/**
 .claude/worktrees
 .nx/polygraph
 .nx/self-healing
+.nx/migrate-runs

@@ -5,7 +5,7 @@ import {
   DisturbanceReportEntry,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
-import { Attributes, CreationAttributes } from "sequelize";
+import { Attributes, CreationAttributes, Op } from "sequelize";
 import { DateTime } from "luxon";
 import { Dictionary } from "lodash";
 import { isNotEmpty } from "@terramatch-microservices/database/types/array";
@@ -86,12 +86,18 @@ export const syncDisturbanceReportPolygons = async (entity: unknown) => {
   }
 
   // Remove disturbance id from all polygons that were previously assigned to this disturbance
-  await SitePolygon.disturbance(disturbance.id).active().update({ disturbanceId: null }, { where: {} });
+  // (covers polygons removed from this report on a resubmission).
+  await SitePolygon.update({ disturbanceId: null }, { where: { disturbanceId: disturbance.id, isActive: true } });
 
-  // Add the disturbance id to all affected polygons that were not already assigned a disturbance
-  await SitePolygon.forUuids(affectedPolygonUuids)
-    .active()
-    .update({ disturbanceId: disturbance.id }, { where: { disturbanceId: null } });
+  // Point every affected polygon at this disturbance, overwriting any older report's link. A
+  // polygon can legitimately appear in more than one disturbance report over time; the most
+  // recently submitted/approved report always owns disturbance_id so "View Report" reflects
+  // the latest one (TM-3941). Use an explicit where (not scoped update + empty where) so the
+  // overwrite is unambiguous.
+  await SitePolygon.update(
+    { disturbanceId: disturbance.id },
+    { where: { uuid: { [Op.in]: affectedPolygonUuids }, isActive: true } }
+  );
 };
 
 export const getEntryData = (entries: DisturbanceReportEntry[]) => {

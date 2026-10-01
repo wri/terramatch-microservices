@@ -25,6 +25,7 @@ import {
   ProjectPitch,
   ProjectPolygon,
   ProjectReport,
+  ResearchTreeCount,
   Site,
   SitePolygon,
   SiteReport,
@@ -69,6 +70,7 @@ import { MediaPolicy } from "./media.policy";
 import { UserContext } from "../contexts/user.context";
 import { AboutSectionPolicy } from "./about-section.policy";
 import { LocalizationKeyPolicy } from "./localization-key.policy";
+import { ResearchTreeCountPolicy } from "./research-tree-count.policy";
 
 type EntityClass = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,6 +108,7 @@ const POLICIES: [EntityClass, PolicyClass][] = [
   [ProjectPitch, ProjectPitchPolicy],
   [ProjectPolygon, ProjectPolygonPolicy],
   [ProjectReport, ProjectReportPolicy],
+  [ResearchTreeCount, ResearchTreeCountPolicy],
   [Site, SitePolicy],
   [SitePolygon, SitePolygonPolicy],
   [SiteReport, SiteReportPolicy],

@@ -11,20 +11,28 @@ export class BulkCsvDownloadQueryDto {
   collection: BulkTreeCollection;
 }
 
+class BulkUploadWarningLocation {
+  @ApiProperty({ type: Number })
+  row?: number;
+
+  @ApiProperty({ type: Number })
+  col?: number;
+}
+
 export class BulkUploadWarning {
   constructor(
     message: string,
     code: string,
-    { row, variables }: { row?: number; variables?: Dictionary<string | number> } = {}
+    { location, variables }: { location?: BulkUploadWarningLocation; variables?: Dictionary<string | number> } = {}
   ) {
     this.message = message;
-    this.row = row;
+    this.location = location;
     this.code = code;
     this.variables = variables;
   }
 
-  @ApiProperty({ description: "If relevant, the row the warning occurred on", type: Number })
-  row?: number;
+  @ApiProperty({ description: "If relevant, the location where the warning occurred", type: BulkUploadWarningLocation })
+  location?: BulkUploadWarningLocation;
 
   @ApiProperty({ description: "The warning message" })
   message: string;

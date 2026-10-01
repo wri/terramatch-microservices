@@ -1,5 +1,5 @@
 import { Op, WhereOptions } from "sequelize";
-import { Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Disturbance, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.builder";
@@ -7,17 +7,27 @@ import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.build
 export const MAP_INDEX_ATTRIBUTES = [
   "uuid",
   "polygonUuid",
+  "siteUuid",
   "status",
   "polyName",
   "numTrees",
   "calcArea",
-  "validationStatus"
+  "validationStatus",
+  "practice",
+  "targetSys"
 ] as const;
 
 export class SitePolygonMapIndexQueryBuilder extends SitePolygonColumnQueryBuilder {
   constructor() {
     super(undefined);
     this.attributes([...MAP_INDEX_ATTRIBUTES]);
+    this.findOptions.include = [
+      {
+        model: Disturbance,
+        attributes: ["disturbanceableType", Disturbance.disturbanceReportUuidAttribute()],
+        required: false
+      }
+    ];
   }
 
   async filterProjectUuids(projectUuids: string[]) {

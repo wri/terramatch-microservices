@@ -43,7 +43,7 @@ export class SitePolygonQueryBuilder extends SitePolygonColumnQueryBuilder {
 
   private disturbanceJoin: IncludeOptions = {
     model: Disturbance,
-    attributes: ["id", "disturbanceableId", "disturbanceableType"],
+    attributes: ["id", "disturbanceableId", "disturbanceableType", Disturbance.disturbanceReportUuidAttribute()],
     required: false
   };
 

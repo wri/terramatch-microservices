@@ -1,7 +1,8 @@
 import { FactoryGirl } from "factory-girl-ts";
-import { Disturbance, Site, SiteReport } from "../entities";
+import { Disturbance, DisturbanceReport, Site, SiteReport } from "../entities";
 import { faker } from "@faker-js/faker";
 import { SiteFactory } from "./site.factory";
+import { DisturbanceReportFactory } from "./disturbance-report.factory";
 
 const TYPES = ["manmade", "climatic", "ecological"];
 const INTENSITIES = ["low", "medium", "high"];
@@ -27,5 +28,12 @@ export const DisturbanceFactory = {
       ...(await defaultAttributesFactory()),
       disturbanceableType: SiteReport.LARAVEL_TYPE,
       disturbanceableId: (report?.id as number) ?? SiteFactory.associate("id")
+    })),
+
+  disturbanceReport: (report?: DisturbanceReport) =>
+    FactoryGirl.define(Disturbance, async () => ({
+      ...(await defaultAttributesFactory()),
+      disturbanceableType: DisturbanceReport.LARAVEL_TYPE,
+      disturbanceableId: (report?.id as number) ?? DisturbanceReportFactory.associate("id")
     }))
 };

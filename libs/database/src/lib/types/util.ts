@@ -1,5 +1,5 @@
 import { Model, ModelCtor } from "sequelize-typescript";
-import { Attributes } from "sequelize";
+import { Attributes, Includeable, ProjectionAlias } from "sequelize";
 import { FormModel } from "../constants/entities";
 import { Dictionary, isFunction } from "lodash";
 
@@ -44,4 +44,14 @@ export const polymorphicAttributes = <M extends Model>(model: PolymorphicModel<M
   const { POLYMORPHIC_TYPE, POLYMORPHIC_ID } =
     model instanceof Model ? (model.constructor as PolymorphicModelCtor<M>) : model;
   return { typeAttribute: POLYMORPHIC_TYPE, idAttribute: POLYMORPHIC_ID };
+};
+
+/**
+ * Some models (Site Report and Nursery Report for instance) have declared NonAttribute<>s that
+ * require that the query issued have some additional clauses attached. This type helps provide
+ * those clauses in a normalized way. See usage in PaginatedQueryBuilder.
+ */
+export type ComputedAttribute = {
+  include: Includeable;
+  attribute: ProjectionAlias;
 };

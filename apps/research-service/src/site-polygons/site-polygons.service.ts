@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Type } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AuditStatus,
   CriteriaSite,
@@ -29,7 +29,6 @@ import {
   TreeSpeciesDto
 } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
-import { ModelPropertiesAccessor } from "@nestjs/swagger/dist/services/model-properties-accessor";
 import { groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
@@ -53,6 +52,7 @@ import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
+import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -94,7 +94,6 @@ export class SitePolygonsService {
   }
 
   async updateIndicator(sitePolygonUuid: string, indicator: IndicatorDto, transaction?: Transaction): Promise<void> {
-    const accessor = new ModelPropertiesAccessor();
     const { id: sitePolygonId } =
       (await SitePolygon.findOne({
         where: { uuid: sitePolygonUuid },
@@ -116,8 +115,7 @@ export class SitePolygonsService {
       })) ?? new IndicatorClass();
     if (model.sitePolygonId == null) model.sitePolygonId = sitePolygonId;
 
-    const DtoPrototype = INDICATOR_DTOS[indicatorSlug];
-    const fields = accessor.getModelProperties(DtoPrototype.prototype as unknown as Type<unknown>);
+    const fields = apiAttributes(INDICATOR_DTOS[indicatorSlug]);
     Object.assign(model, pick(indicator, fields));
     await model.save({ transaction });
   }
@@ -325,7 +323,7 @@ export class SitePolygonsService {
 
       const allVersions = await SitePolygon.findAll({
         where: { primaryUuid: sitePolygon.primaryUuid },
-        attributes: ["id", "uuid", "isActive", "polygonUuid", "pointUuid"],
+        attributes: ["id", "uuid", "isActive", "polygonUuid", "pointUuid", "createdAt"],
         transaction
       });
 
@@ -369,6 +367,21 @@ export class SitePolygonsService {
         where: { sitePolygonUuid: uuid },
         transaction
       });
+
+      const commentAnchor = this.findRemainingCommentAnchor(sitePolygon, allVersions);
+      if (commentAnchor != null) {
+        await AuditStatus.update(
+          { auditableId: commentAnchor.id },
+          {
+            where: {
+              auditableType: SitePolygon.LARAVEL_TYPE,
+              auditableId: sitePolygon.id,
+              type: "comment"
+            },
+            transaction
+          }
+        );
+      }
 
       await AuditStatus.destroy({
         where: {
@@ -416,6 +429,27 @@ export class SitePolygonsService {
         await this.polygonGeometryService.bulkUpdateProjectCentroids([polygonUuid], transaction);
       }
     });
+  }
+
+  private findRemainingCommentAnchor(deletedVersion: SitePolygon, allVersions: SitePolygon[]): SitePolygon | null {
+    const remaining = allVersions.filter(version => version.uuid !== deletedVersion.uuid);
+    if (remaining.length === 0) {
+      return null;
+    }
+
+    const base = remaining.find(version => version.uuid === deletedVersion.primaryUuid);
+    if (base != null) {
+      return base;
+    }
+
+    return [...remaining].sort((left, right) => {
+      const leftCreated = left.createdAt?.getTime() ?? left.id;
+      const rightCreated = right.createdAt?.getTime() ?? right.id;
+      if (leftCreated !== rightCreated) {
+        return leftCreated - rightCreated;
+      }
+      return left.id - right.id;
+    })[0];
   }
 
   async loadAssociationDtos(sitePolygons: SitePolygon[], lightResource: boolean) {
@@ -499,7 +533,6 @@ export class SitePolygonsService {
     const results: Record<number, IndicatorDto[]> = {};
     if (sitePolygons.length === 0) return results;
 
-    const accessor = new ModelPropertiesAccessor();
     const sitePolygonIds = sitePolygons.map(({ id }) => id);
     const plantStartById = new Map(sitePolygons.map(sp => [sp.id, sp.plantStart]));
     const modelClasses = uniq(Object.values(INDICATOR_MODEL_CLASSES));
@@ -512,8 +545,7 @@ export class SitePolygonsService {
       let fields: string[] | undefined = undefined;
       for (const indicator of indicators) {
         if (fields === undefined) {
-          const DTO = INDICATOR_DTOS[indicator.indicatorSlug];
-          fields = accessor.getModelProperties(DTO.prototype as unknown as Type<unknown>);
+          fields = apiAttributes(INDICATOR_DTOS[indicator.indicatorSlug]);
         }
 
         results[indicator.sitePolygonId] ??= [];

@@ -51,6 +51,17 @@ describe("site-polygon-sort", () => {
       );
     });
 
+    it("builds disturbance order by presence of disturbance_id", () => {
+      const order = buildSitePolygonSortOrder("disturbance", "DESC");
+      expect(order).toHaveLength(1);
+      const [expression, direction] = order[0] as [ReturnType<typeof literal>, string];
+      expect(direction).toBe("DESC");
+      expect(expression).toEqual(literal("IF(SitePolygon.disturbance_id IS NULL, 0, 1)"));
+      expect(buildSitePolygonSortOrder("disturbance")).toEqual([
+        [literal("IF(SitePolygon.disturbance_id IS NULL, 0, 1)"), "ASC"]
+      ]);
+    });
+
     it("throws for an unrecognized sort field", () => {
       expect(() => buildSitePolygonSortOrder("invalid")).toThrow(BadRequestException);
       expect(() => buildSitePolygonSortOrder("invalid")).toThrow("Invalid sort field: invalid");
@@ -70,7 +81,8 @@ describe("site-polygon-sort", () => {
           "submissionCycle",
           "source",
           "practice",
-          "distr"
+          "distr",
+          "disturbance"
         ])
       );
     });

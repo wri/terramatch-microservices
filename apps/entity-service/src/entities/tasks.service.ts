@@ -2,20 +2,22 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import {
   Action,
   AuditStatus,
+  Nursery,
   NurseryReport,
   ProjectReport,
   ProjectUser,
+  Site,
   SiteReport,
   SrpReport,
   Task,
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, ResourceBuilder } from "@terramatch-microservices/common/util";
 import { EntitiesService } from "./entities.service";
 import { ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { TaskQueryDto } from "./dto/task-query.dto";
+import { TASK_SIDELOADS, TaskQueryDto, TaskSideload } from "./dto/task-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Attributes, Op } from "sequelize";
 import { PolicyService } from "@terramatch-microservices/common";
@@ -23,8 +25,9 @@ import { APPROVED, PENDING_APPROVAL } from "@terramatch-microservices/database/c
 import { laravelType } from "@terramatch-microservices/database/types/util";
 import { ModelCtor } from "sequelize-typescript";
 import { TaskUpdateAttributes } from "./dto/task-update.dto";
-import { filter } from "lodash";
-import { TaskFullDto } from "@terramatch-microservices/common/dto/task.dto";
+import { filter, groupBy, uniq } from "lodash";
+import { TaskFullDto, TaskLightDto } from "@terramatch-microservices/common/dto/task.dto";
+import { isNotNull } from "@terramatch-microservices/database/types/array";
 
 const FILTER_PROPS = {
   status: "status",
@@ -42,6 +45,25 @@ export class TasksService {
   ) {}
 
   async getTasks(query: TaskQueryDto) {
+    let { projectUuid } = query;
+    const { siteUuid, nurseryUuid } = query;
+    if ([projectUuid, siteUuid, nurseryUuid].filter(isNotNull).length > 1) {
+      throw new BadRequestException("Only one of projectUuid, siteUuid and nurseryUuid may be provided");
+    }
+
+    if (siteUuid != null) {
+      projectUuid = (
+        await Site.findOne({ where: { uuid: siteUuid }, include: [{ association: "project", attributes: ["uuid"] }] })
+      )?.projectUuid;
+    } else if (nurseryUuid != null) {
+      projectUuid = (
+        await Nursery.findOne({
+          where: { uuid: nurseryUuid },
+          include: [{ association: "project", attributes: ["uuid"] }]
+        })
+      )?.projectUuid;
+    }
+
     const builder = PaginatedQueryBuilder.forNumberPage(Task, query.page, [
       // required: true avoids loading tasks attached to deleted projects or orgs
       { association: "organisation", attributes: ["name"], required: true },
@@ -57,7 +79,7 @@ export class TasksService {
     if (frameworkPermissions?.length > 0) {
       builder.where({ "$project.framework_key$": { [Op.in]: frameworkPermissions } });
     } else {
-      if (query.projectUuid == null) {
+      if (projectUuid == null) {
         const userId = this.policyService.userId;
         if (userId == null) throw new BadRequestException("Cannot get tasks without a user");
         // non-admin users should typically be filtering on a project, but to cover our bases,
@@ -76,7 +98,11 @@ export class TasksService {
     }
 
     for (const [filterProp, sqlProp] of Object.entries(FILTER_PROPS) as [keyof typeof FILTER_PROPS, string][]) {
-      if (query[filterProp] != null) {
+      if (filterProp === "projectUuid" && projectUuid != null) {
+        // In this case we have to use our local projectUuid that might have been calculated from a
+        // siteUuid or nurseryUuid query param.
+        builder.where({ [sqlProp]: projectUuid });
+      } else if (query[filterProp] != null) {
         builder.where({ [sqlProp]: query[filterProp] });
       }
     }
@@ -109,6 +135,13 @@ export class TasksService {
     return task;
   }
 
+  async addLightTaskDto(document: DocumentBuilder, task: Task, sideloads: TaskSideload[]) {
+    const resource = document.addData(task.uuid, new TaskLightDto(task));
+    await this.sideloadReports(document, resource, task, uniq(sideloads));
+
+    return document;
+  }
+
   async addFullTaskDto(document: DocumentBuilder, task: Task) {
     const treesPlantedCount =
       (await TreeSpecies.visible()
@@ -117,21 +150,7 @@ export class TasksService {
         .sum("amount")) ?? 0;
 
     const taskResource = document.addData(task.uuid, new TaskFullDto(task, { treesPlantedCount }));
-    await this.loadReports(task);
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      if (entityType === "projectReports") {
-        if (task.projectReport != null) {
-          const { id, dto } = await processor.getLightDto(task.projectReport);
-          taskResource.relateTo("projectReport", document.addData(id, dto));
-        }
-      } else {
-        for (const report of task[entityType] ?? []) {
-          const { id, dto } = await processor.getLightDto(report);
-          taskResource.relateTo(entityType, document.addData(id, dto), { forceMultiple: true });
-        }
-      }
-    }
+    await this.sideloadReports(document, taskResource, task);
 
     return document;
   }
@@ -143,7 +162,7 @@ export class TasksService {
       throw new BadRequestException('Task cannot transition to "pending-approval" status.');
     }
 
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     // First, make sure all the reports are either complete or are completable
     const reports: ReportModel[] = [...(task.siteReports ?? []), ...(task.nurseryReports ?? [])];
@@ -188,7 +207,7 @@ export class TasksService {
     await this.updateReportsStatus(SiteReport, siteReportApprovalUuids ?? [], APPROVED, taskId);
     await this.updateReportsStatus(NurseryReport, nurseryReportApprovalUuids ?? [], APPROVED, taskId);
 
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     const siteReports = filter(
       (siteReportApprovalUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
@@ -213,7 +232,7 @@ export class TasksService {
     { siteReportNothingToReportUuids, nurseryReportNothingToReportUuids }: TaskUpdateAttributes,
     task: Task
   ) {
-    await this.loadReports(task);
+    await this.loadReports([task]);
 
     const siteReports = filter(
       (siteReportNothingToReportUuids ?? []).map(uuid => task.siteReports?.find(siteReport => siteReport.uuid === uuid))
@@ -242,6 +261,71 @@ export class TasksService {
     );
   }
 
+  async loadReports(tasks: Task[]) {
+    const unloadedTasks = tasks.filter(({ projectReport }) => projectReport == null);
+    if (unloadedTasks.length === 0) return;
+
+    const taskIds = unloadedTasks.map(({ id }) => id);
+    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
+      const processor = this.entitiesService.createEntityProcessor(entityType);
+      const { models } = await processor.findMany({ taskIds });
+      const byTask = groupBy(models, "taskId");
+      for (const task of unloadedTasks) {
+        const modelsForTask = byTask[task.id];
+        if (modelsForTask == null) continue;
+
+        if (entityType === "projectReports") {
+          if (modelsForTask.length > 0) this.logger.error(`More than one project report found for task ${task.id}`);
+          task.projectReport = modelsForTask[0] as ProjectReport;
+        } else {
+          task[entityType] = modelsForTask as NurseryReport[] & SiteReport[] & SrpReport[];
+        }
+      }
+    }
+  }
+
+  private async sideloadReports(
+    document: DocumentBuilder,
+    taskResource: ResourceBuilder,
+    task: Task,
+    sideloadTypes?: TaskSideload[]
+  ) {
+    await this.loadReports([task]);
+
+    const getRelations = async (entityType: TaskSideload) => {
+      const relations: { id: string; type: string }[] = [];
+      const reports = ((entityType === "projectReports" ? [task.projectReport] : task[entityType]) ?? []).filter(
+        isNotNull
+      );
+
+      if (sideloadTypes == null || sideloadTypes.includes(entityType)) {
+        const processor = this.entitiesService.createEntityProcessor(entityType);
+        for (const report of reports) {
+          const { id, dto } = await processor.getLightDto(report);
+          relations.push(document.addData(id, dto));
+        }
+      } else {
+        // If the request doesn't ask for this sideload type, don't generate the DTO and add it to the
+        // document. We do still want the list of relations to be sent to the client though.
+        for (const report of reports) {
+          relations.push({ id: report.uuid, type: entityType });
+        }
+      }
+
+      return relations;
+    };
+
+    for (const entityType of TASK_SIDELOADS) {
+      for (const relation of await getRelations(entityType)) {
+        if (entityType === "projectReports") {
+          taskResource.relateTo("projectReport", relation);
+        } else {
+          taskResource.relateTo(entityType, relation, { forceMultiple: true });
+        }
+      }
+    }
+  }
+
   private async updateReportsStatus<T extends ReportModel>(
     modelClass: ModelCtor<T>,
     uuids: string[],
@@ -267,20 +351,5 @@ export class TasksService {
       status: APPROVED,
       comment: feedback ?? null
     }));
-  }
-
-  private async loadReports(task: Task) {
-    if (task.projectReport != null) return;
-
-    for (const entityType of ["projectReports", "siteReports", "nurseryReports", "srpReports"] as const) {
-      const processor = this.entitiesService.createEntityProcessor(entityType);
-      const { models } = await processor.findMany({ taskId: task.id });
-      if (entityType === "projectReports") {
-        if (models.length > 1) this.logger.error(`More than one project report found for task ${task.id}`);
-        task.projectReport = models[0] as ProjectReport;
-      } else {
-        task[entityType] = models as NurseryReport[] & SiteReport[] & SrpReport[];
-      }
-    }
   }
 }

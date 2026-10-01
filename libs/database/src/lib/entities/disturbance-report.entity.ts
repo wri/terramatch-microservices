@@ -90,10 +90,6 @@ export class DisturbanceReport extends Model<
   declare nothingToReport: boolean | null;
 
   @AllowNull
-  @Column(DATE)
-  declare approvedAt: Date | null;
-
-  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   declare approvedBy: number | null;

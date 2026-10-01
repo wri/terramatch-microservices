@@ -1,10 +1,11 @@
 import { getQueueToken } from "@nestjs/bullmq";
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { HealthIndicatorService } from "@nestjs/terminus";
-import { Queue } from "bullmq";
+import { IRedisClient, Queue } from "bullmq";
 import { ModuleRef } from "@nestjs/core";
 import { Dictionary } from "lodash";
 import { QUEUE_LIST } from "./health.module";
+import Redis from "ioredis";
 
 type QueueData = {
   waitingJobs: number;
@@ -43,7 +44,8 @@ export class QueueHealthIndicator implements OnModuleInit {
   }
 
   private async checkQueue(queue: Queue) {
-    const isHealthy = (await (await queue.client).ping()) === "PONG";
+    const client = (await queue.client) as IRedisClient & { ping: Redis["ping"] };
+    const isHealthy = (await client.ping()) === "PONG";
     if (!isHealthy) throw new Error("Redis connection for airtable queue unavailable");
 
     return {

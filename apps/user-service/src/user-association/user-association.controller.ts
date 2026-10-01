@@ -182,7 +182,7 @@ export class UserAssociationController {
   ) {
     const processor = this.userAssociationService.createProcessor(model, uuid);
     const entity = await processor.getEntity();
-    await this.policyService.authorize(processor.updatePolicy, entity);
+    await this.policyService.authorize(processor.deletePolicy, entity);
     await processor.handleDelete(query.uuids);
     return buildDeletedResponse("associatedUsers", query.uuids);
   }

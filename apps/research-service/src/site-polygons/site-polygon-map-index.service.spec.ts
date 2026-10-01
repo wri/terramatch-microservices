@@ -1,7 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
-import { CriteriaSite, SitePolygon } from "@terramatch-microservices/database/entities";
+import { CriteriaSite, Disturbance, SitePolygon } from "@terramatch-microservices/database/entities";
 import {
+  DisturbanceFactory,
+  DisturbanceReportFactory,
   IndicatorOutputTreeCoverFactory,
   ProjectFactory,
   SiteFactory,
@@ -29,6 +31,7 @@ describe("SitePolygonMapIndexService", () => {
   afterEach(async () => {
     await CriteriaSite.truncate();
     await SitePolygon.truncate();
+    await Disturbance.truncate();
   });
 
   describe("scope validation", () => {
@@ -75,7 +78,9 @@ describe("SitePolygonMapIndexService", () => {
         polyName: "Riverbank North",
         numTrees: 1200,
         calcArea: 3.5,
-        validationStatus: "passed"
+        validationStatus: "passed",
+        practice: ["tree-planting"],
+        targetSys: "natural-forest"
       });
 
       const result = await getMapIndex({ siteId: [site.uuid] });
@@ -85,22 +90,62 @@ describe("SitePolygonMapIndexService", () => {
         {
           uuid: polygon.uuid,
           polygonUuid: polygon.polygonUuid,
+          siteId: site.uuid,
           status: "approved",
           name: "Riverbank North",
           numTrees: 1200,
           calcArea: 3.5,
-          validationStatus: "passed"
+          validationStatus: "passed",
+          practice: ["tree-planting"],
+          targetSys: "natural-forest",
+          disturbanceReportUuid: null
         }
       ]);
       expect(Object.keys(result.polygons[0]).sort()).toEqual([
         "calcArea",
+        "disturbanceReportUuid",
         "name",
         "numTrees",
         "polygonUuid",
+        "practice",
+        "siteId",
         "status",
+        "targetSys",
         "uuid",
         "validationStatus"
       ]);
+    });
+
+    it("exposes disturbanceReportUuid for report-linked disturbances", async () => {
+      const site = await SiteFactory.create();
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const polygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+
+      const result = await getMapIndex({ siteId: [site.uuid] });
+
+      expect(result.polygons).toEqual([
+        expect.objectContaining({
+          uuid: polygon.uuid,
+          disturbanceReportUuid: report.uuid
+        })
+      ]);
+    });
+
+    it("returns null disturbanceReportUuid for site-owned disturbances", async () => {
+      const site = await SiteFactory.create();
+      const disturbance = await DisturbanceFactory.site(site).create();
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+
+      const result = await getMapIndex({ siteId: [site.uuid] });
+
+      expect(result.polygons[0].disturbanceReportUuid).toBeNull();
     });
 
     it("excludes polygons from other sites", async () => {
@@ -229,6 +274,21 @@ describe("SitePolygonMapIndexService", () => {
       const result = await getMapIndex({ siteId: [site.uuid], hasOverlap: true });
 
       expect(result.polygons.map(({ uuid }) => uuid)).toEqual([overlapping.uuid]);
+    });
+
+    it("filters to polygons with a disturbance when hasDisturbance is true", async () => {
+      const site = await SiteFactory.create();
+      const report = await DisturbanceReportFactory.create();
+      const disturbance = await DisturbanceFactory.disturbanceReport(report).create();
+      const disturbed = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        disturbanceId: disturbance.id
+      });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, disturbanceId: null });
+
+      const result = await getMapIndex({ siteId: [site.uuid], hasDisturbance: true });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([disturbed.uuid]);
     });
 
     it("filters to polygons missing an indicator", async () => {

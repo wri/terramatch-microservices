@@ -146,5 +146,44 @@ describe("DisturbanceReportEntriesCollector", () => {
       await polygon.reload();
       expect(polygon.disturbanceId).toBe(disturbance?.id);
     });
+
+    it("overwrites disturbance_id from an older report when the polygon is reported again", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+
+      const reportA = await DisturbanceReportFactory.create({ status: "pending-approval" });
+      await collector.syncRelation(
+        reportA,
+        field,
+        [
+          {
+            name: "polygon-affected",
+            value: `[[{"polyUuid":"${polygon.uuid}"}]]`,
+            inputType: "disturbanceAffectedPolygon"
+          }
+        ],
+        false
+      );
+      const disturbanceA = await Disturbance.for(reportA).findOne();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbanceA?.id);
+
+      const reportB = await DisturbanceReportFactory.create({ status: "pending-approval" });
+      await collector.syncRelation(
+        reportB,
+        field,
+        [
+          {
+            name: "polygon-affected",
+            value: `[[{"polyUuid":"${polygon.uuid}"}]]`,
+            inputType: "disturbanceAffectedPolygon"
+          }
+        ],
+        false
+      );
+      const disturbanceB = await Disturbance.for(reportB).findOne();
+      await polygon.reload();
+      expect(disturbanceB?.id).not.toBe(disturbanceA?.id);
+      expect(polygon.disturbanceId).toBe(disturbanceB?.id);
+    });
   });
 });

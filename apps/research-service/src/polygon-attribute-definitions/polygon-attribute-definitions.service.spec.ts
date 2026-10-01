@@ -142,6 +142,41 @@ describe("PolygonAttributeDefinitionsService", () => {
 
       expect(definition.order).toBe(5);
     });
+
+    it("creates a date attribute with no options", async () => {
+      const definition = await service.create({
+        label: uniqueLabel("Monitoring Visit Date"),
+        inputType: "date",
+        frameworkKey: "ppc",
+        options: []
+      });
+      createdDefinitionIds.push(definition.id);
+
+      expect(definition.inputType).toBe("date");
+      expect(definition.options).toEqual([]);
+    });
+
+    it("rejects a date attribute created with options", async () => {
+      await expect(
+        service.create({
+          label: uniqueLabel("Monitoring Visit Date"),
+          inputType: "date",
+          frameworkKey: "ppc",
+          options: [{ label: "One" }]
+        })
+      ).rejects.toThrow("Date attributes cannot have options");
+    });
+
+    it("rejects a single_select attribute created with an empty options array", async () => {
+      await expect(
+        service.create({
+          label: uniqueLabel("No Options"),
+          inputType: "single_select",
+          frameworkKey: "ppc",
+          options: []
+        })
+      ).rejects.toThrow("At least one option is required");
+    });
   });
 
   describe("ordering", () => {
@@ -232,6 +267,47 @@ describe("PolygonAttributeDefinitionsService", () => {
         where: { polygonAttributeDefinitionId: created.id }
       });
       expect(remaining).toBe(2);
+    });
+
+    it("rejects sending options when updating a date attribute", async () => {
+      const created = await service.create({
+        label: uniqueLabel("Monitoring Visit Date"),
+        inputType: "date",
+        frameworkKey: "ppc",
+        options: []
+      });
+      createdDefinitionIds.push(created.id);
+
+      await expect(service.update(created, { options: [option("One")] })).rejects.toThrow(
+        "Date attributes cannot have options"
+      );
+    });
+
+    it("allows updating a date attribute's label without touching options", async () => {
+      const created = await service.create({
+        label: uniqueLabel("Monitoring Visit Date"),
+        inputType: "date",
+        frameworkKey: "ppc",
+        options: []
+      });
+      createdDefinitionIds.push(created.id);
+
+      const updated = await service.update(created, { label: uniqueLabel("Renamed Date Attribute") });
+
+      expect(updated.inputType).toBe("date");
+      expect(updated.options).toEqual([]);
+    });
+
+    it("rejects clearing all options on a single_select attribute via update", async () => {
+      const created = await service.create({
+        label: uniqueLabel("Cannot Clear"),
+        inputType: "single_select",
+        frameworkKey: "ppc",
+        options: [{ label: "One" }]
+      });
+      createdDefinitionIds.push(created.id);
+
+      await expect(service.update(created, { options: [] })).rejects.toThrow("At least one option is required");
     });
 
     it("rejects an unknown option uuid", async () => {

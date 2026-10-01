@@ -75,9 +75,6 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   title: string | null;
 
-  @ApiProperty({ nullable: true, type: Date })
-  approvedAt: Date | null;
-
   @ApiProperty({ nullable: true, type: Number })
   completion: number | null;
 

@@ -95,10 +95,6 @@ export class FinancialReport extends Model<InferAttributes<FinancialReport>, Inf
   declare nothingToReport: boolean | null;
 
   @AllowNull
-  @Column(DATE)
-  declare approvedAt: Date | null;
-
-  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   declare approvedBy: number | null;

@@ -15,7 +15,6 @@ import {
 } from "@terramatch-microservices/database/entities/polygon-attribute-definition.entity";
 import { Transform, Type } from "class-transformer";
 import {
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -134,10 +133,13 @@ export class CreatePolygonAttributeDefinitionAttributes {
   order?: number;
 
   @IsArray()
-  @ArrayMinSize(1, { message: "At least one option is required" })
   @ValidateNested({ each: true })
   @Type(() => StorePolygonAttributeDefinitionOptionAttributes)
-  @ApiProperty({ type: StorePolygonAttributeDefinitionOptionAttributes, isArray: true })
+  @ApiProperty({
+    type: StorePolygonAttributeDefinitionOptionAttributes,
+    isArray: true,
+    description: "Required with at least one entry for single_select/multi_select. Must be an empty array for date."
+  })
   options: StorePolygonAttributeDefinitionOptionAttributes[];
 }
 
@@ -161,14 +163,13 @@ export class UpdatePolygonAttributeDefinitionAttributes {
 
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, { message: "At least one option is required" })
   @ValidateNested({ each: true })
   @Type(() => StorePolygonAttributeDefinitionOptionAttributes)
   @ApiPropertyOptional({
     type: StorePolygonAttributeDefinitionOptionAttributes,
     isArray: true,
     description:
-      "When provided, replaces the full option list. Omitted options are removed only if no polygon stores that option value. Existing option values stay locked."
+      "When provided, replaces the full option list (single_select/multi_select require at least one entry; date must be empty). Omitted options are removed only if no polygon stores that option value. Existing option values stay locked."
   })
   options?: StorePolygonAttributeDefinitionOptionAttributes[];
 }

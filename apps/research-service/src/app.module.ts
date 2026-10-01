@@ -41,6 +41,8 @@ import { AnrPlotGeometryController } from "./site-polygons/anr-plot-geometry.con
 import { AnrPlotGeometryService } from "./site-polygons/anr-plot-geometry.service";
 import { PolygonAttributeDefinitionsController } from "./polygon-attribute-definitions/polygon-attribute-definitions.controller";
 import { PolygonAttributeDefinitionsService } from "./polygon-attribute-definitions/polygon-attribute-definitions.service";
+import { ResearchTreeCountsController } from "./research-tree-counts/research-tree-counts.controller";
+import { ResearchTreeCountsService } from "./research-tree-counts/research-tree-counts.service";
 
 const IS_REPL = process.env["REPL"] === "true";
 
@@ -76,7 +78,8 @@ const IS_REPL = process.env["REPL"] === "true";
     IndicatorsController,
     ProjectPolygonsController,
     AnrPlotGeometryController,
-    PolygonAttributeDefinitionsController
+    PolygonAttributeDefinitionsController,
+    ResearchTreeCountsController
   ],
   providers: [
     { provide: APP_FILTER, useClass: TMGlobalFilter },
@@ -102,6 +105,7 @@ const IS_REPL = process.env["REPL"] === "true";
     ProjectPolygonGeometryService,
     AnrPlotGeometryService,
     PolygonAttributeDefinitionsService,
+    ResearchTreeCountsService,
 
     ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
   ]

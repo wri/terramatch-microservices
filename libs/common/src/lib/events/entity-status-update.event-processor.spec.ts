@@ -525,5 +525,32 @@ describe("EntityStatusUpdate EventProcessor", () => {
       await polygon.reload();
       expect(polygon.disturbanceId).toBeNull();
     });
+
+    it("overwrites site_polygon.disturbance_id with the most recently submitted report", async () => {
+      const polygon = await SitePolygonFactory.create({ isActive: true, disturbanceId: null });
+
+      const reportA = await DisturbanceReportFactory.create({ status: PENDING_APPROVAL });
+      await DisturbanceReportEntryFactory.report(reportA).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+      await handleStatusUpdate(reportA);
+
+      const disturbanceA = await Disturbance.for(reportA).findOne();
+      await polygon.reload();
+      expect(polygon.disturbanceId).toBe(disturbanceA?.id);
+
+      const reportB = await DisturbanceReportFactory.create({ status: PENDING_APPROVAL });
+      await DisturbanceReportEntryFactory.report(reportB).create({
+        name: "polygon-affected",
+        value: `[[{"polyUuid":"${polygon.uuid}"}]]`
+      });
+      await handleStatusUpdate(reportB);
+
+      const disturbanceB = await Disturbance.for(reportB).findOne();
+      await polygon.reload();
+      expect(disturbanceB?.id).not.toBe(disturbanceA?.id);
+      expect(polygon.disturbanceId).toBe(disturbanceB?.id);
+    });
   });
 });

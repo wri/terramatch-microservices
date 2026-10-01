@@ -69,6 +69,7 @@ describe("UserAssociationService", () => {
         expect(processor.readPolicy).toBe("read");
         expect(processor.createPolicy).toBe("update");
         expect(processor.updatePolicy).toBe("update");
+        expect(processor.deletePolicy).toBe("update");
       });
 
       it("should load project entity on getEntity call", async () => {
@@ -175,6 +176,7 @@ describe("UserAssociationService", () => {
         expect(processor.readPolicy).toBe("read");
         expect(processor.createPolicy).toBe("joinRequest");
         expect(processor.updatePolicy).toBe("update");
+        expect(processor.deletePolicy).toBe("read");
       });
 
       it("should load organisation entity on getEntity call", async () => {
@@ -701,12 +703,14 @@ describe("UserAssociationService", () => {
 
       jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
       jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(2);
+      const updateSpy = jest.spyOn(User, "update").mockResolvedValue([0]);
+      const inviteDestroySpy = jest.spyOn(OrganisationInvite, "destroy").mockResolvedValue(0);
 
       const result = await service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string, user2.uuid as string]);
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { uuid: { [Op.in]: [user1.uuid, user2.uuid] } },
-        attributes: ["id", "uuid", "emailAddress"]
+        attributes: ["id", "uuid", "emailAddress", "organisationId"]
       });
       expect(OrganisationUser.destroy).toHaveBeenCalledWith({
         where: {
@@ -714,7 +718,31 @@ describe("UserAssociationService", () => {
           userId: { [Op.in]: [user1.id, user2.id] }
         }
       });
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(inviteDestroySpy).toHaveBeenCalledWith({
+        where: {
+          organisationId: org.id,
+          emailAddress: { [Op.in]: [user1.emailAddress, user2.emailAddress] }
+        }
+      });
       expect(result).toEqual([user1.uuid, user2.uuid]);
+    });
+
+    it("should clear organisationId for members whose home organisation is this one", async () => {
+      const org = await OrganisationFactory.create();
+      const member = await UserFactory.create({ organisationId: org.id });
+
+      jest.spyOn(User, "findAll").mockResolvedValue([member] as User[]);
+      jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(1);
+      const updateSpy = jest.spyOn(User, "update").mockResolvedValue([1]);
+      jest.spyOn(OrganisationInvite, "destroy").mockResolvedValue(1);
+
+      await service.deleteBulkOrgUserAssociations(org.id, [member.uuid as string]);
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        { organisationId: null },
+        { where: { id: { [Op.in]: [member.id] } } }
+      );
     });
 
     it("should throw NotFoundException when no users found", async () => {

@@ -99,10 +99,6 @@ export class SrpReport extends Model<InferAttributes<SrpReport>, InferCreationAt
   declare nothingToReport: boolean | null;
 
   @AllowNull
-  @Column(DATE)
-  declare approvedAt: Date | null;
-
-  @AllowNull
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   declare approvedBy: number | null;

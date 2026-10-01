@@ -45,6 +45,7 @@ import { removeApprovedAtColumns } from "./202609181210-remove-approved-at-colum
 import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-timestamp";
 import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
 import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-adj-nullable";
+import { addCriteriaSiteLookupIndexes } from "./202610011200-add-criteria-site-lookup-indexes";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -91,5 +92,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeApprovedAtColumns,
   convertDatetimeToTimestamp,
   createRsTreeCount,
-  makeRsTreeCountAdjNullable
+  makeRsTreeCountAdjNullable,
+  addCriteriaSiteLookupIndexes
 ];

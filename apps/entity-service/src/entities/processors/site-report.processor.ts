@@ -130,6 +130,7 @@ export class SiteReportProcessor extends ReportProcessor<
       where: { uuid },
       attributes: [
         "id",
+        "siteId",
         "taskId",
         ...apiAttributes(SiteReportFullDto).filter(attr => entityAttributes.includes(attr)),
         ...computedAttributes.map(({ attribute }) => attribute)
@@ -176,6 +177,7 @@ export class SiteReportProcessor extends ReportProcessor<
     builder
       .attributes([
         "id",
+        "siteId",
         "taskId",
         ...apiAttributes(SiteReportLightDto).filter(attr => entityAttributes.includes(attr))
       ])

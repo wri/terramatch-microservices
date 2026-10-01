@@ -145,6 +145,53 @@ describe("FinancialReportPolicy", () => {
     });
   });
 
+  it("allows a project developer to read financial reports of an organisation whose project they monitor", async () => {
+    const ownOrg = await OrganisationFactory.create();
+    const projectOrg = await OrganisationFactory.create();
+    const otherOrg = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: ownOrg.id });
+    const projectDeveloper = await RoleFactory.create({ name: "project-developer" });
+    await ModelHasRole.create({
+      modelId: user.id,
+      roleId: projectDeveloper.id,
+      modelType: User.LARAVEL_TYPE
+    });
+    const project = await ProjectFactory.create({ organisationId: projectOrg.id });
+    await ProjectUserFactory.create({
+      userId: user.id,
+      projectId: project.id,
+      isMonitoring: true,
+      isManaging: false
+    });
+    mockContextForUser(user, "manage-own");
+
+    const visible = await FinancialReportFactory.org(projectOrg).create();
+    const hidden = await FinancialReportFactory.org(otherOrg).create();
+    await expectAuthority(service, {
+      can: [["read", visible]],
+      cannot: [
+        ["read", hidden],
+        ["delete", visible]
+      ]
+    });
+  });
+
+  it("does not allow read for a project member who is not monitoring that organisation", async () => {
+    const org = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: null });
+    const project = await ProjectFactory.create({ organisationId: org.id });
+    await ProjectUserFactory.create({
+      userId: user.id,
+      projectId: project.id,
+      isMonitoring: false,
+      isManaging: true
+    });
+    mockContextForUser(user);
+
+    const report = await FinancialReportFactory.org(org).create();
+    await expectCannot(service, "read", report);
+  });
+
   it("allows read for project-manager in their organisation", async () => {
     const org = await OrganisationFactory.create();
     const user = await UserFactory.create({ organisationId: org.id });

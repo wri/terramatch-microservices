@@ -18,6 +18,7 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { Archiver } from "archiver";
 import { Response } from "express";
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { monitoredOrganisationIds } from "@terramatch-microservices/common/policies/financial-report.policy";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
 
@@ -92,7 +93,11 @@ export class FinancialReportProcessor extends ReportProcessor<
         attributes: ["organisationId"],
         include: [
           { association: "roles", attributes: ["name"] },
-          { association: "projects", attributes: ["organisationId"] }
+          {
+            association: "projects",
+            attributes: ["organisationId"],
+            through: { attributes: ["isMonitoring"] }
+          }
         ]
       });
 
@@ -106,6 +111,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       if (user?.primaryRole === "project-manager" && user.organisationId != null) {
         organisationIds.push(user.organisationId as number);
       }
+      organisationIds.push(...monitoredOrganisationIds(user));
       if (organisationIds.length > 0) {
         builder.where({ organisationId: { [Op.in]: organisationIds } });
       }

@@ -380,6 +380,18 @@ describe("SiteReportProcessor", () => {
       const result = await processor.findOne(siteReport.uuid);
       expect(result?.id).toBe(siteReport.id);
     });
+
+    it("loads siteId so a manage-own user can read the report", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
+      const siteReport = await SiteReportFactory.create({ siteId: site.id });
+
+      setMockedPermissions("manage-own");
+      const model = await processor.findOne(siteReport.uuid);
+      expect(model?.siteId).toBe(site.id);
+      await policyService().authorize("read", model!);
+    });
   });
 
   describe("getFullDto / getLightDto", () => {
@@ -499,6 +511,19 @@ describe("SiteReportProcessor", () => {
       const result = document.serialize();
       expect(result.included?.length).toBe(3);
       expect(result.included!.filter(({ type }) => type === "treeSpecies").length).toBe(3);
+    });
+
+    it("authorizes the index for a manage-own user", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
+      const siteReports = await SiteReportFactory.createMany(2, { siteId: site.id });
+
+      setMockedPermissions("manage-own");
+      const document = buildJsonApi(SiteReportLightDto);
+      await processor.addIndex(document, { siteUuid: site.uuid });
+
+      expect(document.data.map(({ id }) => id).sort()).toEqual(siteReports.map(({ uuid }) => uuid).sort());
     });
 
     it("should throw an error for unsupported sideload entities", async () => {

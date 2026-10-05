@@ -66,6 +66,8 @@ import { TranslatableEntityParamsDto } from "./dto/translatable-entity-params.dt
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ProjectReportMetaDto, ReportMetaDto } from "./dto/project-report-meta.dto";
+import { ReportCountsQueryDto } from "./dto/report-counts-query.dto";
+import { ReportCountsDto } from "./dto/report-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -92,6 +94,18 @@ export class EntitiesController {
     private readonly localizationService: LocalizationService,
     @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
+
+  @Get("reportCounts")
+  @ApiOperation({
+    operationId: "reportCountsGet",
+    summary: "Get the total number of reports matching the given filters."
+  })
+  @JsonApiResponse(ReportCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async reportCountsGet(@Query() query: ReportCountsQueryDto) {
+    const totalReports = await this.entitiesService.countReports(query);
+    return buildJsonApi(ReportCountsDto).addData("reportCounts", new ReportCountsDto(totalReports));
+  }
 
   @Get(":entity")
   @ApiOperation({

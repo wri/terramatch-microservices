@@ -141,7 +141,7 @@ export class Site extends Model<InferAttributes<Site>, InferCreationAttributes<S
     return Subquery.select(Site, "uuid").in("projectId", projectIds).literal;
   }
 
-  static idsSubquery(projectIds: number | number[]) {
+  static idsSubquery(projectIds: number | number[] | Literal) {
     if (isNumber(projectIds)) projectIds = [projectIds];
     return Subquery.select(Site, "id").in("projectId", projectIds).literal;
   }

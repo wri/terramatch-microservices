@@ -100,7 +100,7 @@ export class Nursery extends Model<InferAttributes<Nursery>, InferCreationAttrib
     return Subquery.select(Nursery, "id").eq("projectId", projectId).in("status", Nursery.APPROVED_STATUSES).literal;
   }
 
-  static idsSubquery(projectIds: number | number[]) {
+  static idsSubquery(projectIds: number | number[] | Literal) {
     if (isNumber(projectIds)) projectIds = [projectIds];
     return Subquery.select(Nursery, "id").in("projectId", projectIds).literal;
   }

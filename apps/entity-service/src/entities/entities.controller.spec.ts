@@ -32,6 +32,7 @@ import {
 import { Queue } from "bullmq";
 import { EntityTranslationsService } from "./entity-translations.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ReportCountsQueryDto } from "./dto/report-counts-query.dto";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -107,6 +108,16 @@ describe("EntitiesController", () => {
       expect(result.meta.indices?.[0]?.pageNumber).toBe(1);
       expect(result.meta.indices?.[0]?.total).toBe(2);
       expect(result.meta.resourceType).toBe("projects");
+    });
+  });
+
+  describe("reportCountsGet", () => {
+    it("returns the total from the service", async () => {
+      entitiesService().countReports.mockResolvedValue(42);
+      const query = { statuses: ["due"] } as ReportCountsQueryDto;
+      const result = serialize(await controller.reportCountsGet(query));
+      expect(entitiesService().countReports).toHaveBeenCalledWith(query);
+      expect(result.data).toEqual({ id: "reportCounts", type: "reportCounts", attributes: { totalReports: 42 } });
     });
   });
 

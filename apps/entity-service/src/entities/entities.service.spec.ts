@@ -3,7 +3,20 @@ import { MediaService } from "@terramatch-microservices/common/media/media.servi
 import { DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException } from "@nestjs/common";
 import { Media, Project } from "@terramatch-microservices/database/entities";
-import { MediaFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import {
+  DisturbanceReportFactory,
+  MediaFactory,
+  NurseryFactory,
+  NurseryReportFactory,
+  ProjectFactory,
+  ProjectReportFactory,
+  ProjectUserFactory,
+  SiteFactory,
+  SiteReportFactory,
+  SrpReportFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
+import { mockUserContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { pickApiProperties } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { EntityQueryDto } from "./dto/entity-query.dto";
@@ -51,6 +64,89 @@ describe("EntitiesService", () => {
   describe("isProd", () => {
     it("returns true for prod", () => {
       expect(service.isProd).toBe(true);
+    });
+  });
+
+  describe("countReports", () => {
+    const createReports = async (frameworkKey: FrameworkKey = "ppc") => {
+      const project = await ProjectFactory.create({ frameworkKey });
+      const { id: siteId } = await SiteFactory.create({ projectId: project.id, frameworkKey });
+      const { id: nurseryId } = await NurseryFactory.create({ projectId: project.id, frameworkKey });
+      const projectId = project.id;
+      await ProjectReportFactory.create({ projectId, frameworkKey, status: "due", dueAt: new Date("2025-03-15") });
+      await SiteReportFactory.create({ siteId, frameworkKey, status: "draft", dueAt: new Date("2025-03-31T20:00Z") });
+      await NurseryReportFactory.create({
+        nurseryId,
+        frameworkKey,
+        status: "approved",
+        dueAt: new Date("2025-04-01T12:00Z")
+      });
+      await DisturbanceReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "draft",
+        dueAt: new Date("2025-06-15")
+      });
+      await SrpReportFactory.create({ projectId, frameworkKey, status: "due", dueAt: new Date("2024-03-15") });
+      return project;
+    };
+
+    it("counts all report types for a project", async () => {
+      const { uuid: projectUuid } = await createReports();
+      setMockedPermissions("framework-ppc");
+      expect(await service.countReports({ projectUuid })).toBe(5);
+    });
+
+    it("applies the filters", async () => {
+      const { uuid: projectUuid } = await createReports();
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ projectUuid, statuses: ["due", "approved"] })).toBe(3);
+      expect(
+        await service.countReports({ projectUuid, reportTypes: ["siteReports", "srpReports", "siteReports"] })
+      ).toBe(2);
+      expect(
+        await service.countReports({
+          projectUuid,
+          dueDateFrom: new Date("2025-03-15"),
+          dueDateTo: new Date("2025-03-31")
+        })
+      ).toBe(2);
+      expect(await service.countReports({ projectUuid, dueMonth: 3 })).toBe(3);
+      expect(await service.countReports({ projectUuid, dueMonth: 3, dueYear: 2025 })).toBe(2);
+      expect(
+        await service.countReports({ projectUuid, dueYear: 2025, statuses: ["draft"], reportTypes: ["siteReports"] })
+      ).toBe(1);
+    });
+
+    it("only counts reports in the framework admin's frameworks", async () => {
+      const { uuid: projectUuid } = await createReports("hbf");
+      setMockedPermissions("framework-ppc");
+      expect(await service.countReports({ projectUuid })).toBe(0);
+    });
+
+    it("only counts reports on projects the user manages", async () => {
+      const user = await UserFactory.create();
+      const project = await createReports();
+      await createReports();
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
+
+      mockUserContext({ userId: user.id, permissions: ["projects-manage"] });
+      expect(await service.countReports({})).toBe(5);
+
+      mockUserContext({ userId: user.id, permissions: ["manage-own"] });
+      expect(await service.countReports({ reportTypes: ["projectReports"] })).toBe(1);
+    });
+
+    it("returns 0 if the user has access to no projects", async () => {
+      const { uuid: projectUuid } = await createReports();
+      const user = await UserFactory.create();
+
+      mockUserContext({ userId: user.id, permissions: [] });
+      expect(await service.countReports({ projectUuid })).toBe(0);
+
+      mockUserContext({ userId: user.id, permissions: ["manage-own"] });
+      expect(await service.countReports({ projectUuid })).toBe(0);
     });
   });
 

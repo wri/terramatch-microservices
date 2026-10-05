@@ -7,19 +7,28 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Disturbance,
+  DisturbanceReport,
   Form,
   FormQuestion,
   Invasive,
   Media,
+  Nursery,
+  NurseryReport,
+  Project,
+  ProjectReport,
+  ProjectUser,
   Seeding,
+  Site,
+  SiteReport,
+  SrpReport,
   Strata,
   Tracking,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { chunk, Dictionary, groupBy, kebabCase, uniq } from "lodash";
-import { col, fn, Includeable } from "sequelize";
+import { chunk, Dictionary, groupBy, kebabCase, sum, uniq } from "lodash";
+import { col, fn, Includeable, Op, where, WhereOptions } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
@@ -28,7 +37,9 @@ import {
   ENTITY_MODELS,
   EntityModel,
   EntityType,
-  isLinkedEntityModel
+  isLinkedEntityModel,
+  ReportClass,
+  ReportModel
 } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
 import { NurseryReportProcessor } from "./processors/nursery-report.processor";
@@ -71,6 +82,10 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { Archiver } from "archiver";
+import { Literal } from "sequelize/types/utils";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { REPORT_COUNT_TYPES, ReportCountsQueryDto, ReportCountType } from "./dto/report-counts-query.dto";
+import { DateTime } from "luxon";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -134,6 +149,48 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
+type ReportCountModel = {
+  model: ReportClass<ReportModel>;
+  // Returns the where clause limiting this report type to the given set of project ids
+  inProjects: (projectIds: Literal) => WhereOptions;
+};
+
+const REPORT_COUNT_MODELS: Record<ReportCountType, ReportCountModel> = {
+  disturbanceReports: {
+    model: DisturbanceReport,
+    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
+  },
+  nurseryReports: {
+    model: NurseryReport,
+    inProjects: projectIds => ({ nurseryId: { [Op.in]: Nursery.idsSubquery(projectIds) } })
+  },
+  projectReports: {
+    model: ProjectReport,
+    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
+  },
+  siteReports: {
+    model: SiteReport,
+    inProjects: projectIds => ({ siteId: { [Op.in]: Site.idsSubquery(projectIds) } })
+  },
+  srpReports: {
+    model: SrpReport,
+    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
+  }
+};
+
+/**
+ * Returns a subquery of the project ids that reports should be limited to for a report count, or
+ * undefined if no project limitation is required.
+ */
+const reportCountProjectIds = (userProjectIds?: Literal, projectUuid?: string) => {
+  if (userProjectIds == null && projectUuid == null) return undefined;
+
+  const builder = Subquery.select(Project, "id");
+  if (userProjectIds != null) builder.in("id", userProjectIds);
+  if (projectUuid != null) builder.eq("uuid", projectUuid);
+  return builder.literal;
+};
+
 type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
   // If not specified, all attributes will be fetched from the DB when using a query builder.
   attributes?: string[];
@@ -183,6 +240,62 @@ export class EntitiesService {
 
   async authorize(action: string, subject: Model | Model[]) {
     await this.policyService.authorize(action, subject);
+  }
+
+  async countReports({
+    dueDateFrom,
+    dueDateTo,
+    dueMonth,
+    dueYear,
+    reportTypes,
+    statuses,
+    projectUuid
+  }: ReportCountsQueryDto) {
+    const frameworkKeys = (this.permissions ?? [])
+      .filter(name => name.startsWith("framework-"))
+      .map(name => name.substring("framework-".length));
+    const isFrameworkAdmin = frameworkKeys.length > 0;
+    const userProjectIds = isFrameworkAdmin ? undefined : this.userProjectIdsSubquery();
+    // The user has no access to any projects, so there are no reports they're allowed to count.
+    if (!isFrameworkAdmin && userProjectIds == null) return 0;
+
+    const projectIds = reportCountProjectIds(userProjectIds, projectUuid);
+
+    const conditions: WhereOptions[] = [];
+    if (frameworkKeys.length > 0) conditions.push({ frameworkKey: { [Op.in]: frameworkKeys } });
+    if (statuses != null && statuses.length > 0) conditions.push({ status: { [Op.in]: statuses } });
+    if (dueDateFrom != null) conditions.push({ dueAt: { [Op.gte]: dueDateFrom } });
+    if (dueDateTo != null) {
+      // dueDateTo is a date, so include the entire day.
+      conditions.push({
+        dueAt: { [Op.lt]: DateTime.fromJSDate(dueDateTo, { zone: "utc" }).plus({ days: 1 }).toJSDate() }
+      });
+    }
+    if (dueMonth != null) conditions.push(where(fn("MONTH", col("due_at")), dueMonth));
+    if (dueYear != null) conditions.push(where(fn("YEAR", col("due_at")), dueYear));
+
+    const types = reportTypes != null && reportTypes.length > 0 ? uniq(reportTypes) : REPORT_COUNT_TYPES;
+    const counts = await Promise.all(
+      types.map(type => {
+        const { model, inProjects } = REPORT_COUNT_MODELS[type];
+        const clauses = projectIds == null ? conditions : [...conditions, inProjects(projectIds)];
+        return model.count({ where: { [Op.and]: clauses } });
+      })
+    );
+    return sum(counts);
+  }
+
+  /**
+   * Returns a subquery of the ids of projects the user has access to via manage-own or
+   * projects-manage, or undefined if they have neither permission. Mirrors the read scoping in the
+   * report processors' findMany implementations.
+   */
+  private userProjectIdsSubquery() {
+    const permissions = this.permissions ?? [];
+    const userId = this.userId as number;
+    if (permissions.includes("manage-own")) return ProjectUser.userProjectsSubquery(userId);
+    if (permissions.includes("projects-manage")) return ProjectUser.projectsManageSubquery(userId);
+    return undefined;
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {

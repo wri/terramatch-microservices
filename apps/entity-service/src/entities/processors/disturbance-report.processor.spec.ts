@@ -443,6 +443,24 @@ describe("DisturbanceReportProcessor", () => {
         [reports[0].uuid, reports[2].uuid].sort()
       );
     });
+
+    it("writes only the reports for the given framework to the CSV", async () => {
+      await DisturbanceReport.truncate();
+      const ppcReports = await DisturbanceReportFactory.createMany(2, { frameworkKey: "ppc" });
+      await DisturbanceReportFactory.createMany(2, { frameworkKey: "terrafund" });
+
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
+        await writeRows(addRow);
+      });
+      setMockedPermissions("framework-ppc");
+      await processor.exportAll({ frameworkKey: "ppc" });
+
+      expect(addRow).toHaveBeenCalledTimes(2);
+      expect(addRow.mock.calls.map(([report]) => (report as DisturbanceReport).uuid).sort()).toEqual(
+        ppcReports.map(({ uuid }) => uuid).sort()
+      );
+    });
   });
 
   describe("create", () => {

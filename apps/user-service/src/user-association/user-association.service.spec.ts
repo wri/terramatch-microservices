@@ -231,7 +231,7 @@ describe("UserAssociationService", () => {
       it("should call handleCreate through processor for organisations", async () => {
         const org = await OrganisationFactory.create({ name: "Test Org" });
         const user = await UserFactory.create();
-        user.roles = [await RoleFactory.create()];
+        user.legacyRoles = [await RoleFactory.create()];
         jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
         jest.spyOn(service, "requestOrgJoin").mockResolvedValue(user);
         jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -245,7 +245,7 @@ describe("UserAssociationService", () => {
         expect(User.findOne).toHaveBeenCalledWith({
           where: { id: user.id },
           attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
-          include: [{ association: "roles", attributes: ["name"] }]
+          include: [{ association: "legacyRoles", attributes: ["name"] }]
         });
         expect(addDataSpy).toHaveBeenCalled();
       });
@@ -281,7 +281,7 @@ describe("UserAssociationService", () => {
       it("should call handleUpdate through processor", async () => {
         const org = await OrganisationFactory.create();
         const user = await UserFactory.create();
-        user.roles = [await RoleFactory.create()];
+        user.legacyRoles = [await RoleFactory.create()];
         jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
         jest.spyOn(service, "updateOrgUserStatus").mockResolvedValue(user);
         const document = new DocumentBuilder("associatedUsers");
@@ -362,8 +362,8 @@ describe("UserAssociationService", () => {
         isMonitoring: true
       });
 
-      user1.roles = [role1];
-      user2.roles = [role2];
+      user1.legacyRoles = [role1];
+      user2.legacyRoles = [role2];
 
       jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
       jest.spyOn(Organisation, "findAll").mockResolvedValue([org] as Organisation[]);
@@ -379,7 +379,7 @@ describe("UserAssociationService", () => {
         attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
         include: [
           {
-            association: "roles",
+            association: "legacyRoles",
             attributes: ["name"]
           }
         ]
@@ -419,7 +419,7 @@ describe("UserAssociationService", () => {
     it("should return user when user exists", async () => {
       const project = await ProjectFactory.create();
       const user = await UserFactory.create();
-      user.roles = [await RoleFactory.create()];
+      user.legacyRoles = [await RoleFactory.create()];
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
@@ -504,7 +504,7 @@ describe("UserAssociationService", () => {
       const project = await ProjectFactory.create();
       const role = await RoleFactory.create({ name: "project-manager" });
       const user = await UserFactory.create();
-      user.roles = [role];
+      user.legacyRoles = [role];
 
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
@@ -522,7 +522,7 @@ describe("UserAssociationService", () => {
       const project = await ProjectFactory.create();
       const role = await RoleFactory.create({ name: "project-developer" });
       const user = await UserFactory.create();
-      user.roles = [role];
+      user.legacyRoles = [role];
 
       await expect(
         service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: true })
@@ -533,7 +533,7 @@ describe("UserAssociationService", () => {
       const project = await ProjectFactory.create();
       const role = await RoleFactory.create({ name: "project-manager" });
       const user = await UserFactory.create();
-      user.roles = [role];
+      user.legacyRoles = [role];
       const existingProjectUser = await ProjectUserFactory.create({
         projectId: project.id,
         userId: user.id,
@@ -625,8 +625,8 @@ describe("UserAssociationService", () => {
         status: "requested"
       });
 
-      user1.roles = [role1];
-      user2.roles = [role2];
+      user1.legacyRoles = [role1];
+      user2.legacyRoles = [role2];
 
       const ownersMock = [{ id: user1.id }, { id: user2.id }];
       jest
@@ -659,7 +659,7 @@ describe("UserAssociationService", () => {
         ],
         include: [
           {
-            association: "roles",
+            association: "legacyRoles",
             attributes: ["name"]
           }
         ]
@@ -739,10 +739,7 @@ describe("UserAssociationService", () => {
 
       await service.deleteBulkOrgUserAssociations(org.id, [member.uuid as string]);
 
-      expect(updateSpy).toHaveBeenCalledWith(
-        { organisationId: null },
-        { where: { id: { [Op.in]: [member.id] } } }
-      );
+      expect(updateSpy).toHaveBeenCalledWith({ organisationId: null }, { where: { id: { [Op.in]: [member.id] } } });
     });
 
     it("should throw NotFoundException when no users found", async () => {

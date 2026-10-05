@@ -24,8 +24,8 @@ const COLUMNS: ColumnMapping<UserWithUuid, UserAssociations>[] = [
   "emailAddressVerifiedAt",
   {
     airtableColumn: "roles",
-    include: [{ association: "roles", attributes: ["name"] }],
-    valueMap: async ({ roles }) => (roles ?? []).map(({ name }) => name)
+    include: [{ association: "legacyRoles", attributes: ["name"] }],
+    valueMap: async ({ legacyRoles }) => (legacyRoles ?? []).map(({ name }) => name)
   },
   "jobRole",
   "firstName",

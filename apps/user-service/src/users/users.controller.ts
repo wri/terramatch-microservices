@@ -100,7 +100,7 @@ export class UsersController {
   async findOne(@Param("uuid") pathId: string) {
     const userWhere = pathId === "me" ? { id: UserContext.authenticatedUserId } : { uuid: pathId };
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["legacyRoles", "organisation", "frameworks"],
       where: userWhere
     });
     if (user == null) throw new NotFoundException();
@@ -123,7 +123,7 @@ export class UsersController {
     }
 
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["legacyRoles", "organisation", "frameworks"],
       where: { uuid }
     });
     if (user == null) throw new NotFoundException();
@@ -179,7 +179,7 @@ export class UsersController {
   @ExceptionResponse(NotFoundException, { description: "No user found" })
   async verifyUser(@Param("uuid") uuid: string) {
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["legacyRoles", "organisation", "frameworks"],
       where: { uuid }
     });
     if (user == null) throw new NotFoundException("No user found.");

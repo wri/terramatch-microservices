@@ -92,7 +92,7 @@ export class FinancialReportProcessor extends ReportProcessor<
         where: { id: userId },
         attributes: ["organisationId"],
         include: [
-          { association: "roles", attributes: ["name"] },
+          { association: "legacyRoles", attributes: ["name"] },
           {
             association: "projects",
             attributes: ["organisationId"],

@@ -68,7 +68,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
           attributes: ["organisationId"],
           through: { attributes: ["isMonitoring"] }
         },
-        { association: "roles", attributes: ["name"] }
+        { association: "legacyRoles", attributes: ["name"] }
       ]
     }));
   }

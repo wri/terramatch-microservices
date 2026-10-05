@@ -79,7 +79,7 @@ export class UsersService {
         attributes: ["id", "uuid", "name"]
       },
       {
-        association: "roles",
+        association: "legacyRoles",
         attributes: ["name"],
         ...(query.primaryRole != null ? { required: true, where: { name: query.primaryRole } } : {})
       },

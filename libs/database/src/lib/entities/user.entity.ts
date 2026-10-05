@@ -40,6 +40,7 @@ import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
 import { FrameworkKey } from "../constants";
 import { InternalServerErrorException } from "@nestjs/common";
+import { JsonColumn } from "../decorators/json-column.decorator";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
@@ -173,6 +174,14 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(STRING)
   declare locale: ValidLocale;
 
+  @AllowNull
+  @JsonColumn()
+  declare roles: string[] | null;
+
+  /**
+   * @deprecated Roles are moving to the `roles` column directly on the user. This association
+   *   through `model_has_roles` will be removed once that migration is complete.
+   */
   @BelongsToMany(() => Role, {
     foreignKey: "modelId",
     through: {
@@ -183,19 +192,19 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
       }
     }
   })
-  declare roles: Role[] | null;
+  declare legacyRoles: Role[] | null;
 
   async loadRoles() {
-    if (this.roles == null) this.roles = await (this as User).$get("roles");
-    return this.roles;
+    if (this.legacyRoles == null) this.legacyRoles = await (this as User).$get("legacyRoles");
+    return this.legacyRoles;
   }
 
   /**
-   * Depends on `roles` being loaded, either through include: [Role] on the find call, or by
-   * await user.loadRoles()
+   * Depends on `legacyRoles` being loaded, either through include: ["legacyRoles"] on the find
+   * call, or by await user.loadRoles()
    */
   get primaryRole() {
-    return this.roles?.[0]?.name;
+    return this.legacyRoles?.[0]?.name;
   }
 
   get fullName() {
@@ -203,11 +212,11 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   }
 
   getSourceFromRoles(): string {
-    if (this.roles == null) {
+    if (this.legacyRoles == null) {
       return "terramatch";
     }
 
-    const roleNames = this.roles.map(role => role.name);
+    const roleNames = this.legacyRoles.map(role => role.name);
 
     if (roleNames.includes("greenhouse-service-account")) {
       return "greenhouse";
@@ -296,7 +305,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   async myFrameworks(): Promise<Framework[]> {
     if (this._myFrameworks == null) {
       await this.loadRoles();
-      const isAdmin = this.roles?.find(({ name }) => name.startsWith("admin-")) != null;
+      const isAdmin = this.legacyRoles?.find(({ name }) => name.startsWith("admin-")) != null;
 
       await this.loadFrameworks();
 

@@ -61,11 +61,11 @@ export class PolygonClippingController {
 
     const user = await User.findByPk(UserContext.authenticatedUserId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     let fixablePolygons: string[];
     let entityId: number;
@@ -151,11 +151,11 @@ export class PolygonClippingController {
 
     const user = await User.findByPk(UserContext.authenticatedUserId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const polygonUuids = payload.data.attributes.polygonUuids;
 

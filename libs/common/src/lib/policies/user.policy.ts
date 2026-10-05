@@ -21,12 +21,12 @@ export class UserPolicy extends UserPermissionsPolicy {
     const user = await User.findOne({
       where: { id: this.userId },
       attributes: ["emailAddressVerifiedAt"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
 
     if (user == null) return (this._isVerifiedAdmin = false);
 
-    const hasAdminRole = user.roles?.some(({ name }) => name.startsWith("admin-")) ?? false;
+    const hasAdminRole = user.legacyRoles?.some(({ name }) => name.startsWith("admin-")) ?? false;
     const isEmailVerified = user.emailAddressVerifiedAt != null;
 
     return (this._isVerifiedAdmin = hasAdminRole && isEmailVerified);

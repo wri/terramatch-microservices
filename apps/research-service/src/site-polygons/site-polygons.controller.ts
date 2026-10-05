@@ -149,11 +149,11 @@ export class SitePolygonsController {
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const baseSitePolygonUuid = createRequest?.data?.attributes?.baseSitePolygonUuid;
     const changeReason = createRequest?.data?.attributes?.changeReason;
@@ -541,11 +541,11 @@ export class SitePolygonsController {
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const newVersions = await SitePolygon.sql.transaction(async transaction =>
       this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
@@ -921,10 +921,10 @@ export class SitePolygonsController {
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -995,10 +995,10 @@ export class SitePolygonsController {
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const siteId = payload.data.attributes.siteId;
 
@@ -1067,10 +1067,10 @@ export class SitePolygonsController {
 
     const user = await User.findByPk(userId, {
       attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const isAdminSession = isAdminSessionFromRoles(user?.legacyRoles);
 
     const siteId = payload.data.attributes.siteId;
 

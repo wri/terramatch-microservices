@@ -683,7 +683,7 @@ describe("SitePolygonsController", () => {
 
       expect(User.findByPk).toHaveBeenCalledWith(1, {
         attributes: ["firstName", "lastName"],
-        include: [{ association: "roles", attributes: ["name"] }]
+        include: [{ association: "legacyRoles", attributes: ["name"] }]
       });
       expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith(
         { geometries },

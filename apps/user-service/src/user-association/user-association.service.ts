@@ -128,7 +128,7 @@ export class UserAssociationService {
         const user = await User.findOne({
           where: { id: userId },
           attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
-          include: [{ association: "roles", attributes: ["name"] }]
+          include: [{ association: "legacyRoles", attributes: ["name"] }]
         });
         if (user == null) throw new UnauthorizedException("Authenticated user not found");
         document.addData(
@@ -188,7 +188,7 @@ export class UserAssociationService {
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
     const organisations = await Organisation.findAll({
@@ -226,7 +226,7 @@ export class UserAssociationService {
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
       attributes: ["id", "emailAddress"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     if (user == null) {
       return this.handleUserNotFound(project, attributes);
@@ -323,7 +323,7 @@ export class UserAssociationService {
         "jobRole",
         "lastLoggedInAt"
       ],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     filteredUsers.forEach(user => {
@@ -469,7 +469,7 @@ export class UserAssociationService {
     const user = await User.findOne({
       where: { uuid: userUuid },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
 
     if (user == null) {
@@ -556,7 +556,7 @@ export class UserAssociationService {
     const user = await User.findOne({
       where: { id: userId },
       attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      include: [{ association: "legacyRoles", attributes: ["name"] }]
     });
 
     if (user == null) {

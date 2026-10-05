@@ -65,7 +65,7 @@ describe("UsersService", () => {
         query.page,
         expect.arrayContaining([
           expect.objectContaining({ association: "organisation" }),
-          expect.objectContaining({ association: "roles" })
+          expect.objectContaining({ association: "legacyRoles" })
         ])
       );
       expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
@@ -140,7 +140,7 @@ describe("UsersService", () => {
         1,
         expect.arrayContaining([
           expect.objectContaining({
-            association: "roles",
+            association: "legacyRoles",
             required: true,
             where: { name: "admin-super" }
           })

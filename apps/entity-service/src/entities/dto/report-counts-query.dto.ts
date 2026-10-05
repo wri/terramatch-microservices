@@ -1,5 +1,17 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsDate, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import {
+  IsArray,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+  ValidateNested
+} from "class-validator";
+import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import { REPORT_STATUSES, ReportStatus } from "@terramatch-microservices/database/constants/status";
 import { ReportType } from "@terramatch-microservices/database/constants/entities";
 
@@ -12,16 +24,22 @@ export const REPORT_COUNT_TYPES = [
 ] as const satisfies readonly ReportType[];
 export type ReportCountType = (typeof REPORT_COUNT_TYPES)[number];
 
+// The due date bounds are kept as the date strings the client sent (instead of being transformed
+// to Date) so that the stable request path in the response matches the one the client computes.
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 export class ReportCountsQueryDto {
   @ApiProperty({ required: false, type: String, format: "date", description: "Inclusive lower bound for due date" })
   @IsOptional()
-  @IsDate()
-  dueDateFrom?: Date;
+  @IsISO8601({ strict: true })
+  @Matches(DATE_ONLY)
+  dueDateFrom?: string;
 
   @ApiProperty({ required: false, type: String, format: "date", description: "Inclusive upper bound for due date" })
   @IsOptional()
-  @IsDate()
-  dueDateTo?: Date;
+  @IsISO8601({ strict: true })
+  @Matches(DATE_ONLY)
+  dueDateTo?: string;
 
   @ApiProperty({ required: false, minimum: 1, maximum: 12, description: "Due month (1-12)" })
   @IsOptional()
@@ -56,4 +74,20 @@ export class ReportCountsQueryDto {
   @IsOptional()
   @IsString()
   projectUuid?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      "Search term matched against project, site and nursery names. A site or nursery report matches if " +
+      "its site / nursery or project name matches; project-level reports match on project name."
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
+export class ReportsMetaQueryDto extends IntersectionType(ReportCountsQueryDto, NumberPage) {
+  @ValidateNested()
+  @IsOptional()
+  page?: NumberPage;
 }

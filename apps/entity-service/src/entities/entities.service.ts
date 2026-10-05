@@ -7,28 +7,21 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
   Disturbance,
-  DisturbanceReport,
   Form,
   FormQuestion,
   Invasive,
   Media,
-  Nursery,
-  NurseryReport,
   Project,
-  ProjectReport,
   ProjectUser,
   Seeding,
-  Site,
-  SiteReport,
-  SrpReport,
   Strata,
   Tracking,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { chunk, Dictionary, groupBy, kebabCase, sum, uniq } from "lodash";
-import { col, fn, Includeable, Op, where, WhereOptions } from "sequelize";
+import { chunk, Dictionary, groupBy, kebabCase, omit, orderBy, sum, uniq, uniqBy } from "lodash";
+import { col, fn, Includeable, Op } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
@@ -37,9 +30,7 @@ import {
   ENTITY_MODELS,
   EntityModel,
   EntityType,
-  isLinkedEntityModel,
-  ReportClass,
-  ReportModel
+  isLinkedEntityModel
 } from "@terramatch-microservices/database/constants/entities";
 import { ProjectReportProcessor } from "./processors/project-report.processor";
 import { NurseryReportProcessor } from "./processors/nursery-report.processor";
@@ -84,8 +75,11 @@ import { UserContext } from "@terramatch-microservices/common/contexts/user.cont
 import { Archiver } from "archiver";
 import { Literal } from "sequelize/types/utils";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
-import { REPORT_COUNT_TYPES, ReportCountsQueryDto, ReportCountType } from "./dto/report-counts-query.dto";
 import { DateTime } from "luxon";
+import { REPORT_COUNT_TYPES, ReportCountsQueryDto, ReportCountType } from "./dto/report-counts-query.dto";
+import { ReportingPeriodDto } from "./dto/report-counts.dto";
+import { filteredReportsSubquery, REPORT_FILTER_MODELS, ReportFilter } from "./report-filters";
+import { ReportStatus } from "@terramatch-microservices/database/constants/status";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -149,40 +143,16 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
-type ReportCountModel = {
-  model: ReportClass<ReportModel>;
-  // Returns the where clause limiting this report type to the given set of project ids
-  inProjects: (projectIds: Literal) => WhereOptions;
-};
+const DUE_DATE_FILTERS = ["dueDateFrom", "dueDateTo", "dueMonth", "dueYear"] as const;
 
-const REPORT_COUNT_MODELS: Record<ReportCountType, ReportCountModel> = {
-  disturbanceReports: {
-    model: DisturbanceReport,
-    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
-  },
-  nurseryReports: {
-    model: NurseryReport,
-    inProjects: projectIds => ({ nurseryId: { [Op.in]: Nursery.idsSubquery(projectIds) } })
-  },
-  projectReports: {
-    model: ProjectReport,
-    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
-  },
-  siteReports: {
-    model: SiteReport,
-    inProjects: projectIds => ({ siteId: { [Op.in]: Site.idsSubquery(projectIds) } })
-  },
-  srpReports: {
-    model: SrpReport,
-    inProjects: projectIds => ({ projectId: { [Op.in]: projectIds } })
-  }
-};
+const reportCountTypes = (reportTypes?: ReportCountType[]) =>
+  reportTypes != null && reportTypes.length > 0 ? uniq(reportTypes) : REPORT_COUNT_TYPES;
 
 /**
- * Returns a subquery of the project ids that reports should be limited to for a report count, or
- * undefined if no project limitation is required.
+ * Returns a subquery of the project ids that reports should be limited to, or undefined if no
+ * project limitation is required.
  */
-const reportCountProjectIds = (userProjectIds?: Literal, projectUuid?: string) => {
+const scopedProjectIds = (userProjectIds?: Literal, projectUuid?: string) => {
   if (userProjectIds == null && projectUuid == null) return undefined;
 
   const builder = Subquery.select(Project, "id");
@@ -242,47 +212,79 @@ export class EntitiesService {
     await this.policyService.authorize(action, subject);
   }
 
-  async countReports({
-    dueDateFrom,
-    dueDateTo,
-    dueMonth,
-    dueYear,
-    reportTypes,
-    statuses,
-    projectUuid
-  }: ReportCountsQueryDto) {
+  async countReports(query: ReportCountsQueryDto) {
+    const filter = this.reportFilter(query);
+    if (filter == null) return 0;
+
+    const counts = await Promise.all(
+      reportCountTypes(query.reportTypes).map(type =>
+        REPORT_FILTER_MODELS[type].model.count({
+          where: { id: { [Op.in]: filteredReportsSubquery(type, "id", filter).literal } }
+        })
+      )
+    );
+    return sum(counts);
+  }
+
+  /**
+   * Returns the distinct due month / year of reports matching the query, newest first. The due date
+   * filters are ignored so that the result can be used to offer the available periods to select.
+   */
+  async reportingPeriods(query: ReportCountsQueryDto): Promise<ReportingPeriodDto[]> {
+    const filter = this.reportFilter(omit(query, DUE_DATE_FILTERS));
+    if (filter == null) return [];
+
+    const periods = await Promise.all(
+      reportCountTypes(query.reportTypes).map(
+        async type =>
+          (await REPORT_FILTER_MODELS[type].model.findAll({
+            where: {
+              id: { [Op.in]: filteredReportsSubquery(type, "id", filter).literal },
+              dueAt: { [Op.ne]: null }
+            },
+            attributes: [
+              [fn("YEAR", col("due_at")), "dueYear"],
+              [fn("MONTH", col("due_at")), "dueMonth"]
+            ],
+            group: ["dueYear", "dueMonth"],
+            raw: true
+          })) as unknown as ReportingPeriodDto[]
+      )
+    );
+
+    const unique = uniqBy(
+      periods.flat().map(({ dueYear, dueMonth }) => ({ dueYear: Number(dueYear), dueMonth: Number(dueMonth) })),
+      ({ dueYear, dueMonth }) => `${dueYear}-${dueMonth}`
+    );
+    return orderBy(unique, ["dueYear", "dueMonth"], ["desc", "desc"]);
+  }
+
+  /**
+   * Builds a report filter from the query for the current user, applying the same read scoping as
+   * the report processors' findMany implementations. Returns undefined if the user has no access to
+   * any reports.
+   */
+  reportFilter(
+    { dueDateFrom, dueDateTo, dueMonth, dueYear, statuses, search, projectUuid }: ReportCountsQueryDto,
+    defaultStatuses?: readonly ReportStatus[]
+  ): ReportFilter | undefined {
     const frameworkKeys = (this.permissions ?? [])
       .filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length));
     const isFrameworkAdmin = frameworkKeys.length > 0;
     const userProjectIds = isFrameworkAdmin ? undefined : this.userProjectIdsSubquery();
-    // The user has no access to any projects, so there are no reports they're allowed to count.
-    if (!isFrameworkAdmin && userProjectIds == null) return 0;
+    if (!isFrameworkAdmin && userProjectIds == null) return undefined;
 
-    const projectIds = reportCountProjectIds(userProjectIds, projectUuid);
-
-    const conditions: WhereOptions[] = [];
-    if (frameworkKeys.length > 0) conditions.push({ frameworkKey: { [Op.in]: frameworkKeys } });
-    if (statuses != null && statuses.length > 0) conditions.push({ status: { [Op.in]: statuses } });
-    if (dueDateFrom != null) conditions.push({ dueAt: { [Op.gte]: dueDateFrom } });
-    if (dueDateTo != null) {
-      // dueDateTo is a date, so include the entire day.
-      conditions.push({
-        dueAt: { [Op.lt]: DateTime.fromJSDate(dueDateTo, { zone: "utc" }).plus({ days: 1 }).toJSDate() }
-      });
-    }
-    if (dueMonth != null) conditions.push(where(fn("MONTH", col("due_at")), dueMonth));
-    if (dueYear != null) conditions.push(where(fn("YEAR", col("due_at")), dueYear));
-
-    const types = reportTypes != null && reportTypes.length > 0 ? uniq(reportTypes) : REPORT_COUNT_TYPES;
-    const counts = await Promise.all(
-      types.map(type => {
-        const { model, inProjects } = REPORT_COUNT_MODELS[type];
-        const clauses = projectIds == null ? conditions : [...conditions, inProjects(projectIds)];
-        return model.count({ where: { [Op.and]: clauses } });
-      })
-    );
-    return sum(counts);
+    return {
+      frameworkKeys,
+      projectIds: scopedProjectIds(userProjectIds, projectUuid),
+      statuses: statuses != null && statuses.length > 0 ? statuses : defaultStatuses,
+      dueDateFrom: dueDateFrom == null ? undefined : DateTime.fromISO(dueDateFrom, { zone: "utc" }).toJSDate(),
+      dueDateTo: dueDateTo == null ? undefined : DateTime.fromISO(dueDateTo, { zone: "utc" }).toJSDate(),
+      dueMonth,
+      dueYear,
+      search
+    };
   }
 
   /**

@@ -32,7 +32,7 @@ import {
 import { Queue } from "bullmq";
 import { EntityTranslationsService } from "./entity-translations.service";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
-import { ReportCountsQueryDto } from "./dto/report-counts-query.dto";
+import { ReportCountsQueryDto, ReportsMetaQueryDto } from "./dto/report-counts-query.dto";
 
 export class StubProcessor extends EntityProcessor<Project, ProjectLightDto, ProjectFullDto, EntityUpdateData> {
   LIGHT_DTO = ProjectLightDto;
@@ -114,17 +114,24 @@ describe("EntitiesController", () => {
   describe("reportCountsGet", () => {
     it("returns the total from the service", async () => {
       entitiesService().countReports.mockResolvedValue(42);
+      const reportingPeriods = [{ dueYear: 2025, dueMonth: 6 }];
+      entitiesService().reportingPeriods.mockResolvedValue(reportingPeriods);
       const query = { statuses: ["due"] } as ReportCountsQueryDto;
       const result = serialize(await controller.reportCountsGet(query));
       expect(entitiesService().countReports).toHaveBeenCalledWith(query);
-      expect(result.data).toEqual({ id: "reportCounts", type: "reportCounts", attributes: { totalReports: 42 } });
+      expect(entitiesService().reportingPeriods).toHaveBeenCalledWith(query);
+      expect(result.data).toEqual({
+        id: "reportCounts",
+        type: "reportCounts",
+        attributes: { totalReports: 42, reportingPeriods }
+      });
     });
   });
 
   describe("entityReportsMetaIndex", () => {
     it("should add the reports meta index to the document", async () => {
       const addReportsMetaIndex = jest.spyOn(processor, "addReportsMetaIndex").mockResolvedValue();
-      const query = { page: { number: 2 }, status: "approved" } as EntityQueryDto;
+      const query: ReportsMetaQueryDto = { page: { number: 2 }, statuses: ["approved"] };
       const result = serialize(await controller.entityReportsMetaIndex({ entity: "projects" }, query));
       expect(addReportsMetaIndex).toHaveBeenCalledWith(expect.anything(), query);
       expect(result.meta.resourceType).toBe("projectReportsMetas");

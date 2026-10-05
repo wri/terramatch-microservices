@@ -36,7 +36,7 @@ import {
   UnauthorizedException
 } from "@nestjs/common";
 import { ProcessableEntity, ProgressTick } from "../entities.service";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { ProjectUpdateAttributes } from "../dto/entity-update.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { ProjectCreateAttributes } from "../dto/entity-create.dto";
@@ -56,6 +56,13 @@ import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-s
 import { Literal } from "sequelize/types/utils";
 import { ProjectReportMetaDto, ReportMetaDto } from "../dto/project-report-meta.dto";
 import { DUE, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
+import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import {
+  filteredProjectsSubquery,
+  filteredReportsSubquery,
+  REPORT_FILTER_MODELS,
+  ReportFilter
+} from "../report-filters";
 
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
@@ -165,23 +172,22 @@ export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
 
 const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
 
-const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED];
+const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED] as const;
 
-const countSiteReportsRequiringAttention = async (projectIds: number[]) =>
-  (await SiteReport.sites(Site.idsSubquery(projectIds)).findAll({
-    where: { status: { [Op.in]: REPORTS_REQUIRING_ATTENTION_STATUSES } },
-    attributes: ["siteId", [fn("COUNT", col("id")), "count"]],
-    group: ["siteId"],
+// Returns a map of site / nursery id to the number of matching reports
+const countReportsByParent = async (
+  type: "projectReports" | "siteReports" | "nurseryReports",
+  filter: ReportFilter
+) => {
+  const { model, parentAttribute } = REPORT_FILTER_MODELS[type];
+  const rows = (await model.findAll({
+    where: { id: { [Op.in]: filteredReportsSubquery(type, "id", filter).literal } },
+    attributes: [parentAttribute, [fn("COUNT", col("id")), "count"]],
+    group: [parentAttribute],
     raw: true
-  })) as unknown as { siteId: number; count: number }[];
-
-const countNurseryReportsRequiringAttention = async (projectIds: number[]) =>
-  (await NurseryReport.nurseries(Nursery.idsSubquery(projectIds)).findAll({
-    where: { status: { [Op.in]: REPORTS_REQUIRING_ATTENTION_STATUSES } },
-    attributes: ["nurseryId", [fn("COUNT", col("id")), "count"]],
-    group: ["nurseryId"],
-    raw: true
-  })) as unknown as { nurseryId: number; count: number }[];
+  })) as unknown as Record<string, number>[];
+  return new Map(rows.map(row => [row[parentAttribute], Number(row.count)]));
+};
 
 const reportMetaMap = (
   entities: (Site | Nursery)[] | undefined,
@@ -296,28 +302,69 @@ export class ProjectProcessor extends EntityProcessor<
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  protected async getReportsMetaDtos(projects: Project[]) {
-    const projectIds = projects.map(({ id }) => id);
-    const attributes = ["id", "uuid", "name", "projectId"];
-    const [sites, nurseries, siteReportCounts, nurseryReportCounts] = await Promise.all([
-      Site.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes }),
-      Nursery.findAll({ where: { projectId: { [Op.in]: projectIds } }, attributes }),
-      countSiteReportsRequiringAttention(projectIds),
-      countNurseryReportsRequiringAttention(projectIds)
-    ]);
+  /**
+   * Adds an index of report meta for all projects matching the query's scoping, project and search
+   * filters. Only sites / nurseries with at least one matching report are listed. If no statuses
+   * are requested, reports requiring attention (due, draft, information-required) are counted.
+   */
+  async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
+    const filter = this.entitiesService.reportFilter(query, REPORTS_REQUIRING_ATTENTION_STATUSES);
+    const reportTypes = query.reportTypes ?? [];
+    const includeProjectReports = reportTypes.length === 0 || reportTypes.includes("projectReports");
+    const includeSites = reportTypes.length === 0 || reportTypes.includes("siteReports");
+    const includeNurseries = reportTypes.length === 0 || reportTypes.includes("nurseryReports");
+    const indexData = {
+      resource: getDtoType(ProjectReportMetaDto),
+      requestPath: `/entities/v3/${this.resource}/reportsMeta${getStableRequestQuery(query)}`,
+      pageNumber: query.page?.number ?? 1
+    };
 
-    const sitesByProject = groupBy(sites, "projectId");
-    const nurseriesByProject = groupBy(nurseries, "projectId");
-    const siteCounts = new Map(siteReportCounts.map(({ siteId, count }) => [siteId, Number(count)]));
-    const nurseryCounts = new Map(nurseryReportCounts.map(({ nurseryId, count }) => [nurseryId, Number(count)]));
-    return projects.map(({ id, uuid, name }) => ({
-      id: uuid,
-      dto: new ProjectReportMetaDto({
-        name,
-        sites: reportMetaMap(sitesByProject[id], siteCounts),
-        nurseries: reportMetaMap(nurseriesByProject[id], nurseryCounts)
-      })
-    }));
+    if (filter == null) {
+      document.addIndex({ ...indexData, total: 0, ids: [] });
+      return;
+    }
+
+    const builder = PaginatedQueryBuilder.forNumberPage(Project, query.page, [
+      { association: "organisation", attributes: ["name"] }
+    ])
+      .attributes(["id", "uuid", "name", "frameworkKey", "organisationId", "status"])
+      .where({ id: { [Op.in]: filteredProjectsSubquery(filter).literal } });
+    const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
+
+    if (projects.length > 0) {
+      await this.entitiesService.authorize("read", projects);
+
+      const pageFilter = { ...filter, projectIds: projects.map(({ id }) => id) };
+      const parentWhere = (type: "siteReports" | "nurseryReports") => ({
+        id: { [Op.in]: filteredReportsSubquery(type, "parent", pageFilter).literal }
+      });
+      const attributes = ["id", "uuid", "name", "projectId"];
+      const emptyCounts = new Map<number, number>();
+      const [projectCounts, sites, nurseries, siteCounts, nurseryCounts] = await Promise.all([
+        includeProjectReports ? countReportsByParent("projectReports", pageFilter) : emptyCounts,
+        includeSites ? Site.findAll({ where: parentWhere("siteReports"), attributes }) : [],
+        includeNurseries ? Nursery.findAll({ where: parentWhere("nurseryReports"), attributes }) : [],
+        includeSites ? countReportsByParent("siteReports", pageFilter) : emptyCounts,
+        includeNurseries ? countReportsByParent("nurseryReports", pageFilter) : emptyCounts
+      ]);
+
+      const sitesByProject = groupBy(sites, "projectId");
+      const nurseriesByProject = groupBy(nurseries, "projectId");
+      for (const { id, uuid, name, organisation } of projects) {
+        document.addData(
+          uuid,
+          new ProjectReportMetaDto({
+            uuid,
+            organisationName: organisation?.name ?? null,
+            project: { name, reportsRequiringAttention: projectCounts.get(id) ?? 0 },
+            sites: reportMetaMap(sitesByProject[id], siteCounts),
+            nurseries: reportMetaMap(nurseriesByProject[id], nurseryCounts)
+          })
+        );
+      }
+    }
+
+    document.addIndex({ ...indexData, total, ids: projects.map(({ uuid }) => uuid) });
   }
 
   async update(project: Project, update: ProjectUpdateAttributes) {

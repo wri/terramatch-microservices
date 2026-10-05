@@ -66,7 +66,7 @@ import { TranslatableEntityParamsDto } from "./dto/translatable-entity-params.dt
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ProjectReportMetaDto, ReportMetaDto } from "./dto/project-report-meta.dto";
-import { ReportCountsQueryDto } from "./dto/report-counts-query.dto";
+import { ReportCountsQueryDto, ReportsMetaQueryDto } from "./dto/report-counts-query.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
@@ -98,13 +98,19 @@ export class EntitiesController {
   @Get("reportCounts")
   @ApiOperation({
     operationId: "reportCountsGet",
-    summary: "Get the total number of reports matching the given filters."
+    summary: "Get the total number of reports and the available reporting periods matching the given filters."
   })
   @JsonApiResponse(ReportCountsDto)
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   async reportCountsGet(@Query() query: ReportCountsQueryDto) {
-    const totalReports = await this.entitiesService.countReports(query);
-    return buildJsonApi(ReportCountsDto).addData("reportCounts", new ReportCountsDto(totalReports));
+    const [totalReports, reportingPeriods] = await Promise.all([
+      this.entitiesService.countReports(query),
+      this.entitiesService.reportingPeriods(query)
+    ]);
+    return buildJsonApi(ReportCountsDto).addData(
+      "reportCounts",
+      new ReportCountsDto({ totalReports, reportingPeriods })
+    );
   }
 
   @Get(":entity")
@@ -138,8 +144,8 @@ export class EntitiesController {
   })
   @JsonApiResponse({ data: ProjectReportMetaDto, pagination: "number" })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
-  async entityReportsMetaIndex(@Param() { entity }: ReportsMetaParamsDto, @Query() query: EntityQueryDto) {
-    const processor = this.entitiesService.createEntityProcessor<Project>(entity);
+  async entityReportsMetaIndex(@Param() { entity }: ReportsMetaParamsDto, @Query() query: ReportsMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
     const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
     await processor.addReportsMetaIndex(document, query);
     return document;

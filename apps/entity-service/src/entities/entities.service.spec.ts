@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { EntitiesService, ProcessableAssociation, ProcessableEntity } from "./entities.service";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import { DeepMocked } from "@golevelup/ts-jest";
@@ -68,10 +69,18 @@ describe("EntitiesService", () => {
   });
 
   describe("countReports", () => {
-    const createReports = async (frameworkKey: FrameworkKey = "ppc") => {
-      const project = await ProjectFactory.create({ frameworkKey });
-      const { id: siteId } = await SiteFactory.create({ projectId: project.id, frameworkKey });
-      const { id: nurseryId } = await NurseryFactory.create({ projectId: project.id, frameworkKey });
+    const createReports = async (frameworkKey: FrameworkKey = "ppc", searchToken = faker.string.uuid()) => {
+      const project = await ProjectFactory.create({ frameworkKey, name: `Project ${searchToken}` });
+      const { id: siteId } = await SiteFactory.create({
+        projectId: project.id,
+        frameworkKey,
+        name: `Site ${searchToken}`
+      });
+      const { id: nurseryId } = await NurseryFactory.create({
+        projectId: project.id,
+        frameworkKey,
+        name: `Nursery ${searchToken}`
+      });
       const projectId = project.id;
       await ProjectReportFactory.create({ projectId, frameworkKey, status: "due", dueAt: new Date("2025-03-15") });
       await SiteReportFactory.create({ siteId, frameworkKey, status: "draft", dueAt: new Date("2025-03-31T20:00Z") });
@@ -108,8 +117,8 @@ describe("EntitiesService", () => {
       expect(
         await service.countReports({
           projectUuid,
-          dueDateFrom: new Date("2025-03-15"),
-          dueDateTo: new Date("2025-03-31")
+          dueDateFrom: "2025-03-15",
+          dueDateTo: "2025-03-31"
         })
       ).toBe(2);
       expect(await service.countReports({ projectUuid, dueMonth: 3 })).toBe(3);
@@ -117,6 +126,46 @@ describe("EntitiesService", () => {
       expect(
         await service.countReports({ projectUuid, dueYear: 2025, statuses: ["draft"], reportTypes: ["siteReports"] })
       ).toBe(1);
+    });
+
+    describe("reportingPeriods", () => {
+      it("returns the distinct due month / year of matching reports, ignoring due date filters", async () => {
+        const { uuid: projectUuid } = await createReports();
+        setMockedPermissions("framework-ppc");
+
+        const all = [
+          { dueYear: 2025, dueMonth: 6 },
+          { dueYear: 2025, dueMonth: 4 },
+          { dueYear: 2025, dueMonth: 3 },
+          { dueYear: 2024, dueMonth: 3 }
+        ];
+        expect(await service.reportingPeriods({ projectUuid })).toEqual(all);
+        expect(await service.reportingPeriods({ projectUuid, dueYear: 2024, dueMonth: 3 })).toEqual(all);
+        expect(await service.reportingPeriods({ projectUuid, reportTypes: ["siteReports"] })).toEqual([
+          { dueYear: 2025, dueMonth: 3 }
+        ]);
+        expect(await service.reportingPeriods({ projectUuid, statuses: ["due"] })).toEqual([
+          { dueYear: 2025, dueMonth: 3 },
+          { dueYear: 2024, dueMonth: 3 }
+        ]);
+      });
+
+      it("returns an empty list if the user has access to no projects", async () => {
+        const { uuid: projectUuid } = await createReports();
+        mockUserContext({ userId: (await UserFactory.create()).id, permissions: [] });
+        expect(await service.reportingPeriods({ projectUuid })).toEqual([]);
+      });
+    });
+
+    it("searches project, site and nursery names", async () => {
+      const token = faker.string.uuid();
+      await createReports("ppc", token);
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ search: `Project ${token}` })).toBe(5);
+      expect(await service.countReports({ search: `Site ${token}` })).toBe(1);
+      expect(await service.countReports({ search: `Nursery ${token}` })).toBe(1);
+      expect(await service.countReports({ search: token, reportTypes: ["projectReports", "siteReports"] })).toBe(2);
     });
 
     it("only counts reports in the framework admin's frameworks", async () => {

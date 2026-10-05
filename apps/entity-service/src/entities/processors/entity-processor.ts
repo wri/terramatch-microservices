@@ -1,7 +1,7 @@
 import { Model, ModelCtor } from "sequelize-typescript";
 import { Response } from "express";
 import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "sequelize";
-import { DocumentBuilder, getDtoType, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
+import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity, ProgressTick } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
@@ -23,7 +23,7 @@ import { isPropertyField } from "@terramatch-microservices/database/constants/li
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
 import { Literal } from "sequelize/types/utils";
-import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
+import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -52,19 +52,18 @@ export type PaginatedResult<ModelType extends EntityModel> = {
   paginationTotal: number;
 };
 
-export type DtoResult<DtoType extends object> = {
+export type DtoResult<DtoType extends EntityDto> = {
   id: string;
   dto: DtoType;
 };
 
 const getIndexData = (
-  resource: string,
-  path: string,
+  resource: ProcessableEntity,
   query: EntityQueryDto,
   total: number,
   pageNumber: number
 ): Omit<IndexData, "ids"> => {
-  const requestPath = `/entities/v3/${path}${getStableRequestQuery(query)}`;
+  const requestPath = `/entities/v3/${resource}${getStableRequestQuery(query)}`;
   return { resource, requestPath, total, pageNumber };
 };
 
@@ -139,7 +138,7 @@ export abstract class EntityProcessor<
 
   async addIndex(document: DocumentBuilder, query: EntityQueryDto, sideloaded = false) {
     const { models, paginationTotal } = await this.findMany(query);
-    const indexData = getIndexData(this.resource, this.resource, query, paginationTotal, query.page?.number ?? 1);
+    const indexData = getIndexData(this.resource, query, paginationTotal, query.page?.number ?? 1);
 
     const indexIds: string[] = [];
     if (models.length !== 0) {
@@ -165,32 +164,9 @@ export abstract class EntityProcessor<
     }
   }
 
-  async addReportsMetaIndex(document: DocumentBuilder, query: EntityQueryDto) {
-    const { models, paginationTotal } = await this.findMany(query);
-    const indexData = getIndexData(
-      getDtoType(ProjectReportMetaDto),
-      `${this.resource}/reportsMeta`,
-      query,
-      paginationTotal,
-      query.page?.number ?? 1
-    );
-
-    const indexIds: string[] = [];
-    if (models.length !== 0) {
-      await this.entitiesService.authorize("read", models);
-
-      for (const { id, dto } of await this.getReportsMetaDtos(models)) {
-        indexIds.push(id);
-        document.addData(id, dto);
-      }
-    }
-
-    document.addIndex({ ...indexData, ids: indexIds });
-  }
-
   /* eslint-disable @typescript-eslint/no-unused-vars */
   /* istanbul ignore next */
-  protected async getReportsMetaDtos(models: ModelType[]): Promise<DtoResult<ProjectReportMetaDto>[]> {
+  async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto): Promise<void> {
     throw new BadRequestException("Reports meta is not supported for this entity type");
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */

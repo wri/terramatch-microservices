@@ -19,8 +19,14 @@ export class ProjectReportMetaDto {
     populateDto<ProjectReportMetaDto>(this, data);
   }
 
+  @ApiProperty()
+  uuid: string;
+
   @ApiProperty({ nullable: true, type: String })
-  name: string | null;
+  organisationName: string | null;
+
+  @ApiProperty({ type: ReportMetaDto, description: "Report meta for the project reports of this project" })
+  project: ReportMetaDto;
 
   @ApiProperty({
     type: "object",

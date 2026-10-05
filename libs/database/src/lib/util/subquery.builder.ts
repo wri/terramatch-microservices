@@ -117,6 +117,10 @@ class ClauseBuilder<T extends Model> {
     const escaped = isLiteral(values) ? values.val : values.map(v => this.escape(v)).join(",");
     return `${this.field(attribute)} IN (${escaped})`;
   }
+
+  like(attribute: keyof Attributes<T>, pattern: string) {
+    return `${this.field(attribute)} LIKE ${this.escape(pattern)}`;
+  }
 }
 
 class SubqueryBuilder<T extends Model> {
@@ -180,6 +184,11 @@ class SubqueryBuilder<T extends Model> {
 
   in(attribute: keyof Attributes<T>, values: string[] | number[] | Literal) {
     this.where.push(this.clauses.in(attribute, values));
+    return this;
+  }
+
+  like(attribute: keyof Attributes<T>, pattern: string) {
+    this.where.push(this.clauses.like(attribute, pattern));
     return this;
   }
 

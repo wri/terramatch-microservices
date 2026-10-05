@@ -56,7 +56,8 @@ type ProjectMedia =
   | "programmeSubmission"
   | "detailedProjectBudget"
   | "proofOfLandTenureMou"
-  | "consortiumPartnershipAgreements";
+  | "consortiumPartnershipAgreements"
+  | "communityEngagementDocumentation";
 
 @Table({
   tableName: "v2_projects",
@@ -103,6 +104,11 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" },
     consortiumPartnershipAgreements: {
       dbCollection: "consortium_partnership_agreements",
+      multiple: true,
+      validation: "general-documents"
+    },
+    communityEngagementDocumentation: {
+      dbCollection: "community_engagement_documentation",
       multiple: true,
       validation: "general-documents"
     }
@@ -521,6 +527,14 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   @AllowNull
   @Column(TEXT)
   declare bioeconomyProductDescription: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare indirectEntities: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  declare gliComponents: string[] | null;
 
   @Column({ type: STRING(64), allowNull: false, defaultValue: POLYGON_DATA_SUBMISSION_DEFAULT })
   declare polygonDataSubmission: CreationOptional<string>;

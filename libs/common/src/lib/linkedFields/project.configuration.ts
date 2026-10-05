@@ -440,6 +440,18 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
       property: "bioeconomyProductDescription",
       label: "Bioeconomy product description",
       inputType: "long-text"
+    },
+    "pro-indirect-entities": {
+      property: "indirectEntities",
+      label: "Indirect Entities",
+      inputType: "long-text"
+    },
+    "pro-gli-components": {
+      property: "gliComponents",
+      label: "GLI Components",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gli-components"
     }
   },
   fileCollections: {
@@ -485,6 +497,12 @@ export const ProjectConfiguration: LinkedFieldConfiguration<Project> = {
     "pro-col-consortium-partnership-agreements": {
       collection: "consortium_partnership_agreements",
       label: "Consortium agreements",
+      inputType: "file",
+      multiChoice: true
+    },
+    "pro-col-community-engagement-documentation": {
+      collection: "community_engagement_documentation",
+      label: "Community Engagement Documentation",
       inputType: "file",
       multiChoice: true
     }

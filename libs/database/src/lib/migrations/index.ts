@@ -46,6 +46,7 @@ import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-t
 import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
 import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-adj-nullable";
 import { addCriteriaSiteLookupIndexes } from "./202610011200-add-criteria-site-lookup-indexes";
+import { createStakeholders } from "./202610041200-create-stakeholders";
 import { addUserRolesColumn } from "./202610051200-add-user-roles-column";
 import { addPitchProjectEthiopiaFields } from "./202610051200-add-pitch-project-ethiopia-fields";
 import { removeUserProgramColumn } from "./202610071200-remove-user-program-column";
@@ -98,6 +99,7 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   createRsTreeCount,
   makeRsTreeCountAdjNullable,
   addCriteriaSiteLookupIndexes,
+  createStakeholders,
   addUserRolesColumn,
   addPitchProjectEthiopiaFields,
   removeUserProgramColumn,

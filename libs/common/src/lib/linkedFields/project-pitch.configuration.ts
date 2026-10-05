@@ -714,6 +714,12 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       inputType: "treeSpecies",
       collection: "tree-planted"
     },
+    "pro-pit-stakeholders": {
+      label: "Stakeholders",
+      exportHeading: "stakeholders",
+      resource: "stakeholders",
+      inputType: "stakeholders"
+    },
     "pro-pit-all-jobs": {
       label: "All Jobs",
       exportHeading: "jobsAll",

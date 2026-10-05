@@ -83,6 +83,7 @@ export const RELATION_INPUT_TYPES = [
   "ownershipStake",
   "restorationPartners",
   "seedings",
+  "stakeholders",
   "stratas",
   "trainingBeneficiaries",
   "treesGoal",
@@ -114,6 +115,7 @@ export const LINKED_FIELD_RESOURCES = [
   "ownershipStake",
   "restoration",
   "seedings",
+  "stakeholders",
   "stratas",
   "treeSpecies"
 ] as const;

@@ -48,7 +48,8 @@ import {
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
+import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
@@ -400,6 +401,52 @@ describe("ProjectProcessor", () => {
         expect(result.meta.indices?.length ?? 0).toBeGreaterThanOrEqual(3);
         expect(result.meta.indices!.find(({ resource }) => resource === "sites")?.total).toBe(12);
       });
+    });
+  });
+
+  describe("addReportsMetaIndex", () => {
+    it("returns report meta for the sites and nurseries of each project", async () => {
+      const organisation = await OrganisationFactory.create();
+      const project = await ProjectFactory.create({ organisationId: organisation.id });
+      const emptyProject = await ProjectFactory.create({ organisationId: organisation.id });
+      await ProjectFactory.create();
+
+      const [site, quietSite] = await SiteFactory.createMany(2, { projectId: project.id });
+      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"]) {
+        await SiteReportFactory.create({ siteId: site.id, status });
+      }
+      await SiteReportFactory.create({ siteId: quietSite.id, status: "approved" });
+      await SiteReportFactory.create({ siteId: site.id, status: "due", deletedAt: new Date() });
+
+      const nursery = await NurseryFactory.create({ projectId: project.id });
+      await NurseryReportFactory.create({ nurseryId: nursery.id, status: "due" });
+      await NurseryReportFactory.create({ nurseryId: nursery.id, status: "approved" });
+
+      setMockedPermissions("projects-read");
+      const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
+      await processor.addReportsMetaIndex(document, { organisationUuid: organisation.uuid });
+
+      const result = document.serialize();
+      expect(result.meta.resourceType).toBe("projectReportsMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectReportsMetas",
+        requestPath: `/entities/v3/projects/reportsMeta?organisationUuid=${organisation.uuid}`,
+        total: 2
+      });
+
+      const data = result.data as Resource[];
+      expect(data.map(({ id }) => id)).toEqual([project.uuid, emptyProject.uuid]);
+      expect(data[0].attributes).toEqual({
+        name: project.name,
+        sites: {
+          [site.uuid]: { name: site.name, reportsRequiringAttention: 3 },
+          [quietSite.uuid]: { name: quietSite.name, reportsRequiringAttention: 0 }
+        },
+        nurseries: {
+          [nursery.uuid]: { name: nursery.name, reportsRequiringAttention: 1 }
+        }
+      });
+      expect(data[1].attributes).toEqual({ name: emptyProject.name, sites: {}, nurseries: {} });
     });
   });
 

@@ -110,6 +110,16 @@ describe("EntitiesController", () => {
     });
   });
 
+  describe("entityReportsMetaIndex", () => {
+    it("should add the reports meta index to the document", async () => {
+      const addReportsMetaIndex = jest.spyOn(processor, "addReportsMetaIndex").mockResolvedValue();
+      const query = { page: { number: 2 }, status: "approved" } as EntityQueryDto;
+      const result = serialize(await controller.entityReportsMetaIndex({ entity: "projects" }, query));
+      expect(addReportsMetaIndex).toHaveBeenCalledWith(expect.anything(), query);
+      expect(result.meta.resourceType).toBe("projectReportsMetas");
+    });
+  });
+
   describe("entityExportAll", () => {
     it("should throw an error if the policy does not authorize", async () => {
       jest.spyOn(policyService(), "authorize").mockRejectedValue(new UnauthorizedException());

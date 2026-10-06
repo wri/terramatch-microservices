@@ -22,3 +22,18 @@ export type FinancialReportFramework = (typeof FINANCIAL_REPORT_FRAMEWORKS)[numb
 
 export const FRAMEWORK_KEYS = [...FRAMEWORK_KEYS_TF, PPC, HBF, FUNDO_FLORA, FUNDO_FLORA_1, WCB, BARKA_FUND] as const;
 export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];
+
+/** User-facing display names for each framework. */
+export const FRAMEWORK_NAMES: Record<FrameworkKey, string> = {
+  "barka-fund": "Barka Fund",
+  enterprises: "TerraFund Enterprises",
+  "epa-ghana-pilot": "EPA-Ghana Pilot",
+  "fundo-flora": "Fundo Flora",
+  "fundo-flora-1": "Fundo Flora 1",
+  hbf: "Harit Bharat Fund",
+  ppc: "PPC",
+  terrafund: "TerraFund Top 100",
+  "terrafund-3": "TerraFund Cohort Three",
+  "terrafund-landscapes": "TerraFund Landscapes",
+  wcb: "Wildlife Conservation Bond"
+};

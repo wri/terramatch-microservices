@@ -22,4 +22,16 @@ describe("UserUpdateAttributes", () => {
     const errors = await validate(plainToInstance(UserUpdateAttributes, { roles: "funder" }));
     expect(errors.map(({ property }) => property)).toEqual(["roles"]);
   });
+
+  it("accepts a list of valid direct frameworks", async () => {
+    const errors = await validate(plainToInstance(UserUpdateAttributes, { directFrameworks: ["ppc", "terrafund-3"] }));
+    expect(errors).toHaveLength(0);
+  });
+
+  it("rejects unknown direct frameworks", async () => {
+    const errors = await validate(
+      plainToInstance(UserUpdateAttributes, { directFrameworks: ["ppc", "not-a-framework"] })
+    );
+    expect(errors.map(({ property }) => property)).toEqual(["directFrameworks"]);
+  });
 });

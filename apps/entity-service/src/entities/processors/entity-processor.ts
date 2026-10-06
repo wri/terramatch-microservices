@@ -23,6 +23,7 @@ import { isPropertyField } from "@terramatch-microservices/database/constants/li
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
 import { Literal } from "sequelize/types/utils";
+import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -162,6 +163,13 @@ export abstract class EntityProcessor<
       }
     }
   }
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  /* istanbul ignore next */
+  async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto): Promise<void> {
+    throw new BadRequestException("Reports meta is not supported for this entity type");
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   async delete(model: ModelType) {
     await Action.for(model).destroy();

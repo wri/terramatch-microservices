@@ -67,7 +67,7 @@ export const ROLES = {
     "monitoring-manage",
     "reports-manage"
   ],
-  "admin-fundo-floral": [
+  "admin-fundo-flora": [
     "framework-fundo-flora",
     "framework-fundo-flora-1",
     "custom-forms-manage",
@@ -102,7 +102,7 @@ export const ROLE_NAMES: Record<RoleSlug, string> = {
   "admin-terrafund": "TerraFund Admin",
   "admin-hbf": "HBF Admin",
   "admin-epa-ghana-pilot": "EPA Ghana Pilot Admin",
-  "admin-fundo-floral": "Fundo Flora Admin",
+  "admin-fundo-flora": "Fundo Flora Admin",
   "admin-wcb": "WCB Admin",
   "admin-barka-fund": "Barka Fund Admin",
   "project-developer": "Project Developer",

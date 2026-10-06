@@ -91,6 +91,8 @@ export const ROLES: Dictionary<Permission[]> = {
   funder: ["view-dashboard"]
 };
 
+export const ROLE_NAMES = Object.keys(ROLES);
+
 export const isValidRole = (role: string) => ROLES[role] != null;
 
 export const getPermissionsForRoles = (roles: string[]) => uniq(roles.flatMap(role => ROLES[role] ?? []));

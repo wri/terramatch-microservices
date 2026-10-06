@@ -425,21 +425,23 @@ describe("UsersService", () => {
       );
     });
 
-    it("should replace roles when primaryRole is provided", async () => {
+    it("should replace roles when roles are provided", async () => {
       const user = createUserMock();
-      user.roles = ["project-developer", "funder"];
+      user.roles = ["project-developer"];
 
-      const result = await service.update(user, { primaryRole: "admin-super" });
+      const result = await service.update(user, { roles: ["admin-super", "funder"] });
 
-      expect(result.roles).toEqual(["admin-super"]);
+      expect(result.roles).toEqual(["admin-super", "funder"]);
       expect(user.save).toHaveBeenCalled();
     });
 
-    it("should throw when primary role does not exist", async () => {
+    it("should leave roles alone when roles are not provided", async () => {
       const user = createUserMock();
+      user.roles = ["project-developer"];
 
-      await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow("Role not found");
-      expect(user.save).not.toHaveBeenCalled();
+      const result = await service.update(user, { firstName: "New" });
+
+      expect(result.roles).toEqual(["project-developer"]);
     });
 
     it("should update password when password is provided", async () => {

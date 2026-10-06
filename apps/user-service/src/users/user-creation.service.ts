@@ -19,7 +19,6 @@ import { EmailService } from "@terramatch-microservices/common/email/email.servi
 import { UserCreateAttributes, UserCreateBaseAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
 import { omit, uniq } from "lodash";
-import { isValidRole } from "@terramatch-microservices/database/constants/permissions";
 import bcrypt from "bcryptjs";
 import { validate } from "class-validator";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -36,7 +35,6 @@ const EMAIL_KEYS = {
 @Injectable()
 export class UserCreationService {
   protected readonly logger = new TMLogger(UserCreationService.name);
-  private roles = ["project-developer", "funder", "government"];
 
   constructor(private readonly emailService: EmailService) {}
 
@@ -60,11 +58,6 @@ export class UserCreationService {
     if (errors.length > 0) {
       throw new BadRequestException(errors);
     }
-    const role = request.role;
-    if (!this.roles.includes(role)) {
-      throw new UnprocessableEntityException("Role not valid");
-    }
-
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
     if (userExists) {
       throw new UnprocessableEntityException("User already exists");
@@ -73,9 +66,9 @@ export class UserCreationService {
     try {
       const hashPassword = await bcrypt.hash(request.password, 10);
       const callbackUrl = request.callbackUrl;
-      const newUser = omit(request, ["callbackUrl", "role", "password"]);
+      const newUser = omit(request, ["callbackUrl", "password"]);
 
-      const user = await User.create({ ...newUser, password: hashPassword, roles: [role] } as User);
+      const user = await User.create({ ...newUser, password: hashPassword } as User);
 
       await user.reload();
 
@@ -109,20 +102,13 @@ export class UserCreationService {
     if (userExists) {
       throw new UnprocessableEntityException("User already exists");
     }
-    if (!isValidRole(request.role)) {
-      throw new BadRequestException("Role not found");
-    }
     const frameworkEntities = await Framework.findAll({ where: { slug: request.directFrameworks } });
     if (frameworkEntities.length !== request.directFrameworks.length) {
       throw new BadRequestException("One or more frameworks not found");
     }
     try {
-      const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
-      const user = await User.create({
-        ...newUser,
-        organisationId: organisation?.id ?? null,
-        roles: [request.role]
-      } as User);
+      const newUser = omit(request, ["organisationUuid", "directFrameworks"]);
+      const user = await User.create({ ...newUser, organisationId: organisation?.id ?? null } as User);
 
       if (frameworkEntities.length > 0) {
         await FrameworkUser.bulkCreate(

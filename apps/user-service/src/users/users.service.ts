@@ -12,7 +12,6 @@ import {
   ProjectUser,
   User
 } from "@terramatch-microservices/database/entities";
-import { isValidRole } from "@terramatch-microservices/database/constants/permissions";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 import bcrypt from "bcryptjs";
 import { Queue } from "bullmq";
@@ -168,9 +167,6 @@ export class UsersService {
         throw new BadRequestException("One or more frameworks not found");
       }
     }
-    if (update.primaryRole != null && !isValidRole(update.primaryRole)) {
-      throw new BadRequestException("Role not found");
-    }
 
     if (update.directFrameworks != null) {
       const userPreviousFrameworks = user.frameworks ?? [];
@@ -204,7 +200,7 @@ export class UsersService {
     user.country = update.country ?? user.country;
     user.program = update.program ?? user.program;
     user.locale = update.locale ?? user.locale;
-    if (update.primaryRole != null) user.roles = [update.primaryRole];
+    user.roles = update.roles ?? user.roles;
 
     return await user.save();
   }

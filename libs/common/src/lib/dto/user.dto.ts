@@ -68,6 +68,9 @@ export class UserDto {
   @ApiProperty()
   primaryRole: string;
 
+  @ApiProperty({ isArray: true, type: String })
+  roles: string[];
+
   @ApiProperty({ example: "person@foocorp.net" })
   emailAddress: string;
 

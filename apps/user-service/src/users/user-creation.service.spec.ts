@@ -33,7 +33,7 @@ describe("UserCreationService", () => {
     userNewRequest.password = "secret";
     userNewRequest.firstName = "firstName";
     userNewRequest.lastName = "lastName";
-    userNewRequest.role = role;
+    userNewRequest.roles = [role];
     userNewRequest.jobRole = "developer";
     userNewRequest.phoneNumber = "1234567890";
     userNewRequest.program = "";
@@ -340,7 +340,7 @@ describe("UserCreationService", () => {
     it("should assign project-developer role regardless of request role", async () => {
       const user = await UserFactory.create();
       const request = getInviteRequest("new@example.com", "valid-token");
-      request.role = "funder";
+      request.roles = ["funder"];
       const passwordReset = {
         user,
         destroy: jest.fn().mockResolvedValue(undefined)
@@ -391,7 +391,7 @@ describe("UserCreationService", () => {
   });
 
   describe("authenticated/admin user creation", () => {
-    const getAdminRequest = async (email: string, role: string) => {
+    const getAdminRequest = async (email: string, roles: string[]) => {
       const frameworkSlug = "ppc";
       if ((await Framework.count({ where: { slug: frameworkSlug } })) === 0) {
         await FrameworkFactory.create({ slug: frameworkSlug });
@@ -402,14 +402,14 @@ describe("UserCreationService", () => {
       request.lastName = "lastName";
       request.jobRole = "developer";
       request.phoneNumber = "1234567890";
-      request.role = role;
+      request.roles = roles;
       request.organisationUuid = "org-uuid";
       request.directFrameworks = [frameworkSlug];
       return request;
     };
 
     it("should create user for authenticated request", async () => {
-      const request = await getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", ["project-manager", "funder"]);
       const createdUser = await UserFactory.create();
       const organisation = { id: 999 } as Organisation;
 
@@ -424,13 +424,13 @@ describe("UserCreationService", () => {
         attributes: ["id"]
       });
       expect(User.create).toHaveBeenCalledWith(
-        expect.objectContaining({ organisationId: organisation.id, roles: [request.role] })
+        expect.objectContaining({ organisationId: organisation.id, roles: ["project-manager", "funder"] })
       );
       expect(result).toBe(createdUser);
     });
 
     it("should fail when organisation does not exist", async () => {
-      const request = await getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", ["project-manager"]);
 
       jest.spyOn(Organisation, "findOne").mockResolvedValue(null);
 
@@ -438,7 +438,7 @@ describe("UserCreationService", () => {
     });
 
     it("should fail when admin role does not exist", async () => {
-      const request = await getAdminRequest("admin-created@example.com", "not-a-role");
+      const request = await getAdminRequest("admin-created@example.com", ["not-a-role"]);
       const createdUser = await UserFactory.create();
       const organisation = { id: 888 } as Organisation;
 
@@ -446,11 +446,12 @@ describe("UserCreationService", () => {
       jest.spyOn(User, "count").mockResolvedValue(0);
       jest.spyOn(User, "create").mockResolvedValue(createdUser);
 
-      await expect(service.createNewUser(true, request)).rejects.toThrow(new BadRequestException("Role not found"));
+      await expect(service.createNewUser(true, request)).rejects.toThrow(BadRequestException);
+      expect(User.create).not.toHaveBeenCalled();
     });
 
     it("should fail validation for malformed admin payload", async () => {
-      const request = await getAdminRequest("invalid-email", "project-manager");
+      const request = await getAdminRequest("invalid-email", ["project-manager"]);
       request.organisationUuid = "";
       // @ts-expect-error test invalid payload
       request.phoneNumber = null;

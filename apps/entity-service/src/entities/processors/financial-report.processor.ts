@@ -90,9 +90,8 @@ export class FinancialReportProcessor extends ReportProcessor<
     if (userId != null) {
       const user = await User.findOne({
         where: { id: userId },
-        attributes: ["organisationId"],
+        attributes: ["organisationId", "roles"],
         include: [
-          { association: "legacyRoles", attributes: ["name"] },
           {
             association: "projects",
             attributes: ["organisationId"],

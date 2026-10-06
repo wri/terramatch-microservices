@@ -3,13 +3,11 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import {
   Framework,
   LocalizationKey,
-  ModelHasRole,
   Organisation,
   OrganisationInvite,
   PasswordReset,
   ProjectInvite,
   ProjectUser,
-  Role,
   User,
   Verification
 } from "@terramatch-microservices/database/entities";
@@ -18,12 +16,7 @@ import { LocalizationService } from "@terramatch-microservices/common/localizati
 import { UserCreationService } from "./user-creation.service";
 import { UserCreateAttributes } from "./dto/user-create.dto";
 import { BadRequestException, InternalServerErrorException, UnprocessableEntityException } from "@nestjs/common";
-import {
-  FrameworkFactory,
-  ProjectFactory,
-  RoleFactory,
-  UserFactory
-} from "@terramatch-microservices/database/factories";
+import { FrameworkFactory, ProjectFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { LocalizationKeyFactory } from "@terramatch-microservices/database/factories/localization-key.factory";
 import { TemplateService } from "@terramatch-microservices/common/templates/template.service";
 import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
@@ -114,18 +107,13 @@ describe("UserCreationService", () => {
     const user = await UserFactory.create();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
     const localizationTitle = await getLocalizationTitle();
     const localizationCta = await getLocalizationCta();
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    // @ts-expect-error bogus mock value
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     const reloadSpy = jest.spyOn(user, "reload").mockResolvedValue(user);
 
@@ -137,6 +125,7 @@ describe("UserCreationService", () => {
     templateService.render.mockReturnValue("rendered template");
 
     const result = await service.createNewUser(false, userNewRequest);
+    expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ roles: ["project-developer"] }));
     expect(reloadSpy).toHaveBeenCalled();
     expect(emailService.sendI18nTemplateEmail).toHaveBeenCalled();
     expect(result).toBeDefined();
@@ -161,11 +150,10 @@ describe("UserCreationService", () => {
     );
   });
 
-  it("should generate a error because role not exist", async () => {
+  it("should generate a error because the role is not allowed for sign up", async () => {
     const user = await UserFactory.create();
     jest.spyOn(User, "findOne").mockImplementation(() => Promise.resolve(null));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(null));
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
+    const userNewRequest = getRequest(user.emailAddress, "admin-super");
 
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
@@ -176,14 +164,12 @@ describe("UserCreationService", () => {
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
     );
 
-    await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow("Role not found");
+    await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(BadRequestException);
   });
 
   it("should generate a error when create user in DB", async () => {
     const user = await getUser();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
 
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
@@ -195,7 +181,6 @@ describe("UserCreationService", () => {
     );
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.reject());
 
     await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(InternalServerErrorException);
@@ -205,8 +190,6 @@ describe("UserCreationService", () => {
     const user = await getUser();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
     const localizationTitle = await getLocalizationTitle();
@@ -217,10 +200,7 @@ describe("UserCreationService", () => {
     );
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    // @ts-expect-error bogus mock value
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     jest.spyOn(Verification, "findOrCreate").mockImplementation(() => Promise.reject());
     await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(InternalServerErrorException);
@@ -230,18 +210,13 @@ describe("UserCreationService", () => {
     const user = await UserFactory.create();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
     const localizationTitle = await getLocalizationTitle();
     const localizationCta = await getLocalizationCta();
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    // @ts-expect-error bogus mock value
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     localizationService.getLocalizationKeys.mockReturnValue(
       Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
@@ -255,8 +230,6 @@ describe("UserCreationService", () => {
     const user = await UserFactory.create();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
     const localizationTitle = await getLocalizationTitle();
@@ -267,31 +240,7 @@ describe("UserCreationService", () => {
     );
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockRejectedValue(new Error("User creation failed"));
-
-    await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(InternalServerErrorException);
-  });
-
-  it("should return an error when ModelHasRole.findOrCreate fails", async () => {
-    const user = await UserFactory.create();
-    const userNewRequest = getRequest(user.emailAddress, "project-developer");
-
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
-    const localizationBody = await getLocalizationBody();
-    const localizationSubject = await getLocalizationSubject();
-    const localizationTitle = await getLocalizationTitle();
-    const localizationCta = await getLocalizationCta();
-
-    localizationService.getLocalizationKeys.mockReturnValue(
-      Promise.resolve([localizationBody, localizationSubject, localizationTitle, localizationCta])
-    );
-
-    jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
-    jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    jest.spyOn(ModelHasRole, "findOrCreate").mockRejectedValue(new Error("ModelHasRole creation failed"));
 
     await expect(service.createNewUser(false, userNewRequest)).rejects.toThrow(InternalServerErrorException);
   });
@@ -300,8 +249,6 @@ describe("UserCreationService", () => {
     const user = await UserFactory.create();
     const userNewRequest = getRequest(user.emailAddress, "project-developer");
 
-    const role = RoleFactory.create({ name: userNewRequest.role });
-
     const localizationBody = await getLocalizationBody();
     const localizationSubject = await getLocalizationSubject();
     const localizationTitle = await getLocalizationTitle();
@@ -312,10 +259,7 @@ describe("UserCreationService", () => {
     );
 
     jest.spyOn(User, "count").mockImplementation(() => Promise.resolve(0));
-    jest.spyOn(Role, "findOne").mockImplementation(() => Promise.resolve(role));
     jest.spyOn(User, "create").mockImplementation(() => Promise.resolve(user));
-    // @ts-expect-error bogus mock value
-    jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue(null);
 
     jest.spyOn(Verification, "findOrCreate").mockRejectedValue(new Error("Verification creation failed"));
 
@@ -348,12 +292,9 @@ describe("UserCreationService", () => {
         acceptedAt: null,
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as OrganisationInvite;
-      const role = RoleFactory.create({ name: "project-developer" });
 
       jest.spyOn(PasswordReset, "findOne").mockResolvedValue(passwordReset as PasswordReset);
       jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([organisationInvite] as OrganisationInvite[]);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
       jest.spyOn(user, "save").mockResolvedValue(user);
 
       const result = await service.createNewUser(false, request);
@@ -379,15 +320,12 @@ describe("UserCreationService", () => {
         acceptedAt: null,
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as ProjectInvite;
-      const role = RoleFactory.create({ name: "project-developer" });
       const projectUser = { save: jest.fn() } as unknown as ProjectUser;
 
       jest.spyOn(PasswordReset, "findOne").mockResolvedValue(passwordReset as PasswordReset);
       jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([]);
       jest.spyOn(ProjectInvite, "findAll").mockResolvedValue([projectInvite] as ProjectInvite[]);
       jest.spyOn(ProjectUser, "findOrCreate").mockResolvedValue([projectUser, true]);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
       jest.spyOn(user, "save").mockResolvedValue(user);
 
       const result = await service.createNewUser(false, request);
@@ -407,18 +345,15 @@ describe("UserCreationService", () => {
         user,
         destroy: jest.fn().mockResolvedValue(undefined)
       } as unknown as PasswordReset;
-      const role = RoleFactory.create({ name: "project-developer" });
 
       jest.spyOn(PasswordReset, "findOne").mockResolvedValue(passwordReset as PasswordReset);
       jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([]);
       jest.spyOn(ProjectInvite, "findAll").mockResolvedValue([]);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
       jest.spyOn(user, "save").mockResolvedValue(user);
 
       await service.createNewUser(false, request);
 
-      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "project-developer" } });
+      expect(user.roles).toEqual(["project-developer"]);
     });
 
     it("should update existing project-user relation if already present", async () => {
@@ -435,7 +370,6 @@ describe("UserCreationService", () => {
         acceptedAt: null,
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as ProjectInvite;
-      const role = RoleFactory.create({ name: "project-developer" });
       const projectUser = {
         isMonitoring: false,
         status: "inactive",
@@ -446,8 +380,6 @@ describe("UserCreationService", () => {
       jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([]);
       jest.spyOn(ProjectInvite, "findAll").mockResolvedValue([projectInvite]);
       jest.spyOn(ProjectUser, "findOrCreate").mockResolvedValue([projectUser, false]);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
       jest.spyOn(user, "save").mockResolvedValue(user);
 
       await service.createNewUser(false, request);
@@ -461,7 +393,6 @@ describe("UserCreationService", () => {
   describe("authenticated/admin user creation", () => {
     const getAdminRequest = async (email: string, role: string) => {
       const frameworkSlug = "ppc";
-      if ((await Role.count({ where: { name: role } })) === 0) await RoleFactory.create({ name: role });
       if ((await Framework.count({ where: { slug: frameworkSlug } })) === 0) {
         await FrameworkFactory.create({ slug: frameworkSlug });
       }
@@ -479,15 +410,12 @@ describe("UserCreationService", () => {
 
     it("should create user for authenticated request", async () => {
       const request = await getAdminRequest("admin-created@example.com", "project-manager");
-      const role = RoleFactory.create({ name: request.role });
       const createdUser = await UserFactory.create();
       const organisation = { id: 999 } as Organisation;
 
       jest.spyOn(Organisation, "findOne").mockResolvedValue(organisation);
       jest.spyOn(User, "count").mockResolvedValue(0);
       jest.spyOn(User, "create").mockResolvedValue(createdUser);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
 
       const result = await service.createNewUser(true, request);
 
@@ -495,7 +423,9 @@ describe("UserCreationService", () => {
         where: { uuid: request.organisationUuid },
         attributes: ["id"]
       });
-      expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ organisationId: organisation.id }));
+      expect(User.create).toHaveBeenCalledWith(
+        expect.objectContaining({ organisationId: organisation.id, roles: [request.role] })
+      );
       expect(result).toBe(createdUser);
     });
 
@@ -508,14 +438,13 @@ describe("UserCreationService", () => {
     });
 
     it("should fail when admin role does not exist", async () => {
-      const request = await getAdminRequest("admin-created@example.com", "project-manager");
+      const request = await getAdminRequest("admin-created@example.com", "not-a-role");
       const createdUser = await UserFactory.create();
       const organisation = { id: 888 } as Organisation;
 
       jest.spyOn(Organisation, "findOne").mockResolvedValue(organisation);
       jest.spyOn(User, "count").mockResolvedValue(0);
       jest.spyOn(User, "create").mockResolvedValue(createdUser);
-      jest.spyOn(Role, "findOne").mockResolvedValue(null);
 
       await expect(service.createNewUser(true, request)).rejects.toThrow(new BadRequestException("Role not found"));
     });

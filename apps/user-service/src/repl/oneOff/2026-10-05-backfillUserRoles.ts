@@ -7,7 +7,7 @@ const CHUNK_SIZE = 1000;
 /**
  * Copies each user's role names from the legacy `model_has_roles` join table into the new
  * `users.roles` JSON column. Role names are ordered by role id so that `roles[0]` is stable.
- * Users with no legacy roles are left untouched (`roles` stays null).
+ * Users with no legacy roles are left untouched (`roles` keeps its `[]` default).
  *
  * Users that share the same set of roles are written with a single update per chunk of ids, so
  * the number of statements scales with the number of distinct role sets, not the number of users.

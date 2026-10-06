@@ -1,18 +1,16 @@
 import { BadRequestException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
-import { Op } from "sequelize";
+import { col, fn, Op } from "sequelize";
 import { UsersService } from "./users.service";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
   Framework,
   FrameworkUser,
-  ModelHasRole,
   Organisation,
   PasswordReset,
   Project,
   ProjectUser,
-  Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { UserQueryDto } from "./dto/user-query.dto";
@@ -65,7 +63,7 @@ describe("UsersService", () => {
         query.page,
         expect.arrayContaining([
           expect.objectContaining({ association: "organisation" }),
-          expect.objectContaining({ association: "legacyRoles" })
+          expect.objectContaining({ association: "frameworks" })
         ])
       );
       expect(builder.order).toHaveBeenCalledWith([["createdAt", "DESC"]]);
@@ -129,23 +127,13 @@ describe("UsersService", () => {
       });
     });
 
-    it("should require matching role include when primaryRole is provided", async () => {
+    it("should filter by role when primaryRole is provided", async () => {
       const builder = createBuilderMock();
       jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);
 
       await service.findMany({ page: 1, primaryRole: "admin-super" } as UserQueryDto);
 
-      expect(PaginatedQueryBuilder.forNumberPage).toHaveBeenCalledWith(
-        User,
-        1,
-        expect.arrayContaining([
-          expect.objectContaining({
-            association: "legacyRoles",
-            required: true,
-            where: { name: "admin-super" }
-          })
-        ])
-      );
+      expect(builder.where).toHaveBeenCalledWith(fn("JSON_CONTAINS", col("User.roles"), '"admin-super"'));
     });
 
     it("should sort by direct fields", async () => {
@@ -437,32 +425,21 @@ describe("UsersService", () => {
       );
     });
 
-    it("should replace primary role when primaryRole is provided", async () => {
+    it("should replace roles when primaryRole is provided", async () => {
       const user = createUserMock();
-      const destroySpy = jest.spyOn(ModelHasRole, "destroy").mockResolvedValue(0);
-      jest.spyOn(Role, "findOne").mockResolvedValue({ id: 5 } as Role);
-      const findOrCreateSpy = jest.spyOn(ModelHasRole, "findOrCreate").mockResolvedValue([{} as ModelHasRole, true]);
+      user.roles = ["project-developer", "funder"];
 
-      const result = await service.update(user, { primaryRole: "admin" });
+      const result = await service.update(user, { primaryRole: "admin-super" });
 
-      expect(destroySpy).toHaveBeenCalledWith({
-        where: { modelId: 99, modelType: User.LARAVEL_TYPE }
-      });
-      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "admin" } });
-      expect(findOrCreateSpy).toHaveBeenCalledWith({
-        where: { modelId: 99, roleId: 5 },
-        defaults: { modelId: 99, roleId: 5, modelType: User.LARAVEL_TYPE } as ModelHasRole
-      });
-      expect(user.reload).toHaveBeenCalled();
-      expect(result).toBe(user);
+      expect(result.roles).toEqual(["admin-super"]);
+      expect(user.save).toHaveBeenCalled();
     });
 
     it("should throw when primary role does not exist", async () => {
       const user = createUserMock();
-      jest.spyOn(ModelHasRole, "destroy").mockResolvedValue(0);
-      jest.spyOn(Role, "findOne").mockResolvedValue(null);
 
       await expect(service.update(user, { primaryRole: "unknown-role" })).rejects.toThrow("Role not found");
+      expect(user.save).not.toHaveBeenCalled();
     });
 
     it("should update password when password is provided", async () => {

@@ -682,8 +682,7 @@ describe("SitePolygonsController", () => {
       const result = await controller.create(request as CreateSitePolygonJsonApiRequestDto);
 
       expect(User.findByPk).toHaveBeenCalledWith(1, {
-        attributes: ["firstName", "lastName"],
-        include: [{ association: "legacyRoles", attributes: ["name"] }]
+        attributes: ["firstName", "lastName", "roles"]
       });
       expect(sitePolygonCreationService.createSitePolygons).toHaveBeenCalledWith(
         { geometries },

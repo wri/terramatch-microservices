@@ -9,11 +9,11 @@ import {
 describe("polygon-version-changed", () => {
   describe("isAdminSessionFromRoles", () => {
     it("returns true for admin roles", () => {
-      expect(isAdminSessionFromRoles([{ name: "admin-terrafund" }])).toBe(true);
+      expect(isAdminSessionFromRoles(["admin-terrafund"])).toBe(true);
     });
 
     it("returns false for non-admin roles", () => {
-      expect(isAdminSessionFromRoles([{ name: "project-developer" }])).toBe(false);
+      expect(isAdminSessionFromRoles(["project-developer"])).toBe(false);
     });
   });
 

@@ -1,8 +1,7 @@
-import { Dictionary } from "lodash";
+import { Dictionary, uniq } from "lodash";
 
-// NOTE: When making changes to the roles and permissions assignments, this command must be run
-// in the REPL for the change to take effect:
-// > await Permission.syncPermissions();
+// This file is the source of truth for roles and permissions. Users hold a list of role names
+// (`users.roles`), and their permissions are derived from that list using ROLES below.
 
 export const PERMISSIONS = {
   "framework-ppc": "Framework PPC",
@@ -91,3 +90,7 @@ export const ROLES: Dictionary<Permission[]> = {
   government: ["view-dashboard"],
   funder: ["view-dashboard"]
 };
+
+export const isValidRole = (role: string) => ROLES[role] != null;
+
+export const getPermissionsForRoles = (roles: string[]) => uniq(roles.flatMap(role => ROLES[role] ?? []));

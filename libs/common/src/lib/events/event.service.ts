@@ -47,8 +47,8 @@ export class EventService {
     if (createdBy === null) {
       return;
     }
-    const user = await User.findByPk(createdBy, { include: [{ association: "legacyRoles" }] });
-    if (!user?.legacyRoles?.map(role => role.name).includes("greenhouse-service-account")) {
+    const user = await User.findByPk(createdBy, { attributes: ["roles"] });
+    if (user == null || !user.roles.includes("greenhouse-service-account")) {
       return;
     }
     await this.greenhouseQueue.add("mediaDeleted", media);

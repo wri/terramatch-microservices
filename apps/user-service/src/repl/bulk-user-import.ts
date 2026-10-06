@@ -9,14 +9,8 @@ import {
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Dictionary } from "lodash";
 import { CreationAttributes } from "sequelize";
-import {
-  Application,
-  ModelHasRole,
-  Organisation,
-  PasswordReset,
-  Role,
-  User
-} from "@terramatch-microservices/database/entities";
+import { Application, Organisation, PasswordReset, User } from "@terramatch-microservices/database/entities";
+import { isValidRole } from "@terramatch-microservices/database/constants/permissions";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import crypto from "node:crypto";
 import { BulkUserCreationEmail } from "@terramatch-microservices/common/email/bulk-user-creation.email";
@@ -28,7 +22,6 @@ const LOGGER = new TMLogger("Bulk User Import");
 type Row = {
   user: CreationAttributes<User>;
   orgUuid: string;
-  roleId: number;
 };
 
 /**
@@ -93,20 +86,23 @@ const parseRow = async (row: Dictionary<string>) => {
     await Organisation.findOne({ where: { uuid: orgUuid }, attributes: ["id"] }),
     `Organisation not found: ${orgUuid}`
   );
-  const role = assertNotNull(
-    await Role.findOne({ where: { name: roleName }, attributes: ["id"] }),
-    `Role not found: ${roleName}`
-  );
+  assert(isValidRole(roleName), `Role not found: ${roleName}`);
 
-  const user: CreationAttributes<User> = { emailAddress, firstName, lastName, locale, organisationId: org.id };
-  return { user, orgUuid, roleId: role.id };
+  const user: CreationAttributes<User> = {
+    emailAddress,
+    firstName,
+    lastName,
+    locale,
+    organisationId: org.id,
+    roles: [roleName]
+  };
+  return { user, orgUuid };
 };
 
 const persistRows = async (rows: Row[]) => {
   LOGGER.log(`Creating ${rows.length} users`);
-  for (const { user: userCreationData, orgUuid, roleId } of rows) {
+  for (const { user: userCreationData, orgUuid } of rows) {
     const user = await User.create(userCreationData);
-    await ModelHasRole.create({ roleId, modelType: User.LARAVEL_TYPE, modelId: user.id });
 
     // If the org hasn't yet had a user attached to its applications and form submissions, attach this user to them.
     const applications = await Application.findAll({

@@ -5,8 +5,6 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
-  ModelHasRole,
-  Role,
   User,
   Verification,
   PasswordReset,
@@ -20,7 +18,8 @@ import {
 import { EmailService } from "@terramatch-microservices/common/email/email.service";
 import { UserCreateAttributes, UserCreateBaseAttributes } from "./dto/user-create.dto";
 import crypto from "node:crypto";
-import { omit } from "lodash";
+import { omit, uniq } from "lodash";
+import { isValidRole } from "@terramatch-microservices/database/constants/permissions";
 import bcrypt from "bcryptjs";
 import { validate } from "class-validator";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
@@ -66,11 +65,6 @@ export class UserCreationService {
       throw new UnprocessableEntityException("Role not valid");
     }
 
-    const roleEntity = await Role.findOne({ where: { name: role } });
-    if (roleEntity == null) {
-      throw new BadRequestException("Role not found");
-    }
-
     const userExists = (await User.count({ where: { emailAddress: request.emailAddress } })) !== 0;
     if (userExists) {
       throw new UnprocessableEntityException("User already exists");
@@ -81,14 +75,9 @@ export class UserCreationService {
       const callbackUrl = request.callbackUrl;
       const newUser = omit(request, ["callbackUrl", "role", "password"]);
 
-      const user = await User.create({ ...newUser, password: hashPassword } as User);
+      const user = await User.create({ ...newUser, password: hashPassword, roles: [role] } as User);
 
       await user.reload();
-
-      await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: roleEntity.id },
-        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
-      });
 
       const token = crypto.randomBytes(32).toString("hex");
       await this.saveUserVerification(user.id, token);
@@ -120,8 +109,7 @@ export class UserCreationService {
     if (userExists) {
       throw new UnprocessableEntityException("User already exists");
     }
-    const roleEntity = await Role.findOne({ where: { name: request.role } });
-    if (roleEntity == null) {
+    if (!isValidRole(request.role)) {
       throw new BadRequestException("Role not found");
     }
     const frameworkEntities = await Framework.findAll({ where: { slug: request.directFrameworks } });
@@ -130,11 +118,11 @@ export class UserCreationService {
     }
     try {
       const newUser = omit(request, ["role", "organisationUuid", "directFrameworks"]);
-      const user = await User.create({ ...newUser, organisationId: organisation?.id ?? null } as User);
-      await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: roleEntity.id },
-        defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
-      });
+      const user = await User.create({
+        ...newUser,
+        organisationId: organisation?.id ?? null,
+        roles: [request.role]
+      } as User);
 
       if (frameworkEntities.length > 0) {
         await FrameworkUser.bulkCreate(
@@ -223,17 +211,7 @@ export class UserCreationService {
     user.emailAddress = request.emailAddress;
     user.password = hashPassword;
     user.emailAddressVerifiedAt = new Date();
-
-    const role = "project-developer";
-    const roleEntity = await Role.findOne({ where: { name: role } });
-    if (roleEntity == null) {
-      throw new BadRequestException("Role not found");
-    }
-
-    await ModelHasRole.findOrCreate({
-      where: { modelId: user.id, roleId: roleEntity.id },
-      defaults: { modelId: user.id, roleId: roleEntity.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
-    });
+    user.roles = uniq([...user.roles, "project-developer"]);
 
     await user.save();
 

@@ -137,7 +137,9 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "goalTreesRestoredAnr",
   "goalTreesRestoredDirectSeeding",
   "directSeedingSurvivalRate",
-  "landownerAgreement"
+  "landownerAgreement",
+  "indirectEntities",
+  "gliComponents"
 ];
 
 const ADMIN_CSV_COLUMNS: Dictionary<string> = {
@@ -943,6 +945,7 @@ export class ProjectProcessor extends EntityProcessor<
           "detailed_project_budget",
           "proof_of_land_tenure_mou",
           "consortium_partnership_agreements",
+          "community_engagement_documentation",
           "additional"
         ])
         .findAll();

@@ -1085,7 +1085,9 @@ describe("ProjectProcessor", () => {
       const pitch = await ProjectPitchFactory.create({
         // Spot check a couple attributes
         projectName: "Test Pitch",
-        descriptionOfProjectTimeline: faker.lorem.paragraph()
+        descriptionOfProjectTimeline: faker.lorem.paragraph(),
+        indirectEntities: faker.lorem.paragraph(),
+        gliComponents: ["restoration-of-degraded-landscapes", "knowledge-management-and-monitoring-system"]
       });
       await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
 
@@ -1095,6 +1097,8 @@ describe("ProjectProcessor", () => {
       expect(project.frameworkKey).toBe(form.frameworkKey);
       expect(project.name).toBe(pitch.projectName);
       expect(project.descriptionOfProjectTimeline).toBe(pitch.descriptionOfProjectTimeline);
+      expect(project.indirectEntities).toBe(pitch.indirectEntities);
+      expect(project.gliComponents).toEqual(pitch.gliComponents);
     });
 
     it("copies trees, demographics and media from the pitch when creating the project", async () => {
@@ -1115,6 +1119,9 @@ describe("ProjectProcessor", () => {
       ]);
 
       const pitchMedia = await MediaFactory.projectPitch(pitch).create({ collectionName: "detailed_project_budget" });
+      const engagementMedia = await MediaFactory.projectPitch(pitch).create({
+        collectionName: "community_engagement_documentation"
+      });
       await MediaFactory.projectPitch(pitch).create({ collectionName: "ignored_collection" });
 
       const project = await processor.create({ formUuid: form.uuid, applicationUuid: application.uuid });
@@ -1147,11 +1154,13 @@ describe("ProjectProcessor", () => {
         );
       }
 
-      expect(mediaService().duplicateMedia).toHaveBeenCalledTimes(1);
-      expect(mediaService().duplicateMedia).toHaveBeenCalledWith(
-        expect.objectContaining({ uuid: pitchMedia.uuid }),
-        expect.objectContaining({ uuid: project.uuid })
-      );
+      expect(mediaService().duplicateMedia).toHaveBeenCalledTimes(2);
+      for (const { uuid } of [pitchMedia, engagementMedia]) {
+        expect(mediaService().duplicateMedia).toHaveBeenCalledWith(
+          expect.objectContaining({ uuid }),
+          expect.objectContaining({ uuid: project.uuid })
+        );
+      }
     });
   });
 

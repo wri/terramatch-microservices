@@ -638,6 +638,33 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       property: "consortium",
       label: "Consortium description",
       inputType: "long-text"
+    },
+    "pro-pit-indirect-entities": {
+      property: "indirectEntities",
+      label: "Indirect Entities",
+      inputType: "long-text"
+    },
+    "pro-pit-land-access-description": {
+      property: "landAccessDescription",
+      label: "Land Access Description",
+      inputType: "long-text"
+    },
+    "pro-pit-cofinancing-amount": {
+      property: "cofinancingAmount",
+      label: "Co-financing Amount",
+      inputType: "number-currency"
+    },
+    "pro-pit-cofinancing-details": {
+      property: "cofinancingDetails",
+      label: "Co-financing Details",
+      inputType: "long-text"
+    },
+    "pro-pit-gli-components": {
+      property: "gliComponents",
+      label: "GLI Components",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "gli-components"
     }
   },
   fileCollections: {
@@ -669,6 +696,12 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
     "pro-pit-consortium-partnership-agreements": {
       collection: "consortium_partnership_agreements",
       label: "Consortium agreements",
+      inputType: "file",
+      multiChoice: true
+    },
+    "pro-pit-community-engagement-documentation": {
+      collection: "community_engagement_documentation",
+      label: "Community Engagement Documentation",
       inputType: "file",
       multiChoice: true
     }

@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
   AuditStatus,
+  Organisation,
   Project,
   ProjectReport,
   ProjectUser,
   SiteReport,
   Tracking,
   TrackingEntry,
-  TreeSpecies
+  TreeSpecies,
+  User
 } from "@terramatch-microservices/database/entities";
 import { CHILD_ENTITIES_FOR_EXPORT, ProjectProcessor } from "./project.processor";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
@@ -48,7 +50,9 @@ import {
 import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
-import { buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
+import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
+import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
@@ -400,6 +404,152 @@ describe("ProjectProcessor", () => {
         expect(result.meta.indices?.length ?? 0).toBeGreaterThanOrEqual(3);
         expect(result.meta.indices!.find(({ resource }) => resource === "sites")?.total).toBe(12);
       });
+    });
+  });
+
+  describe("addReportsMetaIndex", () => {
+    const frameworkKey = "ppc";
+    let organisation: Organisation;
+    let user: User;
+    const createData = async () => {
+      user = await UserFactory.create();
+      organisation = await OrganisationFactory.create();
+      const organisationId = organisation.id;
+      const alpha = await ProjectFactory.create({ frameworkKey, organisationId, name: "Alpha Forest" });
+      await ProjectReportFactory.create({ projectId: alpha.id, frameworkKey, status: "due" });
+      const [river, hill] = await Promise.all([
+        SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "River Site" }),
+        SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "Hill Site" })
+      ]);
+      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"]) {
+        await SiteReportFactory.create({ siteId: river.id, frameworkKey, status });
+      }
+      await SiteReportFactory.create({ siteId: river.id, frameworkKey, status: "due", deletedAt: new Date() });
+      await SiteReportFactory.create({ siteId: hill.id, frameworkKey, status: "approved" });
+      const alphaNursery = await NurseryFactory.create({ projectId: alpha.id, frameworkKey, name: "Nursery One" });
+      await NurseryReportFactory.create({ nurseryId: alphaNursery.id, frameworkKey, status: "due" });
+      await NurseryReportFactory.create({ nurseryId: alphaNursery.id, frameworkKey, status: "approved" });
+
+      const approvedOnly = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Woods" });
+      await ProjectReportFactory.create({ projectId: approvedOnly.id, frameworkKey, status: "approved" });
+      const approvedSite = await SiteFactory.create({ projectId: approvedOnly.id, frameworkKey, name: "Beta Site" });
+      await SiteReportFactory.create({ siteId: approvedSite.id, frameworkKey, status: "approved" });
+
+      const coastal = await ProjectFactory.create({ frameworkKey, organisationId, name: "Coastal" });
+      const coastalNursery = await NurseryFactory.create({
+        projectId: coastal.id,
+        frameworkKey,
+        name: "Alpha Seedlings"
+      });
+      await NurseryReportFactory.create({ nurseryId: coastalNursery.id, frameworkKey, status: "draft" });
+
+      // Only has a project report requiring attention
+      const delta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Delta" });
+      await ProjectReportFactory.create({ projectId: delta.id, frameworkKey, status: "draft" });
+
+      for (const { id: projectId } of [alpha, approvedOnly, coastal, delta]) {
+        await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
+      }
+
+      return { alpha, river, hill, alphaNursery, approvedOnly, approvedSite, coastal, coastalNursery, delta };
+    };
+
+    const getIndex = async (query: ReportsMetaQueryDto, permissions = ["projects-manage"]) => {
+      mockContextForUser(user, ...permissions);
+      const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
+      await processor.addReportsMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { result, data, attributes: data.map(({ attributes }) => attributes) };
+    };
+
+    type MetaEntity = { uuid: string; name: string | null };
+    const meta = (entity: MetaEntity, reportsRequiringAttention: number) => ({
+      [entity.uuid]: { name: entity.name, reportsRequiringAttention }
+    });
+    const row = (project: MetaEntity, projectCount: number, sites = {}, nurseries = {}) => ({
+      uuid: project.uuid,
+      organisationName: organisation.name,
+      project: { name: project.name, reportsRequiringAttention: projectCount },
+      sites,
+      nurseries
+    });
+
+    it("returns all projects with their reports requiring attention", async () => {
+      const { alpha, river, alphaNursery, approvedOnly, coastal, coastalNursery, delta } = await createData();
+      const { result, data, attributes } = await getIndex({});
+
+      expect(result.meta.resourceType).toBe("projectReportsMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectReportsMetas",
+        requestPath: "/entities/v3/projects/reportsMeta",
+        total: 4
+      });
+      expect(data.map(({ id }) => id)).toEqual([alpha.uuid, approvedOnly.uuid, coastal.uuid, delta.uuid]);
+      expect(attributes).toEqual([
+        row(alpha, 1, meta(river, 3), meta(alphaNursery, 1)),
+        row(approvedOnly, 0),
+        row(coastal, 0, {}, meta(coastalNursery, 1)),
+        row(delta, 1)
+      ]);
+    });
+
+    it("applies the report filters to the counts", async () => {
+      const { alpha, river, hill, alphaNursery, approvedOnly, approvedSite, coastal, coastalNursery, delta } =
+        await createData();
+
+      expect((await getIndex({ statuses: ["approved"] })).attributes).toEqual([
+        row(alpha, 0, { ...meta(river, 1), ...meta(hill, 1) }, meta(alphaNursery, 1)),
+        row(approvedOnly, 1, meta(approvedSite, 1)),
+        row(coastal, 0),
+        row(delta, 0)
+      ]);
+
+      expect((await getIndex({ reportTypes: ["nurseryReports", "projectReports"] })).attributes).toEqual([
+        row(alpha, 1, {}, meta(alphaNursery, 1)),
+        row(approvedOnly, 0),
+        row(coastal, 0, {}, meta(coastalNursery, 1)),
+        row(delta, 1)
+      ]);
+
+      expect((await getIndex({ reportTypes: ["disturbanceReports"] })).attributes).toEqual([
+        row(alpha, 0),
+        row(approvedOnly, 0),
+        row(coastal, 0),
+        row(delta, 0)
+      ]);
+      expect((await getIndex({ projectUuid: coastal.uuid })).data.map(({ id }) => id)).toEqual([coastal.uuid]);
+    });
+
+    it("searches project, site and nursery names", async () => {
+      const { alpha, river, alphaNursery, coastal, coastalNursery } = await createData();
+
+      expect((await getIndex({ search: "River" })).attributes).toEqual([row(alpha, 0, meta(river, 3))]);
+      expect((await getIndex({ search: "Hill" })).attributes).toEqual([row(alpha, 0)]);
+      expect((await getIndex({ search: "alpha" })).attributes).toEqual([
+        row(alpha, 1, meta(river, 3), meta(alphaNursery, 1)),
+        row(coastal, 0, {}, meta(coastalNursery, 1))
+      ]);
+    });
+
+    it("limits framework admins to their frameworks", async () => {
+      const { alpha } = await createData();
+      const { data } = await getIndex({ projectUuid: alpha.uuid }, ["framework-hbf"]);
+      expect(data).toEqual([]);
+    });
+
+    it("paginates", async () => {
+      const { approvedOnly } = await createData();
+      const { result, data } = await getIndex({ page: { number: 2, size: 1 } });
+      expect(result.meta.indices?.[0]).toMatchObject({ total: 4, pageNumber: 2 });
+      expect(data.map(({ id }) => id)).toEqual([approvedOnly.uuid]);
+    });
+
+    it("returns an empty index if the user has no project access", async () => {
+      await createData();
+      const { result, data } = await getIndex({}, []);
+      expect(result.meta.indices?.[0].total).toBe(0);
+      expect(data).toEqual([]);
     });
   });
 

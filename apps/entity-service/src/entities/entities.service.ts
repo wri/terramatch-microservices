@@ -11,6 +11,8 @@ import {
   FormQuestion,
   Invasive,
   Media,
+  Project,
+  ProjectUser,
   Seeding,
   Strata,
   Tracking,
@@ -18,8 +20,8 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { MediaCollection } from "@terramatch-microservices/database/types/media";
-import { chunk, Dictionary, groupBy, kebabCase, uniq } from "lodash";
-import { col, fn, Includeable } from "sequelize";
+import { chunk, Dictionary, groupBy, kebabCase, omit, orderBy, sum, uniq, uniqBy } from "lodash";
+import { col, fn, Includeable, Op } from "sequelize";
 import { EntityDto } from "./dto/entity.dto";
 import { AssociationProcessor } from "./processors/association-processor";
 import { AssociationDto, AssociationDtoAdditionalProps } from "@terramatch-microservices/common/dto/association.dto";
@@ -71,6 +73,13 @@ import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-a
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { Archiver } from "archiver";
+import { Literal } from "sequelize/types/utils";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { DateTime } from "luxon";
+import { REPORT_COUNT_TYPES, ReportCountsQueryDto, ReportCountType } from "./dto/report-counts-query.dto";
+import { ReportingPeriodDto } from "./dto/report-counts.dto";
+import { filteredReportsSubquery, REPORT_FILTER_MODELS, ReportFilter } from "./report-filters";
+import { ReportStatus } from "@terramatch-microservices/database/constants/status";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -134,6 +143,24 @@ const ASSOCIATION_PROCESSORS = {
 export type ProcessableAssociation = keyof typeof ASSOCIATION_PROCESSORS;
 export const PROCESSABLE_ASSOCIATIONS = Object.keys(ASSOCIATION_PROCESSORS) as ProcessableAssociation[];
 
+const DUE_DATE_FILTERS = ["dueDateFrom", "dueDateTo", "dueMonth", "dueYear"] as const;
+
+const reportCountTypes = (reportTypes?: ReportCountType[]) =>
+  reportTypes != null && reportTypes.length > 0 ? uniq(reportTypes) : REPORT_COUNT_TYPES;
+
+/**
+ * Returns a subquery of the project ids that reports should be limited to, or undefined if no
+ * project limitation is required.
+ */
+const scopedProjectIds = (userProjectIds?: Literal, projectUuid?: string) => {
+  if (userProjectIds == null && projectUuid == null) return undefined;
+
+  const builder = Subquery.select(Project, "id");
+  if (userProjectIds != null) builder.in("id", userProjectIds);
+  if (projectUuid != null) builder.eq("uuid", projectUuid);
+  return builder.literal;
+};
+
 type EntityFrameworkExportOptions<T extends EntityModel> = Omit<ExportAllOptions, "frameworkKey" | "projectUuid"> & {
   // If not specified, all attributes will be fetched from the DB when using a query builder.
   attributes?: string[];
@@ -183,6 +210,94 @@ export class EntitiesService {
 
   async authorize(action: string, subject: Model | Model[]) {
     await this.policyService.authorize(action, subject);
+  }
+
+  async countReports(query: ReportCountsQueryDto) {
+    const filter = this.reportFilter(query);
+    if (filter == null) return 0;
+
+    const counts = await Promise.all(
+      reportCountTypes(query.reportTypes).map(type =>
+        REPORT_FILTER_MODELS[type].model.count({
+          where: { id: { [Op.in]: filteredReportsSubquery(type, "id", filter).literal } }
+        })
+      )
+    );
+    return sum(counts);
+  }
+
+  /**
+   * Returns the distinct due month / year of reports matching the query, newest first. The due date
+   * filters are ignored so that the result can be used to offer the available periods to select.
+   */
+  async reportingPeriods(query: ReportCountsQueryDto): Promise<ReportingPeriodDto[]> {
+    const filter = this.reportFilter(omit(query, DUE_DATE_FILTERS));
+    if (filter == null) return [];
+
+    const periods = await Promise.all(
+      reportCountTypes(query.reportTypes).map(
+        async type =>
+          (await REPORT_FILTER_MODELS[type].model.findAll({
+            where: {
+              id: { [Op.in]: filteredReportsSubquery(type, "id", filter).literal },
+              dueAt: { [Op.ne]: null }
+            },
+            attributes: [
+              [fn("YEAR", col("due_at")), "dueYear"],
+              [fn("MONTH", col("due_at")), "dueMonth"]
+            ],
+            group: ["dueYear", "dueMonth"],
+            raw: true
+          })) as unknown as ReportingPeriodDto[]
+      )
+    );
+
+    const unique = uniqBy(
+      periods.flat().map(({ dueYear, dueMonth }) => ({ dueYear: Number(dueYear), dueMonth: Number(dueMonth) })),
+      ({ dueYear, dueMonth }) => `${dueYear}-${dueMonth}`
+    );
+    return orderBy(unique, ["dueYear", "dueMonth"], ["desc", "desc"]);
+  }
+
+  /**
+   * Builds a report filter from the query for the current user, applying the same read scoping as
+   * the report processors' findMany implementations. Returns undefined if the user has no access to
+   * any reports.
+   */
+  reportFilter(
+    { dueDateFrom, dueDateTo, dueMonth, dueYear, statuses, search, projectUuid }: ReportCountsQueryDto,
+    defaultStatuses?: readonly ReportStatus[]
+  ): ReportFilter | undefined {
+    const frameworkKeys = (this.permissions ?? [])
+      .filter(name => name.startsWith("framework-"))
+      .map(name => name.substring("framework-".length));
+    const isFrameworkAdmin = frameworkKeys.length > 0;
+    const userProjectIds = isFrameworkAdmin ? undefined : this.userProjectIdsSubquery();
+    if (!isFrameworkAdmin && userProjectIds == null) return undefined;
+
+    return {
+      frameworkKeys,
+      projectIds: scopedProjectIds(userProjectIds, projectUuid),
+      statuses: statuses != null && statuses.length > 0 ? statuses : defaultStatuses,
+      dueDateFrom: dueDateFrom == null ? undefined : DateTime.fromISO(dueDateFrom, { zone: "utc" }).toJSDate(),
+      dueDateTo: dueDateTo == null ? undefined : DateTime.fromISO(dueDateTo, { zone: "utc" }).toJSDate(),
+      dueMonth,
+      dueYear,
+      search
+    };
+  }
+
+  /**
+   * Returns a subquery of the ids of projects the user has access to via manage-own or
+   * projects-manage, or undefined if they have neither permission. Mirrors the read scoping in the
+   * report processors' findMany implementations.
+   */
+  private userProjectIdsSubquery() {
+    const permissions = this.permissions ?? [];
+    const userId = this.userId as number;
+    if (permissions.includes("manage-own")) return ProjectUser.userProjectsSubquery(userId);
+    if (permissions.includes("projects-manage")) return ProjectUser.projectsManageSubquery(userId);
+    return undefined;
   }
 
   async isFrameworkAdmin<T extends EntityModel>({ frameworkKey }: T) {

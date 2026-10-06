@@ -280,8 +280,6 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
         "fileName",
         "lat",
         "lng",
-        "isCover",
-        "isPublic",
         "generatedConversions",
         "customProperties",
         "createdAt"

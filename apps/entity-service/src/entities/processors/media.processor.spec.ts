@@ -181,9 +181,7 @@ describe("MediaProcessor", () => {
       expect(entries.find(({ uuid }) => uuid === siteMedia.uuid)).toMatchObject({
         name: siteMedia.name,
         lat: 3,
-        lng: 4,
-        isCover: siteMedia.isCover,
-        isPublic: siteMedia.isPublic
+        lng: 4
       });
     });
 

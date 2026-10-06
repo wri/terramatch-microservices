@@ -24,16 +24,10 @@ export class MediaMapEntryDto {
   thumbUrl: string | null;
 
   @ApiProperty()
-  isCover: boolean;
-
-  @ApiProperty()
-  isPublic: boolean;
-
-  @ApiProperty()
   createdAt: Date;
 }
 
-@JsonApiDto({ type: "mediaMapIndexes" })
+@JsonApiDto({ type: "mediaMapIndexes", id: "string" })
 export class MediaMapIndexDto {
   constructor(media: MediaMapEntryDto[]) {
     this.media = media;

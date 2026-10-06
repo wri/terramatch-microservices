@@ -3,13 +3,12 @@ import { Test } from "@nestjs/testing";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { mockUserContext, serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
-import { Resource } from "@terramatch-microservices/common/util";
-import { Media, Site } from "@terramatch-microservices/database/entities";
-import { MediaFactory, SiteFactory } from "@terramatch-microservices/database/factories";
+import { Media } from "@terramatch-microservices/database/entities";
+import { ENTITY_MODELS } from "@terramatch-microservices/database/constants/entities";
+import { MediaFactory, ProjectFactory, SiteFactory } from "@terramatch-microservices/database/factories";
 import { EntitiesService } from "./entities.service";
 import { MediaMapIndexController } from "./media-map-index.controller";
 import { MediaProcessor } from "./processors/media.processor";
-import { MediaMapIndexDto } from "./dto/media-map-index.dto";
 
 describe("MediaMapIndexController", () => {
   let controller: MediaMapIndexController;
@@ -26,7 +25,7 @@ describe("MediaMapIndexController", () => {
 
     controller = module.get(MediaMapIndexController);
     entitiesService.createAssociationProcessor.mockImplementation(
-      (entity, uuid) => new MediaProcessor(entity, uuid, Site, entitiesService)
+      (entity, uuid) => new MediaProcessor(entity, uuid, ENTITY_MODELS[entity], entitiesService)
     );
     entitiesService.thumbnailUrl.mockReturnValue(null);
 
@@ -46,10 +45,35 @@ describe("MediaMapIndexController", () => {
 
     const result = serialize(await controller.mediaMapIndex({ entity: "sites", uuid: site.uuid }));
 
-    expect(result.data).toMatchObject({ type: "mediaMapIndexes", id: `sites|${site.uuid}` });
-    const { media, total } = (result.data as Resource).attributes as unknown as MediaMapIndexDto;
-    expect(total).toBe(3);
-    expect(media.map(({ uuid }) => uuid).sort()).toEqual(geotagged.map(({ uuid }) => uuid).sort());
+    expect(result.data).toMatchObject({
+      type: "mediaMapIndexes",
+      id: `sites|${site.uuid}`,
+      attributes: {
+        total: 3,
+        media: expect.arrayContaining(geotagged.map(({ uuid }) => expect.objectContaining({ uuid })))
+      }
+    });
+  });
+
+  it("includes geotagged media of the project's sites", async () => {
+    setMockedPermissions("projects-read");
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const projectMedia = await MediaFactory.project(project).create({ lat: 1, lng: 2 });
+    const siteMedia = await MediaFactory.site(site).create({ lat: 3, lng: 4 });
+
+    const result = serialize(await controller.mediaMapIndex({ entity: "projects", uuid: project.uuid }));
+
+    expect(result.data).toMatchObject({
+      id: `projects|${project.uuid}`,
+      attributes: {
+        total: 2,
+        media: expect.arrayContaining([
+          expect.objectContaining({ uuid: projectMedia.uuid }),
+          expect.objectContaining({ uuid: siteMedia.uuid })
+        ])
+      }
+    });
   });
 
   it("throws if the user cannot read the base entity", async () => {

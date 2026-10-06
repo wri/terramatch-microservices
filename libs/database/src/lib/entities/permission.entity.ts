@@ -55,7 +55,7 @@ export class Permission extends Model<InferAttributes<Permission>, InferCreation
     const dbPermissions = await Permission.findAll();
     const rolePermissions = await RoleHasPermission.findAll();
     const rolesSynced: string[] = [];
-    for (const [role, permissions] of Object.entries(ROLES)) {
+    for (const [role, permissions] of Object.entries<readonly PermissionName[]>(ROLES)) {
       rolesSynced.push(role);
 
       let dbRole = dbRoles.find(({ name }) => name === role);

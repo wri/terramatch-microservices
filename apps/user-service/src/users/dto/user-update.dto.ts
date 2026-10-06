@@ -2,7 +2,7 @@ import { IsArray, IsEnum, IsIn, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
-import { ROLE_NAMES } from "@terramatch-microservices/database/constants/permissions";
+import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
 
 export class UserUpdateAttributes {
   @ApiProperty({ description: "Organisation UUID", nullable: true, required: false, format: "uuid", type: String })
@@ -46,11 +46,11 @@ export class UserUpdateAttributes {
     description: "Replaces the user's full set of roles",
     required: false,
     isArray: true,
-    enum: ROLE_NAMES
+    enum: ROLE_SLUGS
   })
   @IsOptional()
   @IsArray()
-  @IsIn(ROLE_NAMES, { each: true })
+  @IsIn(ROLE_SLUGS, { each: true })
   roles?: string[];
 
   @ApiProperty({ required: false, nullable: true, isArray: true, type: String })

@@ -16,6 +16,7 @@ import {
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
+import { Roles } from "./dto/roles.dto";
 import {
   OrganisationLightDto,
   UserDto,
@@ -62,7 +63,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationLightDto]
 };
 
-@ApiExtraModels(UserTaskDto)
+@ApiExtraModels(UserTaskDto, Roles)
 @Controller("users/v3/users")
 export class UsersController {
   constructor(

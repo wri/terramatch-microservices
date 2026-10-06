@@ -61,14 +61,13 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["id", "organisationId"],
+      attributes: ["id", "organisationId", "roles"],
       include: [
         {
           association: "projects",
           attributes: ["organisationId"],
           through: { attributes: ["isMonitoring"] }
-        },
-        { association: "roles", attributes: ["name"] }
+        }
       ]
     }));
   }

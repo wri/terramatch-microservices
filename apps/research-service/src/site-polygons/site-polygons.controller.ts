@@ -148,8 +148,7 @@ export class SitePolygonsController {
     }
 
     const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
@@ -540,8 +539,7 @@ export class SitePolygonsController {
     const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
@@ -920,8 +918,7 @@ export class SitePolygonsController {
     const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const isAdminSession = isAdminSessionFromRoles(user?.roles);
@@ -994,8 +991,7 @@ export class SitePolygonsController {
     const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const isAdminSession = isAdminSessionFromRoles(user?.roles);
@@ -1066,8 +1062,7 @@ export class SitePolygonsController {
     const userId = this.policyService.userId as number;
 
     const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const isAdminSession = isAdminSessionFromRoles(user?.roles);

@@ -76,11 +76,10 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
 
     const user = await User.findOne({
       where: { id: this.userId },
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["roles"]
     });
     if (user != null) {
-      const roleNames = user.roles?.map(role => role.name) ?? [];
-      if (roleNames.includes("greenhouse-service-account")) {
+      if (user.roles.includes("greenhouse-service-account")) {
         this.builder.cannot("joinRequest", Organisation);
       }
     }

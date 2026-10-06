@@ -1,8 +1,7 @@
-import { Dictionary } from "lodash";
+import { Dictionary, uniq } from "lodash";
 
-// NOTE: When making changes to the roles and permissions assignments, this command must be run
-// in the REPL for the change to take effect:
-// > await Permission.syncPermissions();
+// This file is the source of truth for roles and permissions. Users hold a list of role names
+// (`users.roles`), and their permissions are derived from that list using ROLES below.
 
 export const PERMISSIONS = {
   "framework-ppc": "Framework PPC",
@@ -31,7 +30,7 @@ export const PERMISSIONS = {
 
 export type Permission = keyof typeof PERMISSIONS;
 
-export const ROLES: Dictionary<Permission[]> = {
+export const ROLES = {
   "admin-super": [
     "framework-terrafund",
     "framework-ppc",
@@ -90,4 +89,30 @@ export const ROLES: Dictionary<Permission[]> = {
   "research-service-account": ["projects-read", "polygons-manage"],
   government: ["view-dashboard"],
   funder: ["view-dashboard"]
+} as const satisfies Dictionary<readonly Permission[]>;
+
+export type RoleSlug = keyof typeof ROLES;
+
+export const ROLE_SLUGS = Object.keys(ROLES) as RoleSlug[];
+
+/** User-facing display names for each role. */
+export const ROLE_NAMES: Record<RoleSlug, string> = {
+  "admin-super": "Super Admin",
+  "admin-ppc": "PPC Admin",
+  "admin-terrafund": "TerraFund Admin",
+  "admin-hbf": "HBF Admin",
+  "admin-epa-ghana-pilot": "EPA Ghana Pilot Admin",
+  "admin-fundo-floral": "Fundo Flora Admin",
+  "admin-wcb": "WCB Admin",
+  "admin-barka-fund": "Barka Fund Admin",
+  "project-developer": "Project Developer",
+  "project-manager": "Project Manager",
+  "greenhouse-service-account": "Greenhouse Service Account",
+  "research-service-account": "Research Service Account",
+  government: "Government",
+  funder: "Funder"
 };
+
+export const isValidRole = (role: string): role is RoleSlug => ROLE_SLUGS.includes(role as RoleSlug);
+
+export const getPermissionsForRoles = (roles: string[]) => uniq(roles.filter(isValidRole).flatMap(role => ROLES[role]));

@@ -38,9 +38,6 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   ...jest.requireActual("@terramatch-microservices/database/entities"),
   User: {
     findOne: jest.fn()
-  },
-  Permission: {
-    getUserPermissionNames: jest.fn()
   }
 }));
 

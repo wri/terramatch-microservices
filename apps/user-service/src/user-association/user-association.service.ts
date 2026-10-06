@@ -6,7 +6,6 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
-  ModelHasRole,
   Notification,
   Organisation,
   OrganisationInvite,
@@ -15,7 +14,6 @@ import {
   Project,
   ProjectInvite,
   ProjectUser,
-  Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereAttributeHash } from "sequelize";
@@ -127,8 +125,7 @@ export class UserAssociationService {
         await this.requestOrgJoin(org, userId);
         const user = await User.findOne({
           where: { id: userId },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
-          include: [{ association: "roles", attributes: ["name"] }]
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole", "roles"]
         });
         if (user == null) throw new UnauthorizedException("Authenticated user not found");
         document.addData(
@@ -187,8 +184,17 @@ export class UserAssociationService {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
     const organisations = await Organisation.findAll({
@@ -225,8 +231,7 @@ export class UserAssociationService {
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
-      attributes: ["id", "emailAddress"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["id", "emailAddress", "roles"]
     });
     if (user == null) {
       return this.handleUserNotFound(project, attributes);
@@ -256,10 +261,9 @@ export class UserAssociationService {
       organisationId: project.organisationId,
       emailAddress: attributes.emailAddress,
       password: crypto.randomBytes(32).toString("hex"),
-      locale: "en-US"
+      locale: "en-US",
+      roles: ["project-developer"]
     } as User);
-    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
     const token = crypto.randomBytes(32).toString("hex");
     await PasswordReset.create({ userId: newUser.id, token });
     await ProjectInvite.create({
@@ -321,9 +325,9 @@ export class UserAssociationService {
         "organisationId",
         "phoneNumber",
         "jobRole",
-        "lastLoggedInAt"
-      ],
-      include: [{ association: "roles", attributes: ["name"] }]
+        "lastLoggedInAt",
+        "roles"
+      ]
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     filteredUsers.forEach(user => {
@@ -389,11 +393,9 @@ export class UserAssociationService {
       organisationId: organisation.id,
       emailAddress,
       password: crypto.randomBytes(32).toString("hex"),
-      locale: "en-US"
+      locale: "en-US",
+      roles: ["project-developer"]
     } as User);
-
-    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
 
     const token = crypto.randomBytes(32).toString("hex");
     const invite = await OrganisationInvite.create({
@@ -468,8 +470,17 @@ export class UserAssociationService {
   ): Promise<User> {
     const user = await User.findOne({
       where: { uuid: userUuid },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
 
     if (user == null) {
@@ -555,8 +566,17 @@ export class UserAssociationService {
   ): Promise<{ user: User; project: Project; invite: ProjectInvite }> {
     const user = await User.findOne({
       where: { id: userId },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
 
     if (user == null) {

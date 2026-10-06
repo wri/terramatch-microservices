@@ -46,6 +46,7 @@ import { convertDatetimeToTimestamp } from "./202609181220-convert-datetime-to-t
 import { createRsTreeCount } from "./202609231200-create-rs-tree-count";
 import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-adj-nullable";
 import { addCriteriaSiteLookupIndexes } from "./202610011200-add-criteria-site-lookup-indexes";
+import { addUserRolesColumn } from "./202610051200-add-user-roles-column";
 import { addPitchProjectEthiopiaFields } from "./202610051200-add-pitch-project-ethiopia-fields";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
@@ -95,5 +96,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   createRsTreeCount,
   makeRsTreeCountAdjNullable,
   addCriteriaSiteLookupIndexes,
+  addUserRolesColumn,
   addPitchProjectEthiopiaFields
 ];

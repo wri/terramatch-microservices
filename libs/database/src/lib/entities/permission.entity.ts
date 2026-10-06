@@ -1,6 +1,5 @@
 import { AutoIncrement, Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, Op, QueryTypes, STRING } from "sequelize";
-import { User } from "./user.entity";
+import { BIGINT, CreationOptional, InferAttributes, InferCreationAttributes, Op, STRING } from "sequelize";
 import { PERMISSIONS, ROLES, Permission as PermissionName } from "../constants/permissions";
 import { Role } from "./role.entity";
 import { RoleHasPermission } from "./role-has-permission.entity";
@@ -20,42 +19,10 @@ export class Permission extends Model<InferAttributes<Permission>, InferCreation
   declare guardName: CreationOptional<string>;
 
   /**
-   * Gets the list of permission names that the given user has access to through the roles that are
-   * assigned to them. This is done as a raw query because we don't need to represent most of these
-   * models as Entities in this codebase, and without those models represented, the ManyToOne and
-   * OneToMany associations can't be represented.
+   * Syncs the Role / Permissions defined in permissions.ts to the roles / permissions DB tables.
    *
-   * Note: This ignores permissions that are assigned directly to the user. We are not currently
-   * using that capability, but if we started to, this would need to be more complicated.
-   */
-  public static async getUserPermissionNames(userId: number): Promise<string[]> {
-    const permissions = (await this.sequelize?.query(
-      `
-        SELECT permissions.name FROM permissions
-        INNER JOIN role_has_permissions ON role_has_permissions.permission_id = permissions.id
-        INNER JOIN roles ON roles.id = role_has_permissions.role_id
-        INNER JOIN model_has_roles ON model_has_roles.role_id = roles.id
-        WHERE
-            model_has_roles.model_type = :modelType AND
-            model_has_roles.model_id = :modelId
-    `,
-      {
-        replacements: { modelType: User.LARAVEL_TYPE, modelId: userId },
-        type: QueryTypes.SELECT
-      }
-    )) as { name: string }[];
-
-    return permissions?.map(({ name }) => name) ?? [];
-  }
-
-  /**
-   * Syncs the Role / Permissions defined in permissions.ts with what's in the DB. For now, the DB
-   * record is the source of truth, and the configuration in permissions.ts is only referenced for
-   * this sync process.
-   *
-   * Once we have fully decommissioned the PHP codebase, it may make sense to drop the permissions
-   * table and simplify the system by only assigning roles to users and letting the configuration
-   * dictate which permissions they then have access to.
+   * @deprecated The DB tables are no longer read: user permissions are derived from `users.roles`
+   *   and the configuration in permissions.ts directly.
    */
   public static async syncPermissions() {
     // First, check that all the permissions specified in the ROLES constant are included in PERMISSIONS
@@ -88,7 +55,7 @@ export class Permission extends Model<InferAttributes<Permission>, InferCreation
     const dbPermissions = await Permission.findAll();
     const rolePermissions = await RoleHasPermission.findAll();
     const rolesSynced: string[] = [];
-    for (const [role, permissions] of Object.entries(ROLES)) {
+    for (const [role, permissions] of Object.entries<readonly PermissionName[]>(ROLES)) {
       rolesSynced.push(role);
 
       let dbRole = dbRoles.find(({ name }) => name === role);

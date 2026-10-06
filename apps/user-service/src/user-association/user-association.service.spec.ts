@@ -9,7 +9,6 @@ import {
   OrganisationFactory,
   UserFactory,
   OrganisationUserFactory,
-  RoleFactory,
   ProjectFactory,
   ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
@@ -21,8 +20,6 @@ import {
   ProjectInvite,
   Organisation,
   Project,
-  Role,
-  ModelHasRole,
   OrganisationInvite,
   PasswordReset
 } from "@terramatch-microservices/database/entities";
@@ -231,7 +228,7 @@ describe("UserAssociationService", () => {
       it("should call handleCreate through processor for organisations", async () => {
         const org = await OrganisationFactory.create({ name: "Test Org" });
         const user = await UserFactory.create();
-        user.roles = [await RoleFactory.create()];
+        user.roles = ["project-developer"];
         jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
         jest.spyOn(service, "requestOrgJoin").mockResolvedValue(user);
         jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -244,8 +241,7 @@ describe("UserAssociationService", () => {
         expect(service.requestOrgJoin).toHaveBeenCalledWith(org, user.id);
         expect(User.findOne).toHaveBeenCalledWith({
           where: { id: user.id },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
-          include: [{ association: "roles", attributes: ["name"] }]
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole", "roles"]
         });
         expect(addDataSpy).toHaveBeenCalled();
       });
@@ -281,7 +277,7 @@ describe("UserAssociationService", () => {
       it("should call handleUpdate through processor", async () => {
         const org = await OrganisationFactory.create();
         const user = await UserFactory.create();
-        user.roles = [await RoleFactory.create()];
+        user.roles = ["project-developer"];
         jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
         jest.spyOn(service, "updateOrgUserStatus").mockResolvedValue(user);
         const document = new DocumentBuilder("associatedUsers");
@@ -346,8 +342,6 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create({ name: "Test Org" });
       const user1 = await UserFactory.create({ organisationId: org.id });
       const user2 = await UserFactory.create({ organisationId: org.id });
-      const role1 = await RoleFactory.create();
-      const role2 = await RoleFactory.create();
 
       const projectUser1 = await ProjectUserFactory.create({
         projectId: project.id,
@@ -362,9 +356,6 @@ describe("UserAssociationService", () => {
         isMonitoring: true
       });
 
-      user1.roles = [role1];
-      user2.roles = [role2];
-
       jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
       jest.spyOn(Organisation, "findAll").mockResolvedValue([org] as Organisation[]);
       const document = new DocumentBuilder("associatedUsers");
@@ -376,12 +367,16 @@ describe("UserAssociationService", () => {
 
       expect(User.findAll).toHaveBeenCalledWith({
         where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-        include: [
-          {
-            association: "roles",
-            attributes: ["name"]
-          }
+        attributes: [
+          "id",
+          "uuid",
+          "emailAddress",
+          "firstName",
+          "lastName",
+          "organisationId",
+          "phoneNumber",
+          "jobRole",
+          "roles"
         ]
       });
       expect(addDataSpy).toHaveBeenCalledTimes(2);
@@ -419,7 +414,7 @@ describe("UserAssociationService", () => {
     it("should return user when user exists", async () => {
       const project = await ProjectFactory.create();
       const user = await UserFactory.create();
-      user.roles = [await RoleFactory.create()];
+      user.roles = ["project-developer"];
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
@@ -439,12 +434,9 @@ describe("UserAssociationService", () => {
       const project = { id: 1, uuid: "project-uuid", organisationId: 1 } as Project;
       const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
       const newUser = { id: 10, emailAddress: "new@example.com", organisationId: org.id } as User;
-      const role = { id: 1, name: "project-developer" } as Role;
 
       jest.spyOn(User, "findOne").mockResolvedValue(null);
       jest.spyOn(User, "create").mockResolvedValue(newUser);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
       jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
       jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
@@ -456,7 +448,7 @@ describe("UserAssociationService", () => {
         isManager: false
       });
 
-      expect(User.create).toHaveBeenCalled();
+      expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ roles: ["project-developer"] }));
       expect(result).toEqual(newUser);
     });
   });
@@ -502,9 +494,7 @@ describe("UserAssociationService", () => {
   describe("handleExistingUser", () => {
     it("should create manager when isManager is true and user is project-manager", async () => {
       const project = await ProjectFactory.create();
-      const role = await RoleFactory.create({ name: "project-manager" });
-      const user = await UserFactory.create();
-      user.roles = [role];
+      const user = await UserFactory.create({ roles: ["project-manager"] });
 
       jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
@@ -520,9 +510,7 @@ describe("UserAssociationService", () => {
 
     it("should throw BadRequestException when user is not project-manager but isManager is true", async () => {
       const project = await ProjectFactory.create();
-      const role = await RoleFactory.create({ name: "project-developer" });
-      const user = await UserFactory.create();
-      user.roles = [role];
+      const user = await UserFactory.create({ roles: ["project-developer"] });
 
       await expect(
         service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: true })
@@ -531,9 +519,7 @@ describe("UserAssociationService", () => {
 
     it("should throw BadRequestException when user is already a project manager", async () => {
       const project = await ProjectFactory.create();
-      const role = await RoleFactory.create({ name: "project-manager" });
-      const user = await UserFactory.create();
-      user.roles = [role];
+      const user = await UserFactory.create({ roles: ["project-manager"] });
       const existingProjectUser = await ProjectUserFactory.create({
         projectId: project.id,
         userId: user.id,
@@ -611,8 +597,6 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create({ name: "Test Org" });
       const user1 = await UserFactory.create({ organisationId: org.id });
       const user2 = await UserFactory.create({ organisationId: org.id });
-      const role1 = await RoleFactory.create();
-      const role2 = await RoleFactory.create();
 
       const orgUser1 = await OrganisationUserFactory.create({
         organisationId: org.id,
@@ -624,9 +608,6 @@ describe("UserAssociationService", () => {
         userId: user2.id,
         status: "requested"
       });
-
-      user1.roles = [role1];
-      user2.roles = [role2];
 
       const ownersMock = [{ id: user1.id }, { id: user2.id }];
       jest
@@ -655,13 +636,8 @@ describe("UserAssociationService", () => {
           "organisationId",
           "phoneNumber",
           "jobRole",
-          "lastLoggedInAt"
-        ],
-        include: [
-          {
-            association: "roles",
-            attributes: ["name"]
-          }
+          "lastLoggedInAt",
+          "roles"
         ]
       });
       expect(addDataSpy).toHaveBeenCalledTimes(2);
@@ -739,10 +715,7 @@ describe("UserAssociationService", () => {
 
       await service.deleteBulkOrgUserAssociations(org.id, [member.uuid as string]);
 
-      expect(updateSpy).toHaveBeenCalledWith(
-        { organisationId: null },
-        { where: { id: { [Op.in]: [member.id] } } }
-      );
+      expect(updateSpy).toHaveBeenCalledWith({ organisationId: null }, { where: { id: { [Op.in]: [member.id] } } });
     });
 
     it("should throw NotFoundException when no users found", async () => {
@@ -1064,7 +1037,6 @@ describe("UserAssociationService", () => {
 
     it("should create user, organisation invite and queue email when user does not exist", async () => {
       const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
-      const role = { id: 1, name: "project-developer" } as Role;
       const newUser = { id: 10, emailAddress: "new@example.com", organisationId: org.id } as User;
       const invite = {
         id: 1,
@@ -1078,8 +1050,6 @@ describe("UserAssociationService", () => {
 
       jest.spyOn(User, "findOne").mockResolvedValue(null);
       jest.spyOn(User, "create").mockResolvedValue(newUser);
-      jest.spyOn(Role, "findOne").mockResolvedValue(role);
-      jest.spyOn(ModelHasRole, "create").mockResolvedValue({} as ModelHasRole);
       jest.spyOn(PasswordReset, "create").mockResolvedValue({} as PasswordReset);
       jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
       emailQueue.add.mockResolvedValue({} as Job);
@@ -1087,8 +1057,7 @@ describe("UserAssociationService", () => {
       const result = await service.inviteOrganisationUser(org, "new@example.com", "http://frontend/auth/signup");
 
       expect(User.create).toHaveBeenCalled();
-      expect(Role.findOne).toHaveBeenCalledWith({ where: { name: "project-developer" } });
-      expect(ModelHasRole.create).toHaveBeenCalled();
+      expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ roles: ["project-developer"] }));
       expect(OrganisationInvite.create).toHaveBeenCalledWith(
         expect.objectContaining({
           organisationId: org.id,

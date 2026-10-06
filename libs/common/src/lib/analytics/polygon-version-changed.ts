@@ -6,12 +6,7 @@ export const DUPLICATE_VERSION_CHANGE_REASON = "Duplicate version";
 export const GEOMETRY_UPLOAD_CHANGE_REASON = "Version created from geometry file upload";
 
 export type PolygonVersionChangeSource =
-  | "admin_action"
-  | "shape_edit"
-  | "attribute_edit"
-  | "geometry_upload"
-  | "api_push"
-  | "duplicate";
+  "admin_action" | "shape_edit" | "attribute_edit" | "geometry_upload" | "api_push" | "duplicate";
 
 export type PolygonVersionChangedParams = {
   polygon_id: string;
@@ -29,8 +24,8 @@ export type PolygonVersionChangeContext = {
   isAdminSession?: boolean;
 };
 
-export const isAdminSessionFromRoles = (roles: ReadonlyArray<{ name: string }> | null | undefined): boolean =>
-  roles?.some(({ name }) => name.startsWith("admin-")) ?? false;
+export const isAdminSessionFromRoles = (roles: readonly string[] | undefined): boolean =>
+  roles?.some(role => role.startsWith("admin-")) ?? false;
 
 export const isDuplicateVersionChangeReason = (changeReason: string): boolean =>
   changeReason === DUPLICATE_VERSION_CHANGE_REASON || changeReason.startsWith(`${DUPLICATE_VERSION_CHANGE_REASON} `);

@@ -7,18 +7,16 @@ import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/pag
 import {
   Framework,
   FrameworkUser,
-  ModelHasRole,
   PasswordReset,
   Project,
   ProjectUser,
-  Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { Organisation } from "@terramatch-microservices/database/entities/organisation.entity";
 import bcrypt from "bcryptjs";
 import { Queue } from "bullmq";
 import crypto from "node:crypto";
-import { Op } from "sequelize";
+import { col, fn, Op } from "sequelize";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
 
@@ -79,11 +77,6 @@ export class UsersService {
         attributes: ["id", "uuid", "name"]
       },
       {
-        association: "roles",
-        attributes: ["name"],
-        ...(query.primaryRole != null ? { required: true, where: { name: query.primaryRole } } : {})
-      },
-      {
         association: "frameworks",
         attributes: ["id", "name", "slug"]
       }
@@ -100,6 +93,10 @@ export class UsersService {
           { lastName: { [Op.like]: search } }
         ]
       });
+    }
+
+    if (query.primaryRole != null) {
+      builder.where(fn("JSON_CONTAINS", col("User.roles"), JSON.stringify(query.primaryRole)));
     }
 
     if (query.isVerified != null) {
@@ -158,7 +155,6 @@ export class UsersService {
   async update(user: User, update: UserUpdateAttributes) {
     let organisationEntity: Organisation | null = null;
     let frameworkEntities: Framework[] = [];
-    let roleEntity: Role | null = null;
     if (update.organisationUuid != null) {
       organisationEntity = await Organisation.findOne({ where: { uuid: update.organisationUuid } });
       if (organisationEntity == null) {
@@ -169,12 +165,6 @@ export class UsersService {
       frameworkEntities = await Framework.findAll({ where: { slug: update.directFrameworks } });
       if (frameworkEntities.length !== update.directFrameworks.length) {
         throw new BadRequestException("One or more frameworks not found");
-      }
-    }
-    if (update.primaryRole != null) {
-      roleEntity = await Role.findOne({ where: { name: update.primaryRole } });
-      if (roleEntity == null) {
-        throw new BadRequestException("Role not found");
       }
     }
 
@@ -210,18 +200,9 @@ export class UsersService {
     user.country = update.country ?? user.country;
     user.program = update.program ?? user.program;
     user.locale = update.locale ?? user.locale;
+    user.roles = update.roles ?? user.roles;
 
-    user = await user.save();
-
-    if (roleEntity != null) {
-      await ModelHasRole.destroy({ where: { modelId: user.id, modelType: User.LARAVEL_TYPE } });
-      await ModelHasRole.findOrCreate({
-        where: { modelId: user.id, roleId: roleEntity?.id },
-        defaults: { modelId: user.id, roleId: roleEntity?.id, modelType: User.LARAVEL_TYPE } as ModelHasRole
-      });
-      await user.reload();
-    }
-    return user;
+    return await user.save();
   }
 
   async delete(user: User): Promise<void> {

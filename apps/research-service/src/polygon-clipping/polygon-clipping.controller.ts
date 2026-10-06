@@ -60,8 +60,7 @@ export class PolygonClippingController {
     }
 
     const user = await User.findByPk(UserContext.authenticatedUserId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
@@ -150,8 +149,7 @@ export class PolygonClippingController {
     await this.policyService.authorize("update", SitePolygon);
 
     const user = await User.findByPk(UserContext.authenticatedUserId, {
-      attributes: ["firstName", "lastName"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["firstName", "lastName", "roles"]
     });
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;

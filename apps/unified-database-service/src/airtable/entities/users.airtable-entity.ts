@@ -22,11 +22,7 @@ type UserAssociations = {
 const COLUMNS: ColumnMapping<UserWithUuid, UserAssociations>[] = [
   ...commonEntityColumns<UserWithUuid, UserAssociations>("user"),
   "emailAddressVerifiedAt",
-  {
-    airtableColumn: "roles",
-    include: [{ association: "roles", attributes: ["name"] }],
-    valueMap: async ({ roles }) => (roles ?? []).map(({ name }) => name)
-  },
+  "roles",
   "jobRole",
   "firstName",
   "lastName",

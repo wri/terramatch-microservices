@@ -1,13 +1,12 @@
 import { PolicyService } from "./policy.service";
 import { Test } from "@nestjs/testing";
 import { expectCan, expectCannot } from "./policy.service.spec";
-import { ModelHasRole, Organisation, User } from "@terramatch-microservices/database/entities";
+import { Organisation } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
   OrganisationUserFactory,
   ProjectFactory,
   ProjectUserFactory,
-  RoleFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { mockUserContext, mockContextForUser } from "../util/testing";
@@ -225,9 +224,7 @@ describe("OrganisationPolicy", () => {
 
     it("disallows approveReject for admin users without email verification", async () => {
       const org = await OrganisationFactory.create();
-      const adminRole = await RoleFactory.create({ name: "admin-terrafund" });
-      const user = await UserFactory.create({ emailAddressVerifiedAt: null });
-      await ModelHasRole.create({ modelId: user.id, roleId: adminRole.id, modelType: User.LARAVEL_TYPE });
+      const user = await UserFactory.create({ emailAddressVerifiedAt: null, roles: ["admin-terrafund"] });
       mockContextForUser(user, "users-manage");
       await expectCannot(service, "approveReject", org);
     });
@@ -320,9 +317,7 @@ describe("OrganisationPolicy", () => {
 
     it("denies joinRequest for greenhouse-service-account", async () => {
       const org = await OrganisationFactory.create();
-      const serviceRole = await RoleFactory.create({ name: "greenhouse-service-account" });
-      const user = await UserFactory.create();
-      await ModelHasRole.create({ modelId: user.id, roleId: serviceRole.id, modelType: User.LARAVEL_TYPE });
+      const user = await UserFactory.create({ roles: ["greenhouse-service-account"] });
       mockContextForUser(user);
       await expectCannot(service, "joinRequest", org);
     });

@@ -1,6 +1,6 @@
 import { OnWorkerEvent, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
-import { DelayedJob, Permission, User } from "@terramatch-microservices/database/entities";
+import { DelayedJob, User } from "@terramatch-microservices/database/entities";
 import { FAILED, SUCCEEDED } from "@terramatch-microservices/database/constants/status";
 import { TMLogger } from "../util/tm-logger";
 import { isString } from "lodash";
@@ -77,10 +77,9 @@ export abstract class DelayedJobWorker<T extends DelayedJobData> extends WorkerH
   protected async processDelayedJobInUserContext({ createdBy }: DelayedJob, job: Job<T>) {
     if (createdBy == null) return await this.processDelayedJob(job);
 
-    const permissions = await Permission.getUserPermissionNames(createdBy);
-    const locale = (await User.findLocale(createdBy)) ?? "en-US";
+    const user = await User.findOne({ where: { id: createdBy }, attributes: ["roles", "locale"] });
     return await new Promise<DelayedJobResult>((resolve, reject) => {
-      UserContext.use(createdBy, permissions, locale, () => {
+      UserContext.use(createdBy, user?.permissions ?? [], user?.locale ?? "en-US", () => {
         this.processDelayedJob(job).then(resolve, reject);
       });
     });

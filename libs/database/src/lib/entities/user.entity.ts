@@ -22,14 +22,12 @@ import {
   fn,
   InferAttributes,
   InferCreationAttributes,
+  NonAttribute,
   Op,
   STRING,
   UUID,
   UUIDV4
 } from "sequelize";
-import { Role } from "./role.entity";
-import { ModelHasRole } from "./model-has-role.entity";
-import { Permission } from "./permission.entity";
 import { Framework } from "./framework.entity";
 import { Project } from "./project.entity";
 import { ProjectUser } from "./project-user.entity";
@@ -40,6 +38,8 @@ import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
 import { FrameworkKey } from "../constants";
 import { InternalServerErrorException } from "@nestjs/common";
+import { JsonColumn } from "../decorators/json-column.decorator";
+import { getPermissionsForRoles, Permission } from "../constants/permissions";
 
 @Table({ tableName: "users", underscored: true, paranoid: true })
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
@@ -173,29 +173,29 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(STRING)
   declare locale: ValidLocale;
 
-  @BelongsToMany(() => Role, {
-    foreignKey: "modelId",
-    through: {
-      model: () => ModelHasRole,
-      unique: false,
-      scope: {
-        modelType: User.LARAVEL_TYPE
-      }
-    }
-  })
-  declare roles: Role[] | null;
+  @Default([])
+  @JsonColumn()
+  declare roles: CreationOptional<string[]>;
 
-  async loadRoles() {
-    if (this.roles == null) this.roles = await (this as User).$get("roles");
+  /**
+   * Loads the roles column if the user was fetched with an attributes list that excluded it.
+   */
+  async loadRoles(): Promise<string[]> {
+    // The column is non-null, so null / undefined here means it was not included in the query.
+    if (this.roles == null) await this.reload({ attributes: ["roles"] });
     return this.roles;
   }
 
   /**
-   * Depends on `roles` being loaded, either through include: [Role] on the find call, or by
-   * await user.loadRoles()
+   * Depends on `roles` being loaded, either by including it in the attributes on the find call,
+   * or by await user.loadRoles()
    */
-  get primaryRole() {
-    return this.roles?.[0]?.name;
+  get primaryRole(): string | undefined {
+    return this.roles[0];
+  }
+
+  get permissions(): NonAttribute<Permission[]> {
+    return getPermissionsForRoles(this.roles);
   }
 
   get fullName() {
@@ -203,17 +203,11 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   }
 
   getSourceFromRoles(): string {
-    if (this.roles == null) {
-      return "terramatch";
-    }
-
-    const roleNames = this.roles.map(role => role.name);
-
-    if (roleNames.includes("greenhouse-service-account")) {
+    if (this.roles.includes("greenhouse-service-account")) {
       return "greenhouse";
     }
 
-    if (roleNames.includes("research-service-account")) {
+    if (this.roles.includes("research-service-account")) {
       return "research";
     }
 
@@ -296,18 +290,17 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   async myFrameworks(): Promise<Framework[]> {
     if (this._myFrameworks == null) {
       await this.loadRoles();
-      const isAdmin = this.roles?.find(({ name }) => name.startsWith("admin-")) != null;
+      const isAdmin = this.roles.some(role => role.startsWith("admin-"));
 
       await this.loadFrameworks();
 
       let frameworkSlugs = this.frameworks?.map(({ slug }) => slug).filter(isNotNull) ?? [];
       if (isAdmin) {
         // Admins have access to all frameworks their permissions say they do
-        const permissions = await Permission.getUserPermissionNames(this.id);
         const prefix = "framework-";
         frameworkSlugs = [
           ...frameworkSlugs,
-          ...permissions
+          ...this.permissions
             .filter(permission => permission.startsWith(prefix))
             .map(permission => permission.substring(prefix.length))
         ] as FrameworkKey[];

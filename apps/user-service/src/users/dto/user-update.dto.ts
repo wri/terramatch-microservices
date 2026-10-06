@@ -1,7 +1,9 @@
-import { IsArray, IsEnum, IsOptional, IsString } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
+import { FRAMEWORK_KEYS } from "@terramatch-microservices/database/constants/framework";
+import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
 
 export class UserUpdateAttributes {
   @ApiProperty({ description: "Organisation UUID", nullable: true, required: false, format: "uuid", type: String })
@@ -41,15 +43,21 @@ export class UserUpdateAttributes {
   @IsOptional()
   locale?: ValidLocale | null;
 
-  @IsString()
-  @ApiProperty({ description: "Primary role", nullable: true, required: false, type: String })
-  @IsOptional()
-  primaryRole?: string | null;
-
-  @ApiProperty({ required: false, nullable: true, isArray: true, type: String })
+  @ApiProperty({
+    description: "Replaces the user's full set of roles",
+    required: false,
+    isArray: true,
+    enum: ROLE_SLUGS
+  })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsIn(ROLE_SLUGS, { each: true })
+  roles?: string[];
+
+  @ApiProperty({ required: false, nullable: true, isArray: true, enum: FRAMEWORK_KEYS })
+  @IsOptional()
+  @IsArray()
+  @IsIn(FRAMEWORK_KEYS, { each: true })
   directFrameworks?: string[] | null;
 }
 

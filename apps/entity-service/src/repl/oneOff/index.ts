@@ -46,3 +46,4 @@ export { updateInvestmentSplitsAmount } from "./2026-09-03-updateInvestmentSplit
 export { reassignPolygonCommentsToBase } from "./2026-09-21-reassignPolygonCommentsToBase";
 export { resyncDisturbancePolygonLinks } from "./2026-09-28-resyncDisturbancePolygonLinks";
 export { clearStaleDraftUpdateRequestStatuses } from "./2026-09-30-clearStaleDraftUpdateRequestStatuses";
+export { createGliComponentsOptionList } from "./2026-10-05-createGliComponentsOptionList";

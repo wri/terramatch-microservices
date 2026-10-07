@@ -30,9 +30,6 @@ export class UserUpdateAttributes {
   @ApiProperty({ description: "Country", nullable: true, required: false, type: String })
   country?: string | null;
 
-  @ApiProperty({ description: "Program", nullable: true, required: false, type: String })
-  program?: string | null;
-
   @IsEnum(VALID_LOCALES)
   @ApiProperty({
     description: "New default locale for the given user",

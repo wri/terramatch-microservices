@@ -198,7 +198,6 @@ export class UsersService {
     user.jobRole = update.jobRole ?? user.jobRole;
     user.phoneNumber = update.phoneNumber ?? user.phoneNumber;
     user.country = update.country ?? user.country;
-    user.program = update.program ?? user.program;
     user.locale = update.locale ?? user.locale;
     user.roles = update.roles ?? user.roles;
 

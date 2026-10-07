@@ -99,9 +99,6 @@ export class UserDto {
   country: string | null;
 
   @ApiProperty({ nullable: true, type: String })
-  program: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
   locale: string | null;
 
   @ApiProperty({ type: () => UserFramework, isArray: true })

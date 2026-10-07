@@ -48,6 +48,7 @@ import { makeRsTreeCountAdjNullable } from "./202609251200-make-rs-tree-count-ad
 import { addCriteriaSiteLookupIndexes } from "./202610011200-add-criteria-site-lookup-indexes";
 import { addUserRolesColumn } from "./202610051200-add-user-roles-column";
 import { addPitchProjectEthiopiaFields } from "./202610051200-add-pitch-project-ethiopia-fields";
+import { removeUserProgramColumn } from "./202610071200-remove-user-program-column";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -97,5 +98,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   makeRsTreeCountAdjNullable,
   addCriteriaSiteLookupIndexes,
   addUserRolesColumn,
-  addPitchProjectEthiopiaFields
+  addPitchProjectEthiopiaFields,
+  removeUserProgramColumn
 ];

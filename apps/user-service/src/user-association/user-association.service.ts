@@ -33,6 +33,7 @@ import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
+import { OrganisationUserStatus, PENDING, REJECTED } from "@terramatch-microservices/database/constants/status";
 
 export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
 export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
@@ -131,7 +132,7 @@ export class UserAssociationService {
         document.addData(
           user.uuid as string,
           new UserAssociationDto(user, {
-            status: "requested",
+            status: PENDING,
             isManager: false,
             organisationName: (org as Organisation).name ?? "",
             roleName: user.primaryRole ?? null,
@@ -163,7 +164,7 @@ export class UserAssociationService {
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
       where: { projectId: project.id },
-      attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+      attributes: ["id", "userId", "isMonitoring", "isManaging"]
     };
     if (query.isManager != null) {
       if (query.isManager) {
@@ -211,7 +212,7 @@ export class UserAssociationService {
       document.addData(
         user.uuid as string,
         new UserAssociationDto(user, {
-          status: projectUser?.status as string,
+          status: null,
           isManager: projectUser?.isManaging as boolean,
           organisationName: organisation?.name as string,
           roleName: user.primaryRole as string,
@@ -333,7 +334,7 @@ export class UserAssociationService {
     filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
-      const status = isOwner ? "approved" : (orgUser?.status ?? "");
+      const status = isOwner ? "approved" : (orgUser?.status ?? null);
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,
@@ -430,10 +431,10 @@ export class UserAssociationService {
 
     const [orgUser, created] = await OrganisationUser.findOrCreate({
       where: { organisationId: organisation.id, userId },
-      defaults: { organisationId: organisation.id, userId, status: "requested" } as OrganisationUser
+      defaults: { organisationId: organisation.id, userId, status: PENDING } as OrganisationUser
     });
-    if (!created && orgUser.status !== "requested") {
-      orgUser.status = "requested";
+    if (!created && orgUser.status !== PENDING) {
+      orgUser.status = PENDING;
       await orgUser.save();
     }
 
@@ -495,8 +496,8 @@ export class UserAssociationService {
       throw new BadRequestException("User does not have a relationship with this organisation");
     }
 
-    const allowedFrom = status === "approved" ? ["requested", "rejected"] : ["requested"];
-    if (!allowedFrom.includes(orgUser.status ?? "")) {
+    const allowedFrom: OrganisationUserStatus[] = status === "approved" ? [PENDING, REJECTED] : [PENDING];
+    if (!allowedFrom.includes(orgUser.status)) {
       throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
     }
 
@@ -543,7 +544,7 @@ export class UserAssociationService {
 
     const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
     if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
+      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -606,16 +607,12 @@ export class UserAssociationService {
       defaults: {
         projectId: project.id,
         userId: user.id,
-        isMonitoring: true,
-        status: "active"
+        isMonitoring: true
       }
     });
 
     if (!created) {
       projectUser.isMonitoring = true;
-      if (projectUser.status == null) {
-        projectUser.status = "active";
-      }
       await projectUser.save();
     }
 

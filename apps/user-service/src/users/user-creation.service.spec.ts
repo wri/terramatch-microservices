@@ -372,7 +372,6 @@ describe("UserCreationService", () => {
       } as unknown as ProjectInvite;
       const projectUser = {
         isMonitoring: false,
-        status: "inactive",
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as ProjectUser;
 
@@ -385,7 +384,6 @@ describe("UserCreationService", () => {
       await service.createNewUser(false, request);
 
       expect(projectUser.isMonitoring).toBe(true);
-      expect(projectUser.status).toBe("active");
       expect(projectUser.save).toHaveBeenCalled();
     });
   });

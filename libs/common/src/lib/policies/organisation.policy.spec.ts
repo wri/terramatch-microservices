@@ -188,7 +188,7 @@ describe("OrganisationPolicy", () => {
       const requestedOrg = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: primaryOrg.id });
       mockContextForUser(user, "manage-own");
-      await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "requested" });
+      await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "pending" });
       await expectCan(service, "update", primaryOrg);
       await expectCannot(service, "update", requestedOrg);
     });
@@ -283,7 +283,7 @@ describe("OrganisationPolicy", () => {
     it("disallows approveReject for users with requested status", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "requested" });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
       mockContextForUser(user);
       await expectCannot(service, "approveReject", org);
     });

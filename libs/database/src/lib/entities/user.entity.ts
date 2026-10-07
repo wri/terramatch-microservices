@@ -37,6 +37,7 @@ import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
 import { FrameworkKey } from "../constants";
+import { PENDING } from "../constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getPermissionsForRoles, Permission } from "../constants/permissions";
@@ -241,10 +242,10 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @BelongsToMany(() => Organisation, {
     through: {
       model: () => OrganisationUser,
-      scope: { status: "requested" }
+      scope: { status: PENDING }
     }
   })
-  declare organisationsRequested: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
+  declare organisationsPending: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
 
   private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
   async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {
@@ -265,9 +266,9 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
         return (this._primaryOrganisation = confirmed);
       }
 
-      const requested = (await (this as User).$get("organisationsRequested", { limit: 1 }))[0];
-      if (requested != null) {
-        return (this._primaryOrganisation = requested);
+      const pending = (await (this as User).$get("organisationsPending", { limit: 1 }))[0];
+      if (pending != null) {
+        return (this._primaryOrganisation = pending);
       }
 
       this._primaryOrganisation = false;

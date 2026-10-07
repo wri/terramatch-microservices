@@ -976,7 +976,6 @@ export class ProjectProcessor extends EntityProcessor<
         userIds.map(userId => ({
           projectId: project.id,
           userId,
-          status: "active",
           // All org users other than the one that submitted the application are monitoring partners. The
           // submitter is the project "owner"
           isMonitoring: userId !== submission?.user?.id
@@ -985,7 +984,7 @@ export class ProjectProcessor extends EntityProcessor<
     } else {
       const userId = this.entitiesService.userId;
       if (userId == null) throw new BadRequestException("Authenticated user is required");
-      await ProjectUser.create({ projectId: project.id, userId, status: "active" });
+      await ProjectUser.create({ projectId: project.id, userId });
     }
 
     // Load the full project with necessary associations.

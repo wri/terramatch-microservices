@@ -304,7 +304,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
         where: { projectId: project.id },
-        attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+        attributes: ["id", "userId", "isMonitoring", "isManaging"]
       });
       expect(result).toEqual([projectUser1, projectUser2]);
     });
@@ -318,7 +318,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
         where: { projectId: project.id, isManaging: true },
-        attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+        attributes: ["id", "userId", "isMonitoring", "isManaging"]
       });
     });
 
@@ -331,7 +331,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
         where: { projectId: project.id, isMonitoring: true },
-        attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+        attributes: ["id", "userId", "isMonitoring", "isManaging"]
       });
     });
   });
@@ -346,13 +346,11 @@ describe("UserAssociationService", () => {
       const projectUser1 = await ProjectUserFactory.create({
         projectId: project.id,
         userId: user1.id,
-        status: "approved",
         isManaging: true
       });
       const projectUser2 = await ProjectUserFactory.create({
         projectId: project.id,
         userId: user2.id,
-        status: "requested",
         isMonitoring: true
       });
 
@@ -380,6 +378,9 @@ describe("UserAssociationService", () => {
         ]
       });
       expect(addDataSpy).toHaveBeenCalledTimes(2);
+      for (const [, dto] of addDataSpy.mock.calls) {
+        expect(dto).toMatchObject({ status: null, associatedType: "projects" });
+      }
       expect(addIndexSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           resource: "associatedUsers",
@@ -547,7 +548,6 @@ describe("UserAssociationService", () => {
       expect(ProjectUser.create).toHaveBeenCalledWith({
         projectId: project.id,
         userId: user.id,
-        status: "active",
         isMonitoring: true
       });
       expect(ProjectInvite.create).toHaveBeenCalled();
@@ -606,7 +606,7 @@ describe("UserAssociationService", () => {
       const orgUser2 = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user2.id,
-        status: "requested"
+        status: "pending"
       });
 
       const ownersMock = [{ id: user1.id }, { id: user2.id }];
@@ -742,7 +742,7 @@ describe("UserAssociationService", () => {
         await OrganisationUserFactory.create({
           organisationId: org.id,
           userId: user.id,
-          status: "requested"
+          status: "pending"
         }),
         true
       ] as [OrganisationUser, boolean]);
@@ -758,7 +758,7 @@ describe("UserAssociationService", () => {
       });
       expect(OrganisationUser.findOrCreate).toHaveBeenCalledWith({
         where: { organisationId: org.id, userId: user.id },
-        defaults: { organisationId: org.id, userId: user.id, status: "requested" }
+        defaults: { organisationId: org.id, userId: user.id, status: "pending" }
       });
       expect(Notification.bulkCreate).toHaveBeenCalled();
       expect(emailQueue.add).toHaveBeenCalled();
@@ -782,7 +782,7 @@ describe("UserAssociationService", () => {
 
       await service.requestOrgJoin(org, user.id);
 
-      expect(orgUser.status).toBe("requested");
+      expect(orgUser.status).toBe("pending");
       expect(orgUser.save).toHaveBeenCalled();
     });
 
@@ -792,7 +792,7 @@ describe("UserAssociationService", () => {
       const orgUser = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user.id,
-        status: "requested"
+        status: "pending"
       });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -827,7 +827,7 @@ describe("UserAssociationService", () => {
         await OrganisationUserFactory.create({
           organisationId: org.id,
           userId: user.id,
-          status: "requested"
+          status: "pending"
         }),
         true
       ] as [OrganisationUser, boolean]);
@@ -851,7 +851,7 @@ describe("UserAssociationService", () => {
         await OrganisationUserFactory.create({
           organisationId: org.id,
           userId: user.id,
-          status: "requested"
+          status: "pending"
         }),
         true
       ] as [OrganisationUser, boolean]);
@@ -877,7 +877,7 @@ describe("UserAssociationService", () => {
       const orgUser = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user.id,
-        status: "requested"
+        status: "pending"
       });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -902,7 +902,7 @@ describe("UserAssociationService", () => {
       const orgUser = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user.id,
-        status: "requested"
+        status: "pending"
       });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -1005,7 +1005,7 @@ describe("UserAssociationService", () => {
       const orgUser = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user.id,
-        status: "requested"
+        status: "pending"
       });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
@@ -1135,7 +1135,7 @@ describe("UserAssociationService", () => {
       jest
         .spyOn(ProjectUser, "findOrCreate")
         .mockResolvedValue([
-          { id: 1, projectId: project.id, userId: user.id, isMonitoring: true, status: "active" } as ProjectUser,
+          { id: 1, projectId: project.id, userId: user.id, isMonitoring: true } as ProjectUser,
           true
         ]);
 
@@ -1143,7 +1143,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findOrCreate).toHaveBeenCalledWith({
         where: { projectId: project.id, userId: user.id },
-        defaults: { projectId: project.id, userId: user.id, isMonitoring: true, status: "active" }
+        defaults: { projectId: project.id, userId: user.id, isMonitoring: true }
       });
       expect(invite.acceptedAt).toBeInstanceOf(Date);
       expect(invite.save).toHaveBeenCalled();
@@ -1158,7 +1158,6 @@ describe("UserAssociationService", () => {
         projectId: project.id,
         userId: user.id,
         isMonitoring: false,
-        status: null,
         save: jest.fn().mockResolvedValue({})
       } as unknown as ProjectUser;
       const invite = {
@@ -1177,7 +1176,6 @@ describe("UserAssociationService", () => {
       await service.acceptProjectInvite("token", user.id);
 
       expect(projectUser.isMonitoring).toBe(true);
-      expect(projectUser.status).toBe("active");
       expect(projectUser.save).toHaveBeenCalled();
       expect(invite.acceptedAt).toBeInstanceOf(Date);
       expect(invite.save).toHaveBeenCalled();

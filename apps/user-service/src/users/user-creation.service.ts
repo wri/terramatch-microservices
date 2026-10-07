@@ -176,14 +176,12 @@ export class UserCreationService {
           defaults: {
             projectId,
             userId: user.id,
-            isMonitoring: true,
-            status: "active"
+            isMonitoring: true
           }
         });
 
         if (!created) {
           projectUser.isMonitoring = true;
-          projectUser.status = "active";
           await projectUser.save();
         }
       }

@@ -5,7 +5,8 @@ export const removeUserProgramColumn: RunnableMigration<QueryInterface> = {
   name: "202610071200-remove-user-program-column",
 
   async up({ context }) {
-    await context.removeColumn("users", "program");
+    // removeColumn() hits a Sequelize + MariaDB driver bug (Cannot delete property 'meta').
+    await context.sequelize.query("ALTER TABLE `users` DROP COLUMN IF EXISTS `program`");
   },
 
   async down({ context }) {

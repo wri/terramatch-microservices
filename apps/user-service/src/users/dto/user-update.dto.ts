@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsIn, IsOptional } from "class-validator";
+import { ArrayMinSize, IsArray, IsEnum, IsIn, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common/util/json-api-update-dto";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
@@ -51,6 +51,7 @@ export class UserUpdateAttributes {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMinSize(1)
   @IsIn(ROLE_SLUGS, { each: true })
   roles?: string[];
 

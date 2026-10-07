@@ -8,8 +8,13 @@ describe("UserUpdateAttributes", () => {
     expect(errors).toHaveLength(0);
   });
 
-  it("accepts an empty list of roles", async () => {
+  it("rejects an empty list of roles", async () => {
     const errors = await validate(plainToInstance(UserUpdateAttributes, { roles: [] }));
+    expect(errors.map(({ property }) => property)).toEqual(["roles"]);
+  });
+
+  it("accepts an update that leaves roles out", async () => {
+    const errors = await validate(plainToInstance(UserUpdateAttributes, { firstName: "New" }));
     expect(errors).toHaveLength(0);
   });
 

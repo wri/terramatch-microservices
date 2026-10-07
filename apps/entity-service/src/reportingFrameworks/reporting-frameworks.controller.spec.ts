@@ -312,7 +312,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should include null form UUIDs correctly", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "fundo-flora",
+        slug: "fundo-flora-1",
         projectFormUuid: null,
         projectReportFormUuid: null,
         siteFormUuid: null,
@@ -339,7 +339,7 @@ describe("ReportingFrameworksController", () => {
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora");
+      const document = await controller.get("fundo-flora-1");
       const result = document.serialize();
 
       const data = result.data as unknown as {
@@ -374,7 +374,7 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should handle framework with zero projects count", async () => {
-      const framework = await FrameworkFactory.create({ slug: "fundo-flora" });
+      const framework = await FrameworkFactory.create({ slug: "fundo-flora-1" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -382,19 +382,19 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "fundo-flora",
+          id: "fundo-flora-1",
           attributes: {
-            slug: "fundo-flora",
+            slug: "fundo-flora-1",
             totalProjectsCount: 0
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora");
+      const document = await controller.get("fundo-flora-1");
       const result = document.serialize();
 
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora");
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora-1");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       const data = result.data as unknown as { id: string; attributes: { slug: string; totalProjectsCount: number } };
       expect(data.attributes.totalProjectsCount).toBe(0);

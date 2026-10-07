@@ -18,7 +18,7 @@ export class WebhookController {
     // This isn't a perfect match for what this controller does, but it is close, and all admins have
     // this permission, so it's a reasonable way for now to restrict this controller to logged in
     // admins.
-    if (!UserContext.permissions?.includes("reports-manage")) {
+    if (!UserContext.permissions?.includes("users-manage")) {
       throw new UnauthorizedException();
     }
   }

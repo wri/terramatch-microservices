@@ -49,18 +49,6 @@ describe("FinancialReportPolicy", () => {
     });
   });
 
-  it("allows managing all financial reports with reports-manage permission", async () => {
-    mockUserContext({ userId: 123, permissions: ["reports-manage"] });
-    const fr1 = await FinancialReportFactory.org().create();
-    const fr2 = await FinancialReportFactory.org().create();
-    await expectAuthority(service, {
-      can: [
-        [["read", "delete"], fr1],
-        [["read", "delete"], fr2]
-      ]
-    });
-  });
-
   it("does not allow access for users without organisation", async () => {
     const user = await UserFactory.create({ organisationId: null });
     mockContextForUser(user, "manage-own");

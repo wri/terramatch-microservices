@@ -35,10 +35,6 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       });
     }
 
-    if (this.permissions.includes("reports-manage")) {
-      this.builder.can(["read", "delete", "update", "approve", "updateAnswers", "sendReminder"], FinancialReport);
-    }
-
     const organisationIds: number[] = [];
     if (this.permissions?.includes("projects-manage")) {
       const projectsOrganisationIds = [...((user?.projects ?? []).map(({ organisationId }) => organisationId) ?? [])];

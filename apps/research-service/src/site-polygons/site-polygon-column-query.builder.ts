@@ -68,10 +68,6 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
-  /**
-   * Limits results to polygons whose project matches every provided project attribute. Resolved
-   * entirely with subqueries so that wide scopes (e.g. a whole framework) never load ids into memory.
-   */
   filterProjectContext(
     { frameworkKey, country, organisationUuid, plantingStatus }: SitePolygonProjectFiltersDto,
     excludeTestProjects: boolean

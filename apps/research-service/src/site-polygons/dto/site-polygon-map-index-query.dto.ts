@@ -13,6 +13,7 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./site-polygon-query.dto";
+import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
 
 const SITE_POLYGON_PRACTICE_FILTER_VALUES = [...SITE_POLYGON_PRACTICES];
 const SITE_POLYGON_TARGET_SYS_FILTER_VALUES = [...SITE_POLYGON_TARGET_SYSTEMS];
@@ -20,12 +21,12 @@ const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
-export class SitePolygonMapIndexQueryDto {
+export class SitePolygonMapIndexQueryDto extends SitePolygonProjectFiltersDto {
   @ApiProperty({
     name: "siteId[]",
     isArray: true,
     required: false,
-    description: "Scope results to site UUID(s). Exactly one of siteId[] or projectId[] is required."
+    description: "Scope results to site UUID(s). mapIndex requires siteId[] and / or projectId[]."
   })
   @IsOptional()
   @IsArray()
@@ -35,7 +36,7 @@ export class SitePolygonMapIndexQueryDto {
     name: "projectId[]",
     isArray: true,
     required: false,
-    description: "Scope results to project UUID(s). Exactly one of siteId[] or projectId[] is required."
+    description: "Scope results to project UUID(s). mapIndex requires siteId[] and / or projectId[]."
   })
   @IsOptional()
   @IsArray()

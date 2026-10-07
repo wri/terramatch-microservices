@@ -260,8 +260,9 @@ export class SitePolygonsController {
     There is no pagination: the payload stays small because each row carries only the fields needed
     to style GeoServer tiles and render map popups.
 
-    Provide exactly one of siteId[] or projectId[]. The remaining workspace filters match the polygon
-    table and map, including deletedOnly.`
+    Provide siteId[] and / or projectId[]; project context filters (frameworkKey[], country[],
+    organisationUuid[], plantingStatus) further narrow that scope. The remaining workspace filters match
+    the polygon table and map, including deletedOnly.`
   })
   @JsonApiResponse(SitePolygonMapIndexDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
@@ -281,8 +282,9 @@ export class SitePolygonsController {
     operationId: "sitePolygonsSummary",
     summary: "Get aggregate site polygon metrics for a filtered scope",
     description: `Returns workspace totals and optional indicator aggregates without loading polygon rows.
-    Provide exactly one of siteId[] or projectId[]. Workspace filters match mapIndex / index.
-    Pass indicatorSlug[] to include Monitored chart and run-analysis aggregates.`
+    Provide at least one of siteId[], projectId[], frameworkKey[], country[], organisationUuid[] or
+    plantingStatus; all of them combine. Workspace filters match mapIndex / index. Pass indicatorSlug[]
+    to include Monitored chart and run-analysis aggregates (requires siteId[] and / or projectId[]).`
   })
   @JsonApiResponse(SitePolygonSummaryDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
@@ -340,18 +342,12 @@ export class SitePolygonsController {
       throw new BadRequestException("plantStartFrom must be on or before plantStartTo");
     }
 
-    let countSelectedParams = [siteId, projectId].filter(param => param != null).length;
-    // these two can be used together, but not along with the other project / site filters.
-    if (projectCohort != null || landscape != null) countSelectedParams++;
-
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");
     }
 
-    if (countSelectedParams > 1) {
-      throw new BadRequestException(
-        "Only one of siteId, projectId, projectCohort, landscape, and includeTestProjects may be used in a single request."
-      );
+    if ((projectCohort != null || landscape != null) && (siteId != null || projectId != null)) {
+      throw new BadRequestException("projectCohort and landscape may not be used with siteId or projectId.");
     }
     if (missingIndicator != null && presentIndicator != null) {
       throw new BadRequestException(
@@ -370,6 +366,7 @@ export class SitePolygonsController {
     }
 
     const queryBuilder = (await this.sitePolygonService.buildQuery(page, { includeGeometry: lightResource !== true }))
+      .filterProjectContext(query, false)
       .hasStatuses(query.polygonStatus)
       .modifiedSince(query.lastModifiedDate);
 

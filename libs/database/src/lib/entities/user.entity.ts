@@ -166,10 +166,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(STRING)
   declare country: string | null;
 
-  @AllowNull
-  @Column(STRING)
-  declare program: string | null;
-
   @Column(STRING)
   declare locale: ValidLocale;
 

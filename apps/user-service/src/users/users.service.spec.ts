@@ -338,7 +338,6 @@ describe("UsersService", () => {
         jobRole: "old-job" as string | null,
         phoneNumber: "111" as string | null,
         country: "US" as string | null,
-        program: "p1" as string | null,
         locale: "en-US" as const,
         save: jest.fn(),
         reload: jest.fn()
@@ -357,7 +356,6 @@ describe("UsersService", () => {
         jobRole: "engineer",
         phoneNumber: "555",
         country: "CA",
-        program: "p2",
         locale: "fr-FR"
       };
 
@@ -369,7 +367,6 @@ describe("UsersService", () => {
       expect(user.jobRole).toBe("engineer");
       expect(user.phoneNumber).toBe("555");
       expect(user.country).toBe("CA");
-      expect(user.program).toBe("p2");
       expect(user.locale).toBe("fr-FR");
       expect(user.save).toHaveBeenCalledTimes(1);
       expect(result).toBe(user);

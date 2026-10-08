@@ -28,10 +28,6 @@ export class UserCreateBaseAttributes {
   @IsOptional()
   @ApiProperty({ nullable: true })
   country?: string;
-
-  @IsOptional()
-  @ApiProperty({ nullable: true })
-  program?: string;
 }
 
 export class UserCreateBaseBody extends JsonApiBodyDto(

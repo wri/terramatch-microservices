@@ -36,7 +36,6 @@ describe("UserCreationService", () => {
     userNewRequest.roles = [role];
     userNewRequest.jobRole = "developer";
     userNewRequest.phoneNumber = "1234567890";
-    userNewRequest.program = "";
     userNewRequest.callbackUrl = "https://localhost:3000";
     return userNewRequest;
   };

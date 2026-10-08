@@ -160,6 +160,43 @@ describe("MediaProcessor", () => {
     });
   });
 
+  describe("getMapIndex", () => {
+    it("returns only geotagged media across the project scope", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const siteReport = await SiteReportFactory.create({ siteId: site.id });
+      const projectMedia = await MediaFactory.project(project).create({ lat: 1, lng: 2 });
+      const siteMedia = await MediaFactory.site(site).create({ lat: 3, lng: 4 });
+      const siteReportMedia = await MediaFactory.siteReport(siteReport).create({ lat: 5, lng: 6 });
+      await MediaFactory.project(project).create();
+      await MediaFactory.site(site).create({ lat: 7, lng: null });
+      await MediaFactory.project(await ProjectFactory.create()).create({ lat: 8, lng: 9 });
+
+      processor = service.createAssociationProcessor("projects", project.uuid, "media") as MediaProcessor;
+      const entries = await processor.getMapIndex();
+
+      expect(entries.map(({ uuid }) => uuid).sort()).toEqual(
+        [projectMedia.uuid, siteMedia.uuid, siteReportMedia.uuid].sort()
+      );
+      expect(entries.find(({ uuid }) => uuid === siteMedia.uuid)).toMatchObject({
+        name: siteMedia.name,
+        lat: 3,
+        lng: 4
+      });
+    });
+
+    it("sets thumbUrl from the entities service thumbnail url", async () => {
+      const site = await SiteFactory.create();
+      const media = await MediaFactory.site(site).create({ lat: 1, lng: 1 });
+      jest.spyOn(service, "thumbnailUrl").mockImplementation(({ id }) => `thumb-${id}`);
+
+      processor = service.createAssociationProcessor("sites", site.uuid, "media") as MediaProcessor;
+      const [entry] = await processor.getMapIndex();
+
+      expect(entry.thumbUrl).toBe(`thumb-${media.id}`);
+    });
+  });
+
   describe("it filters", () => {
     it("should filter by isGeotagged", async () => {
       const project = await ProjectFactory.create();

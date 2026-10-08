@@ -17,9 +17,10 @@ import {
 } from "@terramatch-microservices/database/constants/media-owners";
 import { AssociationProcessor } from "./association-processor";
 import { MediaQueryDto } from "../dto/media-query.dto";
+import { MediaMapEntryDto } from "../dto/media-map-index.dto";
 import { EntitiesService } from "../entities.service";
 import { DocumentBuilder, getDtoType, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { col, fn, Includeable, Op, Sequelize } from "sequelize";
+import { col, fn, Includeable, Op, Sequelize, WhereOptions } from "sequelize";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Literal } from "sequelize/types/utils";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
@@ -36,6 +37,13 @@ function toDueAtDate(value: Date | string | null | undefined): Date | null {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
+
+const scopeWhere = (models: QueryModelType[]): WhereOptions<Media> => ({
+  [Op.or]: models.map(model => ({
+    modelType: model.modelType,
+    modelId: { [Op.in]: model.subquery }
+  }))
+});
 
 export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
   readonly DTO = MediaDto;
@@ -141,19 +149,8 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
     return this.getBaseEntityModels(financialReport);
   }
 
-  _queryBuilder: PaginatedQueryBuilder<Media> | null = null;
-  private async getQueryBuilder() {
-    if (this._queryBuilder != null) return this._queryBuilder;
+  private async getScopeModels() {
     const baseEntity: EntityModel = await this.getBaseEntity();
-
-    const userAssociations: Includeable = {
-      association: "createdByUser",
-      attributes: ["firstName", "lastName"]
-    };
-
-    const modelClass = this.query.sort?.direction != null ? Media.unscoped() : Media;
-
-    this._queryBuilder = await this.entitiesService.buildQuery(modelClass, this.query, [userAssociations]);
 
     let models: QueryModelType[];
     if (baseEntity instanceof Project) {
@@ -195,15 +192,27 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       });
     }
 
+    return models;
+  }
+
+  _queryBuilder: PaginatedQueryBuilder<Media> | null = null;
+  private async getQueryBuilder() {
+    if (this._queryBuilder != null) return this._queryBuilder;
+
+    const userAssociations: Includeable = {
+      association: "createdByUser",
+      attributes: ["firstName", "lastName"]
+    };
+
+    const modelClass = this.query.sort?.direction != null ? Media.unscoped() : Media;
+
+    this._queryBuilder = await this.entitiesService.buildQuery(modelClass, this.query, [userAssociations]);
+
+    const models = await this.getScopeModels();
     if (models.length === 0) {
       this._queryBuilder.where(Sequelize.literal("1 = 0"));
     } else {
-      this._queryBuilder.where({
-        [Op.or]: models.map(model => ({
-          modelType: model.modelType,
-          modelId: { [Op.in]: model.subquery }
-        }))
-      });
+      this._queryBuilder.where(scopeWhere(models));
     }
 
     if (this.query.isGeotagged != null) {
@@ -252,6 +261,37 @@ export class MediaProcessor extends AssociationProcessor<Media, MediaDto> {
       this._queryBuilder.order([["createdAt", this.query.sort.direction]]);
     }
     return this._queryBuilder;
+  }
+
+  public async getMapIndex() {
+    const models = await this.getScopeModels();
+    if (models.length === 0) return [];
+
+    const medias = await Media.findAll({
+      where: {
+        ...scopeWhere(models),
+        lat: { [Op.ne]: null },
+        lng: { [Op.ne]: null }
+      },
+      attributes: [
+        "id",
+        "uuid",
+        "name",
+        "fileName",
+        "lat",
+        "lng",
+        "generatedConversions",
+        "customProperties",
+        "createdAt"
+      ]
+    });
+
+    return medias.map(
+      media =>
+        new MediaMapEntryDto(media, {
+          thumbUrl: this.entitiesService.thumbnailUrl(media)
+        })
+    );
   }
 
   public async getAssociations() {

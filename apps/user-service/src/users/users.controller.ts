@@ -44,6 +44,7 @@ import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
+import { ORGANISATION_USER_STATUSES } from "@terramatch-microservices/database/constants/status";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -51,7 +52,7 @@ export const USER_ORG_RELATIONSHIP = {
   meta: {
     userStatus: {
       type: "string",
-      enum: ["approved", "requested", "rejected", "na"]
+      enum: [...ORGANISATION_USER_STATUSES, "na"]
     }
   }
 };

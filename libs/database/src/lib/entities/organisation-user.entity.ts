@@ -2,6 +2,7 @@ import { AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "seq
 import { BIGINT, STRING } from "sequelize";
 import { Organisation } from "./organisation.entity";
 import { User } from "./user.entity";
+import { OrganisationUserStatus } from "../constants/status";
 
 @Table({ tableName: "organisation_user", underscored: true, timestamps: false })
 export class OrganisationUser extends Model<OrganisationUser> {
@@ -19,5 +20,5 @@ export class OrganisationUser extends Model<OrganisationUser> {
   declare organisationId: number;
 
   @Column(STRING(20))
-  declare status: string;
+  declare status: OrganisationUserStatus;
 }

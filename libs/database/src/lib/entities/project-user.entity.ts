@@ -39,6 +39,12 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
   @Column(BIGINT.UNSIGNED)
   declare userId: number;
 
+  /**
+   * @deprecated
+   *
+   * No logic or permissions depend on this value; project invite state lives in
+   * v2_project_invites.accepted_at. The column will be dropped in a follow-up migration.
+   */
   @AllowNull
   @Column(STRING)
   declare status: string | null;

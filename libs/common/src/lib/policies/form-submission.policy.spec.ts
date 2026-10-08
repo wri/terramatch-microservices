@@ -46,7 +46,7 @@ describe("FormSubmissionPolicy", () => {
     const user = await UserFactory.create();
     mockContextForUser(user, "manage-own");
     await OrganisationUserFactory.create({ organisationId: associatedOrg.id, userId: user.id, status: "approved" });
-    await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "requested" });
+    await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "pending" });
     const associatedSubmission = await FormSubmissionFactory.create({ organisationUuid: associatedOrg.uuid });
     const pendingSubmission = await FormSubmissionFactory.create({ organisationUuid: pendingOrg.uuid });
     await expectCan(service, "read", associatedSubmission);

@@ -45,6 +45,14 @@ export class OrganisationInvite extends Model<
 
   @AllowNull
   @Column(STRING)
+  declare firstName: CreationOptional<string | null>;
+
+  @AllowNull
+  @Column(STRING)
+  declare lastName: CreationOptional<string | null>;
+
+  @AllowNull
+  @Column(STRING)
   declare token: string | null;
 
   @AllowNull

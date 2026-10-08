@@ -22,6 +22,7 @@ import crypto from "node:crypto";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
+import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
@@ -230,9 +231,16 @@ export class UserAssociationService {
   }
 
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {
+    if (!attributes.isManager) {
+      const inviteCount = await ProjectInvite.count({
+        where: { projectId: project.id, emailAddress: attributes.emailAddress }
+      });
+      if (inviteCount > 0) throw new BadRequestException("User has already been invited to this project");
+    }
+
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
-      attributes: ["id", "emailAddress", "roles"]
+      attributes: ["id", "emailAddress", "organisationId", "roles"]
     });
     if (user == null) {
       return this.handleUserNotFound(project, attributes);
@@ -270,6 +278,8 @@ export class UserAssociationService {
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
+      firstName: attributes.firstName ?? null,
+      lastName: attributes.lastName ?? null,
       token
     } as ProjectInvite);
     const organisation = await Organisation.findOne({
@@ -379,9 +389,13 @@ export class UserAssociationService {
 
   async inviteOrganisationUser(
     organisation: Organisation,
-    emailAddress: string,
-    callbackUrl?: string | null
+    { emailAddress, firstName, lastName, callbackUrl }: OrganisationInviteRequestDto
   ): Promise<OrganisationInvite> {
+    const inviteCount = await OrganisationInvite.count({ where: { organisationId: organisation.id, emailAddress } });
+    if (inviteCount > 0) {
+      throw new UnprocessableEntityException("User has already been invited to this organisation");
+    }
+
     const existingUser = await User.findOne({
       where: { emailAddress },
       attributes: ["id"]
@@ -402,8 +416,10 @@ export class UserAssociationService {
     const invite = await OrganisationInvite.create({
       organisationId: organisation.id,
       emailAddress,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
       token
-    } as OrganisationInvite);
+    });
     await PasswordReset.create({ userId: newUser.id, token });
     try {
       await new OrganisationInviteEmail({
@@ -542,15 +558,25 @@ export class UserAssociationService {
       return;
     }
 
-    const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
-    if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
+    // Admins must not gain project developer access through an invite, even if they also hold that role.
+    if (!user.permissions.includes("manage-own") || user.roles.some(role => role.startsWith("admin-"))) {
+      throw new BadRequestException("Only project developers can be invited to a project");
     }
+    // Members of the owning organisation already have access to the project.
+    if (project.organisationId != null && user.organisationId === project.organisationId) {
+      throw new BadRequestException("User is already associated with this project");
+    }
+    const projectUserCount = await ProjectUser.count({ where: { projectId: project.id, userId: user.id } });
+    if (projectUserCount > 0) throw new BadRequestException("User is already associated with this project");
+
+    await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
 
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: user.emailAddress,
+      firstName: attributes.firstName ?? null,
+      lastName: attributes.lastName ?? null,
       acceptedAt: new Date(),
       token
     } as ProjectInvite);

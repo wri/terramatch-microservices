@@ -114,7 +114,7 @@ export class UserAssociationController {
   @ExceptionResponse(NotFoundException, { description: "Organisation not found" })
   @ExceptionResponse(BadRequestException, { description: "Request params are malformed." })
   @ExceptionResponse(UnprocessableEntityException, {
-    description: "A user with this email already exists."
+    description: "A user with this email already exists, or this email has already been invited."
   })
   async inviteOrganisationUser(
     @Param() { uuid }: OrganisationInviteParamDto,
@@ -124,11 +124,7 @@ export class UserAssociationController {
     const organisation = await processor.getEntity();
     await this.policyService.authorize("update", organisation);
 
-    const invite = await this.userAssociationService.inviteOrganisationUser(
-      organisation as never,
-      body.emailAddress,
-      body.callbackUrl
-    );
+    const invite = await this.userAssociationService.inviteOrganisationUser(organisation as never, body);
 
     return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
   }

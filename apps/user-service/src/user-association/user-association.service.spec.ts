@@ -418,7 +418,6 @@ describe("UserAssociationService", () => {
       user.roles = ["project-developer"];
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
       emailQueue.add.mockResolvedValue({} as Job);
@@ -429,6 +428,33 @@ describe("UserAssociationService", () => {
       });
 
       expect(result).toEqual(user);
+    });
+
+    it("should throw BadRequestException when the email has already been invited to the project", async () => {
+      const project = await ProjectFactory.create();
+      jest.spyOn(ProjectInvite, "count").mockResolvedValue(1);
+      const findUserSpy = jest.spyOn(User, "findOne");
+
+      await expect(
+        service.createUserAssociation(project, { emailAddress: "invited@example.com", isManager: false })
+      ).rejects.toThrow(new BadRequestException("User has already been invited to this project"));
+      expect(ProjectInvite.count).toHaveBeenCalledWith({
+        where: { projectId: project.id, emailAddress: "invited@example.com" }
+      });
+      expect(findUserSpy).not.toHaveBeenCalled();
+    });
+
+    it("should not check for existing invites when adding a manager", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create({ roles: ["project-manager"] });
+      const countSpy = jest.spyOn(ProjectInvite, "count");
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
+      jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
+
+      await service.createUserAssociation(project, { emailAddress: user.emailAddress, isManager: true });
+
+      expect(countSpy).not.toHaveBeenCalled();
     });
 
     it("should call handleUserNotFound when user does not exist", async () => {
@@ -446,10 +472,15 @@ describe("UserAssociationService", () => {
 
       const result = await service.createUserAssociation(project, {
         emailAddress: "new@example.com",
+        firstName: "Jane",
+        lastName: "Doe",
         isManager: false
       });
 
       expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ roles: ["project-developer"] }));
+      expect(ProjectInvite.create).toHaveBeenCalledWith(
+        expect.objectContaining({ emailAddress: "new@example.com", firstName: "Jane", lastName: "Doe" })
+      );
       expect(result).toEqual(newUser);
     });
   });
@@ -536,41 +567,76 @@ describe("UserAssociationService", () => {
 
     it("should create monitoring user when isManager is false", async () => {
       const project = await ProjectFactory.create();
-      const user = await UserFactory.create();
+      const user = await UserFactory.create({ roles: ["project-developer"] });
 
-      jest.spyOn(ProjectUser, "findOne").mockResolvedValue(null);
       jest.spyOn(ProjectUser, "create").mockResolvedValue({} as ProjectUser);
       jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
       emailQueue.add.mockResolvedValue({} as Job);
 
-      await service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false });
+      await service["handleExistingUser"](project, user, {
+        emailAddress: user.emailAddress,
+        firstName: "Jane",
+        lastName: "Doe",
+        isManager: false
+      });
 
       expect(ProjectUser.create).toHaveBeenCalledWith({
         projectId: project.id,
         userId: user.id,
         isMonitoring: true
       });
-      expect(ProjectInvite.create).toHaveBeenCalled();
+      expect(ProjectInvite.create).toHaveBeenCalledWith(
+        expect.objectContaining({ emailAddress: user.emailAddress, firstName: "Jane", lastName: "Doe" })
+      );
       expect(emailQueue.add).toHaveBeenCalled();
     });
 
-    it("should not create ProjectUser if already exists when isManager is false", async () => {
+    it("should throw BadRequestException when the user is already associated with the project", async () => {
       const project = await ProjectFactory.create();
-      const user = await UserFactory.create();
-      const existingProjectUser = await ProjectUserFactory.create({
-        projectId: project.id,
-        userId: user.id
+      const user = await UserFactory.create({ roles: ["project-developer"] });
+      await ProjectUserFactory.create({ projectId: project.id, userId: user.id });
+      const createSpy = jest.spyOn(ProjectInvite, "create");
+
+      await expect(
+        service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false })
+      ).rejects.toThrow(new BadRequestException("User is already associated with this project"));
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when the user belongs to the project's organisation", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create({
+        roles: ["project-developer"],
+        organisationId: project.organisationId
       });
+      const createSpy = jest.spyOn(ProjectInvite, "create");
 
-      jest.spyOn(ProjectUser, "findOne").mockResolvedValue(existingProjectUser);
-      jest.spyOn(ProjectUser, "create");
-      jest.spyOn(ProjectInvite, "create").mockResolvedValue({} as ProjectInvite);
-      emailQueue.add.mockResolvedValue({} as Job);
+      await expect(
+        service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false })
+      ).rejects.toThrow(new BadRequestException("User is already associated with this project"));
+      expect(createSpy).not.toHaveBeenCalled();
+    });
 
-      await service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false });
+    it("should throw BadRequestException when the user is not a project developer", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create({ roles: ["admin-super"] });
+      const createSpy = jest.spyOn(ProjectUser, "create");
 
-      expect(ProjectUser.create).not.toHaveBeenCalled();
-      expect(ProjectInvite.create).toHaveBeenCalled();
+      await expect(
+        service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false })
+      ).rejects.toThrow(new BadRequestException("Only project developers can be invited to a project"));
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when a project developer also has an admin role", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create({ roles: ["project-developer", "admin-terrafund"] });
+      const createSpy = jest.spyOn(ProjectUser, "create");
+
+      await expect(
+        service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false })
+      ).rejects.toThrow(new BadRequestException("Only project developers can be invited to a project"));
+      expect(createSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -1030,9 +1096,23 @@ describe("UserAssociationService", () => {
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
 
-      await expect(service.inviteOrganisationUser(org, "exists@example.com")).rejects.toThrow(
-        UnprocessableEntityException
+      await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).rejects.toThrow(
+        new UnprocessableEntityException("A user with this email address already exists")
       );
+    });
+
+    it("should throw UnprocessableEntityException when the email has already been invited", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(1);
+      const findUserSpy = jest.spyOn(User, "findOne");
+
+      await expect(service.inviteOrganisationUser(org, { emailAddress: "invited@example.com" })).rejects.toThrow(
+        new UnprocessableEntityException("User has already been invited to this organisation")
+      );
+      expect(OrganisationInvite.count).toHaveBeenCalledWith({
+        where: { organisationId: org.id, emailAddress: "invited@example.com" }
+      });
+      expect(findUserSpy).not.toHaveBeenCalled();
     });
 
     it("should create user, organisation invite and queue email when user does not exist", async () => {
@@ -1054,7 +1134,12 @@ describe("UserAssociationService", () => {
       jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
       emailQueue.add.mockResolvedValue({} as Job);
 
-      const result = await service.inviteOrganisationUser(org, "new@example.com", "http://frontend/auth/signup");
+      const result = await service.inviteOrganisationUser(org, {
+        emailAddress: "new@example.com",
+        firstName: "Jane",
+        lastName: "Doe",
+        callbackUrl: "http://frontend/auth/signup"
+      });
 
       expect(User.create).toHaveBeenCalled();
       expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ roles: ["project-developer"] }));
@@ -1062,6 +1147,8 @@ describe("UserAssociationService", () => {
         expect.objectContaining({
           organisationId: org.id,
           emailAddress: "new@example.com",
+          firstName: "Jane",
+          lastName: "Doe",
           token: expect.any(String)
         })
       );

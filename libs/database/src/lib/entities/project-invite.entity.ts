@@ -33,6 +33,14 @@ export class ProjectInvite extends Model<ProjectInvite> {
 
   @AllowNull
   @Column(STRING)
+  declare firstName: string | null;
+
+  @AllowNull
+  @Column(STRING)
+  declare lastName: string | null;
+
+  @AllowNull
+  @Column(STRING)
   declare token: string | null;
 
   @AllowNull

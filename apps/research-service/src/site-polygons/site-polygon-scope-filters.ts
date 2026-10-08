@@ -1,18 +1,35 @@
 import { BadRequestException } from "@nestjs/common";
+import { isEmpty } from "lodash";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
 
 const nonEmpty = <T>(value: T[] | null | undefined): T[] | undefined =>
   value != null && value.length > 0 ? value : undefined;
 
+export type SitePolygonScopeOptions = {
+  requireSiteOrProject: boolean;
+};
+
 export async function applySitePolygonScopeFilters(
   builder: SitePolygonMapIndexQueryBuilder,
-  query: SitePolygonMapIndexQueryDto
+  query: SitePolygonMapIndexQueryDto,
+  { requireSiteOrProject }: SitePolygonScopeOptions
 ): Promise<void> {
   const { siteId, projectId, deletedOnly } = query;
+  const hasSiteOrProject = siteId != null || projectId != null;
+  const hasProjectContext =
+    !isEmpty(query.frameworkKey) ||
+    !isEmpty(query.country) ||
+    !isEmpty(query.organisationUuid) ||
+    query.plantingStatus != null;
 
-  if ((siteId == null) === (projectId == null)) {
-    throw new BadRequestException("Exactly one of siteId[] or projectId[] must be provided.");
+  if (requireSiteOrProject && !hasSiteOrProject) {
+    throw new BadRequestException("At least one of siteId[] or projectId[] must be provided.");
+  }
+  if (!hasSiteOrProject && !hasProjectContext) {
+    throw new BadRequestException(
+      "At least one of siteId[], projectId[], frameworkKey[], country[], organisationUuid[] or plantingStatus must be provided."
+    );
   }
   if (siteId != null && siteId.length === 0) {
     throw new BadRequestException("siteId[] must contain at least one UUID.");
@@ -41,7 +58,8 @@ export async function applySitePolygonScopeFilters(
   }
 
   if (siteId != null) await builder.filterSiteUuids(siteId);
-  else if (projectId != null) await builder.filterProjectUuids(projectId);
+  if (projectId != null) await builder.filterProjectUuids(projectId);
+  builder.filterProjectContext(query, !hasSiteOrProject);
 
   builder.hasStatuses(nonEmpty(query.polygonStatus)).modifiedSince(query.lastModifiedDate);
 

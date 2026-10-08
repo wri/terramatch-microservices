@@ -5,7 +5,9 @@ import {
   DisturbanceFactory,
   DisturbanceReportFactory,
   IndicatorOutputTreeCoverFactory,
+  OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   SiteFactory,
   SitePolygonFactory
 } from "@terramatch-microservices/database/factories";
@@ -39,10 +41,8 @@ describe("SitePolygonMapIndexService", () => {
       await expect(getMapIndex({})).rejects.toThrow(BadRequestException);
     });
 
-    it("rejects a request with both siteId[] and projectId[]", async () => {
-      await expect(getMapIndex({ siteId: ["site-uuid"], projectId: ["project-uuid"] })).rejects.toThrow(
-        BadRequestException
-      );
+    it("rejects a request scoped only by project context filters", async () => {
+      await expect(getMapIndex({ frameworkKey: ["ppc"], country: ["KE"] })).rejects.toThrow(BadRequestException);
     });
 
     it("rejects deletedOnly without exactly one siteId[]", async () => {
@@ -199,10 +199,85 @@ describe("SitePolygonMapIndexService", () => {
       expect(result.polygons.map(({ uuid }) => uuid).sort()).toEqual([polygonA.uuid, polygonB.uuid].sort());
     });
 
+    it("combines siteId[] and projectId[]", async () => {
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const otherSite = await SiteFactory.create({ projectId: project.id });
+      const polygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+      await SitePolygonFactory.create({ siteUuid: otherSite.uuid });
+      const otherProjectSite = await SiteFactory.create();
+      await SitePolygonFactory.create({ siteUuid: otherProjectSite.uuid });
+
+      const result = await getMapIndex({ projectId: [project.uuid], siteId: [site.uuid, otherProjectSite.uuid] });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([polygon.uuid]);
+    });
+
     it("returns an empty list for an unknown project", async () => {
       const result = await getMapIndex({ projectId: ["00000000-0000-0000-0000-000000000000"] });
 
       expect(result).toEqual({ polygons: [], total: 0 });
+    });
+  });
+
+  describe("project context filters", () => {
+    it("narrows a project scope by framework, country, organisation and planting status together", async () => {
+      const organisation = await OrganisationFactory.create();
+      const matching = await ProjectFactory.create({
+        frameworkKey: "ppc",
+        country: "KE",
+        organisationId: organisation.id
+      });
+      await ProjectReportFactory.create({ projectId: matching.id, status: "approved", plantingStatus: "in-progress" });
+      const otherFramework = await ProjectFactory.create({
+        frameworkKey: "terrafund",
+        country: "KE",
+        organisationId: organisation.id
+      });
+      await ProjectReportFactory.create({
+        projectId: otherFramework.id,
+        status: "approved",
+        plantingStatus: "in-progress"
+      });
+      const [matchingSite, otherSite] = await Promise.all([
+        SiteFactory.create({ projectId: matching.id }),
+        SiteFactory.create({ projectId: otherFramework.id })
+      ]);
+      const polygon = await SitePolygonFactory.create({ siteUuid: matchingSite.uuid, status: "approved" });
+      await SitePolygonFactory.create({ siteUuid: matchingSite.uuid, status: "draft" });
+      await SitePolygonFactory.create({ siteUuid: otherSite.uuid, status: "approved" });
+
+      const result = await getMapIndex({
+        projectId: [matching.uuid, otherFramework.uuid],
+        frameworkKey: ["ppc"],
+        country: ["KE"],
+        organisationUuid: [organisation.uuid],
+        plantingStatus: "in-progress",
+        polygonStatus: ["approved"]
+      });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([polygon.uuid]);
+    });
+
+    it("returns nothing when the project's latest approved planting status does not match", async () => {
+      const project = await ProjectFactory.create();
+      await ProjectReportFactory.create({
+        projectId: project.id,
+        status: "approved",
+        plantingStatus: "not-started",
+        dueAt: new Date("2024-01-01")
+      });
+      await ProjectReportFactory.create({
+        projectId: project.id,
+        status: "approved",
+        plantingStatus: "completed",
+        dueAt: new Date("2025-01-01")
+      });
+      const site = await SiteFactory.create({ projectId: project.id });
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      expect((await getMapIndex({ projectId: [project.uuid], plantingStatus: "not-started" })).total).toBe(0);
+      expect((await getMapIndex({ projectId: [project.uuid], plantingStatus: "completed" })).total).toBe(1);
     });
   });
 

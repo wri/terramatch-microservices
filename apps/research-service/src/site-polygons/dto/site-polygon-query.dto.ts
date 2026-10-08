@@ -17,6 +17,7 @@ import { LandscapeGeometry } from "@terramatch-microservices/database/entities";
 import { LandscapeSlug } from "@terramatch-microservices/database/types/landscapeGeometry";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { SITE_POLYGON_SORT_FIELDS } from "../site-polygon-sort";
+import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
 
 export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
 export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
@@ -44,7 +45,7 @@ const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
-export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage) {
+export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage, SitePolygonProjectFiltersDto) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
@@ -70,7 +71,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     name: "projectId[]",
     isArray: true,
     required: false,
-    description: "Filter results by project UUID(s). May not be used with siteId[], projectCohort or landscape"
+    description: "Filter results by project UUID(s). May not be used with projectCohort or landscape"
   })
   @IsOptional()
   @IsArray()
@@ -90,7 +91,7 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     name: "siteId[]",
     isArray: true,
     required: false,
-    description: "Filter results by site UUID(s). May not be used with projectId[], projectCohort or landscape"
+    description: "Filter results by site UUID(s). May not be used with projectCohort or landscape"
   })
   @IsOptional()
   @IsArray()

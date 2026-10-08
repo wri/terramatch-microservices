@@ -96,6 +96,7 @@ describe("SitePolygonsController", () => {
     filterSource: jest.Mock;
     filterHasOverlap: jest.Mock;
     filterHasDisturbance: jest.Mock;
+    filterProjectContext: jest.Mock;
   }
 
   const mockQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockQueryBuilder => {
@@ -123,7 +124,8 @@ describe("SitePolygonsController", () => {
       filterTargetSys: jest.fn().mockReturnThis(),
       filterSource: jest.fn().mockReturnThis(),
       filterHasOverlap: jest.fn().mockReturnThis(),
-      filterHasDisturbance: jest.fn().mockReturnThis()
+      filterHasDisturbance: jest.fn().mockReturnThis(),
+      filterProjectContext: jest.fn().mockReturnThis()
     } as unknown as MockQueryBuilder;
 
     builder.filterProjectUuids.mockResolvedValue(builder);
@@ -232,8 +234,7 @@ describe("SitePolygonsController", () => {
         { landscape, projectId },
         { landscape, siteId },
         { projectCohort, projectId },
-        { projectCohort, siteId },
-        { projectId, siteId }
+        { projectCohort, siteId }
       ];
 
       for (const query of cases) {
@@ -344,6 +345,25 @@ describe("SitePolygonsController", () => {
 
       await controller.findMany({ siteId: ["asdf"] });
       expect(builder.filterSiteUuids).toHaveBeenCalledWith(["asdf"]);
+    });
+
+    it("should combine siteId, projectId and the project context filters", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockQueryBuilder();
+      const query = {
+        siteId: ["site"],
+        projectId: ["project"],
+        frameworkKey: ["ppc" as const],
+        country: ["KE"],
+        organisationUuid: ["org"],
+        plantingStatus: "in-progress" as const
+      };
+
+      await controller.findMany(query);
+
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["site"]);
+      expect(builder.filterProjectUuids).toHaveBeenCalledWith(["project"]);
+      expect(builder.filterProjectContext).toHaveBeenCalledWith(query, false);
     });
 
     it("should call filterValidationStatus when validationStatus is provided", async () => {

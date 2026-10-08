@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
-import { isEmpty } from "lodash";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
+import { hasProjectContextFilters } from "./project-context-filters";
 
 const nonEmpty = <T>(value: T[] | null | undefined): T[] | undefined =>
   value != null && value.length > 0 ? value : undefined;
@@ -17,11 +17,7 @@ export async function applySitePolygonScopeFilters(
 ): Promise<void> {
   const { siteId, projectId, deletedOnly } = query;
   const hasSiteOrProject = siteId != null || projectId != null;
-  const hasProjectContext =
-    !isEmpty(query.frameworkKey) ||
-    !isEmpty(query.country) ||
-    !isEmpty(query.organisationUuid) ||
-    query.plantingStatus != null;
+  const hasProjectContext = hasProjectContextFilters(query);
 
   if (requireSiteOrProject && !hasSiteOrProject) {
     throw new BadRequestException("At least one of siteId[] or projectId[] must be provided.");

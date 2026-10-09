@@ -56,6 +56,7 @@ export * from "./site-polygon.factory";
 export * from "./site-polygon-attribute-value.factory";
 export * from "./site-report.factory";
 export * from "./stage.factory";
+export * from "./stakeholders.factory";
 export * from "./stratas.factory";
 export * from "./tree-species.factory";
 export * from "./tree-species-research.factory";

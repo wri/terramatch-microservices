@@ -50,6 +50,7 @@ import { addUserRolesColumn } from "./202610051200-add-user-roles-column";
 import { addPitchProjectEthiopiaFields } from "./202610051200-add-pitch-project-ethiopia-fields";
 import { removeUserProgramColumn } from "./202610071200-remove-user-program-column";
 import { addInviteNameColumns } from "./202610081200-add-invite-name-columns";
+import { removeProjectUsersIsMonitoringColumn } from "./202610081200-remove-project-users-is-monitoring-column";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -101,5 +102,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addUserRolesColumn,
   addPitchProjectEthiopiaFields,
   removeUserProgramColumn,
-  addInviteNameColumns
+  addInviteNameColumns,
+  removeProjectUsersIsMonitoringColumn
 ];

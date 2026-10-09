@@ -520,6 +520,42 @@ describe("UserAssociationService", () => {
       );
       expect(destroySpy).not.toHaveBeenCalled();
     });
+
+    it("should throw BadRequestException when removing the last user from a project", async () => {
+      const project = await ProjectFactory.create();
+      const user = await UserFactory.create();
+      await ProjectUserFactory.create({ projectId: project.id, userId: user.id });
+
+      await expect(service.deleteBulkUserAssociations(project.id, [user.uuid as string])).rejects.toThrow(
+        BadRequestException
+      );
+      expect(await ProjectUser.count({ where: { projectId: project.id } })).toBe(1);
+    });
+
+    it("should throw BadRequestException when the request removes every user from a project", async () => {
+      const project = await ProjectFactory.create();
+      const user1 = await UserFactory.create();
+      const user2 = await UserFactory.create();
+      await ProjectUserFactory.create({ projectId: project.id, userId: user1.id });
+      await ProjectUserFactory.create({ projectId: project.id, userId: user2.id });
+
+      await expect(
+        service.deleteBulkUserAssociations(project.id, [user1.uuid as string, user2.uuid as string])
+      ).rejects.toThrow(BadRequestException);
+      expect(await ProjectUser.count({ where: { projectId: project.id } })).toBe(2);
+    });
+
+    it("should allow removing users when at least one user remains on the project", async () => {
+      const project = await ProjectFactory.create();
+      const user1 = await UserFactory.create();
+      const user2 = await UserFactory.create();
+      await ProjectUserFactory.create({ projectId: project.id, userId: user1.id });
+      await ProjectUserFactory.create({ projectId: project.id, userId: user2.id });
+
+      await service.deleteBulkUserAssociations(project.id, [user1.uuid as string]);
+
+      expect(await ProjectUser.count({ where: { projectId: project.id } })).toBe(1);
+    });
   });
 
   describe("handleExistingUser", () => {
@@ -794,6 +830,42 @@ describe("UserAssociationService", () => {
         NotFoundException
       );
       expect(destroySpy).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException when removing the last user from an organisation", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id });
+
+      await expect(service.deleteBulkOrgUserAssociations(org.id, [user.uuid as string])).rejects.toThrow(
+        BadRequestException
+      );
+      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(1);
+    });
+
+    it("should throw BadRequestException when the request removes every user from an organisation", async () => {
+      const org = await OrganisationFactory.create();
+      const user1 = await UserFactory.create();
+      const user2 = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id });
+
+      await expect(
+        service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string, user2.uuid as string])
+      ).rejects.toThrow(BadRequestException);
+      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(2);
+    });
+
+    it("should allow removing users when at least one user remains in the organisation", async () => {
+      const org = await OrganisationFactory.create();
+      const user1 = await UserFactory.create();
+      const user2 = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id });
+
+      await service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string]);
+
+      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(1);
     });
   });
 

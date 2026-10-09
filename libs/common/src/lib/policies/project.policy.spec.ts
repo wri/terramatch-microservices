@@ -57,7 +57,7 @@ describe("ProjectPolicy", () => {
     const p3 = await ProjectFactory.create({ status: "draft" });
     const p4 = await ProjectFactory.create({ status: "pending-approval" });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
-    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isManaging: true });
     await expectAuthority(service, {
       can: [
         [["read", "update", "delete", "deleteFiles"], p1],
@@ -79,7 +79,7 @@ describe("ProjectPolicy", () => {
     mockContextForUser(user, "projects-manage");
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();
-    await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isManaging: true });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "deleteFiles"], p1]],
       cannot: [[["read", "delete", "update", "approve", "deleteFiles"], p2]]

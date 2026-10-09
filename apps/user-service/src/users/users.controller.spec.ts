@@ -132,7 +132,6 @@ describe("UsersController", () => {
       await ProjectUserFactory.create({
         userId: user.id,
         projectId: project.id,
-        isMonitoring: true,
         isManaging: false
       });
       mockUserContext({ userId: user.id + 1 });

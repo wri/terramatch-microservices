@@ -3,7 +3,6 @@ import {
   Application,
   AuditStatus,
   Form,
-  FormSubmission,
   Media,
   Nursery,
   NurseryReport,
@@ -964,23 +963,10 @@ export class ProjectProcessor extends EntityProcessor<
     }
 
     if (application != null) {
-      const submission = await FormSubmission.application(application.id).findOne({
-        order: [["id", "DESC"]],
-        attributes: ["id"],
-        include: [{ association: "user", attributes: ["id"] }]
-      });
       const userIds = (await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] })).map(
         ({ id }) => id
       );
-      await ProjectUser.bulkCreate(
-        userIds.map(userId => ({
-          projectId: project.id,
-          userId,
-          // All org users other than the one that submitted the application are monitoring partners. The
-          // submitter is the project "owner"
-          isMonitoring: userId !== submission?.user?.id
-        }))
-      );
+      await ProjectUser.bulkCreate(userIds.map(userId => ({ projectId: project.id, userId })));
     } else {
       const userId = this.entitiesService.userId;
       if (userId == null) throw new BadRequestException("Authenticated user is required");

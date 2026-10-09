@@ -304,7 +304,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
         where: { projectId: project.id },
-        attributes: ["id", "userId", "isMonitoring", "isManaging"]
+        attributes: ["id", "userId", "isManaging"]
       });
       expect(result).toEqual([projectUser1, projectUser2]);
     });
@@ -318,11 +318,11 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
         where: { projectId: project.id, isManaging: true },
-        attributes: ["id", "userId", "isMonitoring", "isManaging"]
+        attributes: ["id", "userId", "isManaging"]
       });
     });
 
-    it("should filter by isMonitoring when isManager is false", async () => {
+    it("should filter by non-managing users when isManager is false", async () => {
       const project = await ProjectFactory.create();
 
       jest.spyOn(ProjectUser, "findAll").mockResolvedValue([]);
@@ -330,8 +330,8 @@ describe("UserAssociationService", () => {
       await service.query(project, { isManager: false });
 
       expect(ProjectUser.findAll).toHaveBeenCalledWith({
-        where: { projectId: project.id, isMonitoring: true },
-        attributes: ["id", "userId", "isMonitoring", "isManaging"]
+        where: { projectId: project.id, isManaging: false },
+        attributes: ["id", "userId", "isManaging"]
       });
     });
   });
@@ -350,8 +350,7 @@ describe("UserAssociationService", () => {
       });
       const projectUser2 = await ProjectUserFactory.create({
         projectId: project.id,
-        userId: user2.id,
-        isMonitoring: true
+        userId: user2.id
       });
 
       jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
@@ -582,8 +581,7 @@ describe("UserAssociationService", () => {
 
       expect(ProjectUser.create).toHaveBeenCalledWith({
         projectId: project.id,
-        userId: user.id,
-        isMonitoring: true
+        userId: user.id
       });
       expect(ProjectInvite.create).toHaveBeenCalledWith(
         expect.objectContaining({ emailAddress: user.emailAddress, firstName: "Jane", lastName: "Doe" })
@@ -1221,16 +1219,13 @@ describe("UserAssociationService", () => {
       jest.spyOn(ProjectInvite, "findOne").mockResolvedValue(invite);
       jest
         .spyOn(ProjectUser, "findOrCreate")
-        .mockResolvedValue([
-          { id: 1, projectId: project.id, userId: user.id, isMonitoring: true } as ProjectUser,
-          true
-        ]);
+        .mockResolvedValue([{ id: 1, projectId: project.id, userId: user.id } as ProjectUser, true]);
 
       const result = await service.acceptProjectInvite("token", user.id);
 
       expect(ProjectUser.findOrCreate).toHaveBeenCalledWith({
         where: { projectId: project.id, userId: user.id },
-        defaults: { projectId: project.id, userId: user.id, isMonitoring: true }
+        defaults: { projectId: project.id, userId: user.id }
       });
       expect(invite.acceptedAt).toBeInstanceOf(Date);
       expect(invite.save).toHaveBeenCalled();
@@ -1244,7 +1239,6 @@ describe("UserAssociationService", () => {
         id: 1,
         projectId: project.id,
         userId: user.id,
-        isMonitoring: false,
         save: jest.fn().mockResolvedValue({})
       } as unknown as ProjectUser;
       const invite = {
@@ -1262,8 +1256,6 @@ describe("UserAssociationService", () => {
 
       await service.acceptProjectInvite("token", user.id);
 
-      expect(projectUser.isMonitoring).toBe(true);
-      expect(projectUser.save).toHaveBeenCalled();
       expect(invite.acceptedAt).toBeInstanceOf(Date);
       expect(invite.save).toHaveBeenCalled();
     });

@@ -165,7 +165,7 @@ describe("FinancialReportProcessor", () => {
       const otherOrganisation = await OrganisationFactory.create();
       jest.spyOn(User, "findOne").mockResolvedValue({
         organisationId: otherOrganisation.id,
-        projects: [{ organisationId: organisation1.id, ProjectUser: { isMonitoring: true } }]
+        projects: [{ organisationId: organisation1.id, ProjectUser: { isManaging: false } }]
       } as User);
 
       await expectFinancialReports(reports1, {});

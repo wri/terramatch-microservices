@@ -121,7 +121,6 @@ describe("ProjectProcessor", () => {
         await ProjectUserFactory.create({
           userId: policyService().userId,
           projectId: id,
-          isMonitoring: false,
           isManaging: true
         });
       }

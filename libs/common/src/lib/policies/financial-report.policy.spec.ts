@@ -116,7 +116,6 @@ describe("FinancialReportPolicy", () => {
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: false,
       isManaging: true
     });
     mockContextForUser(user, "projects-manage");
@@ -140,7 +139,6 @@ describe("FinancialReportPolicy", () => {
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: true,
       isManaging: false
     });
     mockContextForUser(user, "manage-own");
@@ -163,7 +161,6 @@ describe("FinancialReportPolicy", () => {
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: false,
       isManaging: true
     });
     mockContextForUser(user);

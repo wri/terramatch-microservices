@@ -107,7 +107,7 @@ describe("TasksService", () => {
       const tasks: Task[] = [];
       const baseDate = DateTime.utc().plus({ years: 1 });
       for (const { id } of await ProjectFactory.createMany(3)) {
-        await ProjectUserFactory.create({ userId, projectId: id, isMonitoring: false, isManaging: true });
+        await ProjectUserFactory.create({ userId, projectId: id, isManaging: true });
         const dueAt = baseDate.minus({ months: tasks.length }).toJSDate();
         tasks.push((await TaskFactory.create({ projectId: id, dueAt }))!);
       }

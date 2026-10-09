@@ -10,15 +10,9 @@ export class ProjectMapIndexService {
   async getMapIndex(query: ProjectMapIndexQueryDto) {
     const projects = await Project.findAll({
       attributes: ["uuid", "name", "lat", "long"],
-      where: {
-        id: { [Op.in]: projectContextIdsSubquery(query, true) },
-        lat: { [Op.ne]: null },
-        long: { [Op.ne]: null }
-      }
+      where: { id: { [Op.in]: projectContextIdsSubquery(query, true) } }
     });
 
-    return new ProjectMapIndexDto(
-      projects.map(({ uuid, name, lat, long }) => ({ uuid, name, lat: lat as number, long: long as number }))
-    );
+    return new ProjectMapIndexDto(projects.map(({ uuid, name, lat, long }) => ({ uuid, name, lat, long })));
   }
 }

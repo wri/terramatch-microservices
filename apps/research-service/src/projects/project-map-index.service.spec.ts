@@ -30,18 +30,18 @@ describe("ProjectMapIndexService", () => {
     expect(result.total).toBe(result.projects.length);
   });
 
-  it("excludes projects without a centroid and test projects", async () => {
-    const withCentroid = await ProjectFactory.create({ lat: 1, long: 1 });
-    const noLat = await ProjectFactory.create({ lat: null, long: 1 });
-    const noLong = await ProjectFactory.create({ lat: 1, long: null });
+  it("includes projects without a centroid with a null lat / long", async () => {
+    const project = await ProjectFactory.create({ lat: null, long: null });
+
+    const result = await service.getMapIndex({});
+
+    expect(result.projects).toContainEqual({ uuid: project.uuid, name: project.name, lat: null, long: null });
+  });
+
+  it("excludes test projects", async () => {
     const testProject = await ProjectFactory.create({ lat: 1, long: 1, isTest: true });
 
-    const uuids = await getUuids();
-
-    expect(uuids).toContain(withCentroid.uuid);
-    expect(uuids).not.toContain(noLat.uuid);
-    expect(uuids).not.toContain(noLong.uuid);
-    expect(uuids).not.toContain(testProject.uuid);
+    expect(await getUuids()).not.toContain(testProject.uuid);
   });
 
   it("filters by frameworkKey[], country[] and organisationUuid[]", async () => {

@@ -8,11 +8,21 @@ export class ProjectMapEntryDto {
   @ApiProperty({ nullable: true, type: String, description: "Project name." })
   name: string | null;
 
-  @ApiProperty({ description: "Latitude of the project centroid (average of its polygon centroids)." })
-  lat: number;
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description:
+      "Latitude of the project centroid (average of its polygon centroids). Null when the project has no polygons."
+  })
+  lat: number | null;
 
-  @ApiProperty({ description: "Longitude of the project centroid (average of its polygon centroids)." })
-  long: number;
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description:
+      "Longitude of the project centroid (average of its polygon centroids). Null when the project has no polygons."
+  })
+  long: number | null;
 }
 
 @JsonApiDto({ type: "projectMapIndexes" })
@@ -25,7 +35,7 @@ export class ProjectMapIndexDto {
   @ApiProperty({
     type: () => ProjectMapEntryDto,
     isArray: true,
-    description: "Every project with a centroid that matches the requested filters."
+    description: "Every project that matches the requested filters, including projects without a centroid."
   })
   projects: ProjectMapEntryDto[];
 

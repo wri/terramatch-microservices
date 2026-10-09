@@ -11,10 +11,6 @@ export const hasProjectContextFilters = ({
 }: SitePolygonProjectFiltersDto) =>
   !isEmpty(frameworkKey) || !isEmpty(country) || !isEmpty(organisationUuid) || plantingStatus != null;
 
-/**
- * Subquery for the ids of the projects that match the project context filters. Shared by the site
- * polygon endpoints and the project map index so both scope projects the same way.
- */
 export const projectContextIdsSubquery = (
   { frameworkKey, country, organisationUuid, plantingStatus }: SitePolygonProjectFiltersDto,
   excludeTestProjects: boolean

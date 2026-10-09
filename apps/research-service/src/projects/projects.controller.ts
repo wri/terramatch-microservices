@@ -24,7 +24,7 @@ export class ProjectsController {
     each row carries only the fields needed to place a project marker.
 
     frameworkKey[], country[], organisationUuid[] and plantingStatus are optional and combine. Test projects
-    and projects without a centroid are excluded.`
+    are excluded. Projects without polygons are included with a null lat / long, so they can still be selected.`
   })
   @JsonApiResponse(ProjectMapIndexDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })

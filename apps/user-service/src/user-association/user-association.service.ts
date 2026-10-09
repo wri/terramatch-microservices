@@ -562,10 +562,6 @@ export class UserAssociationService {
     if (!user.permissions.includes("manage-own") || user.roles.some(role => role.startsWith("admin-"))) {
       throw new BadRequestException("Only project developers can be invited to a project");
     }
-    // Members of the owning organisation already have access to the project.
-    if (project.organisationId != null && user.organisationId === project.organisationId) {
-      throw new BadRequestException("User is already associated with this project");
-    }
     const projectUserCount = await ProjectUser.count({ where: { projectId: project.id, userId: user.id } });
     if (projectUserCount > 0) throw new BadRequestException("User is already associated with this project");
 

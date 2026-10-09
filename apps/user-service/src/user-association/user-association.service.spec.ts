@@ -601,18 +601,20 @@ describe("UserAssociationService", () => {
       expect(createSpy).not.toHaveBeenCalled();
     });
 
-    it("should throw BadRequestException when the user belongs to the project's organisation", async () => {
+    it("should add a member of the project's organisation to the project team", async () => {
       const project = await ProjectFactory.create();
       const user = await UserFactory.create({
         roles: ["project-developer"],
         organisationId: project.organisationId
       });
-      const createSpy = jest.spyOn(ProjectInvite, "create");
+      emailQueue.add.mockResolvedValue({} as Job);
 
-      await expect(
-        service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false })
-      ).rejects.toThrow(new BadRequestException("User is already associated with this project"));
-      expect(createSpy).not.toHaveBeenCalled();
+      await service["handleExistingUser"](project, user, { emailAddress: user.emailAddress, isManager: false });
+
+      expect(await ProjectUser.count({ where: { projectId: project.id, userId: user.id } })).toBe(1);
+      const invite = await ProjectInvite.findOne({ where: { projectId: project.id, emailAddress: user.emailAddress } });
+      expect(invite?.acceptedAt).not.toBeNull();
+      expect(emailQueue.add).toHaveBeenCalled();
     });
 
     it("should throw BadRequestException when the user is not a project developer", async () => {

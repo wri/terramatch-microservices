@@ -257,6 +257,11 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
+    const projectUserCount = await ProjectUser.count({ where: { projectId } });
+    const removedProjectUserCount = await ProjectUser.count({ where: { projectId, userId: { [Op.in]: userIds } } });
+    if (removedProjectUserCount > 0 && projectUserCount - removedProjectUserCount === 0) {
+      throw new BadRequestException("Cannot remove the last user from a project");
+    }
     await ProjectUser.destroy({ where: { projectId, userId: { [Op.in]: userIds } } });
     await ProjectInvite.destroy({
       where: { projectId, emailAddress: { [Op.in]: users.map(user => user.emailAddress) } }
@@ -371,6 +376,13 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
+    const organisationUserCount = await OrganisationUser.count({ where: { organisationId } });
+    const removedOrganisationUserCount = await OrganisationUser.count({
+      where: { organisationId, userId: { [Op.in]: userIds } }
+    });
+    if (removedOrganisationUserCount > 0 && organisationUserCount - removedOrganisationUserCount === 0) {
+      throw new BadRequestException("Cannot remove the last user from an organisation");
+    }
     await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
 
     // Approved and invited members stay visible through users.organisation_id, not only organisation_user.

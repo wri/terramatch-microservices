@@ -391,6 +391,15 @@ describe("SiteReportProcessor", () => {
       expect(model?.siteId).toBe(site.id);
       await policyService().authorize("read", model!);
     });
+
+    it("loads the columns needed for form data that are not on the DTO", async () => {
+      const answers = { "conditional-question-uuid": true };
+      const siteReport = await SiteReportFactory.create({ answers, createdBy: 123 });
+
+      const model = await processor.findOne(siteReport.uuid);
+      expect(model?.answers).toEqual(answers);
+      expect(model?.createdBy).toBe(123);
+    });
   });
 
   describe("getFullDto / getLightDto", () => {

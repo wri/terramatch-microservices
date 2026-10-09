@@ -120,21 +120,16 @@ export class SiteReportProcessor extends ReportProcessor<
   readonly FULL_DTO = SiteReportFullDto;
 
   async findOne(uuid: string) {
-    const entityAttributes = Object.keys(SiteReport.getAttributes());
     const computedAttributes = [
       SiteReport.TOTAL_TREES_REGENERATING_SPECIES_COUNT_ATTRIBUTE,
       SiteReport.TOTAL_SEEDS_PLANTED_COUNT_ATTRIBUTE,
       SiteReport.TOTAL_TREES_PLANTED_COUNT_ATTRIBUTE
     ];
+    // findOne also backs the form data endpoints, which need columns that are not on the DTO
+    // (answers, createdBy), so all columns are loaded here.
     return await SiteReport.findOne({
       where: { uuid },
-      attributes: [
-        "id",
-        "siteId",
-        "taskId",
-        ...apiAttributes(SiteReportFullDto).filter(attr => entityAttributes.includes(attr)),
-        ...computedAttributes.map(({ attribute }) => attribute)
-      ],
+      attributes: { include: computedAttributes.map(({ attribute }) => attribute) },
       include: [
         {
           association: "site",

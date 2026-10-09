@@ -165,13 +165,13 @@ export class UserAssociationService {
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
       where: { projectId: project.id },
-      attributes: ["id", "userId", "isMonitoring", "isManaging"]
+      attributes: ["id", "userId", "isManaging"]
     };
     if (query.isManager != null) {
       if (query.isManager) {
         (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = true;
       } else {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isMonitoring = true;
+        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = false;
       }
     }
     return ProjectUser.findAll(findOptions);
@@ -569,7 +569,7 @@ export class UserAssociationService {
     const projectUserCount = await ProjectUser.count({ where: { projectId: project.id, userId: user.id } });
     if (projectUserCount > 0) throw new BadRequestException("User is already associated with this project");
 
-    await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true });
+    await ProjectUser.create({ projectId: project.id, userId: user.id });
 
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
@@ -628,19 +628,10 @@ export class UserAssociationService {
       throw new NotFoundException("Project associated with invite not found");
     }
 
-    const [projectUser, created] = await ProjectUser.findOrCreate({
+    await ProjectUser.findOrCreate({
       where: { projectId: project.id, userId: user.id },
-      defaults: {
-        projectId: project.id,
-        userId: user.id,
-        isMonitoring: true
-      }
+      defaults: { projectId: project.id, userId: user.id }
     });
-
-    if (!created) {
-      projectUser.isMonitoring = true;
-      await projectUser.save();
-    }
 
     invite.acceptedAt = new Date();
     await invite.save();

@@ -4,7 +4,7 @@ import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database
 
 export const monitoredOrganisationIds = (user: User | null | undefined) =>
   (user?.projects ?? []).flatMap(project =>
-    project.ProjectUser?.isMonitoring === true && project.organisationId != null ? [project.organisationId] : []
+    project.ProjectUser?.isManaging === false && project.organisationId != null ? [project.organisationId] : []
   );
 
 export class FinancialReportPolicy extends UserPermissionsPolicy {
@@ -62,7 +62,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
         {
           association: "projects",
           attributes: ["organisationId"],
-          through: { attributes: ["isMonitoring"] }
+          through: { attributes: ["isManaging"] }
         }
       ]
     }));

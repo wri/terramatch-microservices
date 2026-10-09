@@ -59,7 +59,7 @@ describe("SitePolicy", () => {
 
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
-    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isManaging: true });
 
     const s1 = await SiteFactory.create({ projectId: p1.id });
     const s2 = await SiteFactory.create({ projectId: p2.id });
@@ -81,7 +81,7 @@ describe("SitePolicy", () => {
   it("allows managing managed sites", async () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();
-    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     mockContextForUser(user, "projects-manage");
     const s1 = await SiteFactory.create({ projectId: project.id });
     const s2 = await SiteFactory.create();
@@ -94,7 +94,7 @@ describe("SitePolicy", () => {
   it("allows uploading files to sites", async () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();
-    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     const site = await SiteFactory.create({ projectId: project.id });
     mockContextForUser(user, "media-manage");
     await expectCan(service, "uploadFiles", site);

@@ -33,7 +33,7 @@ export class UsersService {
     }
 
     const links = await ProjectUser.findAll({
-      where: { userId: { [Op.in]: userIds }, isMonitoring: true },
+      where: { userId: { [Op.in]: userIds }, isManaging: false },
       attributes: ["userId", "projectId"]
     });
     if (links.length === 0) {

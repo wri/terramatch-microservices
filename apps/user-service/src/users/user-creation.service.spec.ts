@@ -370,7 +370,6 @@ describe("UserCreationService", () => {
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as ProjectInvite;
       const projectUser = {
-        isMonitoring: false,
         save: jest.fn().mockResolvedValue(undefined)
       } as unknown as ProjectUser;
 
@@ -382,8 +381,10 @@ describe("UserCreationService", () => {
 
       await service.createNewUser(false, request);
 
-      expect(projectUser.isMonitoring).toBe(true);
-      expect(projectUser.save).toHaveBeenCalled();
+      expect(ProjectUser.findOrCreate).toHaveBeenCalledWith({
+        where: { projectId: project.id, userId: user.id },
+        defaults: { projectId: project.id, userId: user.id }
+      });
     });
   });
 

@@ -52,10 +52,5 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
   // Note: this is marked as nullable in the current schema, but has a default value. The
   // nullability should be removed when v3 is responsible for the DB schema.
   @Column({ type: BOOLEAN, defaultValue: false })
-  declare isMonitoring: CreationOptional<boolean>;
-
-  // Note: this is marked as nullable in the current schema, but has a default value. The
-  // nullability should be removed when v3 is responsible for the DB schema.
-  @Column({ type: BOOLEAN, defaultValue: false })
   declare isManaging: CreationOptional<boolean>;
 }

@@ -171,19 +171,10 @@ export class UserCreationService {
       }
 
       for (const projectId of projectIdsToAssociate) {
-        const [projectUser, created] = await ProjectUser.findOrCreate({
+        await ProjectUser.findOrCreate({
           where: { projectId, userId: user.id },
-          defaults: {
-            projectId,
-            userId: user.id,
-            isMonitoring: true
-          }
+          defaults: { projectId, userId: user.id }
         });
-
-        if (!created) {
-          projectUser.isMonitoring = true;
-          await projectUser.save();
-        }
       }
     }
 

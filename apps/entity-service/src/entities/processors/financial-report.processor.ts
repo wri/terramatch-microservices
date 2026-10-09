@@ -95,7 +95,7 @@ export class FinancialReportProcessor extends ReportProcessor<
           {
             association: "projects",
             attributes: ["organisationId"],
-            through: { attributes: ["isMonitoring"] }
+            through: { attributes: ["isManaging"] }
           }
         ]
       });

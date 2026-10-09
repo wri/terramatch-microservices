@@ -59,7 +59,7 @@ describe("NurseryPolicy", () => {
 
     await ProjectUserFactory.create({ userId: user.id, projectId: p1.id });
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
-    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isManaging: true });
 
     const s1 = await NurseryFactory.create({ projectId: p1.id });
     const s2 = await NurseryFactory.create({ projectId: p2.id });
@@ -82,7 +82,7 @@ describe("NurseryPolicy", () => {
   it("allows managing managed nurseries", async () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();
-    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
     mockContextForUser(user, "projects-manage");
     const s1 = await NurseryFactory.create({ projectId: project.id });
     const s2 = await NurseryFactory.create();

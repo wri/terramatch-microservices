@@ -393,7 +393,34 @@ describe("UsersService", () => {
       await service.update(user, { organisationUuid: "org-uuid" });
 
       expect(user.organisationId).toBe(7);
+      expect(user.organisation).toEqual({ id: 7 });
       expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should clear the organisation when organisationUuid is null", async () => {
+      const user = createUserMock();
+      user.organisationId = 7;
+      user.organisation = { id: 7 } as Organisation;
+      const findOneSpy = jest.spyOn(Organisation, "findOne");
+
+      await service.update(user, { organisationUuid: null });
+
+      expect(findOneSpy).not.toHaveBeenCalled();
+      expect(user.organisationId).toBeNull();
+      expect(user.organisation).toBeNull();
+      expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should leave the organisation untouched when organisationUuid is absent", async () => {
+      const user = createUserMock();
+      const organisation = { id: 7 } as Organisation;
+      user.organisationId = 7;
+      user.organisation = organisation;
+
+      await service.update(user, { firstName: "New" });
+
+      expect(user.organisationId).toBe(7);
+      expect(user.organisation).toBe(organisation);
     });
 
     it("should replace direct frameworks when directFrameworks is provided", async () => {

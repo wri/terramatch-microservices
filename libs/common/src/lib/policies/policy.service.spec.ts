@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PolicyService } from "./policy.service";
 import { UnauthorizedException } from "@nestjs/common";
-import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
+import { Seeding, User } from "@terramatch-microservices/database/entities";
 import { isArray } from "lodash";
 import { mockUserContext } from "../util/testing";
 
@@ -53,6 +53,6 @@ describe("PolicyService", () => {
 
   it("should throw an error if there is no policy defined", async () => {
     mockUserContext({ userId: 123 });
-    await expect(service.authorize("foo", new ModelHasRole())).rejects.toThrow(UnauthorizedException);
+    await expect(service.authorize("foo", new Seeding())).rejects.toThrow(UnauthorizedException);
   });
 });

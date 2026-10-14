@@ -191,7 +191,8 @@ export function fieldCollector(logger: LoggerService): FieldResourceCollector {
           return;
         }
 
-        Object.assign(model, { [property]: answer });
+        // A cleared date input arrives as an empty string, which is not a valid DATE column value.
+        Object.assign(model, { [property]: field.inputType === "date" && answer === "" ? null : answer });
         return;
       }
 

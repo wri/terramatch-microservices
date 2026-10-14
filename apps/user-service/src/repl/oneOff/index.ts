@@ -8,5 +8,4 @@
 // * Export script in this index file - it will be added to the `oneOff` context member in the REPL,
 //   which means it will be runnable in the REPL at > await oneOff.fooScript()
 
-export { backfillUserRoles } from "./2026-10-05-backfillUserRoles";
 export { renameRequestedOrganisationUsers } from "./2026-10-07-renameRequestedOrganisationUsers";

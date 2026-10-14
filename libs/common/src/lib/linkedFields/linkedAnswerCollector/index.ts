@@ -18,6 +18,7 @@ import { disturbancesCollector } from "./disturbances.collector";
 import { invasivesCollector } from "./invasives.collector";
 import { seedingsCollector } from "./seedings.collector";
 import { stratasCollector } from "./stratas.collector";
+import { stakeholdersCollector } from "./stakeholders.collector";
 import { ownershipStakeCollector } from "./ownership-stake.collector";
 import { leadershipsCollector } from "./leaderships.collector";
 import { fundingTypesCollector } from "./funding-types.collector";
@@ -105,6 +106,9 @@ export class LinkedAnswerCollector {
   }
   get stratas() {
     return this.getCollector("stratas", () => stratasCollector(new TMLogger("Stratas Collector")));
+  }
+  get stakeholders() {
+    return this.getCollector("stakeholders", () => stakeholdersCollector(new TMLogger("Stakeholders Collector")));
   }
   get ownershipStake() {
     return this.getCollector("ownershipStake", () =>

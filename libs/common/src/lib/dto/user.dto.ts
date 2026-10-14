@@ -68,6 +68,9 @@ export class UserDto {
   @ApiProperty()
   primaryRole: string;
 
+  @ApiProperty({ isArray: true, type: String })
+  roles: string[];
+
   @ApiProperty({ example: "person@foocorp.net" })
   emailAddress: string;
 
@@ -94,9 +97,6 @@ export class UserDto {
 
   @ApiProperty({ nullable: true, type: String })
   country: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  program: string | null;
 
   @ApiProperty({ nullable: true, type: String })
   locale: string | null;

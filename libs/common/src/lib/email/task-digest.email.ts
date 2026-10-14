@@ -82,10 +82,9 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
 
     const projectUsers = await ProjectUser.findAll({
       where: {
-        projectId: task.projectId,
-        [Op.or]: [{ isManaging: true }, { isMonitoring: true }]
+        projectId: task.projectId
       },
-      attributes: ["userId", "isManaging", "isMonitoring"]
+      attributes: ["userId", "isManaging"]
     });
 
     if (projectUsers.length === 0) {
@@ -106,7 +105,6 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
     }
 
     const managingIds = new Set(projectUsers.filter(pu => pu.isManaging).map(pu => pu.userId));
-    const monitoringIds = new Set(projectUsers.filter(pu => pu.isMonitoring).map(pu => pu.userId));
 
     const baseUrl = emailService.frontEndUrl;
     const managerTaskLink = `${baseUrl}/admin#/task/${task.uuid}/show`;
@@ -119,7 +117,7 @@ export class TaskDigestEmail extends EmailSender<TaskDigestEmailData> {
     };
 
     const managers = recipients.filter(u => managingIds.has(u.id));
-    const monitorsOnly = recipients.filter(u => monitoringIds.has(u.id) && !managingIds.has(u.id));
+    const monitorsOnly = recipients.filter(u => !managingIds.has(u.id));
 
     await Promise.all([
       ...Object.entries(groupBy(managers, "locale")).map(([locale, localeUsers]) =>

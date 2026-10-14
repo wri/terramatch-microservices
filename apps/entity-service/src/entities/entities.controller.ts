@@ -22,7 +22,7 @@ import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
-import { EntityIndexParamsDto } from "./dto/entity-index-params.dto";
+import { EntityIndexParamsDto, ReportsMetaParamsDto } from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
@@ -65,6 +65,9 @@ import { EntityTranslationsService } from "./entity-translations.service";
 import { TranslatableEntityParamsDto } from "./dto/translatable-entity-params.dto";
 import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-translation.dto";
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
+import { ProjectReportMetaDto, ReportMetaDto } from "./dto/project-report-meta.dto";
+import { ReportCountsQueryDto, ReportsMetaQueryDto } from "./dto/report-counts-query.dto";
+import { ReportCountsDto } from "./dto/report-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -81,7 +84,7 @@ const getAssetExportEntityName = (model: AssetExportEntity, fallbackName: string
 };
 
 @Controller("entities/v3")
-@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities)
+@ApiExtraModels(ANRDto, ProjectApplicationDto, MediaDto, EntitySideload, SupportedEntities, ReportMetaDto)
 export class EntitiesController {
   constructor(
     private readonly policyService: PolicyService,
@@ -91,6 +94,24 @@ export class EntitiesController {
     private readonly localizationService: LocalizationService,
     @InjectQueue(ENTITY_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
   ) {}
+
+  @Get("reportCounts")
+  @ApiOperation({
+    operationId: "reportCountsGet",
+    summary: "Get the total number of reports and the available reporting periods matching the given filters."
+  })
+  @JsonApiResponse(ReportCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async reportCountsGet(@Query() query: ReportCountsQueryDto) {
+    const [totalReports, reportingPeriods] = await Promise.all([
+      this.entitiesService.countReports(query),
+      this.entitiesService.reportingPeriods(query)
+    ]);
+    return buildJsonApi(ReportCountsDto).addData(
+      "reportCounts",
+      new ReportCountsDto({ totalReports, reportingPeriods })
+    );
+  }
 
   @Get(":entity")
   @ApiOperation({
@@ -113,6 +134,20 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor<T>(entity);
     const document = buildJsonApi(processor.LIGHT_DTO, { pagination: "number" });
     await processor.addIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/reportsMeta")
+  @ApiOperation({
+    operationId: "entityReportsMetaIndex",
+    summary: "Get a paginated and filtered list of report meta for each entity."
+  })
+  @JsonApiResponse({ data: ProjectReportMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entityReportsMetaIndex(@Param() { entity }: ReportsMetaParamsDto, @Query() query: ReportsMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
+    await processor.addReportsMetaIndex(document, query);
     return document;
   }
 

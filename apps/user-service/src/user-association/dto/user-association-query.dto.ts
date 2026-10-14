@@ -1,9 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsIn } from "class-validator";
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
-
-const ORGANISATION_USER_STATUSES = ["requested", "approved", "rejected"] as const;
-export type OrganisationUserStatus = (typeof ORGANISATION_USER_STATUSES)[number];
+import {
+  ORGANISATION_USER_STATUSES,
+  OrganisationUserStatus
+} from "@terramatch-microservices/database/constants/status";
 
 export class UserAssociationQueryDto {
   @ApiProperty({
@@ -15,7 +16,7 @@ export class UserAssociationQueryDto {
   isManager?: boolean;
 
   @ApiProperty({
-    description: "Filter by association status (for organisations: 'requested', 'approved', 'rejected')",
+    description: "Filter by association status (organisations only)",
     required: false,
     enum: ORGANISATION_USER_STATUSES
   })

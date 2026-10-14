@@ -6,13 +6,12 @@ import {
   Form,
   FormSubmission,
   FundingProgramme,
-  ModelHasRole,
   Organisation,
   ProjectPitch,
-  Role,
   Stage,
   User
 } from "@terramatch-microservices/database/entities";
+import { isValidRole } from "@terramatch-microservices/database/constants/permissions";
 import { DRAFT, PENDING_APPROVAL } from "@terramatch-microservices/database/constants/status";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
@@ -77,7 +76,7 @@ export class OrganisationCreationService {
       return { user: null, organisation };
     }
 
-    const { roleId, stageUuid, formUuid, fundingProgrammeName } = await this.validatePendingAssociations(attributes);
+    const { stageUuid, formUuid, fundingProgrammeName } = await this.validatePendingAssociations(attributes);
 
     // create User (we know these fields are not null due to hasAllUserFields check)
     const userData: Partial<User> = {
@@ -86,12 +85,12 @@ export class OrganisationCreationService {
       firstName: attributes.userFirstName ?? "",
       lastName: attributes.userLastName ?? "",
       locale: attributes.userLocale ?? "en-US",
+      roles: [attributes.userRole ?? ""],
       // We can set the verified stamp for this user, because they only way they can log in is by following the
       // set password link in the email sent.
       emailAddressVerifiedAt: new Date()
     };
     const user = await User.create(userData as User);
-    await ModelHasRole.create({ roleId, modelId: user.id, modelType: User.LARAVEL_TYPE });
 
     // create Project Pitch, Application and Form Submission for chosen funding programme
     const pitch = await ProjectPitch.create({
@@ -172,11 +171,10 @@ export class OrganisationCreationService {
       throw new BadRequestException("User already exists");
     }
 
-    const role = await Role.findOne({ where: { name: attributes.userRole }, attributes: ["id"] });
-    if (role == null) {
+    if (!isValidRole(attributes.userRole as string)) {
       throw new BadRequestException("User role not found");
     }
 
-    return { roleId: role.id, stageUuid: stage.uuid, formUuid: form.uuid, fundingProgrammeName: fundingProgramme.name };
+    return { stageUuid: stage.uuid, formUuid: form.uuid, fundingProgrammeName: fundingProgramme.name };
   }
 }

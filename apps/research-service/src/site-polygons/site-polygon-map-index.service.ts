@@ -36,7 +36,7 @@ const toMapIndexTargetSys = (targetSys: string | null | undefined): SitePolygonT
 export class SitePolygonMapIndexService {
   async getMapIndex(query: SitePolygonMapIndexQueryDto): Promise<SitePolygonMapIndexDto> {
     const builder = new SitePolygonMapIndexQueryBuilder();
-    await applySitePolygonScopeFilters(builder, query);
+    await applySitePolygonScopeFilters(builder, query, { requireSiteOrProject: true });
     const sitePolygons = await builder.execute();
 
     return new SitePolygonMapIndexDto(

@@ -10,17 +10,14 @@ import {
   FormFactory,
   FundingProgrammeFactory,
   OrganisationFactory,
-  RoleFactory,
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import {
   Application,
   FormSubmission,
-  ModelHasRole,
   Organisation,
   ProjectPitch,
-  Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { pick } from "lodash";
@@ -125,8 +122,6 @@ describe("OrganisationCreationService", () => {
     });
 
     it("should use the attributes to create a valid org, user and send an email", async () => {
-      let role = await Role.findOne({ where: { name: "project-developer" } });
-      if (role == null) role = await RoleFactory.create({ name: "project-developer" });
       const { fundingProgramme, stage, form } = await validFundingProgramme();
       const attributes = createAttributes(fundingProgramme.uuid);
       // fill in all the optional attributes
@@ -172,10 +167,7 @@ describe("OrganisationCreationService", () => {
         locale: attributes.userLocale
       });
       expect(createdUser.emailAddressVerifiedAt).not.toBeNull();
-      const modelRole = await ModelHasRole.findOne({
-        where: { modelType: User.LARAVEL_TYPE, modelId: createdUser.id }
-      });
-      expect(modelRole?.roleId).toBe(role.id);
+      expect(createdUser.roles).toEqual([attributes.userRole]);
 
       // pitch, application, form submission creation
       const pitch = await ProjectPitch.findOne({ where: { organisationId: organisation.uuid } });

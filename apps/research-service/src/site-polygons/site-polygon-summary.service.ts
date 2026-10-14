@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { col, fn, Op } from "sequelize";
+import { isEmpty } from "lodash";
 import { getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
@@ -41,7 +42,7 @@ type IndicatorValueRow = {
 export class SitePolygonSummaryService {
   async getSummary(query: SitePolygonSummaryQueryDto): Promise<SitePolygonSummaryDto> {
     const builder = new SitePolygonMapIndexQueryBuilder();
-    await applySitePolygonScopeFilters(builder, query);
+    await applySitePolygonScopeFilters(builder, query, { requireSiteOrProject: !isEmpty(query.indicatorSlug) });
 
     const [base, indicators] = await Promise.all([
       this.buildBaseAggregates(builder),

@@ -328,9 +328,11 @@ export class NurseryProcessor extends EntityProcessor<
     }
   }
 
-  async exportAll({ target, frameworkKey, projectUuid, fileNamePrefix }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, projectUuid, uuids, fileNamePrefix }: ExportAllOptions = {}) {
     const where: WhereOptions<Nursery> = {};
-    if (projectUuid != null) {
+    if (uuids != null && uuids.length > 0) {
+      where.uuid = { [Op.in]: uuids };
+    } else if (projectUuid != null) {
       frameworkKey ??=
         (await Project.findOne({ where: { uuid: projectUuid }, attributes: ["frameworkKey"] }))?.frameworkKey ??
         undefined;

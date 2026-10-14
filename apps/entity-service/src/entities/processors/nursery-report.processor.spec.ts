@@ -82,7 +82,6 @@ describe("NurseryReportProcessor", () => {
       await ProjectUserFactory.create({
         userId: policyService().userId,
         projectId: project.id,
-        isMonitoring: false,
         isManaging: true
       });
       await ProjectFactory.create();

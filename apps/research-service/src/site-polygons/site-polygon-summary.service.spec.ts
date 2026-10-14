@@ -10,7 +10,9 @@ import {
 import {
   DisturbanceFactory,
   DisturbanceReportFactory,
+  OrganisationFactory,
   ProjectFactory,
+  ProjectReportFactory,
   SiteFactory,
   SitePolygonFactory
 } from "@terramatch-microservices/database/factories";
@@ -47,8 +49,8 @@ describe("SitePolygonSummaryService", () => {
       await expect(getSummary({})).rejects.toThrow(BadRequestException);
     });
 
-    it("rejects a request with both siteId[] and projectId[]", async () => {
-      await expect(getSummary({ siteId: ["site-uuid"], projectId: ["project-uuid"] })).rejects.toThrow(
+    it("rejects indicator aggregates without siteId[] or projectId[]", async () => {
+      await expect(getSummary({ frameworkKey: ["ppc"], indicatorSlug: ["treeCoverLoss"] })).rejects.toThrow(
         BadRequestException
       );
     });
@@ -132,6 +134,38 @@ describe("SitePolygonSummaryService", () => {
       await SitePolygonFactory.create({ siteUuid: siteB.uuid, numTrees: 7, calcArea: 2 });
 
       const result = await getSummary({ projectId: [project.uuid] });
+
+      expect(result.sumNumTrees).toBe(10);
+      expect(result.sumCalcArea).toBe(3);
+      expect(result.totalPolygons).toBe(2);
+    });
+
+    it("aggregates across a project context scope without a project or site, hiding test projects", async () => {
+      const organisation = await OrganisationFactory.create();
+      const [project, otherCountry, testProject] = await Promise.all([
+        ProjectFactory.create({ frameworkKey: "ppc", country: "KE", organisationId: organisation.id }),
+        ProjectFactory.create({ frameworkKey: "ppc", country: "GH", organisationId: organisation.id }),
+        ProjectFactory.create({ frameworkKey: "ppc", country: "KE", organisationId: organisation.id, isTest: true })
+      ]);
+      await Promise.all(
+        [project, otherCountry, testProject].map(({ id }) =>
+          ProjectReportFactory.create({ projectId: id, status: "approved", plantingStatus: "in-progress" })
+        )
+      );
+      const [site, otherCountrySite, testSite] = await Promise.all(
+        [project, otherCountry, testProject].map(({ id }) => SiteFactory.create({ projectId: id }))
+      );
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 3, calcArea: 1 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 7, calcArea: 2 });
+      await SitePolygonFactory.create({ siteUuid: otherCountrySite.uuid, numTrees: 100, calcArea: 100 });
+      await SitePolygonFactory.create({ siteUuid: testSite.uuid, numTrees: 100, calcArea: 100 });
+
+      const result = await getSummary({
+        frameworkKey: ["ppc"],
+        country: ["KE"],
+        organisationUuid: [organisation.uuid],
+        plantingStatus: "in-progress"
+      });
 
       expect(result.sumNumTrees).toBe(10);
       expect(result.sumCalcArea).toBe(3);

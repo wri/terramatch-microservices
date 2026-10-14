@@ -83,7 +83,6 @@ describe("SiteReportProcessor", () => {
       await ProjectUserFactory.create({
         userId: policyService().userId,
         projectId: project.id,
-        isMonitoring: false,
         isManaging: true
       });
       await ProjectFactory.create();
@@ -391,6 +390,15 @@ describe("SiteReportProcessor", () => {
       const model = await processor.findOne(siteReport.uuid);
       expect(model?.siteId).toBe(site.id);
       await policyService().authorize("read", model!);
+    });
+
+    it("loads the columns needed for form data that are not on the DTO", async () => {
+      const answers = { "conditional-question-uuid": true };
+      const siteReport = await SiteReportFactory.create({ answers, createdBy: 123 });
+
+      const model = await processor.findOne(siteReport.uuid);
+      expect(model?.answers).toEqual(answers);
+      expect(model?.createdBy).toBe(123);
     });
   });
 

@@ -39,14 +39,15 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
   @Column(BIGINT.UNSIGNED)
   declare userId: number;
 
+  /**
+   * @deprecated
+   *
+   * No logic or permissions depend on this value; project invite state lives in
+   * v2_project_invites.accepted_at. The column will be dropped in a follow-up migration.
+   */
   @AllowNull
   @Column(STRING)
   declare status: string | null;
-
-  // Note: this is marked as nullable in the current schema, but has a default value. The
-  // nullability should be removed when v3 is responsible for the DB schema.
-  @Column({ type: BOOLEAN, defaultValue: false })
-  declare isMonitoring: CreationOptional<boolean>;
 
   // Note: this is marked as nullable in the current schema, but has a default value. The
   // nullability should be removed when v3 is responsible for the DB schema.

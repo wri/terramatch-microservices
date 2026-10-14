@@ -7,6 +7,7 @@ import {
   IndicatorOutputTreeCount,
   IndicatorOutputTreeCover,
   IndicatorOutputTreeCoverLoss,
+  Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
 import {
@@ -19,6 +20,9 @@ import { BadRequestException } from "@nestjs/common";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { omit, uniq } from "lodash";
+import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import { SitePolygonProjectFiltersDto } from "./dto/site-polygon-project-filters.dto";
+import { hasProjectContextFilters, projectContextIdsSubquery } from "./project-context-filters";
 
 type IndicatorModel =
   | IndicatorOutputTreeCover
@@ -59,6 +63,14 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
   }
 
   async filterSiteUuids(siteUuids: string[]) {
+    return this.where({ siteUuid: { [Op.in]: siteUuids } });
+  }
+
+  filterProjectContext(filters: SitePolygonProjectFiltersDto, excludeTestProjects: boolean) {
+    if (!hasProjectContextFilters(filters) && !excludeTestProjects) return this;
+
+    const projectIds = projectContextIdsSubquery(filters, excludeTestProjects);
+    const siteUuids = Subquery.select(Site, "uuid").in("projectId", projectIds).literal;
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 

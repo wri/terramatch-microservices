@@ -40,7 +40,8 @@ type ProjectPitchMedia =
   | "restorationPhotos"
   | "detailedProjectBudget"
   | "proofOfLandTenureMou"
-  | "consortiumPartnershipAgreements";
+  | "consortiumPartnershipAgreements"
+  | "communityEngagementDocumentation";
 
 @Scopes(() => ({
   application: (applicationId: number) => ({
@@ -63,6 +64,11 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
     proofOfLandTenureMou: { dbCollection: "proof_of_land_tenure_mou", multiple: true, validation: "general-documents" },
     consortiumPartnershipAgreements: {
       dbCollection: "consortium_partnership_agreements",
+      multiple: true,
+      validation: "general-documents"
+    },
+    communityEngagementDocumentation: {
+      dbCollection: "community_engagement_documentation",
       multiple: true,
       validation: "general-documents"
     }
@@ -533,4 +539,24 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   @AllowNull
   @Column(TEXT)
   declare consortium: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare indirectEntities: string | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare landAccessDescription: string | null;
+
+  @AllowNull
+  @Column(INTEGER.UNSIGNED)
+  declare cofinancingAmount: number | null;
+
+  @AllowNull
+  @Column(TEXT)
+  declare cofinancingDetails: string | null;
+
+  @AllowNull
+  @JsonColumn()
+  declare gliComponents: string[] | null;
 }

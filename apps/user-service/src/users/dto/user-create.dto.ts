@@ -1,6 +1,8 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional } from "class-validator";
+import { ArrayMinSize, IsArray, IsEmail, IsIn, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/util/json-api-update-dto";
+
+export const SIGN_UP_ROLES = ["project-developer", "funder", "government"] as const;
 
 export class UserCreateBaseAttributes {
   @IsNotEmpty()
@@ -26,10 +28,6 @@ export class UserCreateBaseAttributes {
   @IsOptional()
   @ApiProperty({ nullable: true })
   country?: string;
-
-  @IsOptional()
-  @ApiProperty({ nullable: true })
-  program?: string;
 }
 
 export class UserCreateBaseBody extends JsonApiBodyDto(
@@ -41,10 +39,11 @@ export class UserCreateAttributes extends UserCreateBaseAttributes {
   @ApiProperty()
   password: string;
 
-  @IsNotEmpty()
-  @IsIn(["project-developer", "funder", "government"])
-  @ApiProperty()
-  role: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsIn(SIGN_UP_ROLES, { each: true })
+  @ApiProperty({ isArray: true, enum: SIGN_UP_ROLES })
+  roles: string[];
 
   @IsNotEmpty()
   @ApiProperty()

@@ -2,7 +2,7 @@ import { Injectable, NestMiddleware } from "@nestjs/common";
 import { Request, NextFunction } from "express";
 import { JwtService } from "@nestjs/jwt";
 import { UserContext } from "../contexts/user.context";
-import { Permission, User } from "@terramatch-microservices/database/entities";
+import { User } from "@terramatch-microservices/database/entities";
 
 @Injectable()
 export class UserContextMiddleware implements NestMiddleware {
@@ -21,9 +21,8 @@ export class UserContextMiddleware implements NestMiddleware {
       return;
     }
 
-    const permissions = await Permission.getUserPermissionNames(userId);
-    const locale = await User.findLocale(userId);
-    UserContext.use(userId, permissions, locale ?? "en-US", next);
+    const user = await User.findOne({ where: { id: userId }, attributes: ["roles", "locale"] });
+    UserContext.use(userId, user?.permissions ?? [], user?.locale ?? "en-US", next);
   }
 
   private isJwtToken(token: string) {

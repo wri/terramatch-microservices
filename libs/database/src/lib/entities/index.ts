@@ -74,6 +74,7 @@ export type { SitePolygonAttributeValueData } from "./site-polygon-attribute-val
 export * from "./site-polygon-data.entity";
 export * from "./site-report.entity";
 export * from "./stage.entity";
+export { Stakeholder } from "./stakeholder.entity";
 export * from "./strata.entity";
 export * from "./task.entity";
 export * from "./tracking.entity";

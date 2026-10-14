@@ -93,10 +93,9 @@ export class WeeklyPolygonUpdateEmail extends EmailSender<WeeklyPolygonUpdateEma
 
     const projectUsers = await ProjectUser.findAll({
       where: {
-        projectId: project.id,
-        [Op.or]: [{ isManaging: true }, { isMonitoring: true }]
+        projectId: project.id
       },
-      attributes: ["userId", "isManaging", "isMonitoring"]
+      attributes: ["userId", "isManaging"]
     });
 
     if (projectUsers.length === 0) {

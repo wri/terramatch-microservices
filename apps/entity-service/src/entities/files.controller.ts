@@ -37,6 +37,9 @@ import { MediaRequestBulkBody } from "./dto/media-request-bulk.dto";
 import { MediaBulkErrorDto } from "./dto/media-bulk-error.dto";
 import { Media } from "@terramatch-microservices/database/entities/media.entity";
 import { ExportImageService } from "./export-image.service";
+import { MediaMapIndexParamsDto } from "./dto/media-map-index-params.dto";
+import { MediaMapIndexDto } from "./dto/media-map-index.dto";
+import { MediaProcessor } from "./processors/media.processor";
 import { Response } from "express";
 
 @Controller("entities/v3/files")
@@ -92,7 +95,30 @@ export class FilesController {
     const media = await this.mediaService.getMedia(uuid);
     const model = await getBaseEntityByLaravelTypeAndId(media.modelType, media.modelId);
     await this.policyService.authorize("read", model);
-    return this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid });
+    return buildJsonApi(MediaDto).addData(
+      media.uuid,
+      this.entitiesService.mediaDto(media, { entityType: media.modelType as EntityType, entityUuid: model.uuid })
+    );
+  }
+
+  @Get(":entity/:uuid/mediaMapIndex")
+  @ApiOperation({
+    operationId: "mediaMapIndex",
+    summary: "Get a sparse list of every geotagged media in scope for an entity, for map display.",
+    description: `Covers the same media as the entity's media association index (a project includes its sites,
+      nurseries and reports). Not paginated by design: map markers need the complete set in one response, and
+      each entry only carries the few attributes the map needs. Use the media association index for galleries.`
+  })
+  @JsonApiResponse(MediaMapIndexDto)
+  @ExceptionResponse(BadRequestException, { description: "Unsupported entity type or invalid uuid." })
+  @ExceptionResponse(NotFoundException, { description: "Base entity not found." })
+  @ExceptionResponse(UnauthorizedException, { description: "Current user is not authorized to read this entity." })
+  async mediaMapIndex(@Param() { entity, uuid }: MediaMapIndexParamsDto) {
+    const processor = this.entitiesService.createAssociationProcessor(entity, uuid, "media") as MediaProcessor;
+    await this.policyService.authorize("read", await processor.getBaseEntity());
+
+    const media = await processor.getMapIndex();
+    return buildJsonApi(MediaMapIndexDto).addData(`${entity}|${uuid}`, new MediaMapIndexDto(media));
   }
 
   @Post("/:entity/:uuid/media/:collection")

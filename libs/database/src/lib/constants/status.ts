@@ -145,6 +145,9 @@ export const PENDING = "pending";
 export const ORGANISATION_STATUSES = [APPROVED, PENDING_APPROVAL, REJECTED, DRAFT] as const;
 export type OrganisationStatus = (typeof ORGANISATION_STATUSES)[number];
 
+export const ORGANISATION_USER_STATUSES = [PENDING, APPROVED, REJECTED] as const;
+export type OrganisationUserStatus = (typeof ORGANISATION_USER_STATUSES)[number];
+
 export type AnyStatus = EntityStatus | ReportStatus | UpdateRequestStatus | FormSubmissionStatus | OrganisationStatus;
 
 /**

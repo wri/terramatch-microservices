@@ -59,7 +59,7 @@ describe("SiteReportPolicy", () => {
     const p3 = await ProjectFactory.create();
     const p4 = await ProjectFactory.create();
     await ProjectUserFactory.create({ userId: user.id, projectId: p3.id });
-    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p4.id, isManaging: true });
 
     const s1 = await SiteFactory.create({ projectId: p1.id });
     const s2 = await SiteFactory.create({ projectId: p2.id });
@@ -92,7 +92,7 @@ describe("SiteReportPolicy", () => {
 
     const p1 = await ProjectFactory.create();
     const p2 = await ProjectFactory.create();
-    await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isMonitoring: false, isManaging: true });
+    await ProjectUserFactory.create({ userId: user.id, projectId: p1.id, isManaging: true });
 
     const s1 = await SiteFactory.create({ projectId: p1.id });
     const s2 = await SiteFactory.create({ projectId: p2.id });

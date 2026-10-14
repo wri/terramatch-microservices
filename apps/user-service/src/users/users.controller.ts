@@ -16,6 +16,8 @@ import {
 import { User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
+import { Roles } from "./dto/roles.dto";
+import { Frameworks } from "./dto/frameworks.dto";
 import {
   OrganisationLightDto,
   UserDto,
@@ -42,6 +44,7 @@ import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
+import { ORGANISATION_USER_STATUSES } from "@terramatch-microservices/database/constants/status";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -49,7 +52,7 @@ export const USER_ORG_RELATIONSHIP = {
   meta: {
     userStatus: {
       type: "string",
-      enum: ["approved", "requested", "rejected", "na"]
+      enum: [...ORGANISATION_USER_STATUSES, "na"]
     }
   }
 };
@@ -62,7 +65,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationLightDto]
 };
 
-@ApiExtraModels(UserTaskDto)
+@ApiExtraModels(UserTaskDto, Roles, Frameworks)
 @Controller("users/v3/users")
 export class UsersController {
   constructor(
@@ -100,7 +103,7 @@ export class UsersController {
   async findOne(@Param("uuid") pathId: string) {
     const userWhere = pathId === "me" ? { id: UserContext.authenticatedUserId } : { uuid: pathId };
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["organisation", "frameworks"],
       where: userWhere
     });
     if (user == null) throw new NotFoundException();
@@ -123,7 +126,7 @@ export class UsersController {
     }
 
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["organisation", "frameworks"],
       where: { uuid }
     });
     if (user == null) throw new NotFoundException();
@@ -179,7 +182,7 @@ export class UsersController {
   @ExceptionResponse(NotFoundException, { description: "No user found" })
   async verifyUser(@Param("uuid") uuid: string) {
     const user = await User.findOne({
-      include: ["roles", "organisation", "frameworks"],
+      include: ["organisation", "frameworks"],
       where: { uuid }
     });
     if (user == null) throw new NotFoundException("No user found.");

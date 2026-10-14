@@ -389,7 +389,7 @@ export class DisturbanceReportProcessor extends ReportProcessor<
     });
   }
 
-  async exportAll({ target, uuids, fileNamePrefix }: ExportAllOptions = {}) {
+  async exportAll({ target, frameworkKey, uuids, fileNamePrefix }: ExportAllOptions = {}) {
     const reportsLabel = await this.entitiesService.localizeText("Disturbance Reports Export");
     const fileName =
       fileNamePrefix == null ? timestampFileName(reportsLabel) : `${fileNamePrefix} - ${reportsLabel}.csv`;
@@ -402,6 +402,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
       ]);
       if (uuids != null && uuids.length > 0) {
         builder.where({ uuid: { [Op.in]: uuids } });
+      }
+      if (frameworkKey != null) {
+        builder.where({ frameworkKey });
       }
 
       for await (const page of batchFindAll(builder)) {

@@ -14,6 +14,18 @@ export class OrganisationInviteRequestDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  @ApiProperty({ description: "First name of the invited user.", required: false, maxLength: 255 })
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  @ApiProperty({ description: "Last name of the invited user.", required: false, maxLength: 255 })
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
   @ApiProperty({
     description: "Optional callback URL base for the signup link in the email.",
     required: false

@@ -4,7 +4,7 @@ import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database
 
 export const monitoredOrganisationIds = (user: User | null | undefined) =>
   (user?.projects ?? []).flatMap(project =>
-    project.ProjectUser?.isMonitoring === true && project.organisationId != null ? [project.organisationId] : []
+    project.ProjectUser?.isManaging === false && project.organisationId != null ? [project.organisationId] : []
   );
 
 export class FinancialReportPolicy extends UserPermissionsPolicy {
@@ -35,10 +35,6 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       });
     }
 
-    if (this.permissions.includes("reports-manage")) {
-      this.builder.can(["read", "delete", "update", "approve", "updateAnswers", "sendReminder"], FinancialReport);
-    }
-
     const organisationIds: number[] = [];
     if (this.permissions?.includes("projects-manage")) {
       const projectsOrganisationIds = [...((user?.projects ?? []).map(({ organisationId }) => organisationId) ?? [])];
@@ -61,14 +57,13 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["id", "organisationId"],
+      attributes: ["id", "organisationId", "roles"],
       include: [
         {
           association: "projects",
           attributes: ["organisationId"],
-          through: { attributes: ["isMonitoring"] }
-        },
-        { association: "roles", attributes: ["name"] }
+          through: { attributes: ["isManaging"] }
+        }
       ]
     }));
   }

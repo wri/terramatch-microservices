@@ -78,7 +78,7 @@ describe("UserPolicy", () => {
   it("allows verify any user for verified admin without users-manage", async () => {
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+    verifiedAdminUser.roles = ["admin-terrafund"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
 
@@ -88,7 +88,7 @@ describe("UserPolicy", () => {
   it("allows reading all users for verified admin without users-manage", async () => {
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+    verifiedAdminUser.roles = ["admin-terrafund"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
 
@@ -98,7 +98,7 @@ describe("UserPolicy", () => {
   it("allows updating any user for verified admin without users-manage", async () => {
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+    verifiedAdminUser.roles = ["admin-terrafund"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
 
@@ -108,7 +108,7 @@ describe("UserPolicy", () => {
   it("disallows verify any user when admin role is unverified", async () => {
     const unverifiedAdminUser = new User();
     (unverifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = null;
-    (unverifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+    unverifiedAdminUser.roles = ["admin-terrafund"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(unverifiedAdminUser);
 
@@ -118,7 +118,7 @@ describe("UserPolicy", () => {
   it("disallows verify any user when verified user has no admin role", async () => {
     const verifiedNonAdminUser = new User();
     (verifiedNonAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedNonAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "project-manager" }];
+    verifiedNonAdminUser.roles = ["project-manager"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedNonAdminUser);
 
@@ -144,7 +144,7 @@ describe("UserPolicy", () => {
   it("allows deleting any user for verified admin without users-manage", async () => {
     const verifiedAdminUser = new User();
     (verifiedAdminUser as unknown as { emailAddressVerifiedAt: Date | null }).emailAddressVerifiedAt = new Date();
-    (verifiedAdminUser as unknown as { roles: Array<{ name: string }> }).roles = [{ name: "admin-terrafund" }];
+    verifiedAdminUser.roles = ["admin-terrafund"];
 
     jest.spyOn(User, "findOne").mockResolvedValue(verifiedAdminUser);
 

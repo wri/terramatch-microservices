@@ -6,7 +6,6 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
-  ModelHasRole,
   Notification,
   Organisation,
   OrganisationInvite,
@@ -15,7 +14,6 @@ import {
   Project,
   ProjectInvite,
   ProjectUser,
-  Role,
   User
 } from "@terramatch-microservices/database/entities";
 import { FindOptions, Op, WhereAttributeHash } from "sequelize";
@@ -24,6 +22,7 @@ import crypto from "node:crypto";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
 import { UserAssociationDto } from "./dto/user-association.dto";
 import { UserAssociationQueryDto } from "./dto/user-association-query.dto";
+import { OrganisationInviteRequestDto } from "./dto/organisation-invite-request.dto";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { ProjectInviteEmail } from "@terramatch-microservices/common/email/project-invite.email";
@@ -35,6 +34,7 @@ import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
+import { OrganisationUserStatus, PENDING, REJECTED } from "@terramatch-microservices/database/constants/status";
 
 export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
 export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
@@ -127,14 +127,13 @@ export class UserAssociationService {
         await this.requestOrgJoin(org, userId);
         const user = await User.findOne({
           where: { id: userId },
-          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole"],
-          include: [{ association: "roles", attributes: ["name"] }]
+          attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "phoneNumber", "jobRole", "roles"]
         });
         if (user == null) throw new UnauthorizedException("Authenticated user not found");
         document.addData(
           user.uuid as string,
           new UserAssociationDto(user, {
-            status: "requested",
+            status: PENDING,
             isManager: false,
             organisationName: (org as Organisation).name ?? "",
             roleName: user.primaryRole ?? null,
@@ -166,13 +165,13 @@ export class UserAssociationService {
   query(project: Project, query: UserAssociationQueryDto) {
     const findOptions: FindOptions<ProjectUser> = {
       where: { projectId: project.id },
-      attributes: ["id", "userId", "status", "isMonitoring", "isManaging"]
+      attributes: ["id", "userId", "isManaging"]
     };
     if (query.isManager != null) {
       if (query.isManager) {
         (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = true;
       } else {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isMonitoring = true;
+        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = false;
       }
     }
     return ProjectUser.findAll(findOptions);
@@ -187,8 +186,17 @@ export class UserAssociationService {
     const projectUsersData = projectUsers.map(projectUser => projectUser.dataValues);
     const users = await User.findAll({
       where: { id: { [Op.in]: projectUsersData.map(projectUser => projectUser.userId) } },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
     const organisationIds = users.map(user => user.organisationId).filter(isNotNull);
     const organisations = await Organisation.findAll({
@@ -205,7 +213,7 @@ export class UserAssociationService {
       document.addData(
         user.uuid as string,
         new UserAssociationDto(user, {
-          status: projectUser?.status as string,
+          status: null,
           isManager: projectUser?.isManaging as boolean,
           organisationName: organisation?.name as string,
           roleName: user.primaryRole as string,
@@ -223,10 +231,16 @@ export class UserAssociationService {
   }
 
   async createUserAssociation(project: Project, attributes: UserAssociationCreateAttributes) {
+    if (!attributes.isManager) {
+      const inviteCount = await ProjectInvite.count({
+        where: { projectId: project.id, emailAddress: attributes.emailAddress }
+      });
+      if (inviteCount > 0) throw new BadRequestException("User has already been invited to this project");
+    }
+
     const user = await User.findOne({
       where: { emailAddress: attributes.emailAddress },
-      attributes: ["id", "emailAddress"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: ["id", "emailAddress", "organisationId", "roles"]
     });
     if (user == null) {
       return this.handleUserNotFound(project, attributes);
@@ -243,6 +257,11 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
+    const projectUserCount = await ProjectUser.count({ where: { projectId } });
+    const removedProjectUserCount = await ProjectUser.count({ where: { projectId, userId: { [Op.in]: userIds } } });
+    if (removedProjectUserCount > 0 && projectUserCount - removedProjectUserCount === 0) {
+      throw new BadRequestException("Cannot remove the last user from a project");
+    }
     await ProjectUser.destroy({ where: { projectId, userId: { [Op.in]: userIds } } });
     await ProjectInvite.destroy({
       where: { projectId, emailAddress: { [Op.in]: users.map(user => user.emailAddress) } }
@@ -256,15 +275,16 @@ export class UserAssociationService {
       organisationId: project.organisationId,
       emailAddress: attributes.emailAddress,
       password: crypto.randomBytes(32).toString("hex"),
-      locale: "en-US"
+      locale: "en-US",
+      roles: ["project-developer"]
     } as User);
-    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
     const token = crypto.randomBytes(32).toString("hex");
     await PasswordReset.create({ userId: newUser.id, token });
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: attributes.emailAddress,
+      firstName: attributes.firstName ?? null,
+      lastName: attributes.lastName ?? null,
       token
     } as ProjectInvite);
     const organisation = await Organisation.findOne({
@@ -321,15 +341,15 @@ export class UserAssociationService {
         "organisationId",
         "phoneNumber",
         "jobRole",
-        "lastLoggedInAt"
-      ],
-      include: [{ association: "roles", attributes: ["name"] }]
+        "lastLoggedInAt",
+        "roles"
+      ]
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
-      const status = isOwner ? "approved" : (orgUser?.status ?? "");
+      const status = isOwner ? "approved" : (orgUser?.status ?? null);
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,
@@ -356,6 +376,13 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
+    const organisationUserCount = await OrganisationUser.count({ where: { organisationId } });
+    const removedOrganisationUserCount = await OrganisationUser.count({
+      where: { organisationId, userId: { [Op.in]: userIds } }
+    });
+    if (removedOrganisationUserCount > 0 && organisationUserCount - removedOrganisationUserCount === 0) {
+      throw new BadRequestException("Cannot remove the last user from an organisation");
+    }
     await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
 
     // Approved and invited members stay visible through users.organisation_id, not only organisation_user.
@@ -374,9 +401,13 @@ export class UserAssociationService {
 
   async inviteOrganisationUser(
     organisation: Organisation,
-    emailAddress: string,
-    callbackUrl?: string | null
+    { emailAddress, firstName, lastName, callbackUrl }: OrganisationInviteRequestDto
   ): Promise<OrganisationInvite> {
+    const inviteCount = await OrganisationInvite.count({ where: { organisationId: organisation.id, emailAddress } });
+    if (inviteCount > 0) {
+      throw new UnprocessableEntityException("User has already been invited to this organisation");
+    }
+
     const existingUser = await User.findOne({
       where: { emailAddress },
       attributes: ["id"]
@@ -389,18 +420,18 @@ export class UserAssociationService {
       organisationId: organisation.id,
       emailAddress,
       password: crypto.randomBytes(32).toString("hex"),
-      locale: "en-US"
+      locale: "en-US",
+      roles: ["project-developer"]
     } as User);
-
-    const pdRole = (await Role.findOne({ where: { name: "project-developer" } })) as Role;
-    await ModelHasRole.create({ modelId: newUser.id, roleId: pdRole.id, modelType: User.LARAVEL_TYPE });
 
     const token = crypto.randomBytes(32).toString("hex");
     const invite = await OrganisationInvite.create({
       organisationId: organisation.id,
       emailAddress,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
       token
-    } as OrganisationInvite);
+    });
     await PasswordReset.create({ userId: newUser.id, token });
     try {
       await new OrganisationInviteEmail({
@@ -428,10 +459,10 @@ export class UserAssociationService {
 
     const [orgUser, created] = await OrganisationUser.findOrCreate({
       where: { organisationId: organisation.id, userId },
-      defaults: { organisationId: organisation.id, userId, status: "requested" } as OrganisationUser
+      defaults: { organisationId: organisation.id, userId, status: PENDING } as OrganisationUser
     });
-    if (!created && orgUser.status !== "requested") {
-      orgUser.status = "requested";
+    if (!created && orgUser.status !== PENDING) {
+      orgUser.status = PENDING;
       await orgUser.save();
     }
 
@@ -468,8 +499,17 @@ export class UserAssociationService {
   ): Promise<User> {
     const user = await User.findOne({
       where: { uuid: userUuid },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
 
     if (user == null) {
@@ -484,8 +524,8 @@ export class UserAssociationService {
       throw new BadRequestException("User does not have a relationship with this organisation");
     }
 
-    const allowedFrom = status === "approved" ? ["requested", "rejected"] : ["requested"];
-    if (!allowedFrom.includes(orgUser.status ?? "")) {
+    const allowedFrom: OrganisationUserStatus[] = status === "approved" ? [PENDING, REJECTED] : [PENDING];
+    if (!allowedFrom.includes(orgUser.status)) {
       throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
     }
 
@@ -530,15 +570,21 @@ export class UserAssociationService {
       return;
     }
 
-    const projectUser = await ProjectUser.findOne({ where: { projectId: project.id, userId: user.id } });
-    if (projectUser == null) {
-      await ProjectUser.create({ projectId: project.id, userId: user.id, isMonitoring: true, status: "active" });
+    // Admins must not gain project developer access through an invite, even if they also hold that role.
+    if (!user.permissions.includes("manage-own") || user.roles.some(role => role.startsWith("admin-"))) {
+      throw new BadRequestException("Only project developers can be invited to a project");
     }
+    const projectUserCount = await ProjectUser.count({ where: { projectId: project.id, userId: user.id } });
+    if (projectUserCount > 0) throw new BadRequestException("User is already associated with this project");
+
+    await ProjectUser.create({ projectId: project.id, userId: user.id });
 
     const token = crypto.randomBytes(32).toString("hex");
     await ProjectInvite.create({
       projectId: project.id,
       emailAddress: user.emailAddress,
+      firstName: attributes.firstName ?? null,
+      lastName: attributes.lastName ?? null,
       acceptedAt: new Date(),
       token
     } as ProjectInvite);
@@ -555,8 +601,17 @@ export class UserAssociationService {
   ): Promise<{ user: User; project: Project; invite: ProjectInvite }> {
     const user = await User.findOne({
       where: { id: userId },
-      attributes: ["id", "uuid", "emailAddress", "firstName", "lastName", "organisationId", "phoneNumber", "jobRole"],
-      include: [{ association: "roles", attributes: ["name"] }]
+      attributes: [
+        "id",
+        "uuid",
+        "emailAddress",
+        "firstName",
+        "lastName",
+        "organisationId",
+        "phoneNumber",
+        "jobRole",
+        "roles"
+      ]
     });
 
     if (user == null) {
@@ -581,23 +636,10 @@ export class UserAssociationService {
       throw new NotFoundException("Project associated with invite not found");
     }
 
-    const [projectUser, created] = await ProjectUser.findOrCreate({
+    await ProjectUser.findOrCreate({
       where: { projectId: project.id, userId: user.id },
-      defaults: {
-        projectId: project.id,
-        userId: user.id,
-        isMonitoring: true,
-        status: "active"
-      }
+      defaults: { projectId: project.id, userId: user.id }
     });
-
-    if (!created) {
-      projectUser.isMonitoring = true;
-      if (projectUser.status == null) {
-        projectUser.status = "active";
-      }
-      await projectUser.save();
-    }
 
     invite.acceptedAt = new Date();
     await invite.save();

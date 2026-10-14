@@ -180,11 +180,10 @@ describe("UserAssociationController", () => {
 
       expect(userAssociationService.createProcessor).toHaveBeenCalledWith("organisations", organisation.uuid);
       expect(policyService.authorize).toHaveBeenCalledWith("update", organisation);
-      expect(userAssociationService.inviteOrganisationUser).toHaveBeenCalledWith(
-        organisation,
-        "invitee@example.com",
-        "https://example.com/invite"
-      );
+      expect(userAssociationService.inviteOrganisationUser).toHaveBeenCalledWith(organisation, {
+        emailAddress: "invitee@example.com",
+        callbackUrl: "https://example.com/invite"
+      });
       expect(result.data).toBeDefined();
       expect((result.data as Resource).id).toBe("invite-uuid");
     });

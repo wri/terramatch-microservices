@@ -6,12 +6,10 @@ import {
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
-  RoleFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { mockUserContext, mockContextForUser } from "../util/testing";
 import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
-import { ModelHasRole, User } from "@terramatch-microservices/database/entities";
 
 describe("FinancialReportPolicy", () => {
   let service: PolicyService;
@@ -48,18 +46,6 @@ describe("FinancialReportPolicy", () => {
     await expectAuthority(service, {
       can: [[["read", "delete"], fr1]],
       cannot: [[["read", "delete"], fr2]]
-    });
-  });
-
-  it("allows managing all financial reports with reports-manage permission", async () => {
-    mockUserContext({ userId: 123, permissions: ["reports-manage"] });
-    const fr1 = await FinancialReportFactory.org().create();
-    const fr2 = await FinancialReportFactory.org().create();
-    await expectAuthority(service, {
-      can: [
-        [["read", "delete"], fr1],
-        [["read", "delete"], fr2]
-      ]
     });
   });
 
@@ -130,7 +116,6 @@ describe("FinancialReportPolicy", () => {
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: false,
       isManaging: true
     });
     mockContextForUser(user, "projects-manage");
@@ -149,18 +134,11 @@ describe("FinancialReportPolicy", () => {
     const ownOrg = await OrganisationFactory.create();
     const projectOrg = await OrganisationFactory.create();
     const otherOrg = await OrganisationFactory.create();
-    const user = await UserFactory.create({ organisationId: ownOrg.id });
-    const projectDeveloper = await RoleFactory.create({ name: "project-developer" });
-    await ModelHasRole.create({
-      modelId: user.id,
-      roleId: projectDeveloper.id,
-      modelType: User.LARAVEL_TYPE
-    });
+    const user = await UserFactory.create({ organisationId: ownOrg.id, roles: ["project-developer"] });
     const project = await ProjectFactory.create({ organisationId: projectOrg.id });
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: true,
       isManaging: false
     });
     mockContextForUser(user, "manage-own");
@@ -183,7 +161,6 @@ describe("FinancialReportPolicy", () => {
     await ProjectUserFactory.create({
       userId: user.id,
       projectId: project.id,
-      isMonitoring: false,
       isManaging: true
     });
     mockContextForUser(user);
@@ -194,9 +171,7 @@ describe("FinancialReportPolicy", () => {
 
   it("allows read for project-manager in their organisation", async () => {
     const org = await OrganisationFactory.create();
-    const user = await UserFactory.create({ organisationId: org.id });
-    const pmRole = await RoleFactory.create({ name: "project-manager" });
-    await ModelHasRole.create({ modelId: user.id, roleId: pmRole.id, modelType: User.LARAVEL_TYPE });
+    const user = await UserFactory.create({ organisationId: org.id, roles: ["project-manager"] });
 
     mockContextForUser(user);
 

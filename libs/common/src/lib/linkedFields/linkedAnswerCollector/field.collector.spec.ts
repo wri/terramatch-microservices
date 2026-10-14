@@ -3,6 +3,7 @@ import {
   TrackingFactory,
   FormQuestionFactory,
   NurseryFactory,
+  ProjectFactory,
   ProjectPitchFactory,
   ProjectReportFactory,
   SiteFactory,
@@ -176,6 +177,22 @@ describe("FieldCollector", () => {
       [question.uuid]: "site history"
     });
     expect(site.history).toBe("site history");
+  });
+
+  it("clears date property fields when the answer is an empty string", async () => {
+    const project = await ProjectFactory.create({ plantingStartDate: new Date("2029-09-09") });
+    const question = await FormQuestionFactory.section().create({
+      inputType: "date",
+      linkedFieldKey: "pro-plant_start_dte"
+    });
+
+    await collector.syncField(project, question, getField("pro-plant_start_dte"), {
+      [question.uuid]: ""
+    });
+    await project.save();
+    await project.reload();
+
+    expect(project.plantingStartDate).toBeNull();
   });
 
   it("normalizes planting status answers to completed", async () => {

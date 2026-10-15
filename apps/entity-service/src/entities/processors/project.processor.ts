@@ -566,6 +566,11 @@ export class ProjectProcessor extends EntityProcessor<
     const treesRegeneratingSpeciesCount =
       (await TreeSpecies.visible().collection("anr").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesSeedlingsGrownCount =
+      (await TreeSpecies.visible()
+        .collection("nursery-seedling")
+        .nurseryReports(NurseryReport.approvedIdsSubquery(Nursery.approvedIdsSubquery(projectId)))
+        .sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
     const plantingStatus = resolveReportPlantingStatus(lastReport);
@@ -588,6 +593,7 @@ export class ProjectProcessor extends EntityProcessor<
       treesRegeneratingSpeciesCount,
       treesPlantedCount,
       seedsPlantedCount,
+      treesSeedlingsGrownCount,
       treesRestoredPpc:
         regeneratedTreesCount +
         (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +

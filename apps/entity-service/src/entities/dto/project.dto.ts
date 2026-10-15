@@ -244,6 +244,12 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty()
   seedsPlantedCount: number;
 
+  @ApiProperty({
+    description:
+      "Sum of tree species amounts for collection 'nursery-seedling' across approved nursery reports for this project"
+  })
+  treesSeedlingsGrownCount: number;
+
   @ApiProperty()
   regeneratedTreesCount: number;
 

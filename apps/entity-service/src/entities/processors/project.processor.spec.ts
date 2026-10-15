@@ -749,7 +749,7 @@ describe("ProjectProcessor", () => {
       approvedSites.push(await SiteFactory.create({ projectId, status: "approved" }));
       await SiteFactory.create({ projectId, status: "draft" });
       const approvedNurseries = await NurseryFactory.createMany(3, { projectId, status: "approved" });
-      await NurseryFactory.create({ projectId, status: "information-required" });
+      const unapprovedNursery = await NurseryFactory.create({ projectId, status: "information-required" });
 
       const approvedProjectReports = [
         await ProjectReportFactory.create({ projectId, status: "approved", dueAt: new Date() })
@@ -797,10 +797,34 @@ describe("ProjectProcessor", () => {
       const treesPlantedCount = sumBy(treeSpecies, "amount");
       const seedsPlantedCount = sumBy(seedings, "amount");
 
+      const approvedNurseryReports = await Promise.all(
+        approvedNurseries
+          .slice(0, 2)
+          .map(({ id }) => NurseryReportFactory.create({ nurseryId: id, status: "approved" }))
+      );
+      const nurserySeedlings = flatten(
+        await Promise.all(
+          approvedNurseryReports.map(report =>
+            TreeSpeciesFactory.nurseryReportSeedling(report).createMany(faker.number.int({ min: 1, max: 10 }))
+          )
+        )
+      );
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedNurseryReports[0]).create({ hidden: true });
+      const unapprovedNurseryReport = await NurseryReportFactory.create({
+        nurseryId: unapprovedNursery.id,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(unapprovedNurseryReport).create();
+      const treesSeedlingsGrownCount = sumBy(nurserySeedlings, "amount");
+
       // incomplete reports
       await ProjectReportFactory.create({ projectId, status: "information-required" });
       await SiteReportFactory.create({ siteId: approvedSites[0].id, status: "due" });
-      await NurseryReportFactory.create({ nurseryId: approvedNurseries[1].id, status: "draft" });
+      const draftNurseryReport = await NurseryReportFactory.create({
+        nurseryId: approvedNurseries[1].id,
+        status: "draft"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftNurseryReport).create();
 
       const sitePolygons = flatten(
         await Promise.all(
@@ -913,6 +937,7 @@ describe("ProjectProcessor", () => {
         regeneratedTreesCount,
         treesPlantedCount,
         seedsPlantedCount,
+        treesSeedlingsGrownCount,
         treesRestoredPpc:
           regeneratedTreesCount +
           (treesPlantedCount * ((project?.survivalRate ?? 0) / 100) +

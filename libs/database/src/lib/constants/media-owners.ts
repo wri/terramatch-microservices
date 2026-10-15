@@ -115,10 +115,10 @@ export const FILE_VALIDATION: {
     "logo-image": "mimes:jpg,png",
     "cover-image": "mimes:jpg,png",
     "cover-image-with-svg": "mimes:jpg,png,svg,heic,heif",
-    photos: "mimes:jpg,png,mp4,heic,heif",
+    photos: "mimes:jpg,png,mp4,heic,heif|size:10MB",
     pdf: "mimes:pdf",
     documents: "mimes:pdf,xls,xlsx,csv,txt,doc,docx,bin",
-    "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin,heic,heif|size:5MB",
+    "general-documents": "mimes:pdf,xls,xlsx,csv,txt,png,jpg,doc,mp4,docx,bin,heic,heif|size:10MB",
     spreadsheet: "mimes:pdf,xls,xlsx,csv,txt|size:5MB",
     thumbnail: "mimes:jpg,png"
   },
@@ -209,4 +209,11 @@ export const acceptMimeTypes = (mediaOwner: MediaOwnerType, collection: string):
   const configuration = mediaConfiguration(mediaOwner, collection);
   const abbreviatedTypes = configuration == null ? undefined : abbreviatedValidationMimeTypes(configuration.validation);
   return abbreviatedTypes?.map(type => MIME_TYPES[type]).filter(isNotNull);
+};
+
+export const maxFileSizeBytes = (mediaOwner: string, collection: string): number | undefined => {
+  if (!isMediaOwner(mediaOwner)) return undefined;
+  const configuration = mediaConfiguration(mediaOwner, collection);
+  const size = configuration == null ? undefined : sizeValidation(configuration.validation);
+  return size == null ? undefined : parseInt(size.replace("MB", "")) * 1024 * 1024;
 };

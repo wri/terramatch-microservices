@@ -34,6 +34,8 @@ type ReportFilterModel = {
   parentAttribute: "projectId" | "siteId" | "nurseryId";
   // Returns the ids of parents (the attribute above) that belong to the given projects
   parentIdsInProjects: (projectIds: number[] | Literal) => number[] | Literal;
+  // Returns the ids of the projects that the given parents belong to
+  projectIdsForParents: (parentIds: Literal) => Literal;
   // Returns the ids of parents whose own name or project name matches the search pattern
   parentIdsMatchingSearch: (pattern: string) => Literal;
 };
@@ -50,6 +52,7 @@ const projectChildIdsMatchingSearch = <M extends Site | Nursery>(model: ModelSta
 const PROJECT_REPORT_FILTER = {
   parentAttribute: "projectId",
   parentIdsInProjects: projectIds => projectIds,
+  projectIdsForParents: parentIds => parentIds,
   parentIdsMatchingSearch: projectIdsMatchingSearch
 } satisfies Omit<ReportFilterModel, "model">;
 
@@ -59,6 +62,7 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
     model: NurseryReport,
     parentAttribute: "nurseryId",
     parentIdsInProjects: projectIds => Nursery.idsSubquery(projectIds),
+    projectIdsForParents: parentIds => Subquery.select(Nursery, "projectId").in("id", parentIds).literal,
     parentIdsMatchingSearch: pattern => projectChildIdsMatchingSearch(Nursery, pattern)
   },
   projectReports: { model: ProjectReport, ...PROJECT_REPORT_FILTER },
@@ -66,30 +70,10 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
     model: SiteReport,
     parentAttribute: "siteId",
     parentIdsInProjects: projectIds => Site.idsSubquery(projectIds),
+    projectIdsForParents: parentIds => Subquery.select(Site, "projectId").in("id", parentIds).literal,
     parentIdsMatchingSearch: pattern => projectChildIdsMatchingSearch(Site, pattern)
   },
   srpReports: { model: SrpReport, ...PROJECT_REPORT_FILTER }
-};
-
-/**
- * Builds a subquery of the ids of projects matching the filter's scoping, project and search
- * filters. A project matches the search if its name, or the name of one of its sites or nurseries,
- * matches. Report-specific filters (statuses, due dates) are not applied.
- */
-export const filteredProjectsSubquery = ({ frameworkKeys, projectIds, search }: ReportFilter) => {
-  const builder = Subquery.select(Project, "id");
-  if (frameworkKeys.length > 0) builder.in("frameworkKey", frameworkKeys);
-  if (projectIds != null) builder.in("id", projectIds);
-  if (search != null) {
-    const pattern = `%${search}%`;
-    const siteProjectIds = Subquery.select(Site, "projectId").like("name", pattern).literal;
-    const nurseryProjectIds = Subquery.select(Nursery, "projectId").like("name", pattern).literal;
-    const { clauses } = builder;
-    builder.andLiteral(
-      `(${clauses.like("name", pattern)} OR ${clauses.in("id", siteProjectIds)} OR ${clauses.in("id", nurseryProjectIds)})`
-    );
-  }
-  return builder;
 };
 
 /**
@@ -120,4 +104,17 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   if (filter.search != null) builder.in(parent, parentIdsMatchingSearch(`%${filter.search}%`));
 
   return builder;
+};
+
+/**
+ * Builds a subquery of the ids of projects with at least one report of the given (non-empty) types
+ * matching the filter.
+ */
+export const filteredProjectsSubquery = (types: readonly ReportCountType[], filter: ReportFilter) => {
+  const builder = Subquery.select(Project, "id");
+  const matches = types.map(type => {
+    const parentIds = filteredReportsSubquery(type, "parent", filter).literal;
+    return builder.clauses.in("id", REPORT_FILTER_MODELS[type].projectIdsForParents(parentIds));
+  });
+  return builder.andLiteral(`(${matches.join(" OR ")})`);
 };

@@ -363,15 +363,22 @@ describe("SiteProcessor", () => {
       expect(site.deletedAt).not.toBeNull();
     });
 
-    it("should not allow a non-admin to delete a site if it has reports", async () => {
-      const site = await SiteFactory.create();
-      await SiteReportFactory.create({ siteId: site.id });
+    it("should not allow a non-admin to delete a non-draft site", async () => {
+      const site = await SiteFactory.create({ status: "approved" });
       setMockedPermissions("manage-own");
       await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
-    it("should allow a non-admin to delete a site if it has no reports", async () => {
-      const site = await SiteFactory.create();
+    it("should allow a non-admin to delete a draft site even if it has reports", async () => {
+      const site = await SiteFactory.create({ status: "draft" });
+      await SiteReportFactory.create({ siteId: site.id });
+      setMockedPermissions("manage-own");
+      await processor.delete(site);
+      expect(site.deletedAt).not.toBeNull();
+    });
+
+    it("should allow a non-admin to delete a draft site if it has no reports", async () => {
+      const site = await SiteFactory.create({ status: "draft" });
       setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();

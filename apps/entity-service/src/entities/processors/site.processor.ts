@@ -466,8 +466,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const permissions = this.entitiesService.permissions;
     const managesOwn = permissions?.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
     if (managesOwn) {
-      const reportCount = await SiteReport.count({ where: { siteId: site.id } });
-      if (reportCount > 0) {
+      if (site.status !== "draft") {
         throw new NotAcceptableException("You can only delete sites that do not have reports");
       }
     }

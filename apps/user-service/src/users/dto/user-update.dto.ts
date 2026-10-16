@@ -4,7 +4,7 @@ import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { FRAMEWORK_KEYS } from "@terramatch-microservices/database/constants/framework";
 import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
-import { IsValidRoleCombination } from "./is-valid-role-combination.decorator";
+import { IsValidRoleCombination, ROLE_COMBINATION_DESCRIPTION } from "./is-valid-role-combination.decorator";
 
 export class UserUpdateAttributes {
   @ApiProperty({
@@ -49,7 +49,7 @@ export class UserUpdateAttributes {
   locale?: ValidLocale | null;
 
   @ApiProperty({
-    description: "Replaces the user's full set of roles",
+    description: `Replaces the user's full set of roles. ${ROLE_COMBINATION_DESCRIPTION}`,
     required: false,
     isArray: true,
     enum: ROLE_SLUGS

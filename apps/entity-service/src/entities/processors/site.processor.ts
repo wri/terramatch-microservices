@@ -44,13 +44,11 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "projectUuid",
-  "organisationUuid",
-  "country"
+  "organisationUuid"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$project.organisation.uuid$",
-  country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
 
@@ -156,6 +154,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     for (const term of SIMPLE_FILTERS) {
       const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.country != null) {
+      builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.search != null || query.searchFilter != null) {

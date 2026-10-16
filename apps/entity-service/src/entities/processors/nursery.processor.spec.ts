@@ -106,8 +106,8 @@ describe("NurseryProcessor", () => {
     });
 
     it("should return nurseries filtered by the update request status or project", async () => {
-      const p1 = await ProjectFactory.create();
-      const p2 = await ProjectFactory.create();
+      const p1 = await ProjectFactory.create({ level0Project: ["MX"] });
+      const p2 = await ProjectFactory.create({ country: "MX", level0Project: ["CA"] });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
@@ -139,6 +139,8 @@ describe("NurseryProcessor", () => {
       await expectNurseries([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectNurseries([fourth], { projectUuid: p2.uuid });
+
+      await expectNurseries([fourth], { country: "CA" });
     });
 
     it("should throw an error if the project uuid is not found", async () => {

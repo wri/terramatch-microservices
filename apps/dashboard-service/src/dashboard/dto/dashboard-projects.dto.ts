@@ -11,6 +11,7 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
     super();
     if (project != null && props != null) {
       populateDto<DashboardProjectsLightDto, Project>(this, project, { lightResource: true, ...props });
+      this.country = project.level0Project?.[0] ?? null;
     }
   }
 
@@ -58,6 +59,7 @@ export class DashboardProjectsFullDto extends DashboardProjectsLightDto {
   constructor(project: Project, props: HybridSupportProps<DashboardProjectsFullDto, Project>) {
     super();
     populateDto<DashboardProjectsFullDto, Project>(this, project, { lightResource: false, ...props });
+    this.country = project.level0Project?.[0] ?? null;
   }
 
   @ApiProperty({ nullable: true, type: String, isArray: true })

@@ -126,8 +126,8 @@ describe("NurseryReportProcessor", () => {
     it("should return nursery reports filtered by the status, update request status, nursery, country, organisation", async () => {
       const org1 = await OrganisationFactory.create();
       const org2 = await OrganisationFactory.create();
-      const p1 = await ProjectFactory.create({ country: "MX", organisationId: org1.id });
-      const p2 = await ProjectFactory.create({ country: "CA", organisationId: org2.id });
+      const p1 = await ProjectFactory.create({ level0Project: ["MX"], organisationId: org1.id });
+      const p2 = await ProjectFactory.create({ level0Project: ["CA"], organisationId: org2.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
       const n1 = await NurseryFactory.create({ projectId: p1.id });

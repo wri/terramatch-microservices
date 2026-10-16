@@ -321,7 +321,6 @@ describe("UserAssociationController", () => {
                 status,
                 isManager: false,
                 organisationName: org.name ?? "",
-                roleName: user.primaryRole ?? null,
                 associatedType: "organisations"
               })
             );
@@ -357,7 +356,6 @@ describe("UserAssociationController", () => {
                 status,
                 isManager: false,
                 organisationName: org.name ?? "",
-                roleName: user.primaryRole ?? null,
                 associatedType: "organisations"
               })
             );

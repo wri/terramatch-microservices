@@ -6,7 +6,14 @@ import { FRAMEWORK_KEYS } from "@terramatch-microservices/database/constants/fra
 import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
 
 export class UserUpdateAttributes {
-  @ApiProperty({ description: "Organisation UUID", nullable: true, required: false, format: "uuid", type: String })
+  @ApiProperty({
+    description:
+      "Organisation UUID if set to null (instead of simply being absent from the payload), the existing organisation association will be removed.",
+    nullable: true,
+    required: false,
+    format: "uuid",
+    type: String
+  })
   organisationUuid?: string | null;
 
   @ApiProperty({ description: "First name", nullable: true, required: false, type: String })

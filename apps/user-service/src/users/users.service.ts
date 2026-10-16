@@ -191,7 +191,12 @@ export class UsersService {
       user.password = await bcrypt.hash(update.password, 10);
     }
 
-    user.organisationId = organisationEntity?.id ?? user.organisationId;
+    // An explicit null clears the organisation, while an absent value leaves it untouched.
+    if (update.organisationUuid !== undefined) {
+      user.organisationId = organisationEntity?.id ?? null;
+      // Keep the preloaded association in sync so the response DTO reflects the change.
+      user.organisation = organisationEntity;
+    }
     user.firstName = update.firstName ?? user.firstName;
     user.lastName = update.lastName ?? user.lastName;
     user.emailAddress = update.emailAddress ?? user.emailAddress;

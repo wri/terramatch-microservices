@@ -141,17 +141,17 @@ describe("ProjectProcessor", () => {
 
     it("filters", async () => {
       const us = await ProjectFactory.create({
-        country: "US",
+        level0Project: ["US"],
         status: "approved",
         updateRequestStatus: "draft"
       });
       const mx = await ProjectFactory.create({
-        country: "MX",
+        level0Project: ["MX"],
         status: "draft",
         updateRequestStatus: "pending-approval"
       });
       const ca = await ProjectFactory.create({
-        country: "CA",
+        level0Project: ["CA"],
         status: "approved",
         updateRequestStatus: "pending-approval"
       });

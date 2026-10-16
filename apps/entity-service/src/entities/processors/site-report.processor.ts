@@ -35,7 +35,6 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "organisationUuid",
-  "country",
   "projectUuid",
   "nothingToReport"
 ];
@@ -43,7 +42,6 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
 const ASSOCIATION_FIELD_MAP = {
   siteUuid: "$site.uuid$",
   organisationUuid: "$site.project.organisation.uuid$",
-  country: "$site.project.country$",
   projectUuid: "$site.project.uuid$"
 };
 
@@ -227,6 +225,10 @@ export class SiteReportProcessor extends ReportProcessor<
           [field]: term === "nothingToReport" ? this.nothingToReportConditions(query[term]) : query[term]
         });
       }
+    }
+
+    if (query.country != null) {
+      builder.where({ "$site.project.id$": { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.taskIds != null && query.taskIds.length > 0) {

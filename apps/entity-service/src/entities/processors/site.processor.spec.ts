@@ -104,8 +104,8 @@ describe("SiteProcessor", () => {
     });
 
     it("filters", async () => {
-      const p1 = await ProjectFactory.create();
-      const p2 = await ProjectFactory.create();
+      const p1 = await ProjectFactory.create({ level0Project: ["MX"] });
+      const p2 = await ProjectFactory.create({ country: "MX", level0Project: ["CA"] });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
@@ -137,6 +137,8 @@ describe("SiteProcessor", () => {
       await expectSites([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectSites([fourth], { projectUuid: p2.uuid });
+
+      await expectSites([fourth], { country: "CA" });
     });
 
     it("filters by the latest approved non-null plantingStatus", async () => {

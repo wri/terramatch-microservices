@@ -40,13 +40,11 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "organisationUuid",
-  "country",
   "projectUuid"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$project.organisation.uuid$",
-  country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
 
@@ -148,6 +146,10 @@ export class NurseryProcessor extends EntityProcessor<
         const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
         builder.where({ [field]: query[term] });
       }
+    }
+
+    if (query.country != null) {
+      builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.search != null || query.searchFilter != null) {

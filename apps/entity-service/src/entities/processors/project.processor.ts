@@ -66,7 +66,6 @@ import {
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
-  "country",
   "status",
   "updateRequestStatus",
   "frameworkKey",
@@ -265,6 +264,10 @@ export class ProjectProcessor extends EntityProcessor<
     for (const term of SIMPLE_FILTERS) {
       const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.country != null) {
+      builder.where({ id: { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.landscape != null && query.landscape.length > 0) {

@@ -1,7 +1,11 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
 import { PolygonGeometry, SitePolygon, CriteriaSite, Site, Project } from "@terramatch-microservices/database/entities";
 import { QueryTypes, Transaction } from "sequelize";
-import { VALIDATION_CRITERIA_IDS, VALIDATION_TYPES } from "@terramatch-microservices/database/constants";
+import {
+  OVERLAP_SLIVER_TOLERANCE_DEGREES,
+  VALIDATION_CRITERIA_IDS,
+  VALIDATION_TYPES
+} from "@terramatch-microservices/database/constants";
 import { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import { simplify } from "@turf/simplify";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon } from "@turf/helpers";
@@ -33,6 +37,7 @@ export interface ClippedVersionResult {
 const MAX_OVERLAP_PERCENTAGE = 3.5;
 const MAX_OVERLAP_AREA_HECTARES = 0.118;
 const BUFFER_DISTANCE = 0.000001;
+const SIMPLIFY_TOLERANCE = OVERLAP_SLIVER_TOLERANCE_DEGREES / 2;
 const OVERLAPPING_CRITERIA_ID = VALIDATION_CRITERIA_IDS.OVERLAPPING;
 
 @Injectable()
@@ -445,8 +450,6 @@ export class PolygonClippingService {
   private simplifyGeometry(geometry: Polygon | MultiPolygon): Polygon | MultiPolygon {
     try {
       // This removes only the tiny buffer curves, not important geometry features
-      const tolerance = 0.0000005;
-      const highQuality = true;
 
       let turfFeature;
       if (geometry.type === "Polygon") {
@@ -455,7 +458,7 @@ export class PolygonClippingService {
         turfFeature = turfMultiPolygon(geometry.coordinates);
       }
 
-      const simplified = simplify(turfFeature, { tolerance, highQuality });
+      const simplified = simplify(turfFeature, { tolerance: SIMPLIFY_TOLERANCE, highQuality: true });
 
       return simplified.geometry as Polygon | MultiPolygon;
     } catch (error) {

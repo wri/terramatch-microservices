@@ -9,7 +9,11 @@ import {
   SrpReport
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
-import { ReportStatus } from "@terramatch-microservices/database/constants/status";
+import {
+  INFORMATION_REQUIRED,
+  PENDING_APPROVAL,
+  ReportStatus
+} from "@terramatch-microservices/database/constants/status";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Attributes, ModelStatic } from "sequelize";
 import { Literal } from "sequelize/types/utils";
@@ -21,6 +25,7 @@ export type ReportFilter = {
   frameworkKeys: string[];
   // If set, reports are limited to these projects
   projectIds?: number[] | Literal;
+  // Matched against the status shown for the report (see SUBMITTED_UPDATE_REQUEST_STATUSES)
   statuses?: readonly ReportStatus[];
   dueDateFrom?: Date;
   dueDateTo?: Date;
@@ -76,6 +81,10 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
   srpReports: { model: SrpReport, ...PROJECT_REPORT_FILTER }
 };
 
+// A report with a submitted change request is shown with the change request's status instead of
+// its own, so the status filter matches on that (the FE resolves the status the same way).
+const SUBMITTED_UPDATE_REQUEST_STATUSES = [PENDING_APPROVAL, INFORMATION_REQUIRED];
+
 /**
  * Builds a subquery selecting the given attribute from all reports of the given type that match
  * the filter.
@@ -88,7 +97,12 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   const { clauses } = builder;
 
   if (filter.frameworkKeys.length > 0) builder.in("frameworkKey", filter.frameworkKeys);
-  if (filter.statuses != null && filter.statuses.length > 0) builder.in("status", [...filter.statuses]);
+  if (filter.statuses != null && filter.statuses.length > 0) {
+    const isSubmitted = clauses.in("updateRequestStatus", SUBMITTED_UPDATE_REQUEST_STATUSES);
+    const shownStatus = `IF(${isSubmitted}, ${clauses.field("updateRequestStatus")}, ${clauses.field("status")})`;
+    const statuses = filter.statuses.map(status => clauses.escape(status)).join(",");
+    builder.andLiteral(`${shownStatus} IN (${statuses})`);
+  }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);
   if (filter.dueDateTo != null) {
     // dueDateTo is a date, so include the entire day.

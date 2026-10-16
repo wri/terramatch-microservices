@@ -96,8 +96,8 @@ export class UsersService {
       });
     }
 
-    if (query.primaryRole != null) {
-      builder.where(fn("JSON_CONTAINS", col("User.roles"), JSON.stringify(query.primaryRole)));
+    if (query.role != null) {
+      builder.where(fn("JSON_CONTAINS", col("User.roles"), JSON.stringify(query.role)));
     }
 
     if (query.isVerified != null) {

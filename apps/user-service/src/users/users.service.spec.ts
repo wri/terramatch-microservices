@@ -127,11 +127,11 @@ describe("UsersService", () => {
       });
     });
 
-    it("should filter by role when primaryRole is provided", async () => {
+    it("should filter by role when role is provided", async () => {
       const builder = createBuilderMock();
       jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);
 
-      await service.findMany({ page: 1, primaryRole: "admin-super" } as UserQueryDto);
+      await service.findMany({ page: 1, role: "admin-super" } as UserQueryDto);
 
       expect(builder.where).toHaveBeenCalledWith(fn("JSON_CONTAINS", col("User.roles"), '"admin-super"'));
     });

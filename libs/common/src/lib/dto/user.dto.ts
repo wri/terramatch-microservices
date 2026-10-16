@@ -65,9 +65,6 @@ export class UserDto {
   })
   fullName: string | null;
 
-  @ApiProperty()
-  primaryRole: string;
-
   @ApiProperty({ isArray: true, type: String })
   roles: string[];
 

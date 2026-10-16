@@ -136,7 +136,6 @@ export class UserAssociationService {
             status: PENDING,
             isManager: false,
             organisationName: (org as Organisation).name ?? "",
-            roleName: user.primaryRole ?? null,
             associatedType: "organisations"
           })
         );
@@ -154,7 +153,6 @@ export class UserAssociationService {
             status,
             isManager: false,
             organisationName: org.name ?? "",
-            roleName: user.primaryRole ?? null,
             associatedType: "organisations"
           })
         );
@@ -216,7 +214,6 @@ export class UserAssociationService {
           status: null,
           isManager: projectUser?.isManaging as boolean,
           organisationName: organisation?.name as string,
-          roleName: user.primaryRole as string,
           associatedType: "projects"
         })
       );
@@ -354,7 +351,6 @@ export class UserAssociationService {
         status,
         isManager: false,
         organisationName: organisation.name ?? "",
-        roleName: user.primaryRole ?? null,
         associatedType: "organisations"
       });
       dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
@@ -561,7 +557,7 @@ export class UserAssociationService {
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
-      if (user.primaryRole !== "project-manager") throw new BadRequestException("User is not a project manager");
+      if (!user.roles.includes("project-manager")) throw new BadRequestException("User is not a project manager");
       const projectUser = await ProjectUser.findOne({
         where: { projectId: project.id, userId: user.id, isManaging: true }
       });

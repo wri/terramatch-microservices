@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { col, fn, Op } from "sequelize";
@@ -127,11 +127,11 @@ describe("UsersService", () => {
       });
     });
 
-    it("should filter by role when primaryRole is provided", async () => {
+    it("should filter by role when role is provided", async () => {
       const builder = createBuilderMock();
       jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);
 
-      await service.findMany({ page: 1, primaryRole: "admin-super" } as UserQueryDto);
+      await service.findMany({ page: 1, role: "admin-super" } as UserQueryDto);
 
       expect(builder.where).toHaveBeenCalledWith(fn("JSON_CONTAINS", col("User.roles"), '"admin-super"'));
     });
@@ -453,10 +453,21 @@ describe("UsersService", () => {
       const user = createUserMock();
       user.roles = ["project-developer"];
 
-      const result = await service.update(user, { roles: ["admin-super", "funder"] });
+      const result = await service.update(user, { roles: ["admin-ppc", "admin-wcb"] });
 
-      expect(result.roles).toEqual(["admin-super", "funder"]);
+      expect(result.roles).toEqual(["admin-ppc", "admin-wcb"]);
       expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should throw when roles are an invalid combination", async () => {
+      const user = createUserMock();
+      user.roles = ["project-developer"];
+
+      await expect(service.update(user, { roles: ["admin-ppc", "funder"] })).rejects.toThrow(
+        InternalServerErrorException
+      );
+      expect(user.roles).toEqual(["project-developer"]);
+      expect(user.save).not.toHaveBeenCalled();
     });
 
     it("should leave roles alone when roles are not provided", async () => {

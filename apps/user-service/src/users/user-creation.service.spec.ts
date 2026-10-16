@@ -355,6 +355,23 @@ describe("UserCreationService", () => {
       expect(user.roles).toEqual(["project-developer"]);
     });
 
+    it("should throw when the invited user holds a role that cannot be combined", async () => {
+      const user = await UserFactory.create({ roles: ["funder"] });
+      const request = getInviteRequest("new@example.com", "valid-token");
+      const passwordReset = {
+        user,
+        destroy: jest.fn().mockResolvedValue(undefined)
+      } as unknown as PasswordReset;
+
+      jest.spyOn(PasswordReset, "findOne").mockResolvedValue(passwordReset);
+      jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([]);
+      jest.spyOn(user, "save").mockResolvedValue(user);
+
+      await expect(service.createNewUser(false, request)).rejects.toThrow(InternalServerErrorException);
+      expect(OrganisationInvite.findAll).not.toHaveBeenCalled();
+      expect(user.save).not.toHaveBeenCalled();
+    });
+
     it("should update existing project-user relation if already present", async () => {
       const user = await UserFactory.create();
       const project = await ProjectFactory.create();
@@ -407,7 +424,7 @@ describe("UserCreationService", () => {
     };
 
     it("should create user for authenticated request", async () => {
-      const request = await getAdminRequest("admin-created@example.com", ["project-manager", "funder"]);
+      const request = await getAdminRequest("admin-created@example.com", ["admin-ppc", "admin-hbf"]);
       const createdUser = await UserFactory.create();
       const organisation = { id: 999 } as Organisation;
 
@@ -422,7 +439,7 @@ describe("UserCreationService", () => {
         attributes: ["id"]
       });
       expect(User.create).toHaveBeenCalledWith(
-        expect.objectContaining({ organisationId: organisation.id, roles: ["project-manager", "funder"] })
+        expect.objectContaining({ organisationId: organisation.id, roles: ["admin-ppc", "admin-hbf"] })
       );
       expect(result).toBe(createdUser);
     });

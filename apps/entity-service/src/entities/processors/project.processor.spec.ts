@@ -446,7 +446,11 @@ describe("ProjectProcessor", () => {
       const delta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Delta" });
       await ProjectReportFactory.create({ projectId: delta.id, frameworkKey, status: "draft" });
 
-      for (const { id: projectId } of [alpha, approvedOnly, coastal, delta]) {
+      // Has no reports, so it is never listed
+      const empty = await ProjectFactory.create({ frameworkKey, organisationId, name: "Echo" });
+      await SiteFactory.create({ projectId: empty.id, frameworkKey, name: "Echo Site" });
+
+      for (const { id: projectId } of [alpha, approvedOnly, coastal, delta, empty]) {
         await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
       }
 
@@ -474,7 +478,7 @@ describe("ProjectProcessor", () => {
       nurseries
     });
 
-    it("returns all projects with their reports requiring attention", async () => {
+    it("returns all projects with reports, with their reports requiring attention", async () => {
       const { alpha, river, alphaNursery, approvedOnly, coastal, coastalNursery, delta } = await createData();
       const { result, data, attributes } = await getIndex({});
 
@@ -493,15 +497,15 @@ describe("ProjectProcessor", () => {
       ]);
     });
 
-    it("applies the report filters to the counts", async () => {
+    it("only returns projects with reports matching the filters, and applies the filters to the counts", async () => {
       const { alpha, river, hill, alphaNursery, approvedOnly, approvedSite, coastal, coastalNursery, delta } =
         await createData();
 
-      expect((await getIndex({ statuses: ["approved"] })).attributes).toEqual([
+      const approved = await getIndex({ statuses: ["approved"] });
+      expect(approved.result.meta.indices?.[0].total).toBe(2);
+      expect(approved.attributes).toEqual([
         row(alpha, 0, { ...meta(river, 1), ...meta(hill, 1) }, meta(alphaNursery, 1)),
-        row(approvedOnly, 1, meta(approvedSite, 1)),
-        row(coastal, 0),
-        row(delta, 0)
+        row(approvedOnly, 1, meta(approvedSite, 1))
       ]);
 
       expect((await getIndex({ reportTypes: ["nurseryReports", "projectReports"] })).attributes).toEqual([
@@ -511,12 +515,15 @@ describe("ProjectProcessor", () => {
         row(delta, 1)
       ]);
 
-      expect((await getIndex({ reportTypes: ["disturbanceReports"] })).attributes).toEqual([
-        row(alpha, 0),
-        row(approvedOnly, 0),
-        row(coastal, 0),
-        row(delta, 0)
+      expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["draft"] })).attributes).toEqual([
+        row(coastal, 0, {}, meta(coastalNursery, 1))
       ]);
+
+      const disturbance = await getIndex({ reportTypes: ["disturbanceReports"] });
+      expect(disturbance.result.meta.indices?.[0].total).toBe(0);
+      expect(disturbance.data).toEqual([]);
+
+      expect((await getIndex({ dueDateFrom: "2999-01-01" })).data).toEqual([]);
       expect((await getIndex({ projectUuid: coastal.uuid })).data.map(({ id }) => id)).toEqual([coastal.uuid]);
     });
 

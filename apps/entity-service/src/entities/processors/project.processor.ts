@@ -175,6 +175,8 @@ const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name",
 
 const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED] as const;
 
+const REPORTS_META_TYPES = ["nurseryReports", "projectReports", "siteReports"] as const;
+
 // Returns a map of site / nursery id to the number of matching reports
 const countReportsByParent = async (
   type: "projectReports" | "siteReports" | "nurseryReports",
@@ -304,23 +306,25 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   /**
-   * Adds an index of report meta for all projects matching the query's scoping, project and search
-   * filters. Only sites / nurseries with at least one matching report are listed. If no statuses
-   * are requested, reports requiring attention (due, draft, information-required) are counted.
+   * Adds an index of report meta for all projects with at least one project, site or nursery report
+   * matching the query's filters. Only sites / nurseries with at least one matching report are
+   * listed. If no statuses are requested, reports requiring attention (due, draft,
+   * information-required) are counted.
    */
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
-    const filter = this.entitiesService.reportFilter(query, REPORTS_REQUIRING_ATTENTION_STATUSES);
-    const reportTypes = query.reportTypes ?? [];
-    const includeProjectReports = reportTypes.length === 0 || reportTypes.includes("projectReports");
-    const includeSites = reportTypes.length === 0 || reportTypes.includes("siteReports");
-    const includeNurseries = reportTypes.length === 0 || reportTypes.includes("nurseryReports");
+    const filter = this.entitiesService.reportFilter(query);
+    const requestedTypes = query.reportTypes ?? [];
+    const reportTypes = REPORTS_META_TYPES.filter(type => requestedTypes.length === 0 || requestedTypes.includes(type));
+    const includeProjectReports = reportTypes.includes("projectReports");
+    const includeSites = reportTypes.includes("siteReports");
+    const includeNurseries = reportTypes.includes("nurseryReports");
     const indexData = {
       resource: getDtoType(ProjectReportMetaDto),
       requestPath: `/entities/v3/${this.resource}/reportsMeta${getStableRequestQuery(query)}`,
       pageNumber: query.page?.number ?? 1
     };
 
-    if (filter == null) {
+    if (filter == null || reportTypes.length === 0) {
       document.addIndex({ ...indexData, total: 0, ids: [] });
       return;
     }
@@ -329,13 +333,17 @@ export class ProjectProcessor extends EntityProcessor<
       { association: "organisation", attributes: ["name"] }
     ])
       .attributes(["id", "uuid", "name", "frameworkKey", "organisationId", "status"])
-      .where({ id: { [Op.in]: filteredProjectsSubquery(filter).literal } });
+      .where({ id: { [Op.in]: filteredProjectsSubquery(reportTypes, filter).literal } });
     const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
 
     if (projects.length > 0) {
       await this.entitiesService.authorize("read", projects);
 
-      const pageFilter = { ...filter, projectIds: projects.map(({ id }) => id) };
+      const pageFilter = {
+        ...filter,
+        statuses: filter.statuses ?? REPORTS_REQUIRING_ATTENTION_STATUSES,
+        projectIds: projects.map(({ id }) => id)
+      };
       const parentWhere = (type: "siteReports" | "nurseryReports") => ({
         id: { [Op.in]: filteredReportsSubquery(type, "parent", pageFilter).literal }
       });

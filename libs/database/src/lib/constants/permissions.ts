@@ -1,3 +1,4 @@
+import { InternalServerErrorException } from "@nestjs/common";
 import { Dictionary, uniq } from "lodash";
 
 // This file is the source of truth for roles and permissions. Users hold a list of role names
@@ -86,5 +87,29 @@ export const ROLE_NAMES: Record<RoleSlug, string> = {
 };
 
 export const isValidRole = (role: string): role is RoleSlug => ROLE_SLUGS.includes(role as RoleSlug);
+
+/** The only roles that may be combined with other roles; all other roles must be held alone. */
+export const FRAMEWORK_ADMIN_ROLES = [
+  "admin-barka-fund",
+  "admin-epa-ghana-pilot",
+  "admin-fundo-flora",
+  "admin-hbf",
+  "admin-ppc",
+  "admin-terrafund",
+  "admin-wcb"
+] as const satisfies readonly RoleSlug[];
+
+export const isValidRoleCombination = (roles: string[]) =>
+  roles.length <= 1 || roles.every(role => (FRAMEWORK_ADMIN_ROLES as readonly string[]).includes(role));
+
+/**
+ * Request DTOs validate role combinations; this guards service code paths that set roles in case
+ * one is reached without that validation.
+ */
+export const assertValidRoleCombination = (roles: string[]) => {
+  if (!isValidRoleCombination(roles)) {
+    throw new InternalServerErrorException(`Invalid role combination: ${roles.join(", ")}`);
+  }
+};
 
 export const getPermissionsForRoles = (roles: string[]) => uniq(roles.filter(isValidRole).flatMap(role => ROLES[role]));

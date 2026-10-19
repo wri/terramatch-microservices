@@ -24,6 +24,7 @@ import { validate } from "class-validator";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { AdminUserCreateAttributes } from "./dto/admin-user-create.dto";
 import { plainToInstance } from "class-transformer";
+import { assertValidRoleCombination } from "@terramatch-microservices/database/constants/permissions";
 
 const EMAIL_KEYS = {
   body: "user-verification.body",
@@ -137,6 +138,8 @@ export class UserCreationService {
     }
 
     const user = passwordReset.user;
+    const roles = uniq([...user.roles, "project-developer"]);
+    assertValidRoleCombination(roles);
 
     const organisationInvites = await OrganisationInvite.findAll({
       where: { emailAddress: user.emailAddress, acceptedAt: null }
@@ -186,7 +189,7 @@ export class UserCreationService {
     user.emailAddress = request.emailAddress;
     user.password = hashPassword;
     user.emailAddressVerifiedAt = new Date();
-    user.roles = uniq([...user.roles, "project-developer"]);
+    user.roles = roles;
 
     await user.save();
 

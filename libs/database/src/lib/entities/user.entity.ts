@@ -183,14 +183,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     return this.roles;
   }
 
-  /**
-   * Depends on `roles` being loaded, either by including it in the attributes on the find call,
-   * or by await user.loadRoles()
-   */
-  get primaryRole(): string | undefined {
-    return this.roles[0];
-  }
-
   get permissions(): NonAttribute<Permission[]> {
     return getPermissionsForRoles(this.roles);
   }

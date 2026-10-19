@@ -2,6 +2,7 @@ import { CreateDataDto, JsonApiBodyDto } from "@terramatch-microservices/common/
 import { ArrayMinSize, IsArray, IsIn, IsOptional } from "class-validator";
 import { FRAMEWORK_KEYS } from "@terramatch-microservices/database/constants/framework";
 import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
+import { IsValidRoleCombination, ROLE_COMBINATION_DESCRIPTION } from "./is-valid-role-combination.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { UserCreateBaseAttributes } from "./user-create.dto";
 
@@ -9,7 +10,8 @@ export class AdminUserCreateAttributes extends UserCreateBaseAttributes {
   @IsArray()
   @ArrayMinSize(1)
   @IsIn(ROLE_SLUGS, { each: true })
-  @ApiProperty({ isArray: true, enum: ROLE_SLUGS })
+  @IsValidRoleCombination()
+  @ApiProperty({ description: ROLE_COMBINATION_DESCRIPTION, isArray: true, enum: ROLE_SLUGS })
   roles: string[];
 
   @IsOptional()

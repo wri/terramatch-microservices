@@ -38,8 +38,8 @@ export class UserAssociationDto {
   @ApiProperty()
   organisationName: string;
 
-  @ApiProperty({ nullable: true, type: String })
-  roleName: string | null;
+  @ApiProperty({ isArray: true, type: String })
+  roles: string[];
 
   @ApiProperty({ nullable: true, type: String })
   phoneNumber: string | null;

@@ -380,8 +380,8 @@ describe("NurseryProcessor", () => {
       expect(nursery.deletedAt).not.toBeNull();
     });
 
-    it("should allow a non-admin to delete a nursery if it has no reports", async () => {
-      const nursery = await NurseryFactory.create();
+    it("should allow a non-admin to delete a draft nursery if it has no reports", async () => {
+      const nursery = await NurseryFactory.create({ status: "draft" });
       setMockedPermissions("manage-own");
       await processor.delete(nursery);
       expect(nursery.deletedAt).not.toBeNull();

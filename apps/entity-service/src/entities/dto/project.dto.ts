@@ -78,8 +78,12 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  /** @deprecated Use level0Project instead. */
+  @ApiProperty({ nullable: true, type: String, deprecated: true, description: "Use level0Project instead" })
   country: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true, description: "Project country codes (GADM level 0)" })
+  level0Project: string[] | null;
 
   @ApiProperty({ nullable: true, type: Number, description: "Latitude coordinate" })
   lat: number | null;

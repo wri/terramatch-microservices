@@ -237,7 +237,7 @@ export class ProjectProcessor extends EntityProcessor<
     ]);
 
     if (query.sort?.field != null) {
-      if (["name", "plantingStartDate", "country", "shortName"].includes(query.sort.field)) {
+      if (["name", "plantingStartDate", "country", "level0Project", "shortName"].includes(query.sort.field)) {
         builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
         builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);

@@ -313,6 +313,8 @@ describe("ProjectProcessor", () => {
       const projects = [
         await ProjectFactory.create({
           name: "A Project",
+          country: "KEN",
+          level0Project: ["GHA"],
           plantingStartDate: DateTime.now().minus({ days: 1 }).toJSDate(),
           organisationId: org2.id
         })
@@ -320,6 +322,8 @@ describe("ProjectProcessor", () => {
       projects.push(
         await ProjectFactory.create({
           name: "Z Project",
+          country: "GHA",
+          level0Project: ["BRA"],
           plantingStartDate: DateTime.now().minus({ days: 10 }).toJSDate(),
           organisationId: org3.id
         })
@@ -327,6 +331,8 @@ describe("ProjectProcessor", () => {
       projects.push(
         await ProjectFactory.create({
           name: "M Project",
+          country: "BRA",
+          level0Project: ["KEN"],
           plantingStartDate: DateTime.now().minus({ days: 5 }).toJSDate(),
           organisationId: org1.id
         })
@@ -349,6 +355,13 @@ describe("ProjectProcessor", () => {
         projects,
         { sort: { field: "plantingStartDate", direction: "DESC" } },
         { sortField: "plantingStartDate", sortUp: false }
+      );
+      await expectProjects(projects, { sort: { field: "country" } }, { sortField: "country" });
+      await expectProjects(projects, { sort: { field: "level0Project" } }, { sortField: "level0Project[0]" });
+      await expectProjects(
+        projects,
+        { sort: { field: "level0Project", direction: "DESC" } },
+        { sortField: "level0Project[0]", sortUp: false }
       );
       await expectProjects(projects, { sort: { field: "organisationName" } }, { sortField: "organisationName" });
       await expectProjects(
@@ -641,7 +654,8 @@ describe("ProjectProcessor", () => {
       const org = await OrganisationFactory.create();
       const { uuid } = await ProjectFactory.create({
         organisationId: org.id,
-        frameworkKey: "foofund" as FrameworkKey
+        frameworkKey: "foofund" as FrameworkKey,
+        level0Project: ["GHA"]
       });
 
       setMockedPermissions("projects-read");
@@ -651,7 +665,8 @@ describe("ProjectProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: true,
-        organisationName: org.name
+        organisationName: org.name,
+        level0Project: ["GHA"]
       });
     });
 
@@ -742,7 +757,8 @@ describe("ProjectProcessor", () => {
       let project = await ProjectFactory.create({
         organisationId: org.id,
         frameworkKey: "barfund" as FrameworkKey,
-        applicationId: application.id
+        applicationId: application.id,
+        level0Project: ["KEN"]
       });
       const { id: projectId, uuid } = project;
       const approvedSites = [await SiteFactory.create({ projectId, status: "approved" })];
@@ -895,6 +911,7 @@ describe("ProjectProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: false,
+        level0Project: ["KEN"],
         organisationName: org.name,
         totalSites: approvedSites.length,
         totalNurseries: approvedNurseries.length,

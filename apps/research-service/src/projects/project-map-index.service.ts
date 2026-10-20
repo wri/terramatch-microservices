@@ -27,20 +27,20 @@ export class ProjectMapIndexService {
     const projectIds = projectContextIdsSubquery(query, true);
     const [projects, polygonCounts] = await Promise.all([
       Project.findAll({
-        attributes: ["id", "uuid", "name", "lat", "long", "frameworkKey", "country", "cohort"],
+        attributes: ["id", "uuid", "name", "lat", "long", "frameworkKey", "level0Project", "cohort"],
         where: { id: { [Op.in]: projectIds } }
       }),
       countActivePolygonsByProject(projectIds)
     ]);
 
     return new ProjectMapIndexDto(
-      projects.map(({ id, uuid, name, lat, long, frameworkKey, country, cohort }) => ({
+      projects.map(({ id, uuid, name, lat, long, frameworkKey, level0Project, cohort }) => ({
         uuid,
         name,
         lat,
         long,
         frameworkKey,
-        country,
+        level0Project,
         cohort,
         polygonCount: polygonCounts.get(id) ?? 0
       }))

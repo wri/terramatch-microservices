@@ -20,7 +20,7 @@ export class ProjectsController {
     operationId: "projectsMapIndex",
     summary: "Get a sparse list of projects for the cohort map and the project context filter",
     description: `Returns one resource whose attributes hold every project as
-    \`{ uuid, name, lat, long, frameworkKey, country, cohort, polygonCount }\`, plus a \`total\`. There is no
+    \`{ uuid, name, lat, long, frameworkKey, level0Project, cohort, polygonCount }\`, plus a \`total\`. There is no
     pagination: the payload stays small because each row carries only the fields needed to place a project marker
     and to build the framework / country / cohort facets.
 

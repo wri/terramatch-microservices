@@ -31,7 +31,7 @@ describe("ProjectMapIndexService", () => {
       lat: 1.25,
       long: -3.5,
       frameworkKey: "ppc",
-      country: "KE",
+      level0Project: ["KE"],
       cohort: "terrafund"
     });
 
@@ -43,7 +43,7 @@ describe("ProjectMapIndexService", () => {
       lat: 1.25,
       long: -3.5,
       frameworkKey: "ppc",
-      country: "KE",
+      level0Project: ["KE"],
       cohort: "terrafund",
       polygonCount: 0
     });
@@ -82,24 +82,29 @@ describe("ProjectMapIndexService", () => {
       lat: 1,
       long: 1,
       frameworkKey: "ppc",
-      country: "KE",
+      level0Project: ["KE"],
       organisationId: organisation.id
     });
     const otherFramework = await ProjectFactory.create({
       lat: 1,
       long: 1,
       frameworkKey: "terrafund",
-      country: "KE",
+      level0Project: ["KE"],
       organisationId: organisation.id
     });
     const otherCountry = await ProjectFactory.create({
       lat: 1,
       long: 1,
       frameworkKey: "ppc",
-      country: "GH",
+      level0Project: ["GH"],
       organisationId: organisation.id
     });
-    const otherOrganisation = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "ppc", country: "KE" });
+    const otherOrganisation = await ProjectFactory.create({
+      lat: 1,
+      long: 1,
+      frameworkKey: "ppc",
+      level0Project: ["KE"]
+    });
 
     const uuids = await getUuids({
       frameworkKey: ["ppc"],
@@ -111,6 +116,16 @@ describe("ProjectMapIndexService", () => {
     expect(uuids).not.toContain(otherFramework.uuid);
     expect(uuids).not.toContain(otherCountry.uuid);
     expect(uuids).not.toContain(otherOrganisation.uuid);
+  });
+
+  it("matches country[] against the first level0Project entry only", async () => {
+    const primary = await ProjectFactory.create({ lat: 1, long: 1, level0Project: ["KE", "GH"] });
+    const secondary = await ProjectFactory.create({ lat: 1, long: 1, level0Project: ["GH", "KE"] });
+
+    const uuids = await getUuids({ country: ["KE"] });
+
+    expect(uuids).toContain(primary.uuid);
+    expect(uuids).not.toContain(secondary.uuid);
   });
 
   it("filters by plantingStatus of the latest approved project report", async () => {

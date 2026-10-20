@@ -48,7 +48,7 @@ describe("ProjectsController", () => {
         lat: 1,
         long: 2,
         frameworkKey: "ppc" as const,
-        country: "KE",
+        level0Project: ["KE"],
         cohort: "terrafund",
         polygonCount: 3
       };

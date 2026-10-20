@@ -28,8 +28,8 @@ export class ProjectMapEntryDto {
   @ApiProperty({ nullable: true, type: String, enum: FRAMEWORK_KEYS, description: "Framework key of the project." })
   frameworkKey: FrameworkKey | null;
 
-  @ApiProperty({ nullable: true, type: String, description: "Country code of the project." })
-  country: string | null;
+  @ApiProperty({ nullable: true, type: String, isArray: true, description: "Project country codes (GADM level 0)." })
+  level0Project: string[] | null;
 
   @ApiProperty({ nullable: true, type: String, description: "Cohort of the project." })
   cohort: string | null;

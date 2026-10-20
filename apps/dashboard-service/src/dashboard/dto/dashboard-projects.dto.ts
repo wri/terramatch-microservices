@@ -11,12 +11,15 @@ export class DashboardProjectsLightDto extends DashboardEntityDto {
     super();
     if (project != null && props != null) {
       populateDto<DashboardProjectsLightDto, Project>(this, project, { lightResource: true, ...props });
-      this.country = project.level0Project?.[0] ?? null;
     }
   }
 
-  @ApiProperty({ nullable: true, type: String })
+  /** @deprecated Use level0Project instead. */
+  @ApiProperty({ nullable: true, type: String, deprecated: true, description: "Use level0Project instead" })
   country: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true, description: "Project country codes (GADM level 0)" })
+  level0Project: string[] | null;
 
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
@@ -59,7 +62,6 @@ export class DashboardProjectsFullDto extends DashboardProjectsLightDto {
   constructor(project: Project, props: HybridSupportProps<DashboardProjectsFullDto, Project>) {
     super();
     populateDto<DashboardProjectsFullDto, Project>(this, project, { lightResource: false, ...props });
-    this.country = project.level0Project?.[0] ?? null;
   }
 
   @ApiProperty({ nullable: true, type: String, isArray: true })

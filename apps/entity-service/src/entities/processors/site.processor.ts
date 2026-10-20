@@ -381,6 +381,27 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     };
   }
 
+  /**
+   * Trees planted and hectares restored for each site, keyed by site uuid. Used by the sites meta index
+   * to total the section header metrics without building a light DTO for every site.
+   */
+  async getProgressMetrics(sites: Site[]) {
+    const siteUuids = sites.map(site => site.uuid);
+    const [hectaresData, treesPlantedData] = await Promise.all([
+      this.getHectaresRestoredSum(siteUuids),
+      this.getTreesPlantedCount(sites)
+    ]);
+    return new Map(
+      sites.map(site => [
+        site.uuid,
+        {
+          treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+          totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0
+        }
+      ])
+    );
+  }
+
   async getLightDtos(sites: Site[]): Promise<{ id: string; dto: SiteLightDto }[]> {
     if (sites.length === 0) return [];
 

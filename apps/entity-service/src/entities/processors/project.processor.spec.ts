@@ -53,6 +53,12 @@ import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import {
+  NurseriesMetaQueryDto,
+  ProjectNurseriesMetaDto,
+  ProjectSitesMetaDto,
+  SitesMetaQueryDto
+} from "../dto/nurseries-meta.dto";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
@@ -591,6 +597,262 @@ describe("ProjectProcessor", () => {
       const { result, data } = await getIndex({}, []);
       expect(result.meta.indices?.[0].total).toBe(0);
       expect(data).toEqual([]);
+    });
+  });
+
+  describe("addNurseriesMetaIndex", () => {
+    const frameworkKey = "ppc";
+    let organisation: Organisation;
+    let user: User;
+
+    // Seedlings are summed from the approved reports only, as the nursery detail page does.
+    const createData = async () => {
+      user = await UserFactory.create();
+      organisation = await OrganisationFactory.create();
+      const organisationId = organisation.id;
+
+      const alpha = await ProjectFactory.create({ frameworkKey, organisationId, name: "Alpha Nurseries" });
+      const approvedNursery = await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Approved Nursery",
+        status: "approved",
+        updateRequestStatus: null
+      });
+      const approvedReport = await NurseryReportFactory.create({
+        nurseryId: approvedNursery.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 100 });
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 50 });
+      const draftReport = await NurseryReportFactory.create({
+        nurseryId: approvedNursery.id,
+        frameworkKey,
+        status: "draft"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftReport).create({ amount: 999 });
+
+      const draftNursery = await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Draft Nursery",
+        status: "draft",
+        updateRequestStatus: null
+      });
+      const draftNurseryReport = await NurseryReportFactory.create({
+        nurseryId: draftNursery.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftNurseryReport).create({ amount: 30 });
+
+      const beta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Nurseries" });
+      await NurseryFactory.create({ projectId: beta.id, frameworkKey, name: "Beta Nursery", status: "approved" });
+
+      // Has only a draft nursery, so it is listed without filters and not when filtering by approved.
+      const gamma = await ProjectFactory.create({ frameworkKey, organisationId, name: "Gamma" });
+      await NurseryFactory.create({ projectId: gamma.id, frameworkKey, name: "Gamma Nursery", status: "draft" });
+
+      for (const { id: projectId } of [alpha, beta, gamma]) {
+        await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
+      }
+
+      return { alpha, beta, gamma };
+    };
+
+    const getIndex = async (query: NurseriesMetaQueryDto, permissions = ["projects-manage"]) => {
+      mockContextForUser(user, ...permissions);
+      const document = buildJsonApi(ProjectNurseriesMetaDto, { pagination: "number" });
+      await processor.addNurseriesMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { result, data, attributes: data.map(({ attributes }) => attributes) };
+    };
+
+    it("lists every project with nurseries, with nursery counts and seedlings grown", async () => {
+      const { alpha, beta, gamma } = await createData();
+      const { result, data, attributes } = await getIndex({});
+
+      expect(result.meta.resourceType).toBe("projectNurseriesMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectNurseriesMetas",
+        requestPath: "/entities/v3/projects/nurseriesMeta",
+        total: 3
+      });
+      expect(data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid, gamma.uuid]);
+      expect(attributes).toEqual([
+        {
+          uuid: alpha.uuid,
+          name: "Alpha Nurseries",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 2,
+          nurseriesMatching: 2,
+          seedlingsGrownTotal: 180,
+          seedlingsGrownMatching: 180
+        },
+        {
+          uuid: beta.uuid,
+          name: "Beta Nurseries",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 1,
+          nurseriesMatching: 1,
+          seedlingsGrownTotal: 0,
+          seedlingsGrownMatching: 0
+        },
+        {
+          uuid: gamma.uuid,
+          name: "Gamma",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 1,
+          nurseriesMatching: 1,
+          seedlingsGrownTotal: 0,
+          seedlingsGrownMatching: 0
+        }
+      ]);
+    });
+
+    it("only returns projects with matching nurseries, and counts only the matching nurseries", async () => {
+      const { alpha, beta } = await createData();
+      const approved = await getIndex({ status: ["approved"] });
+
+      expect(approved.result.meta.indices?.[0].total).toBe(2);
+      expect(approved.data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(approved.attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        nurseriesTotal: 2,
+        nurseriesMatching: 1,
+        seedlingsGrownTotal: 180,
+        seedlingsGrownMatching: 150
+      });
+    });
+
+    it("matches the search against the nursery, project and organisation names", async () => {
+      const { alpha } = await createData();
+      const byNursery = await getIndex({ search: "Draft Nursery" });
+      expect(byNursery.data.map(({ id }) => id)).toEqual([alpha.uuid]);
+      expect(byNursery.attributes[0]).toMatchObject({ nurseriesTotal: 2, nurseriesMatching: 1 });
+
+      const byProject = await getIndex({ search: "Alpha Nurseries" });
+      expect(byProject.attributes[0]).toMatchObject({ nurseriesTotal: 2, nurseriesMatching: 2 });
+    });
+  });
+
+  describe("addSitesMetaIndex", () => {
+    const frameworkKey = "ppc";
+    let organisation: Organisation;
+    let user: User;
+
+    // Trees planted are summed from the approved site reports only, as the site detail page does.
+    const createData = async () => {
+      user = await UserFactory.create();
+      organisation = await OrganisationFactory.create();
+      const organisationId = organisation.id;
+
+      const alpha = await ProjectFactory.create({ frameworkKey, organisationId, name: "Alpha Sites" });
+      const approvedSite = await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Approved Site",
+        status: "approved",
+        updateRequestStatus: null
+      });
+      const approvedReport = await SiteReportFactory.create({
+        siteId: approvedSite.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedReport).create({ amount: 40 });
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedReport).create({ amount: 10 });
+      const draftReport = await SiteReportFactory.create({ siteId: approvedSite.id, frameworkKey, status: "draft" });
+      await TreeSpeciesFactory.siteReportTreePlanted(draftReport).create({ amount: 500 });
+
+      const draftSite = await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Draft Site",
+        status: "draft",
+        updateRequestStatus: null
+      });
+      const draftSiteReport = await SiteReportFactory.create({
+        siteId: draftSite.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(draftSiteReport).create({ amount: 20 });
+
+      const beta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Sites" });
+      await SiteFactory.create({
+        projectId: beta.id,
+        frameworkKey,
+        name: "Beta Site",
+        status: "approved",
+        updateRequestStatus: null
+      });
+
+      for (const { id: projectId } of [alpha, beta]) {
+        await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
+      }
+
+      return { alpha, beta };
+    };
+
+    const getIndex = async (query: SitesMetaQueryDto, permissions = ["projects-manage"]) => {
+      mockContextForUser(user, ...permissions);
+      const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
+      await processor.addSitesMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { result, data, attributes: data.map(({ attributes }) => attributes) };
+    };
+
+    it("lists every project with sites, with site counts and trees planted", async () => {
+      const { alpha, beta } = await createData();
+      const { result, data, attributes } = await getIndex({});
+
+      expect(result.meta.resourceType).toBe("projectSitesMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectSitesMetas",
+        requestPath: "/entities/v3/projects/sitesMeta",
+        total: 2
+      });
+      expect(data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        name: "Alpha Sites",
+        sitesTotal: 2,
+        sitesMatching: 2,
+        treesPlantedTotal: 70,
+        treesPlantedMatching: 50
+      });
+      expect(attributes[1]).toMatchObject({ uuid: beta.uuid, sitesTotal: 1, sitesMatching: 1, treesPlantedTotal: 0 });
+    });
+
+    it("counts only the sites matching the filters in the totals", async () => {
+      const { alpha, beta } = await createData();
+      const approved = await getIndex({ status: ["approved"] });
+
+      expect(approved.data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(approved.attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        sitesTotal: 2,
+        sitesMatching: 1,
+        treesPlantedTotal: 70,
+        treesPlantedMatching: 50
+      });
+    });
+
+    it("matches the search against the site and project names", async () => {
+      const { alpha } = await createData();
+      const bySite = await getIndex({ search: "Draft Site" });
+      expect(bySite.data.map(({ id }) => id)).toEqual([alpha.uuid]);
+      expect(bySite.attributes[0]).toMatchObject({ sitesTotal: 2, sitesMatching: 1 });
+
+      const byProject = await getIndex({ search: "Alpha Sites" });
+      expect(byProject.attributes[0]).toMatchObject({ sitesTotal: 2, sitesMatching: 2 });
     });
   });
 

@@ -22,7 +22,12 @@ import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
-import { EntityIndexParamsDto, ReportsMetaParamsDto } from "./dto/entity-index-params.dto";
+import {
+  EntityIndexParamsDto,
+  NurseriesMetaParamsDto,
+  ReportsMetaParamsDto,
+  SitesMetaParamsDto
+} from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
@@ -67,6 +72,12 @@ import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-tr
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ProjectReportMetaDto, ReportMetaDto } from "./dto/project-report-meta.dto";
 import { ReportCountsQueryDto, ReportsMetaQueryDto } from "./dto/report-counts-query.dto";
+import {
+  NurseriesMetaQueryDto,
+  ProjectNurseriesMetaDto,
+  ProjectSitesMetaDto,
+  SitesMetaQueryDto
+} from "./dto/nurseries-meta.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
@@ -148,6 +159,34 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor(entity);
     const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
     await processor.addReportsMetaIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/nurseriesMeta")
+  @ApiOperation({
+    operationId: "entityNurseriesMetaIndex",
+    summary: "Get a paginated and filtered list of projects with nursery meta for the nurseries index."
+  })
+  @JsonApiResponse({ data: ProjectNurseriesMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entityNurseriesMetaIndex(@Param() { entity }: NurseriesMetaParamsDto, @Query() query: NurseriesMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectNurseriesMetaDto, { pagination: "number" });
+    await processor.addNurseriesMetaIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/sitesMeta")
+  @ApiOperation({
+    operationId: "entitySitesMetaIndex",
+    summary: "Get a paginated and filtered list of projects with site meta for the sites index."
+  })
+  @JsonApiResponse({ data: ProjectSitesMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entitySitesMetaIndex(@Param() { entity }: SitesMetaParamsDto, @Query() query: SitesMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
+    await processor.addSitesMetaIndex(document, query);
     return document;
   }
 

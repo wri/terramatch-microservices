@@ -2,7 +2,9 @@ import { Test } from "@nestjs/testing";
 import {
   OrganisationFactory,
   ProjectFactory,
-  ProjectReportFactory
+  ProjectReportFactory,
+  SiteFactory,
+  SitePolygonFactory
 } from "@terramatch-microservices/database/factories";
 import { ProjectMapIndexService } from "./project-map-index.service";
 import { ProjectMapIndexQueryDto } from "./dto/project-map-index-query.dto";
@@ -21,21 +23,51 @@ describe("ProjectMapIndexService", () => {
     service = module.get(ProjectMapIndexService);
   });
 
-  it("returns uuid, name and centroid for every project when no filters are given", async () => {
-    const project = await ProjectFactory.create({ lat: 1.25, long: -3.5 });
+  const findEntry = async (uuid: string) =>
+    (await service.getMapIndex({})).projects.find(project => project.uuid === uuid);
+
+  it("returns the marker and facet fields for every project when no filters are given", async () => {
+    const project = await ProjectFactory.create({
+      lat: 1.25,
+      long: -3.5,
+      frameworkKey: "ppc",
+      country: "KE",
+      cohort: "terrafund"
+    });
 
     const result = await service.getMapIndex({});
 
-    expect(result.projects).toContainEqual({ uuid: project.uuid, name: project.name, lat: 1.25, long: -3.5 });
+    expect(result.projects).toContainEqual({
+      uuid: project.uuid,
+      name: project.name,
+      lat: 1.25,
+      long: -3.5,
+      frameworkKey: "ppc",
+      country: "KE",
+      cohort: "terrafund",
+      polygonCount: 0
+    });
     expect(result.total).toBe(result.projects.length);
   });
 
   it("includes projects without a centroid with a null lat / long", async () => {
     const project = await ProjectFactory.create({ lat: null, long: null });
 
-    const result = await service.getMapIndex({});
+    expect(await findEntry(project.uuid)).toMatchObject({ lat: null, long: null });
+  });
 
-    expect(result.projects).toContainEqual({ uuid: project.uuid, name: project.name, lat: null, long: null });
+  it("counts only active polygons across all of a project's sites", async () => {
+    const project = await ProjectFactory.create({ lat: 1, long: 1 });
+    const [siteA, siteB] = await SiteFactory.createMany(2, { projectId: project.id });
+    await SitePolygonFactory.createMany(2, { siteUuid: siteA.uuid });
+    await SitePolygonFactory.create({ siteUuid: siteB.uuid });
+    await SitePolygonFactory.create({ siteUuid: siteB.uuid, isActive: false });
+    const otherProject = await ProjectFactory.create({ lat: 1, long: 1 });
+    const otherSite = await SiteFactory.create({ projectId: otherProject.id });
+    await SitePolygonFactory.create({ siteUuid: otherSite.uuid });
+
+    expect((await findEntry(project.uuid))?.polygonCount).toBe(3);
+    expect((await findEntry(otherProject.uuid))?.polygonCount).toBe(1);
   });
 
   it("excludes test projects", async () => {

@@ -1,6 +1,8 @@
 import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes, STRING, TEXT } from "sequelize";
+import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes, STRING } from "sequelize";
 import { User } from "./user.entity";
+import { Project } from "./project.entity";
+import { EventCategory } from "../constants/product-events";
 
 @Table({ tableName: "notifications", underscored: true })
 export class Notification extends Model<InferAttributes<Notification>, InferCreationAttributes<Notification>> {
@@ -13,15 +15,22 @@ export class Notification extends Model<InferAttributes<Notification>, InferCrea
   @Column(BIGINT.UNSIGNED)
   declare userId: number;
 
-  @Column(STRING)
-  declare title: string;
+  @AllowNull
+  @ForeignKey(() => Project)
+  @Column(BIGINT.UNSIGNED)
+  declare projectId: number | null;
 
-  @Column(TEXT({ length: "long" }))
-  declare body: string;
+  @AllowNull
+  @ForeignKey(() => User)
+  @Column(BIGINT.UNSIGNED)
+  declare createdBy: number | null;
 
   @AllowNull
   @Column(STRING)
-  declare action: string | null;
+  declare summary: string | null;
+
+  @Column(STRING)
+  declare category: EventCategory;
 
   @AllowNull
   @Column(STRING)
@@ -33,7 +42,4 @@ export class Notification extends Model<InferAttributes<Notification>, InferCrea
 
   @Column({ type: BOOLEAN, defaultValue: true })
   declare unread: CreationOptional<boolean>;
-
-  @Column({ type: BOOLEAN, defaultValue: false })
-  declare hiddenFromApp: CreationOptional<boolean>;
 }

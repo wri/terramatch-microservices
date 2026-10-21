@@ -134,4 +134,7 @@ export class ProjectSitesMetaDto {
 
   @ApiProperty({ description: "Hectares restored across the sites that match the filters" })
   hectaresRestoredMatching: number;
+
+  @ApiProperty({ description: "Workdays across the approved sites that match the filters" })
+  workdaysMatching: number;
 }

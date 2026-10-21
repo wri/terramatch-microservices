@@ -496,7 +496,11 @@ export class ProjectProcessor extends EntityProcessor<
       }
       const metricsBySiteUuid = await siteProcessor.getProgressMetrics(sites);
       const metricsOf = (site: Site) =>
-        metricsBySiteUuid.get(site.uuid) ?? { treesPlantedCount: 0, totalHectaresRestoredSum: 0 };
+        metricsBySiteUuid.get(site.uuid) ?? {
+          treesPlantedCount: 0,
+          totalHectaresRestoredSum: 0,
+          combinedWorkdayCount: 0
+        };
       const sitesByProject = groupBy(sites, "projectId");
 
       for (const { id, uuid, name, frameworkKey, organisation } of projects) {
@@ -516,7 +520,8 @@ export class ProjectProcessor extends EntityProcessor<
             treesPlantedTotal: sumBy(projectSites, site => metricsOf(site).treesPlantedCount),
             treesPlantedMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesPlantedCount),
             hectaresRestoredTotal: sumBy(projectSites, site => metricsOf(site).totalHectaresRestoredSum),
-            hectaresRestoredMatching: sumBy(approvedMatchingSites, site => metricsOf(site).totalHectaresRestoredSum)
+            hectaresRestoredMatching: sumBy(approvedMatchingSites, site => metricsOf(site).totalHectaresRestoredSum),
+            workdaysMatching: sumBy(approvedMatchingSites, site => metricsOf(site).combinedWorkdayCount)
           })
         );
       }

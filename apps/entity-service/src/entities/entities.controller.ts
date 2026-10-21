@@ -79,6 +79,7 @@ import {
   SitesMetaQueryDto
 } from "./dto/nurseries-meta.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
+import { EntityCountsDto, EntityCountsQueryDto } from "./dto/entity-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -122,6 +123,38 @@ export class EntitiesController {
       "reportCounts",
       new ReportCountsDto({ totalReports, reportingPeriods })
     );
+  }
+
+  @Get("sitesCounts")
+  @ApiOperation({
+    operationId: "sitesCountsGet",
+    summary: "Get the total number of sites matching the given filters."
+  })
+  @JsonApiResponse(EntityCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async sitesCountsGet(@Query() query: EntityCountsQueryDto) {
+    return await this.countEntities("sites", query);
+  }
+
+  @Get("nurseriesCounts")
+  @ApiOperation({
+    operationId: "nurseriesCountsGet",
+    summary: "Get the total number of nurseries matching the given filters."
+  })
+  @JsonApiResponse(EntityCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async nurseriesCountsGet(@Query() query: EntityCountsQueryDto) {
+    return await this.countEntities("nurseries", query);
+  }
+
+  /**
+   * Counts with the same filters and permission scope as the index, using findMany, which does not authorize the
+   * rows it returns. The count therefore never fails because of a single row the user can't read.
+   */
+  private async countEntities(entity: "sites" | "nurseries", query: EntityCountsQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const { paginationTotal } = await processor.findMany({ ...query, page: { number: 1, size: 1 } });
+    return buildJsonApi(EntityCountsDto).addData(`${entity}Counts`, new EntityCountsDto({ total: paginationTotal }));
   }
 
   @Get(":entity")

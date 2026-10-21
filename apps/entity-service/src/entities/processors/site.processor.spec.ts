@@ -19,6 +19,8 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
+import { TrackingEntryFactory } from "@terramatch-microservices/database/factories/tracking-entry.factory";
+import { TrackingFactory } from "@terramatch-microservices/database/factories/tracking.factory";
 import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
@@ -354,6 +356,53 @@ describe("SiteProcessor", () => {
         const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
         expect(indexDto.plantingStatus).toBe("in-progress");
       });
+    });
+
+    it("includes combined workdays in light DTOs, matching the full DTO", async () => {
+      const { id: siteId, uuid } = await SiteFactory.create();
+      await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2024-01-01"),
+        workdaysPaid: 3,
+        workdaysVolunteer: 2
+      });
+      await SiteReportFactory.create({
+        siteId,
+        status: "draft",
+        dueAt: new Date("2024-01-01"),
+        workdaysPaid: 10,
+        workdaysVolunteer: 10
+      });
+
+      const site = await processor.findOne(uuid);
+      const { dto: fullDto } = await processor.getFullDto(site!);
+      const { dto: lightDto } = await processor.getLightDto(site!);
+      const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+      const progressMetrics = await processor.getProgressMetrics([site!]);
+
+      expect(fullDto.combinedWorkdayCount).toBe(5);
+      expect(lightDto.combinedWorkdayCount).toBe(5);
+      expect(indexDto.combinedWorkdayCount).toBe(5);
+      expect(progressMetrics.get(uuid)?.combinedWorkdayCount).toBe(5);
+    });
+
+    it("counts demographic workdays from tracking entries for reports due after the cutoff", async () => {
+      const { id: siteId, uuid } = await SiteFactory.create();
+      const report = await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2025-01-01"),
+        workdaysPaid: 0,
+        workdaysVolunteer: 0
+      });
+      const tracking = await TrackingFactory.siteReportWorkday(report).create();
+      await TrackingEntryFactory.gender(tracking).create({ amount: 4 });
+      await TrackingEntryFactory.gender(tracking).create({ amount: 6 });
+
+      const [{ dto: indexDto }] = await processor.getLightDtos([(await processor.findOne(uuid))!]);
+
+      expect(indexDto.combinedWorkdayCount).toBe(10);
     });
   });
 

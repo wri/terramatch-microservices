@@ -1,5 +1,8 @@
 import { Test } from "@nestjs/testing";
+import { Project } from "@terramatch-microservices/database/entities";
+import { PROJECT_QA_STATUS_AUDIT_TYPES } from "@terramatch-microservices/database/constants";
 import {
+  AuditStatusFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
@@ -45,7 +48,11 @@ describe("ProjectMapIndexService", () => {
       frameworkKey: "ppc",
       level0Project: ["KE"],
       cohort: "terrafund",
-      polygonCount: 0
+      polygonCount: 0,
+      sumNumTrees: 0,
+      sumCalcArea: 0,
+      latestQaCycle: null,
+      latestQaStatus: null
     });
     expect(result.total).toBe(result.projects.length);
   });
@@ -68,6 +75,53 @@ describe("ProjectMapIndexService", () => {
 
     expect((await findEntry(project.uuid))?.polygonCount).toBe(3);
     expect((await findEntry(otherProject.uuid))?.polygonCount).toBe(1);
+  });
+
+  it("sums numTrees and calcArea of active polygons in any status", async () => {
+    const project = await ProjectFactory.create({ lat: 1, long: 1 });
+    const site = await SiteFactory.create({ projectId: project.id });
+    await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved", numTrees: 100, calcArea: 1.5 });
+    await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft", numTrees: 50, calcArea: 2.25 });
+    await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: null, calcArea: null });
+    await SitePolygonFactory.create({ siteUuid: site.uuid, isActive: false, numTrees: 1000, calcArea: 100 });
+
+    expect(await findEntry(project.uuid)).toMatchObject({ polygonCount: 3, sumNumTrees: 150, sumCalcArea: 3.75 });
+  });
+
+  describe("latest QA status", () => {
+    const createQaAudit = (project: Project, cycle: number, status: string | null) =>
+      AuditStatusFactory.project(project).create({ type: PROJECT_QA_STATUS_AUDIT_TYPES[cycle - 1], status });
+
+    it("returns the status of the most recently updated cycle, not the highest one", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1 });
+      await createQaAudit(project, 1, "qa-completed");
+      await createQaAudit(project, 4, "qa-in-progress");
+      await createQaAudit(project, 2, "no-data-submitted");
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 2, latestQaStatus: "no-data-submitted" });
+    });
+
+    it("ignores audits that are not QA status audits", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1 });
+      await createQaAudit(project, 3, "qa-completed");
+      await AuditStatusFactory.project(project).create({ type: "status", status: "approved" });
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 3, latestQaStatus: "qa-completed" });
+    });
+
+    it("returns null when the most recent QA audit cleared the status", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1 });
+      await createQaAudit(project, 1, "qa-completed");
+      await createQaAudit(project, 2, null);
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: null, latestQaStatus: null });
+    });
+
+    it("ignores QA status columns that have no audit", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1, projectQaStatus1: "qa-completed" });
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: null, latestQaStatus: null });
+    });
   });
 
   it("excludes test projects", async () => {

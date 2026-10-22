@@ -50,7 +50,11 @@ describe("ProjectsController", () => {
         frameworkKey: "ppc" as const,
         level0Project: ["KE"],
         cohort: "terrafund",
-        polygonCount: 3
+        polygonCount: 3,
+        sumNumTrees: 1200,
+        sumCalcArea: 4.5,
+        latestQaCycle: 2,
+        latestQaStatus: "qa-in-progress" as const
       };
       service.getMapIndex.mockResolvedValue(new ProjectMapIndexDto([entry]));
 

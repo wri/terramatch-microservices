@@ -2,7 +2,10 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { UserSocketProcessor } from "./user-socket.processor";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UserGateway } from "./user.gateway";
-import { UserDataPushEvent } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
+import {
+  UserDataDeleteEvent,
+  UserDataPushEvent
+} from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { Job } from "bullmq";
 import { Server } from "socket.io";
 import {
@@ -161,10 +164,12 @@ describe("UserSocketProcessor", () => {
         emit
       } as unknown as ReturnType<Server["in"]>;
       gateway().server.in.mockReturnValue(room);
+      // Hard delete the task to show that the processor doesn't need to load it.
+      await task.destroy({ force: true });
       await processor.process({
         name: "userDataDelete",
-        data: { userIds: [user.id], model: "tasks", modelId: task.id }
-      } as Job<UserDataPushEvent>);
+        data: { userIds: [user.id], model: "tasks", uuid: task.uuid }
+      } as Job<UserDataDeleteEvent>);
       expect(gateway().server.in).toHaveBeenCalledWith(`user:${user.id}`);
       expect(room.emit).toHaveBeenCalled();
 
@@ -173,6 +178,35 @@ describe("UserSocketProcessor", () => {
       expect(payload.meta.resourceType).toBe("userTasks");
       expect(payload.meta.resourceIds).toEqual([task.uuid]);
       expect(payload.data).toBeUndefined();
+    });
+
+    it("throws if a deletion event is missing the uuid", async () => {
+      await expect(
+        processor.process({
+          name: "userDataDelete",
+          data: { userIds: [1], model: "tasks" }
+        } as Job<UserDataDeleteEvent>)
+      ).rejects.toThrow('Model missing for user push event {"userIds":[1],"model":"tasks"}');
+    });
+
+    it("generates a notification deletion document", async () => {
+      const notification = await NotificationFactory.create();
+      await notification.destroy();
+      const emit = jest.fn();
+      const room = {
+        fetchSockets: jest.fn(() => Promise.resolve([1])), // what's in the room doesn't matter to the processor
+        emit
+      } as unknown as ReturnType<Server["in"]>;
+      gateway().server.in.mockReturnValue(room);
+      await processor.process({
+        name: "userDataDelete",
+        data: { userIds: [notification.userId], model: "notifications", uuid: notification.uuid }
+      } as Job<UserDataDeleteEvent>);
+
+      const [event, payload] = emit.mock.calls[0] as [string, JsonApiDocument];
+      expect(event).toBe("userDataPush");
+      expect(payload.meta.resourceType).toBe("notifications");
+      expect(payload.meta.resourceIds).toEqual([notification.uuid]);
     });
 
     it("throws if the serializer is not defined", async () => {
@@ -188,8 +222,8 @@ describe("UserSocketProcessor", () => {
       await expect(
         processor.process({
           name: "userDataDelete",
-          data: { userIds: [user.id], model: "foo", modelId: task.id }
-        } as unknown as Job<UserDataPushEvent>)
+          data: { userIds: [user.id], model: "foo", uuid: task.uuid }
+        } as unknown as Job<UserDataDeleteEvent>)
       ).rejects.toThrow("Invalid model: foo");
     });
   });

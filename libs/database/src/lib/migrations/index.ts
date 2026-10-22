@@ -55,6 +55,7 @@ import { removeProjectUsersIsMonitoringColumn } from "./202610081200-remove-proj
 import { dropRolePermissionTables } from "./202610141200-drop-role-permission-tables";
 import { removeProjectUsersStatusColumn } from "./202610151200-remove-project-users-status-column";
 import { updateNotifications } from "./202610201200-update-notifications";
+import { addNotificationsUuid } from "./202610221200-add-notifications-uuid";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -111,5 +112,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeProjectUsersIsMonitoringColumn,
   dropRolePermissionTables,
   removeProjectUsersStatusColumn,
-  updateNotifications
+  updateNotifications,
+  addNotificationsUuid
 ];

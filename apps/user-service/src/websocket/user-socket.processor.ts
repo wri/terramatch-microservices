@@ -9,14 +9,9 @@ import {
 } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { InternalServerErrorException, NotImplementedException } from "@nestjs/common";
 import { UserGateway } from "./user.gateway";
-import { ModelSerializer } from "@terramatch-microservices/common/modelSerializers/model-serializer";
-import { UserTasksSerializer } from "@terramatch-microservices/common/modelSerializers/user-tasks.serializer";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { UserDataModel } from "@terramatch-microservices/database/types/user-model";
-
-const SERIALIZERS: Record<UserDataModel, ModelSerializer> = {
-  tasks: UserTasksSerializer
-};
+import { USER_DATA_SERIALIZERS } from "./user-data-serializers";
 
 const SUPPORTED_EVENTS = [USER_DATA_PUSH_EVENT, USER_DATA_DELETE_EVENT] as const;
 type SupportedEvent = (typeof SUPPORTED_EVENTS)[number];
@@ -80,7 +75,7 @@ export class UserSocketProcessor extends WorkerHost {
   }
 
   private serializer(model: UserDataModel) {
-    const serializer = SERIALIZERS[model];
+    const serializer = USER_DATA_SERIALIZERS[model];
     if (serializer == null) {
       throw new InternalServerErrorException(`Invalid model: ${model}`);
     }

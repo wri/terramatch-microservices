@@ -2,7 +2,7 @@ import { OnGatewayConnection, OnGatewayInit, WebSocketGateway, WebSocketServer }
 import { Server, Socket } from "socket.io";
 import { JwtService } from "@nestjs/jwt";
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { UserTasksSerializer } from "@terramatch-microservices/common/modelSerializers/user-tasks.serializer";
+import { USER_DATA_SERIALIZERS } from "./user-data-serializers";
 
 @Injectable()
 @WebSocketGateway({
@@ -35,12 +35,11 @@ export class UserGateway implements OnGatewayInit, OnGatewayConnection {
       throw new InternalServerErrorException("User ID missing on client socket");
     }
 
-    const tasks = await UserTasksSerializer.findForUser(client.data.userId);
-    if (tasks.length > 0) {
-      client.emit(
-        "userDataReset",
-        (await UserTasksSerializer.addDtos(UserTasksSerializer.createDocument(), tasks)).serialize()
-      );
+    for (const serializer of Object.values(USER_DATA_SERIALIZERS)) {
+      const models = await serializer.findForUser(client.data.userId);
+      if (models.length > 0) {
+        client.emit("userDataReset", (await serializer.addDtos(serializer.createDocument(), models)).serialize());
+      }
     }
   }
 

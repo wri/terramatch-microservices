@@ -5,9 +5,15 @@ import { UserGateway } from "./user.gateway";
 import { UserDataPushEvent } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { Job } from "bullmq";
 import { Server } from "socket.io";
-import { TaskFactory, UserFactory, UserTaskFactory } from "@terramatch-microservices/database/factories";
+import {
+  NotificationFactory,
+  TaskFactory,
+  UserFactory,
+  UserTaskFactory
+} from "@terramatch-microservices/database/factories";
 import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
+import { NotificationDto } from "@terramatch-microservices/common/dto/notification.dto";
 
 describe("UserSocketProcessor", () => {
   let module: TestingModule;
@@ -113,6 +119,36 @@ describe("UserSocketProcessor", () => {
           })
         ])
       );
+    });
+
+    it("generates a notification data document", async () => {
+      const notification = await NotificationFactory.create();
+      const project = await notification.$get("project");
+      const emit = jest.fn();
+      const room = {
+        fetchSockets: jest.fn(() => Promise.resolve([1])), // what's in the room doesn't matter to the processor
+        emit
+      } as unknown as ReturnType<Server["in"]>;
+      gateway().server.in.mockReturnValue(room);
+      await processor.process({
+        name: "userDataPush",
+        data: { userIds: [notification.userId], model: "notifications", modelId: notification.id }
+      } as Job<UserDataPushEvent>);
+      expect(gateway().server.in).toHaveBeenCalledWith(`user:${notification.userId}`);
+
+      const [event, payload] = emit.mock.calls[0] as [string, JsonApiDocument];
+      expect(event).toBe("userDataPush");
+      const resource = payload.data as Resource;
+      expect(resource.type).toBe("notifications");
+      expect(resource.id).toBe(notification.uuid);
+      const dto = resource.attributes as unknown as NotificationDto;
+      expect(dto).toMatchObject({
+        projectUuid: project?.uuid,
+        projectName: project?.name,
+        summary: notification.summary,
+        category: notification.category,
+        unread: true
+      });
     });
 
     it("generates a deletion document", async () => {

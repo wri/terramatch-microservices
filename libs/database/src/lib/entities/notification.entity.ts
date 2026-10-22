@@ -13,6 +13,7 @@ import {
   BIGINT,
   BOOLEAN,
   CreationOptional,
+  DestroyOptions,
   InferAttributes,
   InferCreationAttributes,
   STRING,
@@ -40,13 +41,20 @@ const notificationDestroyedHook = async (notification: Notification) => {
   });
 };
 
+// Bulk destroys (e.g. Notification.destroy({ where })) skip instance hooks by default; force them
+// on so that every deletion is pushed to the client.
+const notificationBulkDestroyHook = (options: DestroyOptions<Notification>) => {
+  options.individualHooks = true;
+};
+
 @Table({
   tableName: "notifications",
   underscored: true,
   hooks: {
     afterCreate: notificationUpdatedHook,
     afterUpdate: notificationUpdatedHook,
-    afterDestroy: notificationDestroyedHook
+    afterDestroy: notificationDestroyedHook,
+    beforeBulkDestroy: notificationBulkDestroyHook
   }
 })
 export class Notification extends Model<InferAttributes<Notification>, InferCreationAttributes<Notification>> {

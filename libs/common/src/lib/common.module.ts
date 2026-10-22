@@ -100,7 +100,8 @@ const IS_REPL = process.env["REPL"] === "true";
     CsvExportService,
     GreenhouseNotificationService,
     TransifexApiModule,
-    GwcTileInvalidationService
+    GwcTileInvalidationService,
+    ProductEventService
   ]
 })
 export class CommonModule implements NestModule {

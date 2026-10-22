@@ -7,7 +7,7 @@ import {
   TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import { APPLICATION_SUBMITTED, ProductEventService } from "./product-event.service";
+import { APPLICATION_SUBMITTED, ORGANISATION_APPROVED, ProductEventService } from "./product-event.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { getQueueToken } from "@nestjs/bullmq";
@@ -16,6 +16,7 @@ import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { mockUserContext } from "../util/testing";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { OrganisationApprovedEmail } from "../email/organisation-approved.email";
 import { ConfigService } from "@nestjs/config";
 import { FormSubmission, Notification } from "@terramatch-microservices/database/entities";
 import { DatabaseModule } from "@terramatch-microservices/database";
@@ -149,6 +150,31 @@ describe("ProductEventService", () => {
         const submission = await FormSubmissionFactory.create();
 
         await service.notify(APPLICATION_SUBMITTED, submission);
+
+        expect(emailQueue.add).not.toHaveBeenCalled();
+      });
+    });
+
+    describe(ORGANISATION_APPROVED, () => {
+      it("queues the organisation approved email", async () => {
+        const user = await UserFactory.create();
+        mockUserContext({ userId: user.id });
+        const organisation = await OrganisationFactory.create();
+
+        await service.notify(ORGANISATION_APPROVED, organisation);
+
+        expect(emailQueue.add).toHaveBeenCalledWith(OrganisationApprovedEmail.NAME, {
+          organisationId: organisation.id,
+          approvedByUserId: user.id
+        });
+        expect(await Notification.count({ where: { userId: user.id } })).toBe(0);
+      });
+
+      it("does not queue an email without an authenticated user", async () => {
+        mockUserContext();
+        const organisation = await OrganisationFactory.create();
+
+        await service.notify(ORGANISATION_APPROVED, organisation);
 
         expect(emailQueue.add).not.toHaveBeenCalled();
       });

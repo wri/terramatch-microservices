@@ -20,13 +20,16 @@ import {
 } from "@terramatch-microservices/database/constants";
 import { TerrafundReportReminderEmail } from "../email/terrafund-report-reminder.email";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { OrganisationApprovedEmail } from "../email/organisation-approved.email";
 import { UserContext } from "../contexts/user.context";
 import { TMLogger } from "../util/tm-logger";
 
 export const APPLICATION_SUBMITTED = "application-submitted";
+export const ORGANISATION_APPROVED = "organisation-approved";
 
 type NotificationPayloads = {
   [APPLICATION_SUBMITTED]: FormSubmission;
+  [ORGANISATION_APPROVED]: Organisation;
 };
 
 export type NotificationKind = keyof NotificationPayloads;
@@ -43,7 +46,8 @@ export class ProductEventService {
   ) {}
 
   private readonly notifiers: Notifiers = {
-    [APPLICATION_SUBMITTED]: submission => this.applicationSubmitted(submission)
+    [APPLICATION_SUBMITTED]: submission => this.applicationSubmitted(submission),
+    [ORGANISATION_APPROVED]: organisation => this.organisationApproved(organisation)
   };
 
   async notify<K extends NotificationKind>(kind: K, payload: NotificationPayloads[K]) {
@@ -105,6 +109,19 @@ export class ProductEventService {
       message: form?.submissionMessage ?? "Thank you for sending your application.",
       userId
     }).sendLater(this.emailQueue);
+  }
+
+  private async organisationApproved(organisation: Organisation) {
+    const approvedByUserId = UserContext.authenticatedUserId;
+    if (approvedByUserId == null) {
+      this.logger.error("Cannot send organisation approved email without authenticated user");
+      return;
+    }
+
+    await new OrganisationApprovedEmail({ organisationId: organisation.id, approvedByUserId }).sendLater(
+      this.emailQueue
+    );
+    this.logger.log(`Queued organisation approved email for organisation ${organisation.id}`);
   }
 
   private async createOrganisationNotifications(

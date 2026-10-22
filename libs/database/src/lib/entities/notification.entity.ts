@@ -12,6 +12,7 @@ import {
 import {
   BIGINT,
   BOOLEAN,
+  BulkCreateOptions,
   CreationOptional,
   DestroyOptions,
   InferAttributes,
@@ -41,9 +42,9 @@ const notificationDestroyedHook = async (notification: Notification) => {
   });
 };
 
-// Bulk destroys (e.g. Notification.destroy({ where })) skip instance hooks by default; force them
-// on so that every deletion is pushed to the client.
-const notificationBulkDestroyHook = (options: DestroyOptions<Notification>) => {
+// Bulk operations (Notification.bulkCreate(), Notification.destroy({ where })) skip instance hooks
+// by default; force them on so that every creation and deletion is pushed to the client.
+const enableIndividualHooks = (options: BulkCreateOptions<Notification> | DestroyOptions<Notification>) => {
   options.individualHooks = true;
 };
 
@@ -54,7 +55,8 @@ const notificationBulkDestroyHook = (options: DestroyOptions<Notification>) => {
     afterCreate: notificationUpdatedHook,
     afterUpdate: notificationUpdatedHook,
     afterDestroy: notificationDestroyedHook,
-    beforeBulkDestroy: notificationBulkDestroyHook
+    beforeBulkCreate: (_: Notification[], options: BulkCreateOptions<Notification>) => enableIndividualHooks(options),
+    beforeBulkDestroy: enableIndividualHooks
   }
 })
 export class Notification extends Model<InferAttributes<Notification>, InferCreationAttributes<Notification>> {

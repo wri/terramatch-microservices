@@ -1,5 +1,6 @@
 export { AboutSection } from "./about-section.entity";
 export * from "./action.entity";
+export * from "./api-key.entity";
 export * from "./srp-report.entity";
 export * from "./audit.entity";
 export * from "./audit-status.entity";

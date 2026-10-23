@@ -356,10 +356,13 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingNurseryIds = new Set(matchingNurseries.map(({ id }) => id));
       const nurseries = await Nursery.findAll({
-        attributes: ["id", "projectId"],
+        attributes: ["id", "projectId", "status"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
       const seedlingsByNursery = await this.seedlingsGrownByNursery(nurseries.map(({ id }) => id));
+      const seedlingsGoalByNursery = await this.seedlingsGoalByNursery(
+        nurseries.filter(({ status }) => Nursery.APPROVED_STATUSES.includes(status)).map(({ id }) => id)
+      );
       const nurseriesByProject = groupBy(nurseries, "projectId");
 
       for (const { id, uuid, name, frameworkKey, organisation } of projects) {
@@ -380,6 +383,10 @@ export class ProjectProcessor extends EntityProcessor<
             seedlingsGrownMatching: sumBy(
               matchingProjectNurseries,
               ({ id: nurseryId }) => seedlingsByNursery.get(nurseryId) ?? 0
+            ),
+            seedlingsGrownGoalTotal: sumBy(
+              projectNurseries.filter(({ status }) => Nursery.APPROVED_STATUSES.includes(status)),
+              ({ id: nurseryId }) => seedlingsGoalByNursery.get(nurseryId) ?? 0
             )
           })
         );
@@ -429,6 +436,26 @@ export class ProjectProcessor extends EntityProcessor<
    * Seedlings grown per nursery, summed from the visible nursery-seedling tree species of its approved
    * reports. Matches the per-nursery value the nursery index and detail pages show.
    */
+  /**
+   * The seedlings goal for each nursery, keyed by nursery id: the "Tree Species (Nursery)" amounts entered on the
+   * nursery itself (not on its reports).
+   */
+  private async seedlingsGoalByNursery(nurseryIds: number[]) {
+    const totals = new Map<number, number>();
+    if (nurseryIds.length === 0) return totals;
+
+    const treeSpecies = await TreeSpecies.visible()
+      .collection("nursery-seedling")
+      .findAll({
+        where: { speciesableType: Nursery.LARAVEL_TYPE, speciesableId: { [Op.in]: nurseryIds } },
+        attributes: ["speciesableId", "amount"]
+      });
+    for (const { speciesableId, amount } of treeSpecies) {
+      totals.set(speciesableId, (totals.get(speciesableId) ?? 0) + (amount ?? 0));
+    }
+    return totals;
+  }
+
   private async seedlingsGrownByNursery(nurseryIds: number[]) {
     const totals = new Map<number, number>();
     if (nurseryIds.length === 0) return totals;
@@ -486,7 +513,7 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingSiteIds = new Set(matchingSites.map(({ id }) => id));
       const sites = await Site.findAll({
-        attributes: ["id", "uuid", "projectId", "status"],
+        attributes: ["id", "uuid", "projectId", "status", "aNatRegeneration"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
 
@@ -499,7 +526,8 @@ export class ProjectProcessor extends EntityProcessor<
         metricsBySiteUuid.get(site.uuid) ?? {
           treesPlantedCount: 0,
           totalHectaresRestoredSum: 0,
-          combinedWorkdayCount: 0
+          combinedWorkdayCount: 0,
+          treesRestoredPpc: 0
         };
       const sitesByProject = groupBy(sites, "projectId");
 
@@ -508,6 +536,8 @@ export class ProjectProcessor extends EntityProcessor<
         const matchingProjectSites = projectSites.filter(({ id: siteId }) => matchingSiteIds.has(siteId));
         // The header's filtered totals only count approved sites, as the site index always has.
         const approvedMatchingSites = matchingProjectSites.filter(({ status }) => status === "approved");
+        // The ANR goal is entered per site, so it totals every approved site in the project, not just the matches.
+        const approvedProjectSites = projectSites.filter(({ status }) => status === "approved");
         document.addData(
           uuid,
           new ProjectSitesMetaDto({
@@ -521,7 +551,9 @@ export class ProjectProcessor extends EntityProcessor<
             treesPlantedMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesPlantedCount),
             hectaresRestoredTotal: sumBy(projectSites, site => metricsOf(site).totalHectaresRestoredSum),
             hectaresRestoredMatching: sumBy(approvedMatchingSites, site => metricsOf(site).totalHectaresRestoredSum),
-            workdaysMatching: sumBy(approvedMatchingSites, site => metricsOf(site).combinedWorkdayCount)
+            workdaysMatching: sumBy(approvedMatchingSites, site => metricsOf(site).combinedWorkdayCount),
+            treesRestoredPpcMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesRestoredPpc),
+            aNatRegenerationGoalTotal: sumBy(approvedProjectSites, site => site.aNatRegeneration ?? 0)
           })
         );
       }

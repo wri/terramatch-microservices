@@ -424,12 +424,65 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return result;
   }
 
+  /**
+   * Trees restored (PPC estimate) for each site, keyed by site uuid. Matches `treesRestoredPpc` on the full DTO:
+   * trees regenerated on approved reports + trees planted × survival rate + seeds planted × direct seeding survival
+   * rate, using each site's parent project rates. Batched so the index never queries per site.
+   */
+  private async getTreesRestoredPpc(
+    sites: Site[],
+    treesPlantedData: Record<string, number>
+  ): Promise<Record<string, number>> {
+    if (sites.length === 0) return {};
+
+    const approvedReports = await SiteReport.findAll({
+      where: {
+        siteId: { [Op.in]: sites.map(site => site.id) },
+        status: { [Op.in]: SiteReport.APPROVED_STATUSES }
+      },
+      attributes: ["id", "siteId", "numTreesRegenerating"]
+    });
+    const seedings = await Seeding.visible()
+      .siteReports(approvedReports.map(({ id }) => id))
+      .findAll({ attributes: ["seedableId", "amount"] });
+
+    const regeneratedBySiteId = new Map<number, number>();
+    for (const { siteId, numTreesRegenerating } of approvedReports) {
+      regeneratedBySiteId.set(siteId, (regeneratedBySiteId.get(siteId) ?? 0) + (numTreesRegenerating ?? 0));
+    }
+    const siteIdByReportId = new Map(approvedReports.map(({ id, siteId }) => [id, siteId]));
+    const seedsBySiteId = new Map<number, number>();
+    for (const { seedableId, amount } of seedings) {
+      const siteId = siteIdByReportId.get(seedableId);
+      if (siteId != null) seedsBySiteId.set(siteId, (seedsBySiteId.get(siteId) ?? 0) + (amount ?? 0));
+    }
+
+    const projects = await Project.findAll({
+      where: { id: { [Op.in]: [...new Set(sites.map(site => site.projectId))] } },
+      attributes: ["id", "survivalRate", "directSeedingSurvivalRate"]
+    });
+    const projectById = new Map(projects.map(project => [project.id, project]));
+
+    const result: Record<string, number> = {};
+    for (const site of sites) {
+      const project = projectById.get(site.projectId);
+      const treesPlanted = treesPlantedData[site.uuid] ?? 0;
+      const seeds = seedsBySiteId.get(site.id) ?? 0;
+      result[site.uuid] =
+        (regeneratedBySiteId.get(site.id) ?? 0) +
+        (treesPlanted * ((project?.survivalRate ?? 0) / 100) +
+          (seeds * (project?.directSeedingSurvivalRate ?? 0)) / 100);
+    }
+    return result;
+  }
+
   async getLightDto(site: Site) {
     const [hectaresData, treesPlantedData, combinedWorkdayCounts] = await Promise.all([
       this.getHectaresRestoredSum([site.uuid]),
       this.getTreesPlantedCount([site]),
       this.getCombinedWorkdayCounts([site])
     ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc([site], treesPlantedData);
 
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const treesPlantedCount = treesPlantedData[site.uuid] ?? 0;
@@ -441,6 +494,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         treesPlantedCount,
         totalHectaresRestoredSum,
         combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+        treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0,
         plantingStatus: lastReport?.plantingStatus as PlantingStatus,
         totalSiteReports: await this.getTotalSiteReports(site.id)
       })
@@ -458,13 +512,15 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       this.getTreesPlantedCount(sites),
       this.getCombinedWorkdayCounts(sites)
     ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc(sites, treesPlantedData);
     return new Map(
       sites.map(site => [
         site.uuid,
         {
           treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
           totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
-          combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0
+          combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+          treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0
         }
       ])
     );
@@ -481,6 +537,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       this.getCombinedWorkdayCounts(sites),
       this.getPlantingStatus(sites)
     ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc(sites, treesPlantedData);
 
     return Promise.all(
       sites.map(async site => ({
@@ -489,6 +546,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
           treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
           totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
           combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+          treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0,
           plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null,
           totalSiteReports: await this.getTotalSiteReports(site.id)
         })

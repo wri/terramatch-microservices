@@ -2,11 +2,13 @@ import {
   DisturbanceReport,
   Nursery,
   NurseryReport,
+  Organisation,
   Project,
   ProjectReport,
   Site,
   SiteReport,
-  SrpReport
+  SrpReport,
+  Task
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import {
@@ -85,6 +87,15 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
 // its own, so the status filter matches on that (the FE resolves the status the same way).
 const SUBMITTED_UPDATE_REQUEST_STATUSES = [PENDING_APPROVAL, INFORMATION_REQUIRED];
 
+// The progress reports are listed through their tasks (see TasksService.getTasks), which leaves out deleted tasks and the
+// tasks of deleted projects or organisations. The counts have to leave out the same reports, or they won't match the list.
+const TASK_REPORT_TYPES: readonly ReportCountType[] = ["nurseryReports", "projectReports", "siteReports"];
+
+const listedTasksSubquery = () =>
+  Subquery.select(Task, "id")
+    .in("projectId", Subquery.select(Project, "id").literal)
+    .in("organisationId", Subquery.select(Organisation, "id").literal).literal;
+
 /**
  * Builds a subquery selecting the given attribute from all reports of the given type that match
  * the filter.
@@ -97,6 +108,7 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   const { clauses } = builder;
 
   if (filter.frameworkKeys.length > 0) builder.in("frameworkKey", filter.frameworkKeys);
+  if (TASK_REPORT_TYPES.includes(type)) builder.in("taskId" as keyof Attributes<ReportModel>, listedTasksSubquery());
   if (filter.statuses != null && filter.statuses.length > 0) {
     const isSubmitted = clauses.in("updateRequestStatus", SUBMITTED_UPDATE_REQUEST_STATUSES);
     const shownStatus = `IF(${isSubmitted}, ${clauses.field("updateRequestStatus")}, ${clauses.field("status")})`;

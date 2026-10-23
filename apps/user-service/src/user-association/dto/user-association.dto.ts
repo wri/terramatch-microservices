@@ -52,4 +52,13 @@ export class UserAssociationDto {
 
   @ApiProperty()
   associatedType: string;
+
+  @ApiProperty({
+    required: false,
+    type: Boolean,
+    description:
+      "True while an organisation invite has been sent but not yet accepted (the user has not signed up yet). " +
+      "Organisation members only; the FE shows these as Awaiting Response."
+  })
+  invitePending?: boolean;
 }

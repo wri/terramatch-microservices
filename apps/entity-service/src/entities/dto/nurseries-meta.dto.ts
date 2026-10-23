@@ -65,6 +65,12 @@ export class ProjectNurseriesMetaDto {
 
   @ApiProperty({ description: "Seedlings grown across the nurseries that match the filters" })
   seedlingsGrownMatching: number;
+
+  @ApiProperty({
+    description:
+      "Seedlings goal for the project: the Tree Species (Nursery) amounts across all approved nurseries in the project"
+  })
+  seedlingsGrownGoalTotal: number;
 }
 
 export class SitesMetaQueryDto extends IntersectionType(NumberPage) {
@@ -137,4 +143,13 @@ export class ProjectSitesMetaDto {
 
   @ApiProperty({ description: "Workdays across the approved sites that match the filters" })
   workdaysMatching: number;
+
+  @ApiProperty({ description: "Trees restored (PPC estimate) across the approved sites that match the filters" })
+  treesRestoredPpcMatching: number;
+
+  @ApiProperty({
+    description:
+      "Sum of the natural regeneration (ANR) goals entered per site, across all approved sites in the project"
+  })
+  aNatRegenerationGoalTotal: number;
 }

@@ -439,7 +439,7 @@ describe("ProjectProcessor", () => {
         SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "River Site" }),
         SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "Hill Site" })
       ]);
-      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"]) {
+      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"] as const) {
         await SiteReportFactory.create({ siteId: river.id, frameworkKey, status });
       }
       await SiteReportFactory.create({ siteId: river.id, frameworkKey, status: "due", deletedAt: new Date() });
@@ -626,6 +626,7 @@ describe("ProjectProcessor", () => {
       });
       await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 100 });
       await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 50 });
+      await TreeSpeciesFactory.nurserySeedling(approvedNursery).create({ amount: 400 });
       const draftReport = await NurseryReportFactory.create({
         nurseryId: approvedNursery.id,
         frameworkKey,
@@ -690,7 +691,8 @@ describe("ProjectProcessor", () => {
           nurseriesTotal: 2,
           nurseriesMatching: 2,
           seedlingsGrownTotal: 180,
-          seedlingsGrownMatching: 180
+          seedlingsGrownMatching: 180,
+          seedlingsGrownGoalTotal: 400
         },
         {
           uuid: beta.uuid,
@@ -700,7 +702,8 @@ describe("ProjectProcessor", () => {
           nurseriesTotal: 1,
           nurseriesMatching: 1,
           seedlingsGrownTotal: 0,
-          seedlingsGrownMatching: 0
+          seedlingsGrownMatching: 0,
+          seedlingsGrownGoalTotal: 0
         },
         {
           uuid: gamma.uuid,
@@ -710,7 +713,8 @@ describe("ProjectProcessor", () => {
           nurseriesTotal: 1,
           nurseriesMatching: 1,
           seedlingsGrownTotal: 0,
-          seedlingsGrownMatching: 0
+          seedlingsGrownMatching: 0,
+          seedlingsGrownGoalTotal: 0
         }
       ]);
     });

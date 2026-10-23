@@ -21,6 +21,8 @@ import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
 import { TrackingEntryFactory } from "@terramatch-microservices/database/factories/tracking-entry.factory";
 import { TrackingFactory } from "@terramatch-microservices/database/factories/tracking.factory";
+import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories/tree-species.factory";
+import { SeedingFactory } from "@terramatch-microservices/database/factories/seeding.factory";
 import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
@@ -403,6 +405,29 @@ describe("SiteProcessor", () => {
       const [{ dto: indexDto }] = await processor.getLightDtos([(await processor.findOne(uuid))!]);
 
       expect(indexDto.combinedWorkdayCount).toBe(10);
+    });
+
+    it("computes treesRestoredPpc per site, matching the full DTO", async () => {
+      const project = await ProjectFactory.create({ survivalRate: 50, directSeedingSurvivalRate: 10 });
+      const { id: siteId, uuid } = await SiteFactory.create({ projectId: project.id });
+      const report = await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2025-01-01"),
+        numTreesRegenerating: 7
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(report).create({ amount: 100 });
+      await SeedingFactory.siteReport(report).create({ amount: 20 });
+
+      const site = await processor.findOne(uuid);
+      const { dto: fullDto } = await processor.getFullDto(site!);
+      const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+      const progressMetrics = await processor.getProgressMetrics([site!]);
+
+      // 7 regenerated + 100 planted × 50% + 20 seeds × 10%
+      expect(fullDto.treesRestoredPpc).toBe(59);
+      expect(indexDto.treesRestoredPpc).toBe(59);
+      expect(progressMetrics.get(uuid)?.treesRestoredPpc).toBe(59);
     });
   });
 

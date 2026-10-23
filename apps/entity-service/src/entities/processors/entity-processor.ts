@@ -213,6 +213,9 @@ export abstract class EntityProcessor<
         const updateRequest = await UpdateRequest.for(model).current().findOne();
         if (updateRequest != null && entityAllowsChangeRequest(model.status)) {
           await updateRequest.update({ status: PENDING_APPROVAL });
+        } else if (model.status === APPROVED) {
+          // Approved with no change request: there is nothing to review, so the submit is accepted as-is.
+          return;
         } else {
           if (updateRequest != null) {
             await updateRequest.destroy();

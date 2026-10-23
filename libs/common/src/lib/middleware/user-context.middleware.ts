@@ -2,7 +2,7 @@ import { Injectable, NestMiddleware } from "@nestjs/common";
 import { Request, NextFunction } from "express";
 import { JwtService } from "@nestjs/jwt";
 import { UserContext } from "../contexts/user.context";
-import { User } from "@terramatch-microservices/database/entities";
+import { ApiKey, User } from "@terramatch-microservices/database/entities";
 
 @Injectable()
 export class UserContextMiddleware implements NestMiddleware {
@@ -39,6 +39,14 @@ export class UserContextMiddleware implements NestMiddleware {
   }
 
   private async getApiKeyUserId(token: string) {
+    return (await ApiKey.findUserId(token)) ?? (await this.getLegacyApiKeyUserId(token));
+  }
+
+  /**
+   * @deprecated Temporary fallback to `users.api_key` until the migrateUserApiKeys one-off has run
+   *   in all environments. To be removed in TM-4131.
+   */
+  private async getLegacyApiKeyUserId(token: string) {
     const user = await User.findOne({ where: { apiKey: token }, attributes: ["id"] });
     return user?.id ?? null;
   }

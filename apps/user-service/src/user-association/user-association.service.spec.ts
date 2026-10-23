@@ -15,7 +15,6 @@ import {
 import {
   OrganisationUser,
   User,
-  Notification,
   ProjectUser,
   ProjectInvite,
   Organisation,
@@ -873,7 +872,6 @@ describe("UserAssociationService", () => {
     it("should create new organisation user join request", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const owner = await UserFactory.create({ organisationId: org.id });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
@@ -884,8 +882,6 @@ describe("UserAssociationService", () => {
         }),
         true
       ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
-      jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.requestOrgJoin(org, user.id);
@@ -898,7 +894,6 @@ describe("UserAssociationService", () => {
         where: { organisationId: org.id, userId: user.id },
         defaults: { organisationId: org.id, userId: user.id, status: "pending" }
       });
-      expect(Notification.bulkCreate).toHaveBeenCalled();
       expect(emailQueue.add).toHaveBeenCalled();
       expect(result).toEqual(user);
     });
@@ -915,7 +910,6 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
@@ -936,7 +930,6 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save");
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
@@ -956,33 +949,9 @@ describe("UserAssociationService", () => {
       expect(findOrCreateSpy).not.toHaveBeenCalled();
     });
 
-    it("should not create notifications when no owners exist", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
-        await OrganisationUserFactory.create({
-          organisationId: org.id,
-          userId: user.id,
-          status: "pending"
-        }),
-        true
-      ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
-      jest.spyOn(Notification, "bulkCreate");
-      emailQueue.add.mockResolvedValue({} as Job);
-
-      await service.requestOrgJoin(org, user.id);
-
-      expect(Notification.bulkCreate).not.toHaveBeenCalled();
-      expect(emailQueue.add).toHaveBeenCalled();
-    });
-
     it("should handle email queue failure gracefully", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const owner = await UserFactory.create({ organisationId: org.id });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
@@ -993,8 +962,6 @@ describe("UserAssociationService", () => {
         }),
         true
       ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
-      jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
       emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 

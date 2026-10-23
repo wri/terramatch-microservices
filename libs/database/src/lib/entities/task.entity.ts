@@ -52,7 +52,7 @@ const taskDestroyedHook = async (task: Task) => {
     ({ userId }) => userId
   );
   if (userIds.length > 0) {
-    await DatabaseModule.emitUserDataModelDeleted({ userIds, model: "tasks", modelId: task.id });
+    await DatabaseModule.emitUserDataModelDeleted({ userIds, model: "tasks", uuid: task.uuid });
   }
 };
 

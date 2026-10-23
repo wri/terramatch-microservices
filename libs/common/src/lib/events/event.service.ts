@@ -10,7 +10,11 @@ import { Media, PolygonGeometry, User } from "@terramatch-microservices/database
 import { POLYGON_PUSHED_VIA_API_EVENT, PolygonPushedViaApiParams } from "../analytics/polygon-pushed-via-api";
 import { POLYGON_VERSION_CHANGED_EVENT, PolygonVersionChangedParams } from "../analytics/polygon-version-changed";
 import { UserDataPushService } from "../userDataPush/user-data-push.service";
-import { UserDataModelUpdateEvent } from "@terramatch-microservices/database/types/user-model";
+import { ProductEventService } from "../product-events/product-event.service";
+import {
+  UserDataModelDeleteEvent,
+  UserDataModelUpdateEvent
+} from "@terramatch-microservices/database/types/user-model";
 
 /**
  * A service to handle general events that are emitted in the common or database libraries, and
@@ -26,7 +30,8 @@ export class EventService {
     @InjectQueue("entities") readonly entitiesQueue: Queue,
     @InjectQueue("greenhouse") readonly greenhouseQueue: Queue,
     readonly mediaService: MediaService,
-    readonly userDataPushService: UserDataPushService
+    readonly userDataPushService: UserDataPushService,
+    readonly productEventService: ProductEventService
   ) {}
 
   @OnEvent("database.statusUpdated")
@@ -65,8 +70,8 @@ export class EventService {
   }
 
   @OnEvent("database.userDataModelDeleted")
-  async handleUserDataModelDeletion({ userIds, model, modelId }: UserDataModelUpdateEvent) {
-    await this.userDataPushService.sendDataDeletion(userIds, model, modelId);
+  async handleUserDataModelDeletion({ userIds, model, uuid }: UserDataModelDeleteEvent) {
+    await this.userDataPushService.sendDataDeletion(userIds, model, uuid);
   }
 
   async sendStatusUpdateAnalytics(modelUuid: string, modelLaravelType: string, status: string) {

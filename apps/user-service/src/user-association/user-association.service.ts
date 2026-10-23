@@ -6,7 +6,6 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
-  Notification,
   Organisation,
   OrganisationInvite,
   OrganisationUser,
@@ -166,11 +165,7 @@ export class UserAssociationService {
       attributes: ["id", "userId", "isManaging"]
     };
     if (query.isManager != null) {
-      if (query.isManager) {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = true;
-      } else {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = false;
-      }
+      (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = query.isManager;
     }
     return ProjectUser.findAll(findOptions);
   }
@@ -460,20 +455,6 @@ export class UserAssociationService {
     if (!created && orgUser.status !== PENDING) {
       orgUser.status = PENDING;
       await orgUser.save();
-    }
-
-    const owners = await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] });
-    if (owners.length > 0) {
-      await Notification.bulkCreate(
-        owners.map(owner => ({
-          userId: owner.id,
-          title: "A user has requested to join your organization",
-          body: "A user has requested to join your organization. Please go to the 'Meet the Team' page to review this request.",
-          action: "user_join_organisation_requested",
-          referencedModel: Organisation.LARAVEL_TYPE,
-          referencedModelId: organisation.id
-        }))
-      );
     }
 
     try {

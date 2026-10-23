@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { Project } from "@terramatch-microservices/database/entities";
+import { AuditStatus, Project } from "@terramatch-microservices/database/entities";
 import { PROJECT_QA_STATUS_AUDIT_TYPES } from "@terramatch-microservices/database/constants";
 import {
   AuditStatusFactory,
@@ -89,30 +89,60 @@ describe("ProjectMapIndexService", () => {
   });
 
   describe("latest QA status", () => {
-    const createQaAudit = (project: Project, cycle: number, status: string | null) =>
-      AuditStatusFactory.project(project).create({ type: PROJECT_QA_STATUS_AUDIT_TYPES[cycle - 1], status });
+    const JAN_1 = new Date("2026-01-01T00:00:00Z");
+    const JAN_2 = new Date("2026-01-02T00:00:00Z");
+    const JAN_3 = new Date("2026-01-03T00:00:00Z");
 
-    it("returns the status of the most recently updated cycle, not the highest one", async () => {
+    // Sequelize won't write an explicit updatedAt through create() or update(), so backdate with a raw query.
+    const backdate = (audit: AuditStatus, updatedAt: Date) =>
+      audit.sequelize.query("UPDATE audit_statuses SET updated_at = :updatedAt WHERE id = :id", {
+        replacements: { updatedAt, id: audit.id }
+      });
+
+    const createQaAudit = async (project: Project, cycle: number, status: string | null, updatedAt: Date) =>
+      backdate(
+        await AuditStatusFactory.project(project).create({ type: PROJECT_QA_STATUS_AUDIT_TYPES[cycle - 1], status }),
+        updatedAt
+      );
+
+    it("returns the status of the most recently updated cycle, not the highest or last written one", async () => {
       const project = await ProjectFactory.create({ lat: 1, long: 1 });
-      await createQaAudit(project, 1, "qa-completed");
-      await createQaAudit(project, 4, "qa-in-progress");
-      await createQaAudit(project, 2, "no-data-submitted");
+      await createQaAudit(project, 1, "qa-completed", JAN_3);
+      await createQaAudit(project, 4, "qa-in-progress", JAN_1);
+      await createQaAudit(project, 2, "no-data-submitted", JAN_2);
 
-      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 2, latestQaStatus: "no-data-submitted" });
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 1, latestQaStatus: "qa-completed" });
+    });
+
+    it("returns the last written cycle when several were updated at the same time", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1 });
+      await createQaAudit(project, 3, "qa-completed", JAN_2);
+      await createQaAudit(project, 2, "qa-in-progress", JAN_2);
+      await createQaAudit(project, 1, "no-data-expected", JAN_1);
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 2, latestQaStatus: "qa-in-progress" });
     });
 
     it("ignores audits that are not QA status audits", async () => {
       const project = await ProjectFactory.create({ lat: 1, long: 1 });
-      await createQaAudit(project, 3, "qa-completed");
-      await AuditStatusFactory.project(project).create({ type: "status", status: "approved" });
+      await createQaAudit(project, 3, "qa-completed", JAN_1);
+      await backdate(await AuditStatusFactory.project(project).create({ type: "status", status: "approved" }), JAN_2);
 
       expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: 3, latestQaStatus: "qa-completed" });
     });
 
     it("returns null when the most recent QA audit cleared the status", async () => {
       const project = await ProjectFactory.create({ lat: 1, long: 1 });
-      await createQaAudit(project, 1, "qa-completed");
-      await createQaAudit(project, 2, null);
+      await createQaAudit(project, 1, "qa-completed", JAN_1);
+      await createQaAudit(project, 2, null, JAN_2);
+
+      expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: null, latestQaStatus: null });
+    });
+
+    it("returns null when the last written of several simultaneous QA audits cleared the status", async () => {
+      const project = await ProjectFactory.create({ lat: 1, long: 1 });
+      await createQaAudit(project, 1, "qa-completed", JAN_2);
+      await createQaAudit(project, 2, null, JAN_2);
 
       expect(await findEntry(project.uuid)).toMatchObject({ latestQaCycle: null, latestQaStatus: null });
     });

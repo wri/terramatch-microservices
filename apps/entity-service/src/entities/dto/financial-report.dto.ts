@@ -54,6 +54,12 @@ export class FinancialReportLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
 
+  @ApiProperty({ nullable: true, type: Number })
+  finStartMonth: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  currency: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -90,14 +96,8 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
   @ApiProperty({ nullable: true, type: String })
   answers: string | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  finStartMonth: number | null;
-
   @ApiProperty({ nullable: true, type: FinancialIndicatorDto, isArray: true })
   financialCollection: FinancialIndicatorDto[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  currency: string | null;
 
   @ApiProperty({ nullable: true, type: String, description: "The associated organisation type" })
   organisationType: string | null;

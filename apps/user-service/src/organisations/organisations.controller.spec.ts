@@ -1,4 +1,8 @@
 import { OrganisationsController } from "./organisations.controller";
+import {
+  ORGANISATION_APPROVED,
+  ProductEventService
+} from "@terramatch-microservices/common/product-events/product-event.service";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -54,6 +58,7 @@ describe("OrganisationsController", () => {
   let emailQueue: DeepMocked<Queue>;
   let exportQueue: DeepMocked<Queue>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let productEventService: DeepMocked<ProductEventService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -72,6 +77,7 @@ describe("OrganisationsController", () => {
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
         { provide: getQueueToken(USER_SERVICE_EXPORT_QUEUE), useValue: (exportQueue = createMock<Queue>()) },
+        { provide: ProductEventService, useValue: (productEventService = createMock<ProductEventService>()) },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();
@@ -1107,10 +1113,7 @@ describe("OrganisationsController", () => {
       await controller.update(org.uuid, updatePayload);
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
-      expect(emailQueue.add).toHaveBeenCalledWith("organisationApproved", {
-        organisationId: org.id,
-        approvedByUserId: 123
-      });
+      expect(productEventService.notify).toHaveBeenCalledWith(ORGANISATION_APPROVED, org);
     });
 
     it("should use approveReject authorization when status changes to rejected", async () => {
@@ -1185,6 +1188,7 @@ describe("OrganisationsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
       expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(productEventService.notify).not.toHaveBeenCalled();
     });
 
     it("should not queue email if userId is null", async () => {
@@ -1209,6 +1213,7 @@ describe("OrganisationsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
       expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(productEventService.notify).not.toHaveBeenCalled();
     });
 
     it("should handle email queueing errors gracefully", async () => {
@@ -1220,7 +1225,7 @@ describe("OrganisationsController", () => {
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
       mockUserContext({ userId: 123 });
-      emailQueue.add.mockRejectedValue(new Error("Queue error"));
+      productEventService.notify.mockRejectedValue(new Error("Queue error"));
 
       const updatePayload = {
         data: {
@@ -1231,7 +1236,7 @@ describe("OrganisationsController", () => {
       };
 
       await expect(controller.update(org.uuid, updatePayload)).resolves.toBeDefined();
-      expect(emailQueue.add).toHaveBeenCalled();
+      expect(productEventService.notify).toHaveBeenCalled();
     });
   });
 

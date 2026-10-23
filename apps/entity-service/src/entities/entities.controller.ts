@@ -20,7 +20,12 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import {
   EntityIndexParamsDto,
@@ -120,7 +125,7 @@ export class EntitiesController {
       this.entitiesService.reportingPeriods(query)
     ]);
     return buildJsonApi(ReportCountsDto).addData(
-      "reportCounts",
+      getStableRequestQuery(query),
       new ReportCountsDto({ totalReports, reportingPeriods })
     );
   }
@@ -154,7 +159,10 @@ export class EntitiesController {
   private async countEntities(entity: "sites" | "nurseries", query: EntityCountsQueryDto) {
     const processor = this.entitiesService.createEntityProcessor(entity);
     const { paginationTotal } = await processor.findMany({ ...query, page: { number: 1, size: 1 } });
-    return buildJsonApi(EntityCountsDto).addData(`${entity}Counts`, new EntityCountsDto({ total: paginationTotal }));
+    return buildJsonApi(EntityCountsDto).addData(
+      getStableRequestQuery(query),
+      new EntityCountsDto({ total: paginationTotal })
+    );
   }
 
   @Get(":entity")

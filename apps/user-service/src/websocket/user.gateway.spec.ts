@@ -3,7 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UserGateway } from "./user.gateway";
 import { Server, Socket } from "socket.io";
-import { UserFactory, UserTaskFactory } from "@terramatch-microservices/database/factories";
+import { NotificationFactory, UserFactory, UserTaskFactory } from "@terramatch-microservices/database/factories";
 import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util";
 import { isArray } from "lodash";
 
@@ -92,6 +92,33 @@ describe("UserGateway", () => {
       const resource = payload.data as Resource;
       expect(resource.type).toBe("userTasks");
       expect(resource.id).toBe((await userTask.$get("task", { attributes: ["uuid"] }))?.uuid);
+    });
+
+    it("emits the user's current notifications", async () => {
+      const user = await UserFactory.create();
+      const notifications = await NotificationFactory.createMany(2, { userId: user.id });
+      await NotificationFactory.create();
+      const emit = jest.fn();
+      await gateway.handleConnection({ data: { userId: user.id }, emit } as unknown as Socket);
+      expect(emit).toHaveBeenCalledTimes(1);
+      const [event, payload] = emit.mock.calls[0] as [string, JsonApiDocument];
+      expect(event).toBe("userDataReset");
+      expect(payload.meta.resourceType).toBe("notifications");
+      const resources = payload.data as Resource[];
+      expect(resources.map(({ id }) => id).sort()).toEqual(notifications.map(({ uuid }) => uuid).sort());
+    });
+
+    it("emits a reset for each model the user has data for", async () => {
+      const user = await UserFactory.create();
+      await UserTaskFactory.create({ userId: user.id });
+      await NotificationFactory.create({ userId: user.id });
+      const emit = jest.fn();
+      await gateway.handleConnection({ data: { userId: user.id }, emit } as unknown as Socket);
+      expect(emit).toHaveBeenCalledTimes(2);
+      const resourceTypes = (emit.mock.calls as [string, JsonApiDocument][]).map(
+        ([, payload]) => payload.meta.resourceType
+      );
+      expect(resourceTypes.sort()).toEqual(["notifications", "userTasks"]);
     });
   });
 });

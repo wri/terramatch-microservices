@@ -38,8 +38,10 @@ import {
   SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
+  POLYGON_DRAFT,
   ValidationType
 } from "@terramatch-microservices/database/constants";
+import { isEqual, uniq } from "lodash";
 import { VoronoiService } from "../voronoi/voronoi.service";
 import { GeometryFileProcessingService } from "./geometry-file-processing.service";
 import { convertPropertiesToAttributeChanges } from "./utils/attribute-changes-converter";
@@ -52,6 +54,26 @@ import "multer";
 interface DuplicateCheckResult {
   duplicateIndexToUuid: Map<number, string>;
 }
+
+const REVIEW_NEUTRAL_ATTRIBUTES: ReadonlySet<string> = new Set(["submissionCycle"]);
+
+const DRAFT_REVIEW_STATE: Pick<SitePolygon, "status" | "validationStatus"> = {
+  status: POLYGON_DRAFT,
+  validationStatus: null
+};
+
+const normalizeComparableValue = (value: unknown): unknown => {
+  if (value instanceof Date) return value.getTime();
+  if (Array.isArray(value)) return value.length === 0 ? null : [...value].sort();
+  return value ?? null;
+};
+
+const hasOnlyReviewNeutralChanges = (basePolygon: SitePolygon, changes: Partial<SitePolygon>): boolean =>
+  Object.entries(changes).every(
+    ([key, newValue]) =>
+      REVIEW_NEUTRAL_ATTRIBUTES.has(key) ||
+      isEqual(normalizeComparableValue(basePolygon[key as keyof SitePolygon]), normalizeComparableValue(newValue))
+  );
 
 const validateAndSortStrictStringArray = (
   value: unknown,
@@ -899,32 +921,33 @@ export class SitePolygonCreationService {
 
     const parsedAttributeChanges = this.applyAttributeChanges(attributeChanges);
 
-    const polygonUuidsToClear = [
-      ...new Set(
-        [...activeByRequestUuid.values()]
-          .map(polygon => polygon.polygonUuid)
-          .filter((uuid): uuid is string => uuid != null && uuid !== "")
-      )
-    ];
-
-    if (polygonUuidsToClear.length > 0) {
-      await CriteriaSite.destroy({
-        where: { polygonId: { [Op.in]: polygonUuidsToClear } },
-        transaction
-      });
-    }
-
-    const versionEntries = sitePolygonUuids.map(sitePolygonUuid => {
+    const basePolygons = sitePolygonUuids.map(sitePolygonUuid => {
       const basePolygon = activeByRequestUuid.get(sitePolygonUuid);
       if (basePolygon == null) {
         throw new NotFoundException(`Site polygon not found: ${sitePolygonUuid}`);
       }
+      return basePolygon;
+    });
 
-      const changeDescription = this.buildDetailedChangeDescription(basePolygon, parsedAttributeChanges, false);
+    const resettingBasePolygons = new Set(
+      basePolygons.filter(
+        basePolygon => !this.keepsReviewState(basePolygon, parsedAttributeChanges, false, isAdminSession)
+      )
+    );
+    await this.clearValidationResults(
+      [...resettingBasePolygons].map(({ polygonUuid }) => polygonUuid),
+      transaction
+    );
+
+    const versionEntries = basePolygons.map(basePolygon => {
+      const versionAttributes = resettingBasePolygons.has(basePolygon)
+        ? { ...parsedAttributeChanges, ...DRAFT_REVIEW_STATE }
+        : parsedAttributeChanges;
+      const changeDescription = this.buildDetailedChangeDescription(basePolygon, versionAttributes, false);
 
       return {
         basePolygon,
-        attributeChanges: parsedAttributeChanges,
+        attributeChanges: versionAttributes,
         newPolygonGeometryUuid: null,
         userId,
         changeReason: `${BULK_ATTRIBUTE_UPDATE_CHANGE_REASON} - ${changeDescription}`,
@@ -1034,13 +1057,9 @@ export class SitePolygonCreationService {
       await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
     }
 
-    const polygonUuidToClear = newPolygonGeometryUuid ?? basePolygon.polygonUuid;
-
-    if (polygonUuidToClear != null) {
-      await CriteriaSite.destroy({
-        where: { polygonId: polygonUuidToClear },
-        transaction
-      });
+    if (!this.keepsReviewState(basePolygon, sitePolygonAttributes, newPolygonGeometryUuid != null, isAdminSession)) {
+      Object.assign(sitePolygonAttributes, DRAFT_REVIEW_STATE);
+      await this.clearValidationResults([newPolygonGeometryUuid ?? basePolygon.polygonUuid], transaction);
     }
 
     const changeDescription = this.buildDetailedChangeDescription(
@@ -1125,10 +1144,23 @@ export class SitePolygonCreationService {
       }
     }
 
-    sitePolygonAttributes.validationStatus = null;
-    sitePolygonAttributes.status = "draft";
-
     return sitePolygonAttributes;
+  }
+
+  private keepsReviewState(
+    basePolygon: SitePolygon,
+    changes: Partial<SitePolygon>,
+    geometryChanged: boolean,
+    isAdminSession: boolean
+  ) {
+    return isAdminSession && !geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes);
+  }
+
+  private async clearValidationResults(polygonUuids: Array<string | null>, transaction: Transaction) {
+    const polygonIds = uniq(polygonUuids.filter((uuid): uuid is string => uuid != null && uuid !== ""));
+    if (polygonIds.length === 0) return;
+
+    await CriteriaSite.destroy({ where: { polygonId: { [Op.in]: polygonIds } }, transaction });
   }
 
   private async trackPolygonPushedViaApiForSitePolygons(sitePolygons: SitePolygon[]) {

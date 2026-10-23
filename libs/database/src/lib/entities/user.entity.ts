@@ -187,6 +187,10 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     return getPermissionsForRoles(this.roles);
   }
 
+  get canReviewPolygons(): NonAttribute<boolean> {
+    return this.permissions.some(permission => permission === "projects-manage" || permission.startsWith("framework-"));
+  }
+
   get fullName() {
     return this.firstName == null || this.lastName == null ? null : `${this.firstName} ${this.lastName}`;
   }

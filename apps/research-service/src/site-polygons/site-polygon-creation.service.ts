@@ -62,7 +62,8 @@ const DRAFT_REVIEW_STATE: Pick<SitePolygon, "status" | "validationStatus"> = {
   validationStatus: null
 };
 
-const normalizeComparableValue = (value: unknown): unknown => {
+const normalizeComparableValue = (key: string, value: unknown): unknown => {
+  if (key === "numTrees") return value ?? 0;
   if (value instanceof Date) return value.getTime();
   if (Array.isArray(value)) return value.length === 0 ? null : [...value].sort();
   return value ?? null;
@@ -72,7 +73,10 @@ const hasOnlyReviewNeutralChanges = (basePolygon: SitePolygon, changes: Partial<
   Object.entries(changes).every(
     ([key, newValue]) =>
       REVIEW_NEUTRAL_ATTRIBUTES.has(key) ||
-      isEqual(normalizeComparableValue(basePolygon[key as keyof SitePolygon]), normalizeComparableValue(newValue))
+      isEqual(
+        normalizeComparableValue(key, basePolygon[key as keyof SitePolygon]),
+        normalizeComparableValue(key, newValue)
+      )
   );
 
 const validateAndSortStrictStringArray = (
@@ -912,7 +916,8 @@ export class SitePolygonCreationService {
     userFullName: string | null,
     source: string,
     transaction: Transaction,
-    isAdminSession = false
+    isAdminSession = false,
+    canReviewPolygons = false
   ): Promise<SitePolygon[]> {
     const activeByRequestUuid = await this.versioningService.validateBulkVersioningEligibility(
       sitePolygonUuids,
@@ -931,7 +936,7 @@ export class SitePolygonCreationService {
 
     const resettingBasePolygons = new Set(
       basePolygons.filter(
-        basePolygon => !this.keepsReviewState(basePolygon, parsedAttributeChanges, false, isAdminSession)
+        basePolygon => !this.keepsReviewState(basePolygon, parsedAttributeChanges, false, canReviewPolygons)
       )
     );
     await this.clearValidationResults(
@@ -1023,7 +1028,8 @@ export class SitePolygonCreationService {
     source: string,
     transaction: Transaction,
     isAdminSession = false,
-    persistCustomAttributes = true
+    persistCustomAttributes = true,
+    canReviewPolygons = false
   ): Promise<SitePolygon> {
     const basePolygon = await this.versioningService.validateVersioningEligibility(baseSitePolygonUuid, transaction);
 
@@ -1057,7 +1063,7 @@ export class SitePolygonCreationService {
       await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
     }
 
-    if (!this.keepsReviewState(basePolygon, sitePolygonAttributes, newPolygonGeometryUuid != null, isAdminSession)) {
+    if (!this.keepsReviewState(basePolygon, sitePolygonAttributes, newPolygonGeometryUuid != null, canReviewPolygons)) {
       Object.assign(sitePolygonAttributes, DRAFT_REVIEW_STATE);
       await this.clearValidationResults([newPolygonGeometryUuid ?? basePolygon.polygonUuid], transaction);
     }
@@ -1151,9 +1157,9 @@ export class SitePolygonCreationService {
     basePolygon: SitePolygon,
     changes: Partial<SitePolygon>,
     geometryChanged: boolean,
-    isAdminSession: boolean
+    canReviewPolygons: boolean
   ) {
-    return isAdminSession && !geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes);
+    return canReviewPolygons && !geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes);
   }
 
   private async clearValidationResults(polygonUuids: Array<string | null>, transaction: Transaction) {

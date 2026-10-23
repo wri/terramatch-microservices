@@ -578,7 +578,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         numTrees: 10
       };
 
-      const createVersion = (attributeChanges: AttributeChangesDto, isAdminSession: boolean) =>
+      const createVersion = (attributeChanges: AttributeChangesDto, canReviewPolygons: boolean) =>
         service.createSitePolygonVersion(
           baseSitePolygonUuid,
           undefined,
@@ -588,7 +588,9 @@ describe("SitePolygonCreationService - Versioning", () => {
           userFullName,
           source,
           mockTransaction,
-          isAdminSession
+          false,
+          true,
+          canReviewPolygons
         );
 
       const appliedAttributes = () =>
@@ -618,6 +620,17 @@ describe("SitePolygonCreationService - Versioning", () => {
         expect(polygonAttributeValuesService.upsert).toHaveBeenCalled();
       });
 
+      it("should treat an empty tree count sent as 0 as unchanged", async () => {
+        jest
+          .spyOn(versioningService, "validateVersioningEligibility")
+          .mockResolvedValue({ ...approvedBase, numTrees: null } as unknown as SitePolygon);
+
+        await createVersion({ ...unchangedForm, numTrees: 0, submissionCycle: "2" }, true);
+
+        expect(appliedAttributes()).not.toHaveProperty("status");
+        expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+      });
+
       it("should reset to draft when an admin changes a validated attribute", async () => {
         await createVersion({ ...unchangedForm, submissionCycle: "2", numTrees: 11 }, true);
 
@@ -634,7 +647,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         expect(appliedAttributes().status).toBe("draft");
       });
 
-      it("should reset to draft when a non-admin only changes the submission cycle", async () => {
+      it("should reset to draft when a non-reviewer only changes the submission cycle", async () => {
         await createVersion({ ...unchangedForm, submissionCycle: "2" }, false);
 
         expect(appliedAttributes()).toMatchObject({ status: "draft", validationStatus: null });
@@ -768,7 +781,7 @@ describe("SitePolygonCreationService - Versioning", () => {
       expect(result).toHaveLength(2);
     });
 
-    it("should only reset polygons whose validated attributes change when an admin edits in bulk", async () => {
+    it("should only reset polygons whose validated attributes change when a reviewer edits in bulk", async () => {
       const unchangedPolygon = {
         uuid: "active-uuid-1",
         primaryUuid: "primary-uuid-1",
@@ -802,6 +815,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         userFullName,
         source,
         mockTransaction,
+        false,
         true
       );
 

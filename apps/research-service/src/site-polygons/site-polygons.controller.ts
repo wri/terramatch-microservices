@@ -168,7 +168,8 @@ export class SitePolygonsController {
         userId,
         userFullName,
         source,
-        isAdminSession
+        isAdminSession,
+        user?.canReviewPolygons ?? false
       );
     }
 
@@ -550,7 +551,8 @@ export class SitePolygonsController {
         userFullName,
         source,
         transaction,
-        isAdminSession
+        isAdminSession,
+        user?.canReviewPolygons ?? false
       )
     );
 
@@ -1097,7 +1099,8 @@ export class SitePolygonsController {
     userId: number,
     userFullName: string | null,
     source: string,
-    isAdminSession: boolean
+    isAdminSession: boolean,
+    canReviewPolygons: boolean
   ) {
     const hasGeometryChange = geometries != null && geometries.length > 0;
     const hasAttributeChange = attributeChanges != null && Object.keys(attributeChanges).length > 0;
@@ -1122,7 +1125,9 @@ export class SitePolygonsController {
         userFullName,
         source,
         transaction,
-        isAdminSession
+        isAdminSession,
+        true,
+        canReviewPolygons
       );
     });
 

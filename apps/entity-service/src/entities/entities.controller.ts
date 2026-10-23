@@ -159,8 +159,9 @@ export class EntitiesController {
   private async countEntities(entity: "sites" | "nurseries", query: EntityCountsQueryDto) {
     const processor = this.entitiesService.createEntityProcessor(entity);
     const { paginationTotal } = await processor.findMany({ ...query, page: { number: 1, size: 1 } });
+    // Sites and nurseries share the entityCounts resource, so the entity is part of the ID.
     return buildJsonApi(EntityCountsDto).addData(
-      getStableRequestQuery(query),
+      `${entity}Counts${getStableRequestQuery(query)}`,
       new EntityCountsDto({ total: paginationTotal })
     );
   }

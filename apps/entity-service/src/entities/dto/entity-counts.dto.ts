@@ -3,7 +3,7 @@ import { IsArray, IsOptional, IsString } from "class-validator";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
-// Virtual resource, like ReportCountsDto: the id is the stable request query, so the client can tie the count to its filters.
+// Virtual resource, like ReportCountsDto: the id is the entity plus the stable request query, so the client can tie the count to its filters.
 @JsonApiDto({ type: "entityCounts", id: "string" })
 export class EntityCountsDto {
   constructor(data: EntityCountsDto) {

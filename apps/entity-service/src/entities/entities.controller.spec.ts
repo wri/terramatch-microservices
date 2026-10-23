@@ -136,7 +136,7 @@ describe("EntitiesController", () => {
       expect(entitiesService().createEntityProcessor).toHaveBeenCalledWith("sites");
       expect(processor.findMany).toHaveBeenCalledWith({ ...query, page: { number: 1, size: 1 } });
       expect(result.data).toEqual({
-        id: "?status%5B0%5D=approved&status%5B1%5D=draft",
+        id: "sitesCounts?status%5B0%5D=approved&status%5B1%5D=draft",
         type: "entityCounts",
         attributes: { total: 729 }
       });
@@ -144,11 +144,15 @@ describe("EntitiesController", () => {
   });
 
   describe("nurseriesCountsGet", () => {
-    it("returns the total for the nurseries entity", async () => {
+    it("returns the total for the nurseries entity, with an ID that differs from the sites one for the same filters", async () => {
       processor.findMany.mockResolvedValue({ models: [], paginationTotal: 12 });
-      const result = serialize(await controller.nurseriesCountsGet({}));
+      const result = serialize(await controller.nurseriesCountsGet({ status: ["draft", "approved"] }));
       expect(entitiesService().createEntityProcessor).toHaveBeenCalledWith("nurseries");
-      expect(result.data).toEqual({ id: "", type: "entityCounts", attributes: { total: 12 } });
+      expect(result.data).toEqual({
+        id: "nurseriesCounts?status%5B0%5D=approved&status%5B1%5D=draft",
+        type: "entityCounts",
+        attributes: { total: 12 }
+      });
     });
   });
 

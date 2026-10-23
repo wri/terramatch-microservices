@@ -37,7 +37,8 @@ jest.mock("@terramatch-microservices/database/entities", () => ({
   },
   SitePolygon: {
     findAll: jest.fn(),
-    findOne: jest.fn()
+    findOne: jest.fn(),
+    activePolygonUuidsForSites: jest.fn().mockReturnValue("active-polygon-uuids-subquery")
   },
   DisturbanceReport: { findOne: jest.fn() },
   FinancialReport: { findOne: jest.fn() },
@@ -163,27 +164,6 @@ const fixtures = {
     uuid: "polygon-456",
     envelope: createEnvelopeModel(-122.4194, 37.7749, -122.4076, 37.7894)
   },
-  site: {
-    uuid: "site-123",
-    frameworkKey: "ppc",
-    projectId: 1
-  },
-  sitePolygon: {
-    id: "sp-db-id-123",
-    siteUuid: "site-123",
-    polygonUuid: "polygon-123",
-    isActive: true,
-    deletedAt: null,
-    site: {
-      uuid: "site-123",
-      frameworkKey: "ppc",
-      projectId: 1
-    }
-  },
-  sitePolygons: [
-    { polygonUuid: "polygon-123", isActive: true, deletedAt: null },
-    { polygonUuid: "polygon-456", isActive: true, deletedAt: null }
-  ],
   project: {
     uuid: "project-123",
     id: 1,
@@ -310,66 +290,39 @@ describe("BoundingBoxService", () => {
     });
   });
 
-  describe("getSiteBoundingBox", () => {
-    it("should return a bounding box for a site with multiple polygons", async () => {
-      const siteUuid = fixtures.site.uuid;
-      (Site.findOne as jest.Mock).mockResolvedValue(fixtures.site);
-      (SitePolygon.findAll as jest.Mock).mockResolvedValue(fixtures.sitePolygons);
+  describe("getSitesBoundingBox", () => {
+    const siteUuids = fixtures.projectSites.map(({ uuid }) => uuid);
+
+    it("should return one bounding box for the active polygons of all the sites", async () => {
+      (Site.findAll as jest.Mock).mockResolvedValue(fixtures.projectSites);
       (PolygonGeometry.findAll as jest.Mock).mockResolvedValue([fixtures.polygon.envelope, fixtures.polygon2.envelope]);
 
-      const result = await service.getSiteBoundingBox(siteUuid);
+      const result = await service.getSitesBoundingBox(siteUuids);
 
-      expect(Site.findOne).toHaveBeenCalledWith({
-        where: { uuid: siteUuid },
-        attributes: ["uuid", "frameworkKey", "projectId"]
-      });
-
-      expect(SitePolygon.findAll).toHaveBeenCalledWith({
-        where: {
-          siteUuid,
-          polygonUuid: { [Op.ne]: "" },
-          isActive: true,
-          deletedAt: null
-        },
-        attributes: ["polygonUuid"]
-      });
-
+      expect(Site.findAll).toHaveBeenCalledWith({ where: { uuid: { [Op.in]: siteUuids } }, attributes: ["uuid"] });
+      expect(SitePolygon.activePolygonUuidsForSites).toHaveBeenCalledWith(siteUuids);
       expect(PolygonGeometry.findAll).toHaveBeenCalledWith({
-        where: {
-          uuid: { [Op.in]: fixtures.sitePolygons.map(sp => sp.polygonUuid) }
-        },
+        where: { uuid: { [Op.in]: "active-polygon-uuids-subquery" } },
         attributes: [[Sequelize.fn("ST_ASGEOJSON", Sequelize.fn("ST_Envelope", Sequelize.col("geom"))), "envelope"]]
       });
-
-      // The expected bounding box should encompass both NY and SF
-      expect(result).toBeDefined();
       expect(result.bbox).toEqual([-122.4194, 37.7749, -73.9538, 40.8075]);
     });
 
-    it("should throw NotFoundException when site is not found", async () => {
-      const nonExistentUuid = "non-existent-site";
-      (Site.findOne as jest.Mock).mockResolvedValue(null);
+    it("should throw NotFoundException listing the sites that don't exist", async () => {
+      (Site.findAll as jest.Mock).mockResolvedValue([fixtures.projectSites[0]]);
 
-      await expect(service.getSiteBoundingBox(nonExistentUuid)).rejects.toThrow(
-        new NotFoundException(`Site with UUID ${nonExistentUuid} not found`)
+      await expect(service.getSitesBoundingBox([...siteUuids, "site-789"])).rejects.toThrow(
+        new NotFoundException("Sites not found for UUIDs: site-456, site-789")
       );
 
-      expect(Site.findOne).toHaveBeenCalled();
-      expect(SitePolygon.findAll).not.toHaveBeenCalled();
+      expect(PolygonGeometry.findAll).not.toHaveBeenCalled();
     });
 
-    it("should throw NotFoundException when site has no polygons", async () => {
-      const siteUuid = fixtures.site.uuid;
-      (Site.findOne as jest.Mock).mockResolvedValue(fixtures.site);
-      (SitePolygon.findAll as jest.Mock).mockResolvedValue([]);
+    it("should throw NotFoundException when the sites have no polygons", async () => {
+      (Site.findAll as jest.Mock).mockResolvedValue(fixtures.projectSites);
+      (PolygonGeometry.findAll as jest.Mock).mockResolvedValue([]);
 
-      await expect(service.getSiteBoundingBox(siteUuid)).rejects.toThrow(
-        new NotFoundException(`No polygons found for site with UUID ${siteUuid}`)
-      );
-
-      expect(Site.findOne).toHaveBeenCalled();
-      expect(SitePolygon.findAll).toHaveBeenCalled();
-      expect(PolygonGeometry.findAll).not.toHaveBeenCalled();
+      await expect(service.getSitesBoundingBox(siteUuids)).rejects.toThrow(NotFoundException);
     });
   });
 

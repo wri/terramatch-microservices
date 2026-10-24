@@ -6,7 +6,6 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import {
-  Notification,
   Organisation,
   OrganisationInvite,
   OrganisationUser,
@@ -34,7 +33,12 @@ import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { keyBy } from "lodash";
-import { OrganisationUserStatus, PENDING, REJECTED } from "@terramatch-microservices/database/constants/status";
+import {
+  APPROVED,
+  OrganisationUserStatus,
+  PENDING,
+  REJECTED
+} from "@terramatch-microservices/database/constants/status";
 
 export const USER_ASSOCIATION_MODELS = ["projects", "organisations"] as const;
 export type AssociableModel = (typeof USER_ASSOCIATION_MODELS)[number];
@@ -136,7 +140,6 @@ export class UserAssociationService {
             status: PENDING,
             isManager: false,
             organisationName: (org as Organisation).name ?? "",
-            roleName: user.primaryRole ?? null,
             associatedType: "organisations"
           })
         );
@@ -154,7 +157,6 @@ export class UserAssociationService {
             status,
             isManager: false,
             organisationName: org.name ?? "",
-            roleName: user.primaryRole ?? null,
             associatedType: "organisations"
           })
         );
@@ -168,11 +170,7 @@ export class UserAssociationService {
       attributes: ["id", "userId", "isManaging"]
     };
     if (query.isManager != null) {
-      if (query.isManager) {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = true;
-      } else {
-        (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = false;
-      }
+      (findOptions.where as WhereAttributeHash<ProjectUser>).isManaging = query.isManager;
     }
     return ProjectUser.findAll(findOptions);
   }
@@ -216,7 +214,6 @@ export class UserAssociationService {
           status: null,
           isManager: projectUser?.isManaging as boolean,
           organisationName: organisation?.name as string,
-          roleName: user.primaryRole as string,
           associatedType: "projects"
         })
       );
@@ -346,6 +343,16 @@ export class UserAssociationService {
       ]
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
+    // Unregistered invitees already carry the organisation as their home organisation. Until they accept the
+    // invite (which happens at signup), the FE shows them as "Awaiting Response" instead of "Accepted".
+    const pendingInviteEmails = new Set(
+      (
+        await OrganisationInvite.findAll({
+          where: { organisationId: organisation.id, acceptedAt: null },
+          attributes: ["emailAddress"]
+        })
+      ).map(invite => invite.emailAddress)
+    );
     filteredUsers.forEach(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
@@ -354,8 +361,8 @@ export class UserAssociationService {
         status,
         isManager: false,
         organisationName: organisation.name ?? "",
-        roleName: user.primaryRole ?? null,
-        associatedType: "organisations"
+        associatedType: "organisations",
+        invitePending: isOwner && pendingInviteEmails.has(user.emailAddress)
       });
       dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
       document.addData(user.uuid as string, dto);
@@ -405,20 +412,24 @@ export class UserAssociationService {
   ): Promise<OrganisationInvite> {
     const inviteCount = await OrganisationInvite.count({ where: { organisationId: organisation.id, emailAddress } });
     if (inviteCount > 0) {
-      throw new UnprocessableEntityException("User has already been invited to this organisation");
+      throw new UnprocessableEntityException(
+        "This user has already been invited to this organisation, please try a different email address."
+      );
     }
 
     const existingUser = await User.findOne({
       where: { emailAddress },
-      attributes: ["id"]
+      attributes: ["id", "uuid", "emailAddress", "organisationId", "roles"]
     });
     if (existingUser != null) {
-      throw new UnprocessableEntityException("A user with this email address already exists");
+      return this.addRegisteredUserToOrganisation(organisation, existingUser, { firstName, lastName });
     }
 
     const newUser = await User.create({
       organisationId: organisation.id,
       emailAddress,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
       password: crypto.randomBytes(32).toString("hex"),
       locale: "en-US",
       roles: ["project-developer"]
@@ -450,6 +461,69 @@ export class UserAssociationService {
     return invite;
   }
 
+  /**
+   * Registered users are added to the organisation straight away as approved members, so there is no
+   * invitation to accept. The invite row is still written (already accepted) so the response shape is the same.
+   */
+  private async addRegisteredUserToOrganisation(
+    organisation: Organisation,
+    user: User,
+    { firstName, lastName }: { firstName?: string; lastName?: string }
+  ): Promise<OrganisationInvite> {
+    if (!user.roles.includes("project-developer")) {
+      throw new UnprocessableEntityException(
+        "This user type cannot be added to the organisation, please try a different email address."
+      );
+    }
+
+    const membership = await OrganisationUser.findOne({ where: { organisationId: organisation.id, userId: user.id } });
+    if (user.organisationId === organisation.id || membership?.status === APPROVED) {
+      throw new UnprocessableEntityException("This user is already a member of the organisation.");
+    }
+
+    const pendingElsewhere = await OrganisationUser.count({
+      where: { userId: user.id, status: PENDING, organisationId: { [Op.ne]: organisation.id } }
+    });
+    if (pendingElsewhere > 0) {
+      throw new UnprocessableEntityException(
+        "This user has a pending request to join another organisation. If this is incorrect, please reach out to TerraMatch support at support@terramatch.org."
+      );
+    }
+
+    if (membership == null) {
+      await OrganisationUser.create({
+        organisationId: organisation.id,
+        userId: user.id,
+        status: APPROVED
+      } as OrganisationUser);
+    } else {
+      membership.status = APPROVED;
+      await membership.save();
+    }
+    user.organisationId = organisation.id;
+    await user.save();
+
+    const invite = await OrganisationInvite.create({
+      organisationId: organisation.id,
+      emailAddress: user.emailAddress,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
+      token: crypto.randomBytes(32).toString("hex"),
+      acceptedAt: new Date()
+    } as OrganisationInvite);
+
+    try {
+      await new OrganisationUserApprovedEmail({
+        organisationId: organisation.id,
+        userId: user.id
+      }).sendLater(this.emailQueue);
+    } catch (error) {
+      this.logger.error(`Failed to queue organisation user approved email for organisation ${organisation.id}`, error);
+    }
+
+    return invite;
+  }
+
   async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {
     const user = await User.findOne({
       where: { id: userId },
@@ -464,20 +538,6 @@ export class UserAssociationService {
     if (!created && orgUser.status !== PENDING) {
       orgUser.status = PENDING;
       await orgUser.save();
-    }
-
-    const owners = await User.findAll({ where: { organisationId: organisation.id }, attributes: ["id"] });
-    if (owners.length > 0) {
-      await Notification.bulkCreate(
-        owners.map(owner => ({
-          userId: owner.id,
-          title: "A user has requested to join your organization",
-          body: "A user has requested to join your organization. Please go to the 'Meet the Team' page to review this request.",
-          action: "user_join_organisation_requested",
-          referencedModel: Organisation.LARAVEL_TYPE,
-          referencedModelId: organisation.id
-        }))
-      );
     }
 
     try {
@@ -516,21 +576,48 @@ export class UserAssociationService {
       throw new NotFoundException(`User with UUID ${userUuid} not found`);
     }
 
-    const orgUser = await OrganisationUser.findOne({
+    const isHomeMember = user.organisationId === organisation.id;
+    let orgUser = await OrganisationUser.findOne({
       where: { organisationId: organisation.id, userId: user.id }
     });
+    // Home members (e.g. invited users) can be approved members without a membership row yet.
+    if (orgUser == null && status === "rejected" && isHomeMember) {
+      orgUser = await OrganisationUser.create({
+        organisationId: organisation.id,
+        userId: user.id,
+        status: APPROVED
+      } as OrganisationUser);
+    }
 
     if (orgUser == null) {
       throw new BadRequestException("User does not have a relationship with this organisation");
     }
 
-    const allowedFrom: OrganisationUserStatus[] = status === "approved" ? [PENDING, REJECTED] : [PENDING];
+    // Removing an accepted member is a rejection: they stay visible in the rejected list until deleted.
+    const allowedFrom: OrganisationUserStatus[] = status === "approved" ? [PENDING, REJECTED] : [PENDING, APPROVED];
     if (!allowedFrom.includes(orgUser.status)) {
       throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
     }
 
+    if (status === "rejected" && orgUser.status === APPROVED) {
+      const otherMembers = await OrganisationUser.count({
+        where: { organisationId: organisation.id, status: APPROVED, userId: { [Op.ne]: user.id } }
+      });
+      const otherHomeMembers = await User.count({
+        where: { organisationId: organisation.id, id: { [Op.ne]: user.id } }
+      });
+      if (otherMembers + otherHomeMembers === 0) {
+        throw new BadRequestException("Cannot remove the last user from the organisation");
+      }
+    }
+
     orgUser.status = status;
     await orgUser.save();
+
+    if (status === "rejected" && isHomeMember) {
+      user.organisationId = null;
+      await user.save();
+    }
 
     if (status === "approved") {
       user.organisationId = organisation.id;
@@ -561,7 +648,7 @@ export class UserAssociationService {
 
   private async handleExistingUser(project: Project, user: User, attributes: UserAssociationCreateAttributes) {
     if (attributes.isManager) {
-      if (user.primaryRole !== "project-manager") throw new BadRequestException("User is not a project manager");
+      if (!user.roles.includes("project-manager")) throw new BadRequestException("User is not a project manager");
       const projectUser = await ProjectUser.findOne({
         where: { projectId: project.id, userId: user.id, isManaging: true }
       });

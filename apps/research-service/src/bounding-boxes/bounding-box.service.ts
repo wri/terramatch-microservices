@@ -150,35 +150,17 @@ export class BoundingBoxService {
     return this.getPolygonGeometryBoundingBox({ uuid: { [Op.in]: uniquePolygonUuids } });
   }
 
-  async getSiteBoundingBox(siteUuid: string): Promise<BoundingBoxDto> {
-    const site = await Site.findOne({
-      where: { uuid: siteUuid },
-      attributes: ["uuid", "frameworkKey", "projectId"]
-    });
-
-    if (site === null) {
-      throw new NotFoundException(`${EntityType.SITE} with UUID ${siteUuid} not found`);
+  async getSitesBoundingBox(siteUuids: string[]): Promise<BoundingBoxDto> {
+    const sites = await Site.findAll({ where: { uuid: { [Op.in]: siteUuids } }, attributes: ["uuid"] });
+    const foundUuids = new Set(sites.map(({ uuid }) => uuid));
+    const missingUuids = siteUuids.filter(uuid => !foundUuids.has(uuid));
+    if (missingUuids.length > 0) {
+      throw new NotFoundException(`Sites not found for UUIDs: ${missingUuids.join(", ")}`);
     }
-
-    const sitePolygons = await SitePolygon.findAll({
-      where: {
-        siteUuid,
-        polygonUuid: { [Op.ne]: "" },
-        isActive: true,
-        deletedAt: null
-      },
-      attributes: ["polygonUuid"]
-    });
-
-    if (sitePolygons.length === 0) {
-      throw new NotFoundException(`No polygons found for site with UUID ${siteUuid}`);
-    }
-
-    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid);
 
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,
-      { uuid: { [Op.in]: polygonUuids } },
+      { uuid: { [Op.in]: SitePolygon.activePolygonUuidsForSites(siteUuids) } },
       "geom",
       EntityType.POLYGON
     );

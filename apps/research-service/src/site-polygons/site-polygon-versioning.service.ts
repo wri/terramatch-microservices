@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
 import {
+  AnrPlotGeometry,
   SitePolygon,
   PolygonUpdates,
   PolygonGeometry,
@@ -114,6 +115,7 @@ export class SitePolygonVersioningService {
     const newVersions = await SitePolygon.bulkCreate(versionRecords as SitePolygon[], { transaction });
 
     await this.copyAttributeValues(entries, newVersions, transaction);
+    await this.copyAnrPlots(entries, newVersions, transaction);
 
     const keepActiveUuids = [...lastNewVersionPerPrimary.values()];
     const primaryUuids = [...lastNewVersionPerPrimary.keys()];
@@ -169,6 +171,37 @@ export class SitePolygonVersioningService {
     }));
 
     await SitePolygonAttributeValue.bulkCreate(copiedValues as SitePolygonAttributeValue[], { transaction });
+  }
+
+  private async copyAnrPlots(
+    entries: VersionCreateEntry[],
+    newVersions: SitePolygon[],
+    transaction: Transaction
+  ): Promise<void> {
+    const oldToNewId = new Map<number, number>();
+    entries.forEach((entry, index) => {
+      if (entry.newPolygonGeometryUuid == null) {
+        oldToNewId.set(entry.basePolygon.id, newVersions[index].id);
+      }
+    });
+    if (oldToNewId.size === 0) return;
+
+    const previousPlots = await AnrPlotGeometry.findAll({
+      where: { sitePolygonId: { [Op.in]: [...oldToNewId.keys()] } },
+      attributes: ["sitePolygonId", "geojson", "plotCount", "createdBy"],
+      transaction
+    });
+    if (previousPlots.length === 0) return;
+
+    await AnrPlotGeometry.bulkCreate(
+      previousPlots.map(({ sitePolygonId, geojson, plotCount, createdBy }) => ({
+        sitePolygonId: oldToNewId.get(sitePolygonId) as number,
+        geojson,
+        plotCount,
+        createdBy
+      })),
+      { transaction }
+    );
   }
 
   private queueGwcInvalidation(

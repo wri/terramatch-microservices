@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
+  ApiKey,
   Framework,
   FundingProgramme,
   Notification,
@@ -27,6 +28,9 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 const VERIFICATION_RETENTION_HOURS = 48;
 const PASSWORD_RESET_RETENTION_DAYS = 7;
 const NOTIFICATION_RETENTION_DAYS = 90;
+// Expired API keys are kept for a week after expiration so that a key that was expired by
+// accident can still be un-expired before it is removed.
+const EXPIRED_API_KEY_RETENTION_DAYS = 7;
 
 const IS_DEV = process.env["NODE_ENV"] === "development";
 
@@ -157,6 +161,15 @@ export class ScheduledJobsService {
     });
     if (removed > 0) {
       this.logger.log(`Removed ${removed} stale read notifications (older than ${NOTIFICATION_RETENTION_DAYS}d)`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { name: "removeExpiredApiKeys" })
+  async removeExpiredApiKeys() {
+    const cutoff = DateTime.utc().minus({ days: EXPIRED_API_KEY_RETENTION_DAYS }).toJSDate();
+    const removed = await ApiKey.destroy({ where: { expiresAt: { [Op.lte]: cutoff } } });
+    if (removed > 0) {
+      this.logger.log(`Removed ${removed} expired API keys (expired more than ${EXPIRED_API_KEY_RETENTION_DAYS}d ago)`);
     }
   }
 

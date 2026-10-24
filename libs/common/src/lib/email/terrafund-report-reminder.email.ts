@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 
 import { EmailService } from "./email.service";
-import { Notification, Project, Task, User } from "@terramatch-microservices/database/entities";
+import { Project, Task, User } from "@terramatch-microservices/database/entities";
 import { TMLogger } from "../util/tm-logger";
 import { Dictionary, groupBy } from "lodash";
 import { ProjectEmailSender } from "./project-email-sender";
@@ -62,18 +62,6 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
         "{dueDate}": dueDateFormatted
       };
 
-      if (users.length !== 0) {
-        const notificationProps = {
-          title: "Terrafund Report Reminder",
-          body: `Your report for ${projectName} is due on ${dueDateFormatted}`,
-          action: "terrafund_report_reminder",
-          referencedModel: "Project",
-          referencedModelId: projectId,
-          hiddenFromApp: true
-        };
-        await Notification.bulkCreate(users.map(({ id }) => ({ ...notificationProps, userId: id })));
-      }
-
       await Promise.all(
         Object.entries(groupBy(users, "locale")).map(([locale, localeGroup]) =>
           emailService.sendI18nTemplateEmail(
@@ -98,18 +86,6 @@ export class TerrafundReportReminderEmail extends ProjectEmailSender {
     }
 
     // Legacy Top 100 behaviour — unchanged
-    if (users.length !== 0) {
-      const notificationProps = {
-        title: "Terrafund Report Reminder",
-        body: "Terrafund reports are due in a month",
-        action: "terrafund_report_reminder",
-        referencedModel: "Project",
-        referencedModelId: projectId,
-        hiddenFromApp: true
-      };
-      await Notification.bulkCreate(users.map(({ id }) => ({ ...notificationProps, userId: id })));
-    }
-
     await Promise.all(
       Object.entries(groupBy(users, "locale")).map(([locale, localeGroup]) =>
         emailService.sendI18nTemplateEmail(

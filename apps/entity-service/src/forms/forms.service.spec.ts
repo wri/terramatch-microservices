@@ -33,6 +33,13 @@ import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { FormFullDto, FormLightDto, StoreFormAttributes } from "./dto/form.dto";
 import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { orderBy, pick } from "lodash";
+import { getLinkedFieldConfig } from "@terramatch-microservices/common/linkedFields";
+import { LinkedFile } from "@terramatch-microservices/database/constants/linked-fields";
+import {
+  mediaConfiguration,
+  MediaOwnerType,
+  sizeValidation
+} from "@terramatch-microservices/database/constants/media-owners";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { EntitiesService } from "../entities/entities.service";
 
@@ -317,6 +324,39 @@ describe("FormsService", () => {
       const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form));
       const dto = (document.data as Resource).attributes;
       expect(dto).toMatchObject(formMatch);
+    });
+
+    it("returns maxFileSize in bytes for file questions with a size validation", async () => {
+      mockUserContext({ userId: (await UserFactory.create()).id });
+
+      const form = await FormFactory.create();
+      const section = await FormSectionFactory.form(form).create();
+      const sizedKey = "org-fcol-bank-statments";
+      // reference uses the pdf validation, which has no size limit
+      const unsizedKey = "org-fcol-ref";
+      const sizedFile = await FormQuestionFactory.section(section).create({
+        inputType: "file",
+        linkedFieldKey: sizedKey
+      });
+      const unsizedFile = await FormQuestionFactory.section(section).create({
+        inputType: "file",
+        linkedFieldKey: unsizedKey
+      });
+      const text = await FormQuestionFactory.section(section).create({ inputType: "text" });
+
+      // The expected limit is read from the same media configuration the form question resolves against.
+      const sizedConfig = getLinkedFieldConfig(sizedKey);
+      const sizedCollection = (sizedConfig?.field as LinkedFile).collection;
+      const sizedValidation = mediaConfiguration(sizedConfig?.model as MediaOwnerType, sizedCollection)?.validation;
+      const sizeLimit = sizeValidation(sizedValidation ?? "general-documents") ?? "";
+
+      const document = serialize(await service.addFullDto(buildJsonApi<FormFullDto>(FormFullDto), form));
+      const dto = (document.data as Resource).attributes;
+      const questions = dto.sections[0].questions as { name: string; maxFileSize?: number }[];
+      const byName = (uuid: string) => questions.find(({ name }) => name === uuid);
+      expect(byName(sizedFile.uuid)?.maxFileSize).toBe(parseInt(sizeLimit) * 1024 * 1024);
+      expect(byName(unsizedFile.uuid)?.maxFileSize).toBeUndefined();
+      expect(byName(text.uuid)?.maxFileSize).toBeUndefined();
     });
 
     it("uses linked field multiChoice when the stored question is single-select", async () => {

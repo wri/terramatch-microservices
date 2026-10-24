@@ -150,6 +150,14 @@ describe("EntityProcessor", () => {
       expect(project.status).toBe("approved");
     });
 
+    it("accepts a submit on an approved entity without a change request and leaves it unchanged", async () => {
+      const project = await ProjectFactory.create({ status: "approved", updateRequestStatus: null });
+      await createProcessor().update(project, { status: "pending-approval" });
+      await project.reload();
+      expect(project.status).toBe("approved");
+      expect(project.updateRequestStatus).toBeNull();
+    });
+
     it("clears a change request when submitting an entity that is pending-approval", async () => {
       const project = await ProjectFactory.create({
         status: "draft",

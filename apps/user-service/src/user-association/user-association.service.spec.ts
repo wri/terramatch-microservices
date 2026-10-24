@@ -15,7 +15,6 @@ import {
 import {
   OrganisationUser,
   User,
-  Notification,
   ProjectUser,
   ProjectInvite,
   Organisation,
@@ -873,7 +872,6 @@ describe("UserAssociationService", () => {
     it("should create new organisation user join request", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const owner = await UserFactory.create({ organisationId: org.id });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
@@ -884,8 +882,6 @@ describe("UserAssociationService", () => {
         }),
         true
       ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
-      jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.requestOrgJoin(org, user.id);
@@ -898,7 +894,6 @@ describe("UserAssociationService", () => {
         where: { organisationId: org.id, userId: user.id },
         defaults: { organisationId: org.id, userId: user.id, status: "pending" }
       });
-      expect(Notification.bulkCreate).toHaveBeenCalled();
       expect(emailQueue.add).toHaveBeenCalled();
       expect(result).toEqual(user);
     });
@@ -915,7 +910,6 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
@@ -936,7 +930,6 @@ describe("UserAssociationService", () => {
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
       jest.spyOn(orgUser, "save");
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
@@ -956,33 +949,9 @@ describe("UserAssociationService", () => {
       expect(findOrCreateSpy).not.toHaveBeenCalled();
     });
 
-    it("should not create notifications when no owners exist", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
-        await OrganisationUserFactory.create({
-          organisationId: org.id,
-          userId: user.id,
-          status: "pending"
-        }),
-        true
-      ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
-      jest.spyOn(Notification, "bulkCreate");
-      emailQueue.add.mockResolvedValue({} as Job);
-
-      await service.requestOrgJoin(org, user.id);
-
-      expect(Notification.bulkCreate).not.toHaveBeenCalled();
-      expect(emailQueue.add).toHaveBeenCalled();
-    });
-
     it("should handle email queue failure gracefully", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const owner = await UserFactory.create({ organisationId: org.id });
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
@@ -993,8 +962,6 @@ describe("UserAssociationService", () => {
         }),
         true
       ] as [OrganisationUser, boolean]);
-      jest.spyOn(User, "findAll").mockResolvedValue([owner] as User[]);
-      jest.spyOn(Notification, "bulkCreate").mockResolvedValue([]);
       emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 
@@ -1120,9 +1087,30 @@ describe("UserAssociationService", () => {
       );
     });
 
-    it("should throw BadRequestException when trying to reject a non-requested user", async () => {
+    it("should reject an accepted member and clear their home organisation", async () => {
       const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      const orgUser = await OrganisationUserFactory.create({
+        organisationId: org.id,
+        userId: user.id,
+        status: "approved"
+      });
+      const otherUser = await UserFactory.create();
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: otherUser.id, status: "approved" });
+
+      jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+      emailQueue.add.mockResolvedValue({} as Job);
+
+      await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
+
+      expect(orgUser.status).toBe("rejected");
+      expect(user.organisationId).toBeNull();
+    });
+
+    it("should throw BadRequestException when removing the last accepted member", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: null });
       const orgUser = await OrganisationUserFactory.create({
         organisationId: org.id,
         userId: user.id,
@@ -1131,10 +1119,13 @@ describe("UserAssociationService", () => {
 
       jest.spyOn(User, "findOne").mockResolvedValue(user);
       jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
+      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
+      jest.spyOn(User, "count").mockResolvedValue(0);
 
       await expect(service.updateOrgUserStatus(org, user.uuid as string, "rejected")).rejects.toThrow(
-        BadRequestException
+        new BadRequestException("Cannot remove the last user from the organisation")
       );
+      expect(orgUser.status).toBe("approved");
     });
 
     it("should handle email queue failure gracefully", async () => {
@@ -1162,14 +1153,73 @@ describe("UserAssociationService", () => {
     });
   });
   describe("inviteOrganisationUser", () => {
-    it("should throw UnprocessableEntityException when user with email already exists", async () => {
-      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
-      const user = { id: 1, emailAddress: "exists@example.com" } as User;
+    const registeredUser = (overrides: Partial<User> = {}) =>
+      ({
+        id: 1,
+        uuid: "user-uuid",
+        emailAddress: "exists@example.com",
+        organisationId: null,
+        roles: ["project-developer"],
+        save: jest.fn().mockResolvedValue(undefined),
+        ...overrides
+      }) as unknown as User;
 
+    it("should add a registered project developer straight away as an approved member", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      const user = registeredUser();
+      const invite = { uuid: "invite-uuid", acceptedAt: new Date() } as OrganisationInvite;
+
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
       jest.spyOn(User, "findOne").mockResolvedValue(user);
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
+      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
+      jest.spyOn(OrganisationUser, "create").mockResolvedValue({} as OrganisationUser);
+      jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
+      const createUserSpy = jest.spyOn(User, "create");
+      emailQueue.add.mockResolvedValue({} as Job);
+
+      const result = await service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" });
+
+      expect(OrganisationUser.create).toHaveBeenCalledWith(
+        expect.objectContaining({ organisationId: org.id, userId: user.id, status: "approved" })
+      );
+      expect(user.organisationId).toBe(org.id);
+      expect(OrganisationInvite.create).toHaveBeenCalledWith(expect.objectContaining({ acceptedAt: expect.any(Date) }));
+      expect(createUserSpy).not.toHaveBeenCalled();
+      expect(result).toBe(invite);
+    });
+
+    it("should reject a registered user who is not a project developer", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
+      jest.spyOn(User, "findOne").mockResolvedValue(registeredUser({ roles: ["project-manager"] }));
 
       await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).rejects.toThrow(
-        new UnprocessableEntityException("A user with this email address already exists")
+        new UnprocessableEntityException(
+          "This user type cannot be added to the organisation, please try a different email address."
+        )
+      );
+    });
+
+    it("should reject a registered user who is already a member", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
+      jest.spyOn(User, "findOne").mockResolvedValue(registeredUser({ organisationId: org.id }));
+
+      await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).rejects.toThrow(
+        new UnprocessableEntityException("This user is already a member of the organisation.")
+      );
+    });
+
+    it("should reject a registered user with a pending request to join another organisation", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
+      jest.spyOn(User, "findOne").mockResolvedValue(registeredUser());
+      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
+      jest.spyOn(OrganisationUser, "count").mockResolvedValue(1);
+
+      await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).rejects.toThrow(
+        UnprocessableEntityException
       );
     });
 
@@ -1179,7 +1229,9 @@ describe("UserAssociationService", () => {
       const findUserSpy = jest.spyOn(User, "findOne");
 
       await expect(service.inviteOrganisationUser(org, { emailAddress: "invited@example.com" })).rejects.toThrow(
-        new UnprocessableEntityException("User has already been invited to this organisation")
+        new UnprocessableEntityException(
+          "This user has already been invited to this organisation, please try a different email address."
+        )
       );
       expect(OrganisationInvite.count).toHaveBeenCalledWith({
         where: { organisationId: org.id, emailAddress: "invited@example.com" }

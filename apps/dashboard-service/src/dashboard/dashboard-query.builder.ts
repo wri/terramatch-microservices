@@ -52,7 +52,9 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
       type: { [Op.in]: ["non-profit-organization", "for-profit-organization"] }
     };
 
-    if (!isEmpty(filters?.country)) where["country"] = filters.country;
+    if (filters?.country != null && filters.country !== "") {
+      where["id"] = { [Op.in]: Project.forCountry(filters.country) };
+    }
     if (!isEmpty(filters?.programmes)) where["frameworkKey"] = { [Op.in]: [filters.programmes] };
     if (filters?.landscapes != null && filters.landscapes.length > 0) {
       const landscapeNames = mapLandscapeCodesToNames(filters.landscapes);

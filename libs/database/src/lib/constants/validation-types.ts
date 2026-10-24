@@ -58,3 +58,5 @@ export const EXCLUDED_VALIDATION_CRITERIA = [
 ];
 
 export type CriteriaId = (typeof VALIDATION_CRITERIA_IDS)[ValidationType];
+
+export const OVERLAP_SLIVER_TOLERANCE_DEGREES = 0.000001;

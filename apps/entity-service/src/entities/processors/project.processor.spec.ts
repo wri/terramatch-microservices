@@ -53,6 +53,12 @@ import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import {
+  NurseriesMetaQueryDto,
+  ProjectNurseriesMetaDto,
+  ProjectSitesMetaDto,
+  SitesMetaQueryDto
+} from "../dto/nurseries-meta.dto";
 import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
@@ -141,17 +147,17 @@ describe("ProjectProcessor", () => {
 
     it("filters", async () => {
       const us = await ProjectFactory.create({
-        country: "US",
+        level0Project: ["US"],
         status: "approved",
         updateRequestStatus: "draft"
       });
       const mx = await ProjectFactory.create({
-        country: "MX",
+        level0Project: ["MX"],
         status: "draft",
         updateRequestStatus: "pending-approval"
       });
       const ca = await ProjectFactory.create({
-        country: "CA",
+        level0Project: ["CA"],
         status: "approved",
         updateRequestStatus: "pending-approval"
       });
@@ -313,6 +319,8 @@ describe("ProjectProcessor", () => {
       const projects = [
         await ProjectFactory.create({
           name: "A Project",
+          country: "KEN",
+          level0Project: ["GHA"],
           plantingStartDate: DateTime.now().minus({ days: 1 }).toJSDate(),
           organisationId: org2.id
         })
@@ -320,6 +328,8 @@ describe("ProjectProcessor", () => {
       projects.push(
         await ProjectFactory.create({
           name: "Z Project",
+          country: "GHA",
+          level0Project: ["BRA"],
           plantingStartDate: DateTime.now().minus({ days: 10 }).toJSDate(),
           organisationId: org3.id
         })
@@ -327,6 +337,8 @@ describe("ProjectProcessor", () => {
       projects.push(
         await ProjectFactory.create({
           name: "M Project",
+          country: "BRA",
+          level0Project: ["KEN"],
           plantingStartDate: DateTime.now().minus({ days: 5 }).toJSDate(),
           organisationId: org1.id
         })
@@ -349,6 +361,13 @@ describe("ProjectProcessor", () => {
         projects,
         { sort: { field: "plantingStartDate", direction: "DESC" } },
         { sortField: "plantingStartDate", sortUp: false }
+      );
+      await expectProjects(projects, { sort: { field: "country" } }, { sortField: "country" });
+      await expectProjects(projects, { sort: { field: "level0Project" } }, { sortField: "level0Project[0]" });
+      await expectProjects(
+        projects,
+        { sort: { field: "level0Project", direction: "DESC" } },
+        { sortField: "level0Project[0]", sortUp: false }
       );
       await expectProjects(projects, { sort: { field: "organisationName" } }, { sortField: "organisationName" });
       await expectProjects(
@@ -420,7 +439,7 @@ describe("ProjectProcessor", () => {
         SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "River Site" }),
         SiteFactory.create({ projectId: alpha.id, frameworkKey, name: "Hill Site" })
       ]);
-      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"]) {
+      for (const status of ["due", "draft", "information-required", "pending-approval", "approved"] as const) {
         await SiteReportFactory.create({ siteId: river.id, frameworkKey, status });
       }
       await SiteReportFactory.create({ siteId: river.id, frameworkKey, status: "due", deletedAt: new Date() });
@@ -446,7 +465,11 @@ describe("ProjectProcessor", () => {
       const delta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Delta" });
       await ProjectReportFactory.create({ projectId: delta.id, frameworkKey, status: "draft" });
 
-      for (const { id: projectId } of [alpha, approvedOnly, coastal, delta]) {
+      // Has no reports, so it is never listed
+      const empty = await ProjectFactory.create({ frameworkKey, organisationId, name: "Echo" });
+      await SiteFactory.create({ projectId: empty.id, frameworkKey, name: "Echo Site" });
+
+      for (const { id: projectId } of [alpha, approvedOnly, coastal, delta, empty]) {
         await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
       }
 
@@ -474,7 +497,7 @@ describe("ProjectProcessor", () => {
       nurseries
     });
 
-    it("returns all projects with their reports requiring attention", async () => {
+    it("returns all projects with reports, with their reports requiring attention", async () => {
       const { alpha, river, alphaNursery, approvedOnly, coastal, coastalNursery, delta } = await createData();
       const { result, data, attributes } = await getIndex({});
 
@@ -493,15 +516,15 @@ describe("ProjectProcessor", () => {
       ]);
     });
 
-    it("applies the report filters to the counts", async () => {
+    it("only returns projects with reports matching the filters, and applies the filters to the counts", async () => {
       const { alpha, river, hill, alphaNursery, approvedOnly, approvedSite, coastal, coastalNursery, delta } =
         await createData();
 
-      expect((await getIndex({ statuses: ["approved"] })).attributes).toEqual([
+      const approved = await getIndex({ statuses: ["approved"] });
+      expect(approved.result.meta.indices?.[0].total).toBe(2);
+      expect(approved.attributes).toEqual([
         row(alpha, 0, { ...meta(river, 1), ...meta(hill, 1) }, meta(alphaNursery, 1)),
-        row(approvedOnly, 1, meta(approvedSite, 1)),
-        row(coastal, 0),
-        row(delta, 0)
+        row(approvedOnly, 1, meta(approvedSite, 1))
       ]);
 
       expect((await getIndex({ reportTypes: ["nurseryReports", "projectReports"] })).attributes).toEqual([
@@ -511,13 +534,38 @@ describe("ProjectProcessor", () => {
         row(delta, 1)
       ]);
 
-      expect((await getIndex({ reportTypes: ["disturbanceReports"] })).attributes).toEqual([
-        row(alpha, 0),
-        row(approvedOnly, 0),
-        row(coastal, 0),
-        row(delta, 0)
+      expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["draft"] })).attributes).toEqual([
+        row(coastal, 0, {}, meta(coastalNursery, 1))
       ]);
+
+      const disturbance = await getIndex({ reportTypes: ["disturbanceReports"] });
+      expect(disturbance.result.meta.indices?.[0].total).toBe(0);
+      expect(disturbance.data).toEqual([]);
+
+      expect((await getIndex({ dueDateFrom: "2999-01-01" })).data).toEqual([]);
       expect((await getIndex({ projectUuid: coastal.uuid })).data.map(({ id }) => id)).toEqual([coastal.uuid]);
+    });
+
+    it("matches the status of a submitted change request instead of the report's own status", async () => {
+      const { alpha, river } = await createData();
+      const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
+      const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
+      await NurseryReportFactory.create({
+        nurseryId: foxtrotNursery.id,
+        frameworkKey,
+        status: "information-required",
+        updateRequestStatus: "pending-approval"
+      });
+      await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
+
+      expect((await getIndex({ statuses: ["information-required"] })).attributes).toEqual([
+        row(alpha, 0, meta(river, 1))
+      ]);
+      expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["pending-approval"] })).attributes).toEqual([
+        row(foxtrot, 0, {}, meta(foxtrotNursery, 1))
+      ]);
+      // A report waiting on change request approval doesn't require attention.
+      expect((await getIndex({ projectUuid: foxtrot.uuid })).attributes).toEqual([row(foxtrot, 0)]);
     });
 
     it("searches project, site and nursery names", async () => {
@@ -549,6 +597,266 @@ describe("ProjectProcessor", () => {
       const { result, data } = await getIndex({}, []);
       expect(result.meta.indices?.[0].total).toBe(0);
       expect(data).toEqual([]);
+    });
+  });
+
+  describe("addNurseriesMetaIndex", () => {
+    const frameworkKey = "ppc";
+    let organisation: Organisation;
+    let user: User;
+
+    // Seedlings are summed from the approved reports only, as the nursery detail page does.
+    const createData = async () => {
+      user = await UserFactory.create();
+      organisation = await OrganisationFactory.create();
+      const organisationId = organisation.id;
+
+      const alpha = await ProjectFactory.create({ frameworkKey, organisationId, name: "Alpha Nurseries" });
+      const approvedNursery = await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Approved Nursery",
+        status: "approved",
+        updateRequestStatus: null
+      });
+      const approvedReport = await NurseryReportFactory.create({
+        nurseryId: approvedNursery.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 100 });
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedReport).create({ amount: 50 });
+      await TreeSpeciesFactory.nurserySeedling(approvedNursery).create({ amount: 400 });
+      const draftReport = await NurseryReportFactory.create({
+        nurseryId: approvedNursery.id,
+        frameworkKey,
+        status: "draft"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftReport).create({ amount: 999 });
+
+      const draftNursery = await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Draft Nursery",
+        status: "draft",
+        updateRequestStatus: null
+      });
+      const draftNurseryReport = await NurseryReportFactory.create({
+        nurseryId: draftNursery.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftNurseryReport).create({ amount: 30 });
+
+      const beta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Nurseries" });
+      await NurseryFactory.create({ projectId: beta.id, frameworkKey, name: "Beta Nursery", status: "approved" });
+
+      // Has only a draft nursery, so it is listed without filters and not when filtering by approved.
+      const gamma = await ProjectFactory.create({ frameworkKey, organisationId, name: "Gamma" });
+      await NurseryFactory.create({ projectId: gamma.id, frameworkKey, name: "Gamma Nursery", status: "draft" });
+
+      for (const { id: projectId } of [alpha, beta, gamma]) {
+        await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
+      }
+
+      return { alpha, beta, gamma };
+    };
+
+    const getIndex = async (query: NurseriesMetaQueryDto, permissions = ["projects-manage"]) => {
+      mockContextForUser(user, ...permissions);
+      const document = buildJsonApi(ProjectNurseriesMetaDto, { pagination: "number" });
+      await processor.addNurseriesMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { result, data, attributes: data.map(({ attributes }) => attributes) };
+    };
+
+    it("lists every project with nurseries, with nursery counts and seedlings grown", async () => {
+      const { alpha, beta, gamma } = await createData();
+      const { result, data, attributes } = await getIndex({});
+
+      expect(result.meta.resourceType).toBe("projectNurseriesMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectNurseriesMetas",
+        requestPath: "/entities/v3/projects/nurseriesMeta",
+        total: 3
+      });
+      expect(data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid, gamma.uuid]);
+      expect(attributes).toEqual([
+        {
+          uuid: alpha.uuid,
+          name: "Alpha Nurseries",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 2,
+          nurseriesMatching: 2,
+          seedlingsGrownTotal: 180,
+          seedlingsGrownMatching: 180,
+          seedlingsGrownGoalTotal: 400
+        },
+        {
+          uuid: beta.uuid,
+          name: "Beta Nurseries",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 1,
+          nurseriesMatching: 1,
+          seedlingsGrownTotal: 0,
+          seedlingsGrownMatching: 0,
+          seedlingsGrownGoalTotal: 0
+        },
+        {
+          uuid: gamma.uuid,
+          name: "Gamma",
+          organisationName: organisation.name,
+          frameworkKey,
+          nurseriesTotal: 1,
+          nurseriesMatching: 1,
+          seedlingsGrownTotal: 0,
+          seedlingsGrownMatching: 0,
+          seedlingsGrownGoalTotal: 0
+        }
+      ]);
+    });
+
+    it("only returns projects with matching nurseries, and counts only the matching nurseries", async () => {
+      const { alpha, beta } = await createData();
+      const approved = await getIndex({ status: ["approved"] });
+
+      expect(approved.result.meta.indices?.[0].total).toBe(2);
+      expect(approved.data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(approved.attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        nurseriesTotal: 2,
+        nurseriesMatching: 1,
+        seedlingsGrownTotal: 180,
+        seedlingsGrownMatching: 150
+      });
+    });
+
+    it("matches the search against the nursery, project and organisation names", async () => {
+      const { alpha } = await createData();
+      const byNursery = await getIndex({ search: "Draft Nursery" });
+      expect(byNursery.data.map(({ id }) => id)).toEqual([alpha.uuid]);
+      expect(byNursery.attributes[0]).toMatchObject({ nurseriesTotal: 2, nurseriesMatching: 1 });
+
+      const byProject = await getIndex({ search: "Alpha Nurseries" });
+      expect(byProject.attributes[0]).toMatchObject({ nurseriesTotal: 2, nurseriesMatching: 2 });
+    });
+  });
+
+  describe("addSitesMetaIndex", () => {
+    const frameworkKey = "ppc";
+    let organisation: Organisation;
+    let user: User;
+
+    // Trees planted are summed from the approved site reports only, as the site detail page does.
+    const createData = async () => {
+      user = await UserFactory.create();
+      organisation = await OrganisationFactory.create();
+      const organisationId = organisation.id;
+
+      const alpha = await ProjectFactory.create({ frameworkKey, organisationId, name: "Alpha Sites" });
+      const approvedSite = await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Approved Site",
+        status: "approved",
+        updateRequestStatus: null
+      });
+      const approvedReport = await SiteReportFactory.create({
+        siteId: approvedSite.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedReport).create({ amount: 40 });
+      await TreeSpeciesFactory.siteReportTreePlanted(approvedReport).create({ amount: 10 });
+      const draftReport = await SiteReportFactory.create({ siteId: approvedSite.id, frameworkKey, status: "draft" });
+      await TreeSpeciesFactory.siteReportTreePlanted(draftReport).create({ amount: 500 });
+
+      const draftSite = await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Draft Site",
+        status: "draft",
+        updateRequestStatus: null
+      });
+      const draftSiteReport = await SiteReportFactory.create({
+        siteId: draftSite.id,
+        frameworkKey,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(draftSiteReport).create({ amount: 20 });
+
+      const beta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Sites" });
+      await SiteFactory.create({
+        projectId: beta.id,
+        frameworkKey,
+        name: "Beta Site",
+        status: "approved",
+        updateRequestStatus: null
+      });
+
+      for (const { id: projectId } of [alpha, beta]) {
+        await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
+      }
+
+      return { alpha, beta };
+    };
+
+    const getIndex = async (query: SitesMetaQueryDto, permissions = ["projects-manage"]) => {
+      mockContextForUser(user, ...permissions);
+      const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
+      await processor.addSitesMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { result, data, attributes: data.map(({ attributes }) => attributes) };
+    };
+
+    it("lists every project with sites, with site counts and trees planted", async () => {
+      const { alpha, beta } = await createData();
+      const { result, data, attributes } = await getIndex({});
+
+      expect(result.meta.resourceType).toBe("projectSitesMetas");
+      expect(result.meta.indices?.[0]).toMatchObject({
+        resource: "projectSitesMetas",
+        requestPath: "/entities/v3/projects/sitesMeta",
+        total: 2
+      });
+      expect(data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        name: "Alpha Sites",
+        sitesTotal: 2,
+        sitesMatching: 2,
+        treesPlantedTotal: 70,
+        treesPlantedMatching: 50
+      });
+      expect(attributes[1]).toMatchObject({ uuid: beta.uuid, sitesTotal: 1, sitesMatching: 1, treesPlantedTotal: 0 });
+    });
+
+    it("counts only the sites matching the filters in the totals", async () => {
+      const { alpha, beta } = await createData();
+      const approved = await getIndex({ status: ["approved"] });
+
+      expect(approved.data.map(({ id }) => id)).toEqual([alpha.uuid, beta.uuid]);
+      expect(approved.attributes[0]).toMatchObject({
+        uuid: alpha.uuid,
+        sitesTotal: 2,
+        sitesMatching: 1,
+        treesPlantedTotal: 70,
+        treesPlantedMatching: 50
+      });
+    });
+
+    it("matches the search against the site and project names", async () => {
+      const { alpha } = await createData();
+      const bySite = await getIndex({ search: "Draft Site" });
+      expect(bySite.data.map(({ id }) => id)).toEqual([alpha.uuid]);
+      expect(bySite.attributes[0]).toMatchObject({ sitesTotal: 2, sitesMatching: 1 });
+
+      const byProject = await getIndex({ search: "Alpha Sites" });
+      expect(byProject.attributes[0]).toMatchObject({ sitesTotal: 2, sitesMatching: 2 });
     });
   });
 
@@ -641,7 +949,8 @@ describe("ProjectProcessor", () => {
       const org = await OrganisationFactory.create();
       const { uuid } = await ProjectFactory.create({
         organisationId: org.id,
-        frameworkKey: "foofund" as FrameworkKey
+        frameworkKey: "foofund" as FrameworkKey,
+        level0Project: ["GHA"]
       });
 
       setMockedPermissions("projects-read");
@@ -651,7 +960,8 @@ describe("ProjectProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: true,
-        organisationName: org.name
+        organisationName: org.name,
+        level0Project: ["GHA"]
       });
     });
 
@@ -742,14 +1052,15 @@ describe("ProjectProcessor", () => {
       let project = await ProjectFactory.create({
         organisationId: org.id,
         frameworkKey: "barfund" as FrameworkKey,
-        applicationId: application.id
+        applicationId: application.id,
+        level0Project: ["KEN"]
       });
       const { id: projectId, uuid } = project;
       const approvedSites = [await SiteFactory.create({ projectId, status: "approved" })];
       approvedSites.push(await SiteFactory.create({ projectId, status: "approved" }));
       await SiteFactory.create({ projectId, status: "draft" });
       const approvedNurseries = await NurseryFactory.createMany(3, { projectId, status: "approved" });
-      await NurseryFactory.create({ projectId, status: "information-required" });
+      const unapprovedNursery = await NurseryFactory.create({ projectId, status: "information-required" });
 
       const approvedProjectReports = [
         await ProjectReportFactory.create({ projectId, status: "approved", dueAt: new Date() })
@@ -797,10 +1108,34 @@ describe("ProjectProcessor", () => {
       const treesPlantedCount = sumBy(treeSpecies, "amount");
       const seedsPlantedCount = sumBy(seedings, "amount");
 
+      const approvedNurseryReports = await Promise.all(
+        approvedNurseries
+          .slice(0, 2)
+          .map(({ id }) => NurseryReportFactory.create({ nurseryId: id, status: "approved" }))
+      );
+      const nurserySeedlings = flatten(
+        await Promise.all(
+          approvedNurseryReports.map(report =>
+            TreeSpeciesFactory.nurseryReportSeedling(report).createMany(faker.number.int({ min: 1, max: 10 }))
+          )
+        )
+      );
+      await TreeSpeciesFactory.nurseryReportSeedling(approvedNurseryReports[0]).create({ hidden: true });
+      const unapprovedNurseryReport = await NurseryReportFactory.create({
+        nurseryId: unapprovedNursery.id,
+        status: "approved"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(unapprovedNurseryReport).create();
+      const treesSeedlingsGrownCount = sumBy(nurserySeedlings, "amount");
+
       // incomplete reports
       await ProjectReportFactory.create({ projectId, status: "information-required" });
       await SiteReportFactory.create({ siteId: approvedSites[0].id, status: "due" });
-      await NurseryReportFactory.create({ nurseryId: approvedNurseries[1].id, status: "draft" });
+      const draftNurseryReport = await NurseryReportFactory.create({
+        nurseryId: approvedNurseries[1].id,
+        status: "draft"
+      });
+      await TreeSpeciesFactory.nurseryReportSeedling(draftNurseryReport).create();
 
       const sitePolygons = flatten(
         await Promise.all(
@@ -895,6 +1230,7 @@ describe("ProjectProcessor", () => {
       expect(dto).toMatchObject({
         uuid,
         lightResource: false,
+        level0Project: ["KEN"],
         organisationName: org.name,
         totalSites: approvedSites.length,
         totalNurseries: approvedNurseries.length,
@@ -913,6 +1249,7 @@ describe("ProjectProcessor", () => {
         regeneratedTreesCount,
         treesPlantedCount,
         seedsPlantedCount,
+        treesSeedlingsGrownCount,
         treesRestoredPpc:
           regeneratedTreesCount +
           (treesPlantedCount * ((project?.survivalRate ?? 0) / 100) +

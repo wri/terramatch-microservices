@@ -159,6 +159,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(STRING)
   declare banners: string | null;
 
+  /** @deprecated API keys now live in the api_keys table (see ApiKey). To be removed in TM-4131. */
   @AllowNull
   @Column(STRING)
   declare apiKey: string | null;
@@ -183,16 +184,12 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     return this.roles;
   }
 
-  /**
-   * Depends on `roles` being loaded, either by including it in the attributes on the find call,
-   * or by await user.loadRoles()
-   */
-  get primaryRole(): string | undefined {
-    return this.roles[0];
-  }
-
   get permissions(): NonAttribute<Permission[]> {
     return getPermissionsForRoles(this.roles);
+  }
+
+  get canReviewPolygons(): NonAttribute<boolean> {
+    return this.permissions.some(permission => permission === "projects-manage" || permission.startsWith("framework-"));
   }
 
   get fullName() {

@@ -552,6 +552,109 @@ describe("SitePolygonCreationService - Versioning", () => {
       expect(appliedAttributes.status).toBe("draft");
     });
 
+    describe("review state for admin edits", () => {
+      const approvedBase = {
+        uuid: baseSitePolygonUuid,
+        primaryUuid: "primary-uuid",
+        polygonUuid: "geometry-uuid",
+        polyName: "Polygon",
+        plantStart: new Date("2024-01-15"),
+        practice: ["tree-planting", "assisted-natural-regeneration"],
+        targetSys: "agroforest",
+        distr: ["full"],
+        numTrees: 10,
+        submissionCycle: null,
+        status: "approved",
+        validationStatus: "passed",
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+      } as unknown as SitePolygon;
+
+      const unchangedForm: AttributeChangesDto = {
+        polyName: "Polygon",
+        plantStart: "2024-01-15",
+        practice: ["assisted-natural-regeneration", "tree-planting"],
+        targetSys: "agroforest",
+        distr: ["full"],
+        numTrees: 10
+      };
+
+      const createVersion = (attributeChanges: AttributeChangesDto, canReviewPolygons: boolean) =>
+        service.createSitePolygonVersion(
+          baseSitePolygonUuid,
+          undefined,
+          attributeChanges,
+          changeReason,
+          userId,
+          userFullName,
+          source,
+          mockTransaction,
+          false,
+          true,
+          canReviewPolygons
+        );
+
+      const appliedAttributes = () =>
+        (versioningService.createVersions as jest.Mock).mock.calls[0][0][0].attributeChanges as Partial<SitePolygon>;
+
+      beforeEach(() => {
+        jest.spyOn(versioningService, "validateVersioningEligibility").mockResolvedValue(approvedBase);
+        jest
+          .spyOn(versioningService, "createVersions")
+          .mockResolvedValue([{ uuid: "new-version-uuid" } as SitePolygon]);
+      });
+
+      it("should keep status and validation when an admin only changes the submission cycle", async () => {
+        await createVersion({ ...unchangedForm, submissionCycle: "2" }, true);
+
+        expect(appliedAttributes()).not.toHaveProperty("status");
+        expect(appliedAttributes()).not.toHaveProperty("validationStatus");
+        expect(appliedAttributes().submissionCycle).toBe("2");
+        expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+      });
+
+      it("should keep status and validation when an admin only changes custom attributes", async () => {
+        await createVersion({ ...unchangedForm, customAttributes: { anrSubcategory: "farmer-managed" } }, true);
+
+        expect(appliedAttributes()).not.toHaveProperty("status");
+        expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+        expect(polygonAttributeValuesService.upsert).toHaveBeenCalled();
+      });
+
+      it("should treat an empty tree count sent as 0 as unchanged", async () => {
+        jest
+          .spyOn(versioningService, "validateVersioningEligibility")
+          .mockResolvedValue({ ...approvedBase, numTrees: null } as unknown as SitePolygon);
+
+        await createVersion({ ...unchangedForm, numTrees: 0, submissionCycle: "2" }, true);
+
+        expect(appliedAttributes()).not.toHaveProperty("status");
+        expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+      });
+
+      it("should reset to draft when an admin changes a validated attribute", async () => {
+        await createVersion({ ...unchangedForm, submissionCycle: "2", numTrees: 11 }, true);
+
+        expect(appliedAttributes()).toMatchObject({ status: "draft", validationStatus: null });
+        expect(CriteriaSite.destroy).toHaveBeenCalledWith({
+          where: { polygonId: { [Op.in]: ["geometry-uuid"] } },
+          transaction: mockTransaction
+        });
+      });
+
+      it("should reset to draft when an admin changes the polygon name", async () => {
+        await createVersion({ ...unchangedForm, polyName: "Renamed" }, true);
+
+        expect(appliedAttributes().status).toBe("draft");
+      });
+
+      it("should reset to draft when a non-reviewer only changes the submission cycle", async () => {
+        await createVersion({ ...unchangedForm, submissionCycle: "2" }, false);
+
+        expect(appliedAttributes()).toMatchObject({ status: "draft", validationStatus: null });
+        expect(CriteriaSite.destroy).toHaveBeenCalled();
+      });
+    });
+
     it("should upsert customAttributes onto the new version after createVersions", async () => {
       const basePolygon = {
         uuid: baseSitePolygonUuid,
@@ -676,6 +779,53 @@ describe("SitePolygonCreationService - Versioning", () => {
         mockTransaction
       );
       expect(result).toHaveLength(2);
+    });
+
+    it("should only reset polygons whose validated attributes change when a reviewer edits in bulk", async () => {
+      const unchangedPolygon = {
+        uuid: "active-uuid-1",
+        primaryUuid: "primary-uuid-1",
+        polygonUuid: "geometry-uuid-1",
+        numTrees: 99,
+        status: "approved"
+      } as SitePolygon;
+      const changedPolygon = {
+        uuid: "active-uuid-2",
+        primaryUuid: "primary-uuid-2",
+        polygonUuid: "geometry-uuid-2",
+        numTrees: 20,
+        status: "approved"
+      } as SitePolygon;
+
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(
+        new Map([
+          ["request-uuid-1", unchangedPolygon],
+          ["request-uuid-2", changedPolygon]
+        ])
+      );
+      const destroySpy = jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(1);
+      jest
+        .spyOn(versioningService, "createVersions")
+        .mockResolvedValue([{ uuid: "new-uuid-1" } as SitePolygon, { uuid: "new-uuid-2" } as SitePolygon]);
+
+      await service.bulkUpdateSitePolygonAttributes(
+        ["request-uuid-1", "request-uuid-2"],
+        { numTrees: 99, submissionCycle: "3" },
+        userId,
+        userFullName,
+        source,
+        mockTransaction,
+        false,
+        true
+      );
+
+      expect(destroySpy).toHaveBeenCalledWith({
+        where: { polygonId: { [Op.in]: ["geometry-uuid-2"] } },
+        transaction: mockTransaction
+      });
+      const [unchangedEntry, changedEntry] = (versioningService.createVersions as jest.Mock).mock.calls[0][0];
+      expect(unchangedEntry.attributeChanges).not.toHaveProperty("status");
+      expect(changedEntry.attributeChanges).toMatchObject({ status: "draft", validationStatus: null });
     });
   });
 

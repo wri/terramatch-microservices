@@ -96,7 +96,7 @@ describe("DashboardProjectsProcessor", () => {
       id: 1,
       uuid: "test-uuid",
       name: "Test Project",
-      country: "Kenya",
+      level0Project: ["KEN"],
       frameworkKey: "ppc",
       lat: 10.0,
       long: 20.0,
@@ -129,6 +129,7 @@ describe("DashboardProjectsProcessor", () => {
 
     expect(result.id).toBe("test-uuid");
     expect(result.dto).toBeInstanceOf(DashboardProjectsLightDto);
+    expect(result.dto.level0Project).toEqual(["KEN"]);
   });
 
   it("should create full DTO from light DTO", async () => {

@@ -22,16 +22,12 @@ const addDto = async (document: DocumentBuilder, task: Task, associations?: User
 };
 
 export const UserTasksSerializer: ModelSerializer<Task> = {
-  async findById(id, options) {
-    return modelOrNotFound(
-      await Task.findByPk(id, { include: INCLUDE, paranoid: !(options?.includeDeleted ?? false) })
-    );
+  async findById(id) {
+    return modelOrNotFound(await Task.findByPk(id, { include: INCLUDE }));
   },
 
-  async findByUuid(uuid, options) {
-    return modelOrNotFound(
-      await Task.findOne({ where: { uuid }, include: INCLUDE, paranoid: !(options?.includeDeleted ?? false) })
-    );
+  async findByUuid(uuid) {
+    return modelOrNotFound(await Task.findOne({ where: { uuid }, include: INCLUDE }));
   },
 
   async findForUser(userId) {
@@ -73,7 +69,7 @@ export const UserTasksSerializer: ModelSerializer<Task> = {
     return document;
   },
 
-  serializeDeletion(task) {
-    return buildDeletedResponse(getDtoType(UserTaskDto), task.uuid);
+  serializeDeletion(uuid) {
+    return buildDeletedResponse(getDtoType(UserTaskDto), uuid);
   }
 };

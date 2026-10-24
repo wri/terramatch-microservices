@@ -66,6 +66,18 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   totalHectaresRestoredSum: number;
 
+  @ApiProperty({
+    description:
+      "Workdays for this site: demographic workdays from approved reports due on or after the demographics cutoff, plus self-reported workdays from approved reports due before it."
+  })
+  combinedWorkdayCount: number;
+
+  @ApiProperty({
+    description:
+      "PPC estimated trees restored from approved site reports: tree species planted × parent project survival rate + seeds planted × parent project direct seeding survival rate + sum of ANR estimates (numTreesRegenerating) on reports."
+  })
+  treesRestoredPpc: number;
+
   @ApiProperty()
   totalSiteReports: number;
 
@@ -109,18 +121,9 @@ export class SiteFullDto extends SiteLightDto {
   regeneratedTreesCount: number;
 
   @ApiProperty({
-    description:
-      "PPC estimated trees restored from approved site reports: tree species planted × parent project survival rate + seeds planted × parent project direct seeding survival rate + sum of ANR estimates (numTreesRegenerating) on reports."
-  })
-  treesRestoredPpc: number;
-
-  @ApiProperty({
     description: "Sum of tree species amounts for collection 'anr' across approved site reports for this site"
   })
   treesRegeneratingSpeciesCount: number;
-
-  @ApiProperty()
-  combinedWorkdayCount: number;
 
   @ApiProperty()
   workdayCount: number;

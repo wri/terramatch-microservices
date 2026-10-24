@@ -8,7 +8,6 @@ import {
   DisturbanceReportFactory,
   EntityFormFactory,
   FinancialReportFactory,
-  FormFactory,
   FormQuestionFactory,
   FormSectionFactory,
   FormSubmissionFactory,
@@ -50,7 +49,7 @@ import {
 import { mockUserContext } from "../util/testing";
 import { getLinkedFieldConfig } from "../linkedFields";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
-import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
+import { APPLICATION_SUBMITTED } from "../product-events/product-event.service";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 
 describe("EntityStatusUpdate EventProcessor", () => {
@@ -391,11 +390,9 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
       const application = await ApplicationFactory.create();
       const pitch = await ProjectPitchFactory.create();
-      const form = await FormFactory.create({ submissionMessage: faker.lorem.sentence() });
       const submission = await FormSubmissionFactory.create({
         applicationId: application.id,
         projectPitchUuid: pitch.uuid,
-        formId: form.uuid,
         status: "pending-approval"
       });
 
@@ -405,10 +402,7 @@ describe("EntityStatusUpdate EventProcessor", () => {
 
       expect(application.updatedBy).toBe(user.id);
       expect(pitch.status).toBe("active");
-      expect(eventService.emailQueue.add).toHaveBeenCalledWith(
-        ApplicationSubmittedEmail.NAME,
-        expect.objectContaining({ message: form.submissionMessage, userId: user.id })
-      );
+      expect(eventService.productEventService.notify).toHaveBeenCalledWith(APPLICATION_SUBMITTED, submission);
     });
 
     it("should handle admin feedback", async () => {

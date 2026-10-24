@@ -79,7 +79,6 @@ import { DateTime } from "luxon";
 import { REPORT_COUNT_TYPES, ReportCountsQueryDto, ReportCountType } from "./dto/report-counts-query.dto";
 import { ReportingPeriodDto } from "./dto/report-counts.dto";
 import { filteredReportsSubquery, REPORT_FILTER_MODELS, ReportFilter } from "./report-filters";
-import { ReportStatus } from "@terramatch-microservices/database/constants/status";
 
 // The keys of this array must match the type in the resulting DTO.
 export const ENTITY_PROCESSORS = {
@@ -264,10 +263,15 @@ export class EntitiesService {
    * the report processors' findMany implementations. Returns undefined if the user has no access to
    * any reports.
    */
-  reportFilter(
-    { dueDateFrom, dueDateTo, dueMonth, dueYear, statuses, search, projectUuid }: ReportCountsQueryDto,
-    defaultStatuses?: readonly ReportStatus[]
-  ): ReportFilter | undefined {
+  reportFilter({
+    dueDateFrom,
+    dueDateTo,
+    dueMonth,
+    dueYear,
+    statuses,
+    search,
+    projectUuid
+  }: ReportCountsQueryDto): ReportFilter | undefined {
     const frameworkKeys = (this.permissions ?? [])
       .filter(name => name.startsWith("framework-"))
       .map(name => name.substring("framework-".length));
@@ -278,7 +282,7 @@ export class EntitiesService {
     return {
       frameworkKeys,
       projectIds: scopedProjectIds(userProjectIds, projectUuid),
-      statuses: statuses != null && statuses.length > 0 ? statuses : defaultStatuses,
+      statuses: statuses != null && statuses.length > 0 ? statuses : undefined,
       dueDateFrom: dueDateFrom == null ? undefined : DateTime.fromISO(dueDateFrom, { zone: "utc" }).toJSDate(),
       dueDateTo: dueDateTo == null ? undefined : DateTime.fromISO(dueDateTo, { zone: "utc" }).toJSDate(),
       dueMonth,

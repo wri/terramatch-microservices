@@ -6,16 +6,11 @@ import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { AuthOptional } from "@terramatch-microservices/common/guards";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { isEmpty } from "lodash";
-import { LandscapeGeometry, Project, ProjectPitch, Site } from "@terramatch-microservices/database/entities";
+import { isEmpty, uniq } from "lodash";
+import { LandscapeGeometry, Project, ProjectPitch } from "@terramatch-microservices/database/entities";
 
 type ParameterType =
-  | "polygonUuid"
-  | "polygonUuids"
-  | "siteUuid"
-  | "projectUuid"
-  | "projectPitchUuid"
-  | "country/landscapes";
+  "polygonUuid" | "polygonUuids" | "siteUuids" | "projectUuid" | "projectPitchUuid" | "country/landscapes";
 
 @Controller("boundingBoxes/v3")
 @ApiTags("Bounding Boxes")
@@ -26,7 +21,8 @@ export class BoundingBoxController {
   @Get("get")
   @ApiOperation({
     operationId: "boundingBoxGet",
-    summary: "Get a bounding box for one polygon, multiple polygons, site, project, project pitch, or country/landscape"
+    summary:
+      "Get a bounding box for one polygon, multiple polygons, one or more sites, project, project pitch, or country/landscape"
   })
   @JsonApiResponse(BoundingBoxDto)
   @ExceptionResponse(BadRequestException, {
@@ -46,8 +42,8 @@ export class BoundingBoxController {
       providedParams.push("polygonUuids");
     }
 
-    if (!isEmpty(query.siteUuid)) {
-      providedParams.push("siteUuid");
+    if (!isEmpty(query.siteUuids)) {
+      providedParams.push("siteUuids");
     }
 
     if (!isEmpty(query.projectUuid)) {
@@ -73,7 +69,7 @@ export class BoundingBoxController {
 
     if (providedParams.length === 0) {
       throw new BadRequestException(
-        "No valid filter parameters provided. Please specify one of: polygonUuid, polygonUuids, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
+        "No valid filter parameters provided. Please specify one of: polygonUuid, polygonUuids, siteUuids, projectUuid, projectPitchUuid, country, or landscapes."
       );
     }
 
@@ -97,19 +93,11 @@ export class BoundingBoxController {
         );
       }
 
-      case "siteUuid": {
-        const siteUuid = query.siteUuid ?? "";
-
-        const site = await Site.findOne({
-          where: { uuid: siteUuid },
-          attributes: ["frameworkKey", "projectId"]
-        });
-
-        if (site === null) {
-          throw new NotFoundException(`Site with UUID ${siteUuid} not found`);
-        }
-
-        return buildJsonApi(BoundingBoxDto).addData(id, await this.boundingBoxService.getSiteBoundingBox(siteUuid));
+      case "siteUuids": {
+        return buildJsonApi(BoundingBoxDto).addData(
+          id,
+          await this.boundingBoxService.getSitesBoundingBox(uniq(query.siteUuids))
+        );
       }
 
       case "projectUuid": {

@@ -9,12 +9,14 @@ import {
   MediaFactory,
   NurseryFactory,
   NurseryReportFactory,
+  OrganisationFactory,
   ProjectFactory,
   ProjectReportFactory,
   ProjectUserFactory,
   SiteFactory,
   SiteReportFactory,
   SrpReportFactory,
+  TaskFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 import { mockUserContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
@@ -126,6 +128,49 @@ describe("EntitiesService", () => {
       expect(
         await service.countReports({ projectUuid, dueYear: 2025, statuses: ["draft"], reportTypes: ["siteReports"] })
       ).toBe(1);
+    });
+
+    it("doesn't count progress reports that the tasks index doesn't list", async () => {
+      const frameworkKey = "ppc";
+      const { id: projectId, uuid: projectUuid } = await ProjectFactory.create({ frameworkKey });
+      const { id: siteId } = await SiteFactory.create({ projectId, frameworkKey });
+      await ProjectReportFactory.create({ projectId, frameworkKey });
+      await SiteReportFactory.create({ siteId, frameworkKey });
+      const deletedTask = await TaskFactory.create({ projectId });
+      await ProjectReportFactory.create({ projectId, frameworkKey, taskId: deletedTask.id });
+      await deletedTask.destroy();
+      const deletedOrganisation = await OrganisationFactory.create();
+      const orphanedTask = await TaskFactory.create({ projectId, organisationId: deletedOrganisation.id });
+      await SiteReportFactory.create({ siteId, frameworkKey, taskId: orphanedTask.id });
+      await deletedOrganisation.destroy();
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ projectUuid })).toBe(2);
+      expect(await service.countReports({ projectUuid, reportTypes: ["projectReports"] })).toBe(1);
+      expect(await service.countReports({ projectUuid, reportTypes: ["siteReports"] })).toBe(1);
+    });
+
+    it("matches the status of a submitted change request instead of the report's own status", async () => {
+      const frameworkKey = "ppc";
+      const { id: projectId, uuid: projectUuid } = await ProjectFactory.create({ frameworkKey });
+      await ProjectReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "information-required",
+        updateRequestStatus: "pending-approval"
+      });
+      await ProjectReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "information-required"
+      });
+      await ProjectReportFactory.create({ projectId, frameworkKey, status: "approved", updateRequestStatus: "draft" });
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ projectUuid, statuses: ["information-required"] })).toBe(1);
+      expect(await service.countReports({ projectUuid, statuses: ["pending-approval"] })).toBe(1);
+      expect(await service.countReports({ projectUuid, statuses: ["approved"] })).toBe(1);
     });
 
     describe("reportingPeriods", () => {

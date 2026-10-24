@@ -4,7 +4,7 @@ import { BoundingBoxService } from "./bounding-box.service";
 import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import { BoundingBoxQueryDto } from "./dto/bounding-box-query.dto";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { PolygonGeometry, Project, ProjectPitch, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { PolygonGeometry, Project, ProjectPitch, SitePolygon } from "@terramatch-microservices/database/entities";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { serialize } from "@terramatch-microservices/common/util/testing";
 
@@ -35,7 +35,6 @@ jest.mock("@terramatch-microservices/database/entities", () => {
       findAll: jest.fn(),
       findOne: jest.fn()
     },
-    Site: { findOne: jest.fn() },
     Project: { findOne: jest.fn() },
     ProjectPitch: { findOne: jest.fn() },
     SitePolygon: { findOne: jest.fn() },
@@ -59,7 +58,7 @@ describe("BoundingBoxController", () => {
   const mockBoundingBoxService = {
     getPolygonBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getPolygonsBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
-    getSiteBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
+    getSitesBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getProjectBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getProjectPitchBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox),
     getCountryLandscapeBoundingBox: jest.fn().mockResolvedValue(sampleBoundingBox)
@@ -81,7 +80,6 @@ describe("BoundingBoxController", () => {
 
     // Setup mock responses
     (PolygonGeometry.findOne as jest.Mock).mockResolvedValue(mockPolygon);
-    (Site.findOne as jest.Mock).mockResolvedValue(mockSite);
     (Project.findOne as jest.Mock).mockResolvedValue(mockProject);
     (ProjectPitch.findOne as jest.Mock).mockResolvedValue(mockProjectPitch);
     (SitePolygon.findOne as jest.Mock).mockResolvedValue(mockSitePolygon);
@@ -128,13 +126,13 @@ describe("BoundingBoxController", () => {
       }
     };
 
-    it("should call getSiteBoundingBox when siteUuid is provided", async () => {
-      await testQueryParameters({ siteUuid: "site-123" }, "getSiteBoundingBox", ["site-123"], "?siteUuid=site-123");
-
-      expect(Site.findOne).toHaveBeenCalledWith({
-        where: { uuid: "site-123" },
-        attributes: ["frameworkKey", "projectId"]
-      });
+    it("should call getSitesBoundingBox with the unique sites when siteUuids are provided", async () => {
+      await testQueryParameters(
+        { siteUuids: ["site-123", "site-456", "site-123"] },
+        "getSitesBoundingBox",
+        [["site-123", "site-456"]],
+        "?siteUuids%5B0%5D=site-123&siteUuids%5B1%5D=site-123&siteUuids%5B2%5D=site-456"
+      );
     });
 
     it("should call getPolygonsBoundingBox when polygonUuids are provided", async () => {
@@ -206,14 +204,6 @@ describe("BoundingBoxController", () => {
       );
     });
 
-    it("should throw NotFoundException when site is not found", async () => {
-      (Site.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(controller.getBoundingBox({ siteUuid: "non-existent" })).rejects.toThrow(
-        new NotFoundException("Site with UUID non-existent not found")
-      );
-    });
-
     it("should throw NotFoundException when project is not found", async () => {
       (Project.findOne as jest.Mock).mockResolvedValue(null);
 
@@ -235,22 +225,22 @@ describe("BoundingBoxController", () => {
 
       await expect(controller.getBoundingBox(query)).rejects.toThrow(
         new BadRequestException(
-          "No valid filter parameters provided. Please specify one of: polygonUuid, polygonUuids, siteUuid, projectUuid, projectPitchUuid, country, or landscapes."
+          "No valid filter parameters provided. Please specify one of: polygonUuid, polygonUuids, siteUuids, projectUuid, projectPitchUuid, country, or landscapes."
         )
       );
     });
 
     it("should throw BadRequestException when multiple entity types are provided simultaneously", async () => {
       const invalidCombinations = [
-        { polygonUuid: "polygon-123", siteUuid: "site-123" },
+        { polygonUuid: "polygon-123", siteUuids: ["site-123"] },
         { polygonUuid: "polygon-123", projectUuid: "project-123" },
-        { siteUuid: "site-123", projectUuid: "project-123" },
+        { siteUuids: ["site-123"], projectUuid: "project-123" },
         { polygonUuid: "polygon-123", country: "US" },
         { polygonUuid: "polygon-123", polygonUuids: ["polygon-456"] },
-        { siteUuid: "site-123", landscapes: ["ikr"] },
+        { siteUuids: ["site-123"], landscapes: ["ikr"] },
         { projectUuid: "project-123", country: "US", landscapes: ["ikr"] },
         { projectPitchUuid: "pitch-123", polygonUuid: "polygon-123" },
-        { projectPitchUuid: "pitch-123", siteUuid: "site-123" },
+        { projectPitchUuid: "pitch-123", siteUuids: ["site-123"] },
         { projectPitchUuid: "pitch-123", projectUuid: "project-123" },
         { projectPitchUuid: "pitch-123", country: "US" }
       ];

@@ -173,6 +173,30 @@ describe("EntitiesService", () => {
       expect(await service.countReports({ projectUuid, statuses: ["approved"] })).toBe(1);
     });
 
+    it("filters by the update request status, excluding reports without a change request", async () => {
+      const frameworkKey = "ppc";
+      const { id: projectId, uuid: projectUuid } = await ProjectFactory.create({ frameworkKey });
+      await ProjectReportFactory.create({ projectId, frameworkKey, status: "approved", updateRequestStatus: "draft" });
+      await ProjectReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "pending-approval"
+      });
+      await ProjectReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "approved"
+      });
+      await ProjectReportFactory.create({ projectId, frameworkKey, status: "approved", updateRequestStatus: null });
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ projectUuid, updateRequestStatuses: ["draft", "pending-approval"] })).toBe(2);
+      expect(await service.countReports({ projectUuid, updateRequestStatuses: ["approved"] })).toBe(1);
+      expect(await service.countReports({ projectUuid })).toBe(4);
+    });
+
     describe("reportingPeriods", () => {
       it("returns the distinct due month / year of matching reports, ignoring due date filters", async () => {
         const { uuid: projectUuid } = await createReports();

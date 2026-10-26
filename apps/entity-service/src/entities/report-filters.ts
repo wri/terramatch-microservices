@@ -14,7 +14,8 @@ import { ReportClass, ReportModel } from "@terramatch-microservices/database/con
 import {
   INFORMATION_REQUIRED,
   PENDING_APPROVAL,
-  ReportStatus
+  ReportStatus,
+  UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Attributes, ModelStatic } from "sequelize";
@@ -29,6 +30,8 @@ export type ReportFilter = {
   projectIds?: number[] | Literal;
   // Matched against the status shown for the report (see SUBMITTED_UPDATE_REQUEST_STATUSES)
   statuses?: readonly ReportStatus[];
+  // Matched against the report's update request status. Reports without one never match.
+  updateRequestStatuses?: readonly UpdateRequestStatus[];
   dueDateFrom?: Date;
   dueDateTo?: Date;
   dueMonth?: number;
@@ -114,6 +117,9 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
     const shownStatus = `IF(${isSubmitted}, ${clauses.field("updateRequestStatus")}, ${clauses.field("status")})`;
     const statuses = filter.statuses.map(status => clauses.escape(status)).join(",");
     builder.andLiteral(`${shownStatus} IN (${statuses})`);
+  }
+  if (filter.updateRequestStatuses != null && filter.updateRequestStatuses.length > 0) {
+    builder.in("updateRequestStatus", [...filter.updateRequestStatuses]);
   }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);
   if (filter.dueDateTo != null) {

@@ -12,7 +12,12 @@ import {
   ValidateNested
 } from "class-validator";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { REPORT_STATUSES, ReportStatus } from "@terramatch-microservices/database/constants/status";
+import {
+  REPORT_STATUSES,
+  ReportStatus,
+  UPDATE_REQUEST_STATUSES,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 import { ReportType } from "@terramatch-microservices/database/constants/entities";
 
 export const REPORT_COUNT_TYPES = [
@@ -69,6 +74,17 @@ export class ReportCountsQueryDto {
   @IsArray()
   @IsIn(REPORT_STATUSES, { each: true })
   statuses?: ReportStatus[];
+
+  @ApiProperty({
+    required: false,
+    isArray: true,
+    enum: UPDATE_REQUEST_STATUSES,
+    description: "Update request statuses to match. A report with no update request never matches."
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(UPDATE_REQUEST_STATUSES, { each: true })
+  updateRequestStatuses?: UpdateRequestStatus[];
 
   @ApiProperty({ required: false })
   @IsOptional()

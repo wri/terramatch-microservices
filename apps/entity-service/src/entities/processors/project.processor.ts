@@ -27,7 +27,7 @@ import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
-import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
+import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -857,6 +857,11 @@ export class ProjectProcessor extends EntityProcessor<
 
     const treesToBePlantedSpeciesGoalTotal =
       (await TreeSpecies.visible().collection("tree-planted").for(project).sum("amount")) ?? 0;
+    const treesSeedlingsGoal =
+      (await TreeSpecies.visible()
+        .collection("nursery-seedling")
+        .nurseries(Nursery.idsSubquery(projectId))
+        .sum("amount")) ?? 0;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
@@ -867,6 +872,8 @@ export class ProjectProcessor extends EntityProcessor<
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
       totalProjectReports: await ProjectReport.project(projectId).count(),
       treesToBePlantedSpeciesGoalTotal,
+      treesSeedlingsGoal,
+      fullTimeJobsGoal: await this.getFullTimeJobsGoal(projectId),
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
@@ -951,10 +958,27 @@ export class ProjectProcessor extends EntityProcessor<
     return {
       totalHectaresRestoredGoal,
       treesGrownGoal,
+      treesPlantedGoal: treesPlantedGoalYears,
       goalTreesRestoredAnr,
       seedsGrownGoal,
       treesToBeRestoredGoal
     };
+  }
+
+  protected async getFullTimeJobsGoal(projectId: number) {
+    return (
+      (await TrackingEntry.gender().sum("amount", {
+        where: {
+          trackingId: {
+            [Op.in]: Tracking.idsSubquery([projectId], Project.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE,
+              collection: FULL_TIME
+            })
+          }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

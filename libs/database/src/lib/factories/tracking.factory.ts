@@ -122,6 +122,16 @@ export const TrackingFactory = {
       collection: ALL
     })),
 
+  projectJobs: (project?: Project) =>
+    FactoryGirl.define(Tracking, async () => ({
+      ...(await defaultAttributesFactory()),
+      trackableType: Project.LARAVEL_TYPE,
+      trackableId: (project?.id as number) ?? ProjectFactory.associate("id"),
+      domain: "demographics",
+      type: Tracking.JOBS_TYPE,
+      collection: faker.helpers.arrayElement(JOBS_PROJECT_COLLECTIONS)
+    })),
+
   projectHectaresGoal: (project?: Project) =>
     FactoryGirl.define(Tracking, async () => ({
       ...(await defaultAttributesFactory()),

@@ -1298,6 +1298,38 @@ describe("ProjectProcessor", () => {
       expect(dto.treesToBeRestoredGoal).toEqual(Math.round(treesPlantedGoalYears * (survivalRate / 100) + anr.amount));
     });
 
+    it("includes the Fundo Flora indicator goals", async () => {
+      const { uuid } = await ProjectFactory.create();
+      const project = (await processor.findOne(uuid)) as Project;
+
+      const treesGoal = await TrackingFactory.projectTreesGoal(project).create();
+      const treesPlantedGoal = await TrackingFactory.projectTreesGoal(project).create({
+        type: Tracking.TREES_PLANTED_GOAL_TYPE
+      });
+      await TrackingEntryFactory.years(treesPlantedGoal, "1-year").create({ amount: 1000 });
+      await TrackingEntryFactory.years(treesPlantedGoal, "2-year").create({ amount: 500 });
+      await TrackingEntryFactory.strategy(treesGoal, "anr").create({ amount: 200 });
+      await TrackingEntryFactory.strategy(treesGoal, "direct-seeding").create({ amount: 50 });
+
+      const nurseries = await NurseryFactory.createMany(2, { projectId: project.id, status: "draft" });
+      await TreeSpeciesFactory.nurserySeedling(nurseries[0]).create({ amount: 300 });
+      await TreeSpeciesFactory.nurserySeedling(nurseries[1]).create({ amount: 120 });
+      await TreeSpeciesFactory.nurserySeedling(nurseries[1]).create({ amount: 999, hidden: true });
+      await TreeSpeciesFactory.nurserySeedling(await NurseryFactory.create()).create({ amount: 777 });
+
+      const fullTime = await TrackingFactory.projectJobs(project).create({ collection: FULL_TIME });
+      const partTime = await TrackingFactory.projectJobs(project).create({ collection: PART_TIME });
+      const { amount: fullTimeAmount } = await TrackingEntryFactory.gender(fullTime).create({ amount: 40 });
+      await TrackingEntryFactory.age(fullTime).create({ amount: 40 });
+      await TrackingEntryFactory.gender(partTime).create({ amount: 15 });
+
+      const { dto } = await processor.getFullDto(project);
+      expect(dto.treesPlantedGoal).toEqual(1500);
+      expect(dto.treesSeedlingsGoal).toEqual(420);
+      expect(dto.fullTimeJobsGoal).toEqual(fullTimeAmount);
+      expect(dto.goalTreesRestoredAnr).toEqual(200);
+    });
+
     it("loads association data", async () => {
       const project = await ProjectFactory.create();
       const sites = await SiteFactory.createMany(2, { status: "approved", projectId: project.id });

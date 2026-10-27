@@ -82,6 +82,21 @@ describe("OrganisationsService", () => {
         expect.any(Function)
       );
     });
+
+    it("should include media URLs keyed by collection name", async () => {
+      const org = await OrganisationFactory.create();
+      const logo = await MediaFactory.org(org).create({ collectionName: "logo" });
+      mediaService.getUrl.mockReturnValue("https://example.com/logo.png");
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (_fileName, _target, _columns, writeRows) => {
+        await writeRows(addRow);
+      });
+
+      await service.exportCsv(org, {} as Response);
+
+      expect(mediaService.getUrl).toHaveBeenCalledWith(expect.objectContaining({ id: logo.id }));
+      expect(addRow).toHaveBeenCalledWith(org, { logo: "https://example.com/logo.png" });
+    });
   });
 
   describe("findMany", () => {

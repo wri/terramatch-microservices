@@ -56,6 +56,13 @@ export interface UserAssociationProcessor {
   handleUpdate(document: DocumentBuilder, userUuid: string, status: "approved" | "rejected"): Promise<void>;
 }
 
+const compareAscNullsLast = (a: number | null | undefined, b: number | null | undefined) => {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return a - b;
+};
+
 @Injectable()
 export class UserAssociationService {
   private readonly logger = new TMLogger(UserAssociationService.name);
@@ -345,29 +352,39 @@ export class UserAssociationService {
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     // Unregistered invitees already carry the organisation as their home organisation. Until they accept the
     // invite (which happens at signup), the FE shows them as "Invited" instead of "Accepted".
-    const pendingInviteEmails = new Set(
+    const pendingInviteIdsByEmail = new Map(
       (
         await OrganisationInvite.findAll({
           where: { organisationId: organisation.id, acceptedAt: null },
-          attributes: ["emailAddress"]
+          attributes: ["id", "emailAddress"]
         })
-      ).map(invite => invite.emailAddress)
+      ).map(invite => [invite.emailAddress, invite.id])
     );
-    filteredUsers.forEach(user => {
+    const entries = filteredUsers.map(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
       const status = isOwner ? "approved" : (orgUser?.status ?? null);
+      const invitePending = isOwner && pendingInviteIdsByEmail.has(user.emailAddress);
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,
         organisationName: organisation.name ?? "",
         associatedType: "organisations",
-        invitePending: isOwner && pendingInviteEmails.has(user.emailAddress)
+        invitePending
       });
       dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
-      document.addData(user.uuid as string, dto);
+      const inviteId = invitePending ? pendingInviteIdsByEmail.get(user.emailAddress) : undefined;
+      return { user, dto, inviteId, orgUserId: orgUser?.id };
     });
-    const indexIds = filteredUsers.map(user => user.uuid as string);
+    entries.sort((a, b) => {
+      const byInviteId = compareAscNullsLast(a.inviteId, b.inviteId);
+      if (byInviteId !== 0) return byInviteId;
+      const byOrgUserId = compareAscNullsLast(a.orgUserId, b.orgUserId);
+      if (byOrgUserId !== 0) return byOrgUserId;
+      return compareAscNullsLast(a.user.id, b.user.id);
+    });
+    entries.forEach(({ user, dto }) => document.addData(user.uuid as string, dto));
+    const indexIds = entries.map(({ user }) => user.uuid as string);
     document.addIndex({
       resource: "associatedUsers",
       requestPath: `/userAssociations/v3/organisations/${organisation.uuid}${getStableRequestQuery(query)}`,

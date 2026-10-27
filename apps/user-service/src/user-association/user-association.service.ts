@@ -344,7 +344,7 @@ export class UserAssociationService {
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     // Unregistered invitees already carry the organisation as their home organisation. Until they accept the
-    // invite (which happens at signup), the FE shows them as "Awaiting Response" instead of "Accepted".
+    // invite (which happens at signup), the FE shows them as "Invited" instead of "Accepted".
     const pendingInviteEmails = new Set(
       (
         await OrganisationInvite.findAll({
@@ -520,6 +520,31 @@ export class UserAssociationService {
     } catch (error) {
       this.logger.error(`Failed to queue organisation user approved email for organisation ${organisation.id}`, error);
     }
+
+    return invite;
+  }
+
+  async sendOrganisationInviteReminder(
+    organisation: Organisation,
+    userUuid: string,
+    callbackUrl?: string
+  ): Promise<OrganisationInvite> {
+    const user = await User.findOne({ where: { uuid: userUuid }, attributes: ["emailAddress"] });
+    if (user == null) throw new NotFoundException("User not found");
+
+    const invite = await OrganisationInvite.findOne({
+      where: { organisationId: organisation.id, emailAddress: user.emailAddress, acceptedAt: null }
+    });
+    if (invite?.token == null) {
+      throw new BadRequestException("This user does not have a pending invite to this organisation");
+    }
+
+    await new OrganisationInviteEmail({
+      organisationId: organisation.id,
+      emailAddress: invite.emailAddress,
+      token: invite.token,
+      callbackUrl
+    }).sendLater(this.emailQueue);
 
     return invite;
   }

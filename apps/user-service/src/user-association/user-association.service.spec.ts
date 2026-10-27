@@ -792,6 +792,38 @@ describe("UserAssociationService", () => {
     });
   });
 
+  describe("addOrgUserDtos ordering", () => {
+    it("should order invited members by invite id, then accepted members by organisation user id", async () => {
+      const org = await OrganisationFactory.create();
+      const firstInvitee = await UserFactory.create({ organisationId: org.id });
+      const secondInvitee = await UserFactory.create({ organisationId: org.id });
+      const acceptedLater = await UserFactory.create();
+      const acceptedEarlier = await UserFactory.create();
+      jest
+        .spyOn(User, "findAll")
+        .mockResolvedValueOnce([{ id: firstInvitee.id }, { id: secondInvitee.id }] as User[])
+        .mockResolvedValueOnce([acceptedLater, firstInvitee, acceptedEarlier, secondInvitee] as User[]);
+      jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([
+        { id: 9, emailAddress: firstInvitee.emailAddress },
+        { id: 4, emailAddress: secondInvitee.emailAddress }
+      ] as OrganisationInvite[]);
+      const orgUsers = [
+        { id: 5, userId: acceptedLater.id, status: "approved" },
+        { id: 3, userId: acceptedEarlier.id, status: "approved" }
+      ] as OrganisationUser[];
+      const document = new DocumentBuilder("associatedUsers");
+      const addIndexSpy = jest.spyOn(document, "addIndex");
+
+      await service.addOrgUserDtos(document, org, orgUsers, {});
+
+      expect(addIndexSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ids: [secondInvitee.uuid, firstInvitee.uuid, acceptedEarlier.uuid, acceptedLater.uuid]
+        })
+      );
+    });
+  });
+
   describe("deleteBulkOrgUserAssociations", () => {
     it("should delete organisation user associations", async () => {
       const org = await OrganisationFactory.create();

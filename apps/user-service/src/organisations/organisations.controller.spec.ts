@@ -44,6 +44,7 @@ import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-specie
 import { ORGANISATIONS_EXPORT, USER_SERVICE_EXPORT_QUEUE } from "../exports/user-service-exports.processor";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { Response } from "express";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -1014,6 +1015,38 @@ describe("OrganisationsController", () => {
       leadershipSpy.mockRestore();
       ownershipStakeSpy.mockRestore();
       forSpy.mockRestore();
+    });
+  });
+
+  describe("exportOrganisation", () => {
+    it("should authorize read and delegate the CSV export to the service", async () => {
+      const org = await OrganisationFactory.create();
+      const response = {} as Response;
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await controller.exportOrganisation(org.uuid, response);
+
+      expect(organisationsService.findOne).toHaveBeenCalledWith(org.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", org);
+      expect(organisationsService.exportCsv).toHaveBeenCalledWith(org, response);
+    });
+
+    it("should throw UnauthorizedException if policy does not authorize", async () => {
+      const org = await OrganisationFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.exportOrganisation(org.uuid, {} as Response)).rejects.toThrow(UnauthorizedException);
+      expect(organisationsService.exportCsv).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException if organisation does not exist", async () => {
+      organisationsService.findOne.mockRejectedValue(new NotFoundException());
+
+      await expect(controller.exportOrganisation("non-existent-uuid", {} as Response)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 

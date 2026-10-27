@@ -25,7 +25,7 @@ export type UserServiceExportJobData = {
 export const USER_SERVICE_EXPORT_QUEUE = "userServiceExports";
 export const ORGANISATIONS_EXPORT = "organisationsExport";
 
-const ORGANISATION_CSV_COLUMNS: Dictionary<string> = {
+export const ORGANISATION_CSV_COLUMNS: Dictionary<string> = {
   status: "Status",
   type: "Type",
   private: "Private",

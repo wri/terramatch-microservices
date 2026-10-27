@@ -229,7 +229,7 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty({
     description:
-      "Project trees planted goal: sum of trees-planted-goal year entries (plus any remaining trees-goal year entries), without the ANR and direct-seeding strategy amounts."
+      "Project trees planted goal: sum of the trees-goal 'tree-planting' strategy entries, without the ANR and direct-seeding strategy amounts."
   })
   treesPlantedGoal: number;
 

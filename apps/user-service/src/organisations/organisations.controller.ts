@@ -9,10 +9,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
+import { Response } from "express";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -26,7 +28,7 @@ import {
 import { PolicyService } from "@terramatch-microservices/common";
 import { USER_ORG_RELATIONSHIP } from "../users/users.controller";
 import { OrganisationCreationService } from "./organisation-creation.service";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -121,6 +123,27 @@ export class OrganisationsController {
     }
 
     return UserServiceExportsProcessor.queueOrganisationExport(this.exportQueue, fileName);
+  }
+
+  @Get(":uuid/export")
+  @ApiOperation({
+    operationId: "organisationExport",
+    summary: "Export a single organisation profile as CSV"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async exportOrganisation(@Param("uuid") uuid: string, @Res({ passthrough: true }) response: Response) {
+    const organisation = await this.organisationsService.findOne(uuid);
+    await this.policyService.authorize("read", organisation);
+
+    await this.organisationsService.exportCsv(organisation, response);
   }
 
   @Get(":uuid")

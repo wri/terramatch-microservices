@@ -1281,6 +1281,45 @@ describe("UserAssociationService", () => {
     });
   });
 
+  describe("sendOrganisationInviteReminder", () => {
+    const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+
+    it("should re-send the invite email with the original token for a pending invite", async () => {
+      const invite = {
+        uuid: "invite-uuid",
+        organisationId: org.id,
+        emailAddress: "new@example.com",
+        token: "fake-token",
+        acceptedAt: null
+      } as OrganisationInvite;
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: "new@example.com" } as User);
+      jest.spyOn(OrganisationInvite, "findOne").mockResolvedValue(invite);
+      emailQueue.add.mockResolvedValue({} as Job);
+
+      const result = await service.sendOrganisationInviteReminder(org, "user-uuid", "http://frontend/auth/signup");
+
+      expect(OrganisationInvite.findOne).toHaveBeenCalledWith({
+        where: { organisationId: org.id, emailAddress: "new@example.com", acceptedAt: null }
+      });
+      expect(emailQueue.add).toHaveBeenCalled();
+      expect(result).toBe(invite);
+    });
+
+    it("should throw BadRequestException when the user has no pending invite", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: "new@example.com" } as User);
+      jest.spyOn(OrganisationInvite, "findOne").mockResolvedValue(null);
+
+      await expect(service.sendOrganisationInviteReminder(org, "user-uuid")).rejects.toThrow(BadRequestException);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when the user does not exist", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      await expect(service.sendOrganisationInviteReminder(org, "missing-uuid")).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe("acceptProjectInvite", () => {
     it("should throw UnauthorizedException when user not found", async () => {
       jest.spyOn(User, "findOne").mockResolvedValue(null);

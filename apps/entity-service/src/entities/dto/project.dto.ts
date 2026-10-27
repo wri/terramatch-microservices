@@ -227,6 +227,24 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Number })
   jobsCreatedGoal: number | null;
 
+  @ApiProperty({
+    description:
+      "Project trees planted goal: sum of trees-planted-goal year entries (plus any remaining trees-goal year entries), without the ANR and direct-seeding strategy amounts."
+  })
+  treesPlantedGoal: number;
+
+  @ApiProperty({
+    description:
+      "Sum of visible tree species amounts for collection 'nursery-seedling' across all nurseries of this project."
+  })
+  treesSeedlingsGoal: number;
+
+  @ApiProperty({
+    description:
+      "Sum of the gender entries of the project's demographics / jobs / full-time tracking (the aggregate full-time jobs goal)."
+  })
+  fullTimeJobsGoal: number;
+
   @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
 

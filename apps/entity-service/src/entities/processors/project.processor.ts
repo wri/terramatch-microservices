@@ -955,10 +955,16 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
+    // The by-year total also includes the ANR trees, so the planted goal is the "tree-planting" strategy row.
+    const treesPlantedGoalStrategy = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "tree-planting"),
+      "amount"
+    );
+
     return {
       totalHectaresRestoredGoal,
       treesGrownGoal,
-      treesPlantedGoal: treesPlantedGoalYears,
+      treesPlantedGoal: treesPlantedGoalStrategy,
       goalTreesRestoredAnr,
       seedsGrownGoal,
       treesToBeRestoredGoal

@@ -1310,6 +1310,7 @@ describe("ProjectProcessor", () => {
       await TrackingEntryFactory.years(treesPlantedGoal, "2-year").create({ amount: 500 });
       await TrackingEntryFactory.strategy(treesGoal, "anr").create({ amount: 200 });
       await TrackingEntryFactory.strategy(treesGoal, "direct-seeding").create({ amount: 50 });
+      await TrackingEntryFactory.strategy(treesGoal, "tree-planting").create({ amount: 300 });
 
       const nurseries = await NurseryFactory.createMany(2, { projectId: project.id, status: "draft" });
       await TreeSpeciesFactory.nurserySeedling(nurseries[0]).create({ amount: 300 });
@@ -1324,7 +1325,7 @@ describe("ProjectProcessor", () => {
       await TrackingEntryFactory.gender(partTime).create({ amount: 15 });
 
       const { dto } = await processor.getFullDto(project);
-      expect(dto.treesPlantedGoal).toEqual(1500);
+      expect(dto.treesPlantedGoal).toEqual(300);
       expect(dto.treesSeedlingsGoal).toEqual(420);
       expect(dto.fullTimeJobsGoal).toEqual(fullTimeAmount);
       expect(dto.goalTreesRestoredAnr).toEqual(200);

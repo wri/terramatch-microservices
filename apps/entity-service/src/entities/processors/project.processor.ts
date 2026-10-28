@@ -54,7 +54,6 @@ import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { Literal } from "sequelize/types/utils";
 import { ProjectReportMetaDto, ReportMetaDto } from "../dto/project-report-meta.dto";
-import { DUE, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
 import {
   NurseriesMetaQueryDto,
@@ -178,8 +177,6 @@ export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
 ];
 
 const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
-
-const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED] as const;
 
 const REPORTS_META_TYPES = ["nurseryReports", "projectReports", "siteReports"] as const;
 
@@ -580,8 +577,8 @@ export class ProjectProcessor extends EntityProcessor<
   /**
    * Adds an index of report meta for all projects with at least one project, site or nursery report
    * matching the query's filters. Only sites / nurseries with at least one matching report are
-   * listed. If no statuses are requested, reports requiring attention (due, draft,
-   * information-required) are counted.
+   * listed. If no statuses are requested, reports requiring attention (due, or with
+   * information-required on the report or its update request) are counted.
    */
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
     const filter = this.entitiesService.reportFilter(query);
@@ -613,7 +610,7 @@ export class ProjectProcessor extends EntityProcessor<
 
       const pageFilter = {
         ...filter,
-        statuses: filter.statuses ?? REPORTS_REQUIRING_ATTENTION_STATUSES,
+        requiresAttention: filter.statuses == null,
         projectIds: projects.map(({ id }) => id)
       };
       const parentWhere = (type: "siteReports" | "nurseryReports") => ({

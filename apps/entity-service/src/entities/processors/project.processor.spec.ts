@@ -461,7 +461,7 @@ describe("ProjectProcessor", () => {
       });
       await NurseryReportFactory.create({ nurseryId: coastalNursery.id, frameworkKey, status: "draft" });
 
-      // Only has a project report requiring attention
+      // Only has a draft project report, which doesn't require attention
       const delta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Delta" });
       await ProjectReportFactory.create({ projectId: delta.id, frameworkKey, status: "draft" });
 
@@ -498,7 +498,7 @@ describe("ProjectProcessor", () => {
     });
 
     it("returns all projects with reports, with their reports requiring attention", async () => {
-      const { alpha, river, alphaNursery, approvedOnly, coastal, coastalNursery, delta } = await createData();
+      const { alpha, river, alphaNursery, approvedOnly, coastal, delta } = await createData();
       const { result, data, attributes } = await getIndex({});
 
       expect(result.meta.resourceType).toBe("projectReportsMetas");
@@ -509,10 +509,10 @@ describe("ProjectProcessor", () => {
       });
       expect(data.map(({ id }) => id)).toEqual([alpha.uuid, approvedOnly.uuid, coastal.uuid, delta.uuid]);
       expect(attributes).toEqual([
-        row(alpha, 1, meta(river, 3), meta(alphaNursery, 1)),
+        row(alpha, 1, meta(river, 2), meta(alphaNursery, 1)),
         row(approvedOnly, 0),
-        row(coastal, 0, {}, meta(coastalNursery, 1)),
-        row(delta, 1)
+        row(coastal, 0),
+        row(delta, 0)
       ]);
     });
 
@@ -530,8 +530,8 @@ describe("ProjectProcessor", () => {
       expect((await getIndex({ reportTypes: ["nurseryReports", "projectReports"] })).attributes).toEqual([
         row(alpha, 1, {}, meta(alphaNursery, 1)),
         row(approvedOnly, 0),
-        row(coastal, 0, {}, meta(coastalNursery, 1)),
-        row(delta, 1)
+        row(coastal, 0),
+        row(delta, 0)
       ]);
 
       expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["draft"] })).attributes).toEqual([
@@ -564,18 +564,46 @@ describe("ProjectProcessor", () => {
       expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["pending-approval"] })).attributes).toEqual([
         row(foxtrot, 0, {}, meta(foxtrotNursery, 1))
       ]);
-      // A report waiting on change request approval doesn't require attention.
-      expect((await getIndex({ projectUuid: foxtrot.uuid })).attributes).toEqual([row(foxtrot, 0)]);
+    });
+
+    it("counts reports with information required on the report or on its change request", async () => {
+      await createData();
+      const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
+      const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
+      await NurseryReportFactory.create({
+        nurseryId: foxtrotNursery.id,
+        frameworkKey,
+        status: "information-required",
+        updateRequestStatus: "pending-approval"
+      });
+      await NurseryReportFactory.create({
+        nurseryId: foxtrotNursery.id,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "information-required"
+      });
+      await NurseryReportFactory.create({ nurseryId: foxtrotNursery.id, frameworkKey, status: "draft" });
+      await NurseryReportFactory.create({
+        nurseryId: foxtrotNursery.id,
+        frameworkKey,
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
+      await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
+
+      expect((await getIndex({ projectUuid: foxtrot.uuid })).attributes).toEqual([
+        row(foxtrot, 0, {}, meta(foxtrotNursery, 2))
+      ]);
     });
 
     it("searches project, site and nursery names", async () => {
-      const { alpha, river, alphaNursery, coastal, coastalNursery } = await createData();
+      const { alpha, river, alphaNursery, coastal } = await createData();
 
-      expect((await getIndex({ search: "River" })).attributes).toEqual([row(alpha, 0, meta(river, 3))]);
+      expect((await getIndex({ search: "River" })).attributes).toEqual([row(alpha, 0, meta(river, 2))]);
       expect((await getIndex({ search: "Hill" })).attributes).toEqual([row(alpha, 0)]);
       expect((await getIndex({ search: "alpha" })).attributes).toEqual([
-        row(alpha, 1, meta(river, 3), meta(alphaNursery, 1)),
-        row(coastal, 0, {}, meta(coastalNursery, 1))
+        row(alpha, 1, meta(river, 2), meta(alphaNursery, 1)),
+        row(coastal, 0)
       ]);
     });
 

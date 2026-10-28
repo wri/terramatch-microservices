@@ -9,4 +9,3 @@
 //   which means it will be runnable in the REPL at > await oneOff.fooScript()
 
 export { renameRequestedOrganisationUsers } from "./2026-10-07-renameRequestedOrganisationUsers";
-export { migrateUserApiKeys } from "./2026-10-23-migrateUserApiKeys";

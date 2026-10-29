@@ -2,7 +2,7 @@ import {
   FormFactory,
   FormSubmissionFactory,
   OrganisationFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   ProjectFactory,
   TaskFactory,
   UserFactory
@@ -88,20 +88,14 @@ describe("ProductEventService", () => {
         );
       });
 
-      it("creates a notification for each owner and approved partner of the organisation", async () => {
+      it("creates a notification for each member of the organisation", async () => {
         const user = await UserFactory.create();
         mockUserContext({ userId: user.id });
         configService.get.mockReturnValue("staging");
         const organisation = await OrganisationFactory.create();
         const owners = await UserFactory.createMany(2, { organisationId: organisation.id });
-        const partner = await UserFactory.create();
-        await OrganisationUserFactory.create({
-          organisationId: organisation.id,
-          userId: partner.id,
-          status: "approved"
-        });
         const pending = await UserFactory.create();
-        await OrganisationUserFactory.create({
+        await OrganisationJoinRequestFactory.create({
           organisationId: organisation.id,
           userId: pending.id,
           status: "pending"
@@ -115,9 +109,7 @@ describe("ProductEventService", () => {
         const notifications = await Notification.findAll({
           where: { referencedModel: FormSubmission.LARAVEL_TYPE, referencedModelId: submission.id }
         });
-        expect(notifications.map(({ userId }) => userId).sort()).toEqual(
-          [...owners.map(({ id }) => id), partner.id].sort()
-        );
+        expect(notifications.map(({ userId }) => userId).sort()).toEqual(owners.map(({ id }) => id).sort());
         for (const notification of notifications) {
           expect(notification).toMatchObject({ category: "applications", createdBy: user.id, projectId: null });
           expect(emitSpy).toHaveBeenCalledWith({

@@ -11,8 +11,10 @@ export class FormSubmissionPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("manage-own")) {
-      const orgUuids = await this.getOrgUuids();
-      this.builder.can(["read", "update", "updateAnswers"], FormSubmission, { organisationUuid: { $in: orgUuids } });
+      const orgUuid = await this.getOrgUuid();
+      if (orgUuid != null) {
+        this.builder.can(["read", "update", "updateAnswers"], FormSubmission, { organisationUuid: orgUuid });
+      }
     }
   }
 }

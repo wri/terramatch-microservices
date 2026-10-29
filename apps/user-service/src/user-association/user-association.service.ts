@@ -8,14 +8,14 @@ import {
 import {
   Organisation,
   OrganisationInvite,
-  OrganisationUser,
+  OrganisationJoinRequest,
   PasswordReset,
   Project,
   ProjectInvite,
   ProjectUser,
   User
 } from "@terramatch-microservices/database/entities";
-import { FindOptions, Op, WhereAttributeHash } from "sequelize";
+import { FindOptions, Op, WhereAttributeHash, WhereOptions } from "sequelize";
 import { UserAssociationCreateAttributes, UserAssociationCreateBody } from "./dto/user-association-create.dto";
 import crypto from "node:crypto";
 import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
@@ -32,10 +32,10 @@ import { OrganisationUserRejectedEmail } from "@terramatch-microservices/common/
 import { OrganisationInviteEmail } from "@terramatch-microservices/common/email/organisation-invite.email";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { keyBy } from "lodash";
+import { keyBy, uniq } from "lodash";
 import {
   APPROVED,
-  OrganisationUserStatus,
+  OrganisationMembershipStatus,
   PENDING,
   REJECTED
 } from "@terramatch-microservices/database/constants/status";
@@ -123,8 +123,8 @@ export class UserAssociationService {
       deletePolicy: "read",
       addDtos: async (document, query) => {
         const org = (await loadEntity()) as Organisation;
-        const orgUsers = await this.queryOrg(org, query);
-        await this.addOrgUserDtos(document, org, orgUsers, query);
+        const joinRequests = await this.queryOrg(org, query);
+        await this.addOrgUserDtos(document, org, joinRequests, query);
       },
       handleCreate: async (document, _body, userId) => {
         const org = (await loadEntity()) as Organisation;
@@ -297,34 +297,30 @@ export class UserAssociationService {
     return newUser;
   }
 
-  queryOrg(organisation: Organisation, query: UserAssociationQueryDto) {
-    const findOptions: FindOptions<OrganisationUser> = {
-      where: { organisationId: organisation.id },
-      attributes: ["id", "userId", "status"]
-    };
-    if (query.status != null) {
-      (findOptions.where as WhereAttributeHash<OrganisationUser>)["status"] = query.status;
-    }
-    return OrganisationUser.findAll(findOptions);
+  queryOrg(organisation: Organisation, { status }: UserAssociationQueryDto) {
+    // Approved members are the users that belong to the organisation; join requests are never approved.
+    if (status === APPROVED) return Promise.resolve([]);
+
+    const where: WhereOptions<OrganisationJoinRequest> = { organisationId: organisation.id };
+    if (status != null) where.status = status;
+    return OrganisationJoinRequest.findAll({ where, attributes: ["id", "userId", "status"] });
   }
 
   async addOrgUserDtos(
     document: DocumentBuilder,
     organisation: Organisation,
-    orgUsers: OrganisationUser[],
+    joinRequests: OrganisationJoinRequest[],
     query: UserAssociationQueryDto
   ) {
-    const partnerUserIds = orgUsers.map(orgUser => orgUser.userId);
-    const includeOwners = query.status == null || query.status === "approved";
+    const includeMembers = query.status == null || query.status === APPROVED;
 
-    let userIds = [...partnerUserIds];
-    if (includeOwners) {
-      const owners = await User.findAll({
+    let userIds = joinRequests.map(({ userId }) => userId);
+    if (includeMembers) {
+      const members = await User.findAll({
         where: { organisationId: organisation.id },
         attributes: ["id"]
       });
-      const ownerIds = owners.map(owner => owner.id);
-      userIds = [...new Set([...userIds, ...ownerIds])];
+      userIds = uniq([...userIds, ...members.map(({ id }) => id)]);
     }
 
     const users = await User.findAll({
@@ -342,7 +338,7 @@ export class UserAssociationService {
         "roles"
       ]
     });
-    const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
+    const filteredUsers = includeMembers ? users : users.filter(user => user.organisationId !== organisation.id);
     // Unregistered invitees already carry the organisation as their home organisation. Until they accept the
     // invite (which happens at signup), the FE shows them as "Awaiting Response" instead of "Accepted".
     const pendingInviteEmails = new Set(
@@ -354,15 +350,14 @@ export class UserAssociationService {
       ).map(invite => invite.emailAddress)
     );
     filteredUsers.forEach(user => {
-      const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
-      const isOwner = user.organisationId === organisation.id;
-      const status = isOwner ? "approved" : (orgUser?.status ?? null);
+      const isMember = user.organisationId === organisation.id;
+      const status = isMember ? APPROVED : (joinRequests.find(({ userId }) => userId === user.id)?.status ?? null);
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,
         organisationName: organisation.name ?? "",
         associatedType: "organisations",
-        invitePending: isOwner && pendingInviteEmails.has(user.emailAddress)
+        invitePending: isMember && pendingInviteEmails.has(user.emailAddress)
       });
       dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
       document.addData(user.uuid as string, dto);
@@ -382,24 +377,18 @@ export class UserAssociationService {
       attributes: ["id", "uuid", "emailAddress", "organisationId"]
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
-    const userIds = users.map(user => user.id);
-    const organisationUserCount = await OrganisationUser.count({ where: { organisationId } });
-    const removedOrganisationUserCount = await OrganisationUser.count({
-      where: { organisationId, userId: { [Op.in]: userIds } }
+    const memberIds = users.filter(user => user.organisationId === organisationId).map(({ id }) => id);
+    if (memberIds.length > 0) {
+      const remainingMembers = await User.count({ where: { organisationId, id: { [Op.notIn]: memberIds } } });
+      if (remainingMembers === 0) {
+        throw new BadRequestException("Cannot remove the last user from an organisation");
+      }
+      await User.update({ organisationId: null }, { where: { id: { [Op.in]: memberIds } } });
+    }
+
+    await OrganisationJoinRequest.destroy({
+      where: { organisationId, userId: { [Op.in]: users.map(({ id }) => id) } }
     });
-    if (removedOrganisationUserCount > 0 && organisationUserCount - removedOrganisationUserCount === 0) {
-      throw new BadRequestException("Cannot remove the last user from an organisation");
-    }
-    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
-
-    // Approved and invited members stay visible through users.organisation_id, not only organisation_user.
-    const homeMemberIds = users
-      .filter(user => user.organisationId != null && Number(user.organisationId) === Number(organisationId))
-      .map(user => user.id);
-    if (homeMemberIds.length > 0) {
-      await User.update({ organisationId: null }, { where: { id: { [Op.in]: homeMemberIds } } });
-    }
-
     await OrganisationInvite.destroy({
       where: { organisationId, emailAddress: { [Op.in]: users.map(user => user.emailAddress) } }
     });
@@ -476,12 +465,11 @@ export class UserAssociationService {
       );
     }
 
-    const membership = await OrganisationUser.findOne({ where: { organisationId: organisation.id, userId: user.id } });
-    if (user.organisationId === organisation.id || membership?.status === APPROVED) {
+    if (user.organisationId === organisation.id) {
       throw new UnprocessableEntityException("This user is already a member of the organisation.");
     }
 
-    const pendingElsewhere = await OrganisationUser.count({
+    const pendingElsewhere = await OrganisationJoinRequest.count({
       where: { userId: user.id, status: PENDING, organisationId: { [Op.ne]: organisation.id } }
     });
     if (pendingElsewhere > 0) {
@@ -490,18 +478,9 @@ export class UserAssociationService {
       );
     }
 
-    if (membership == null) {
-      await OrganisationUser.create({
-        organisationId: organisation.id,
-        userId: user.id,
-        status: APPROVED
-      } as OrganisationUser);
-    } else {
-      membership.status = APPROVED;
-      await membership.save();
-    }
     user.organisationId = organisation.id;
     await user.save();
+    await OrganisationJoinRequest.destroy({ where: { organisationId: organisation.id, userId: user.id } });
 
     const invite = await OrganisationInvite.create({
       organisationId: organisation.id,
@@ -527,17 +506,20 @@ export class UserAssociationService {
   async requestOrgJoin(organisation: Organisation, userId: number): Promise<User> {
     const user = await User.findOne({
       where: { id: userId },
-      attributes: ["id", "uuid", "emailAddress"]
+      attributes: ["id", "uuid", "emailAddress", "organisationId"]
     });
     if (user == null) throw new UnauthorizedException("Authenticated user not found");
+    if (user.organisationId === organisation.id) {
+      throw new BadRequestException("User is already a member of this organisation");
+    }
 
-    const [orgUser, created] = await OrganisationUser.findOrCreate({
+    const [joinRequest, created] = await OrganisationJoinRequest.findOrCreate({
       where: { organisationId: organisation.id, userId },
-      defaults: { organisationId: organisation.id, userId, status: PENDING } as OrganisationUser
+      defaults: { organisationId: organisation.id, userId, status: PENDING }
     });
-    if (!created && orgUser.status !== PENDING) {
-      orgUser.status = PENDING;
-      await orgUser.save();
+    if (!created && joinRequest.status !== PENDING) {
+      joinRequest.status = PENDING;
+      await joinRequest.save();
     }
 
     try {
@@ -576,52 +558,44 @@ export class UserAssociationService {
       throw new NotFoundException(`User with UUID ${userUuid} not found`);
     }
 
-    const isHomeMember = user.organisationId === organisation.id;
-    let orgUser = await OrganisationUser.findOne({
+    const isMember = user.organisationId === organisation.id;
+    const joinRequest = await OrganisationJoinRequest.findOne({
       where: { organisationId: organisation.id, userId: user.id }
     });
-    // Home members (e.g. invited users) can be approved members without a membership row yet.
-    if (orgUser == null && status === "rejected" && isHomeMember) {
-      orgUser = await OrganisationUser.create({
-        organisationId: organisation.id,
-        userId: user.id,
-        status: APPROVED
-      } as OrganisationUser);
-    }
-
-    if (orgUser == null) {
+    const currentStatus = isMember ? APPROVED : joinRequest?.status;
+    if (currentStatus == null) {
       throw new BadRequestException("User does not have a relationship with this organisation");
     }
 
-    // Removing an accepted member is a rejection: they stay visible in the rejected list until deleted.
-    const allowedFrom: OrganisationUserStatus[] = status === "approved" ? [PENDING, REJECTED] : [PENDING, APPROVED];
-    if (!allowedFrom.includes(orgUser.status)) {
-      throw new BadRequestException(`Cannot ${status} a user with status '${orgUser.status}'`);
+    // Removing a member is a rejection: they stay visible in the rejected list until deleted.
+    const allowedFrom: OrganisationMembershipStatus[] = status === APPROVED ? [PENDING, REJECTED] : [PENDING, APPROVED];
+    if (!allowedFrom.includes(currentStatus)) {
+      throw new BadRequestException(`Cannot ${status} a user with status '${currentStatus}'`);
     }
 
-    if (status === "rejected" && orgUser.status === APPROVED) {
-      const otherMembers = await OrganisationUser.count({
-        where: { organisationId: organisation.id, status: APPROVED, userId: { [Op.ne]: user.id } }
-      });
-      const otherHomeMembers = await User.count({
-        where: { organisationId: organisation.id, id: { [Op.ne]: user.id } }
-      });
-      if (otherMembers + otherHomeMembers === 0) {
-        throw new BadRequestException("Cannot remove the last user from the organisation");
-      }
-    }
-
-    orgUser.status = status;
-    await orgUser.save();
-
-    if (status === "rejected" && isHomeMember) {
-      user.organisationId = null;
-      await user.save();
-    }
-
-    if (status === "approved") {
+    if (status === APPROVED) {
       user.organisationId = organisation.id;
       await user.save();
+      // Membership replaces this request, along with any others the user still has waiting on a decision.
+      await OrganisationJoinRequest.destroy({
+        where: { userId: user.id, [Op.or]: [{ organisationId: organisation.id }, { status: PENDING }] }
+      });
+    } else {
+      if (isMember) {
+        const otherMembers = await User.count({ where: { organisationId: organisation.id, id: { [Op.ne]: user.id } } });
+        if (otherMembers === 0) {
+          throw new BadRequestException("Cannot remove the last user from the organisation");
+        }
+        user.organisationId = null;
+        await user.save();
+      }
+
+      if (joinRequest == null) {
+        await OrganisationJoinRequest.create({ organisationId: organisation.id, userId: user.id, status: REJECTED });
+      } else {
+        joinRequest.status = REJECTED;
+        await joinRequest.save();
+      }
     }
 
     try {

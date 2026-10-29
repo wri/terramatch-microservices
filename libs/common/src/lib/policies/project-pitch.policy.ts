@@ -1,4 +1,4 @@
-import { Organisation, ProjectPitch, User } from "@terramatch-microservices/database/entities";
+import { ProjectPitch } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 
 export class ProjectPitchPolicy extends UserPermissionsPolicy {
@@ -8,29 +8,12 @@ export class ProjectPitchPolicy extends UserPermissionsPolicy {
     }
 
     if (this.permissions.includes("manage-own")) {
-      const user = await this.getUser();
-      if (user?.organisationId != null) {
-        const orgUuid = (await Organisation.findOne({ where: { id: user.organisationId }, attributes: ["uuid"] }))
-          ?.uuid;
-        const organisationsConfirmed = (user.organisationsConfirmed ?? []).map(({ uuid }) => uuid);
-        if (orgUuid != null) {
-          organisationsConfirmed.push(orgUuid);
-        }
+      const orgUuid = await this.getOrgUuid();
+      if (orgUuid != null) {
         this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], ProjectPitch, {
-          organisationId: { $in: organisationsConfirmed }
+          organisationId: orgUuid
         });
       }
     }
-  }
-
-  protected _user?: User | null;
-  protected async getUser() {
-    if (this._user != null) return this._user;
-
-    return (this._user = await User.findOne({
-      where: { id: this.userId },
-      attributes: ["organisationId"],
-      include: [{ association: "organisationsConfirmed", attributes: ["uuid"] }]
-    }));
   }
 }

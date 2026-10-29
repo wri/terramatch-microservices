@@ -3,8 +3,8 @@ import { User } from "@terramatch-microservices/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { AdditionalProps, populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import {
-  ORGANISATION_USER_STATUSES,
-  OrganisationUserStatus
+  ORGANISATION_MEMBERSHIP_STATUSES,
+  OrganisationMembershipStatus
 } from "@terramatch-microservices/database/constants/status";
 
 @JsonApiDto({ type: "associatedUsers" })
@@ -27,10 +27,10 @@ export class UserAssociationDto {
   @ApiProperty({
     nullable: true,
     type: String,
-    enum: ORGANISATION_USER_STATUSES,
+    enum: ORGANISATION_MEMBERSHIP_STATUSES,
     description: "Organisation membership status. Always null for project associations."
   })
-  status: OrganisationUserStatus | null;
+  status: OrganisationMembershipStatus | null;
 
   @ApiProperty()
   isManager: boolean;

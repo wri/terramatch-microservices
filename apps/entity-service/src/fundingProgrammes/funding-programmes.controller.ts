@@ -15,7 +15,6 @@ import {
   Application,
   Form,
   FundingProgramme,
-  Organisation,
   SavedExport,
   Stage,
   User
@@ -29,9 +28,8 @@ import {
 } from "./dto/funding-programme.dto";
 import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
 import { FormDataService } from "../entities/form-data.service";
-import { difference, uniq } from "lodash";
-import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { literal, Op } from "sequelize";
+import { difference } from "lodash";
+import { literal } from "sequelize";
 import { JsonApiDeletedResponse } from "@terramatch-microservices/common/decorators/json-api-response.decorator";
 import { ApplicationDto } from "../applications/dto/application.dto";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
@@ -59,25 +57,23 @@ export class FundingProgrammesController {
   async index() {
     let fundingProgrammes: FundingProgramme[];
     if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
-      // non-admins only have access to FPs that match their org types
-      const orgUuids = await User.orgUuids(UserContext.authenticatedUserId);
-      const types =
-        orgUuids.length === 0
-          ? []
-          : uniq(
-              (
-                await Organisation.findAll({
-                  where: { uuid: orgUuids },
-                  attributes: ["type"]
-                })
-              ).map(({ type }) => type)
-            ).filter(isNotNull);
+      // non-admins only have access to FPs that match their org type
+      const userId = UserContext.authenticatedUserId;
+      const user =
+        userId == null
+          ? null
+          : await User.findOne({
+              where: { id: userId },
+              attributes: ["id", "organisationId"],
+              include: [{ association: "organisation", attributes: ["type"] }]
+            });
+      const type = user?.organisation?.type;
       fundingProgrammes =
-        types.length === 0
+        type == null
           ? []
           : await FundingProgramme.findAll({
               // It's unclear why, but sequelize is failing to generate an appropriate like query here
-              where: { [Op.or]: types.map(type => literal(`organisation_types like '%"${type}"%'`)) }
+              where: literal(`organisation_types like '%"${type}"%'`)
             });
     } else {
       // admins have access to everything

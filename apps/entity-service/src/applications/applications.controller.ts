@@ -59,8 +59,8 @@ export class ApplicationsController {
 
     if (this.policyService.permissions.find(p => p.startsWith("framework-")) == null) {
       // admins have access to everything, so we just filter what's available for non-admins
-      const orgUuids = await User.orgUuids(UserContext.authenticatedUserId);
-      builder.where({ organisationUuid: { [Op.in]: orgUuids } });
+      const orgUuid = await User.orgUuid(UserContext.authenticatedUserId);
+      builder.where({ organisationUuid: orgUuid == null ? { [Op.in]: [] } : orgUuid });
     }
 
     if (query.currentSubmissionStatus != null) {

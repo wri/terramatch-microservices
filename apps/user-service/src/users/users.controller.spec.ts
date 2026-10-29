@@ -6,6 +6,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import {
   OrganisationFactory,
+  OrganisationJoinRequestFactory,
   ProjectFactory,
   ProjectUserFactory,
   UserFactory
@@ -89,25 +90,7 @@ describe("UsersController", () => {
       expect(result.included).not.toBeDefined();
     });
 
-    it("should include the primary org for the user", async () => {
-      const user = await UserFactory.create();
-      const org = await OrganisationFactory.create();
-      await user.$add("organisationsConfirmed", org);
-      mockUserContext({ userId: user.id });
-      const result = serialize(await controller.findOne("me"));
-      expect(result.included).toHaveLength(1);
-      expect(result.included![0]).toMatchObject({ type: "organisations", id: org.uuid });
-      const data = result.data as Resource;
-      expect(data.relationships?.org).toBeDefined();
-      const relationship = data.relationships!.org.data as Relationship;
-      expect(relationship).toMatchObject({
-        type: "organisations",
-        id: org.uuid,
-        meta: { userStatus: "approved" }
-      });
-    });
-
-    it('should return "approved" for userStatus if user belongs to org without many-to-many relationship', async () => {
+    it("should include the user's org", async () => {
       const user = await UserFactory.create();
       const org = await OrganisationFactory.create();
       await user.$set("organisation", org);
@@ -122,6 +105,28 @@ describe("UsersController", () => {
         type: "organisations",
         id: org.uuid,
         meta: { userStatus: "approved" }
+      });
+    });
+
+    it("should include the org from the latest pending join request for a user without an org", async () => {
+      const user = await UserFactory.create();
+      const [olderOrg, latestOrg, rejectedOrg] = await OrganisationFactory.createMany(3);
+      await OrganisationJoinRequestFactory.create({ organisationId: olderOrg.id, userId: user.id, status: "pending" });
+      await OrganisationJoinRequestFactory.create({ organisationId: latestOrg.id, userId: user.id, status: "pending" });
+      await OrganisationJoinRequestFactory.create({
+        organisationId: rejectedOrg.id,
+        userId: user.id,
+        status: "rejected"
+      });
+      mockUserContext({ userId: user.id });
+      const result = serialize(await controller.findOne("me"));
+      expect(result.included).toHaveLength(1);
+      expect(result.included![0]).toMatchObject({ type: "organisations", id: latestOrg.uuid });
+      const relationship = (result.data as Resource).relationships!.org.data as Relationship;
+      expect(relationship).toMatchObject({
+        type: "organisations",
+        id: latestOrg.uuid,
+        meta: { userStatus: "pending" }
       });
     });
 

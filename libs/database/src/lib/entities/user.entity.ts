@@ -32,12 +32,10 @@ import { Framework } from "./framework.entity";
 import { Project } from "./project.entity";
 import { ProjectUser } from "./project-user.entity";
 import { Organisation } from "./organisation.entity";
-import { OrganisationUser } from "./organisation-user.entity";
 import { FrameworkUser } from "./framework-user.entity";
 import { ValidLocale } from "../constants/locale";
 import { isNotNull } from "../types/array";
 import { FrameworkKey } from "../constants";
-import { PENDING } from "../constants/status";
 import { InternalServerErrorException } from "@nestjs/common";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import { getPermissionsForRoles, Permission } from "../constants/permissions";
@@ -57,20 +55,15 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     return userId == null ? undefined : (await User.findOne({ where: { id: userId }, attributes: ["locale"] }))?.locale;
   }
 
-  static async orgUuids(userId?: number) {
-    const user =
-      userId == null
-        ? undefined
-        : await User.findOne({
-            where: { id: userId },
-            attributes: ["id", "organisationId"],
-            include: [
-              { association: "organisation", attributes: ["uuid"] },
-              { association: "organisationsConfirmed", attributes: ["uuid"] }
-            ]
-          });
+  static async orgUuid(userId?: number): Promise<string | null> {
+    if (userId == null) return null;
 
-    return (await user?.myOrgUuids()) ?? [];
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ["id", "organisationId"],
+      include: [{ association: "organisation", attributes: ["uuid"] }]
+    });
+    return user?.organisation?.uuid ?? null;
   }
 
   @PrimaryKey
@@ -221,55 +214,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     return this.organisation;
   }
 
-  @BelongsToMany(() => Organisation, () => OrganisationUser)
-  declare organisations: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
-
-  @BelongsToMany(() => Organisation, {
-    through: {
-      model: () => OrganisationUser,
-      scope: { status: "approved" }
-    }
-  })
-  declare organisationsConfirmed: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
-
-  @BelongsToMany(() => Organisation, {
-    through: {
-      model: () => OrganisationUser,
-      scope: { status: PENDING }
-    }
-  })
-  declare organisationsPending: Array<Organisation & { OrganisationUser: OrganisationUser }> | null;
-
-  private _primaryOrganisation: (Organisation & { OrganisationUser?: OrganisationUser }) | false;
-  async primaryOrganisation(): Promise<(Organisation & { OrganisationUser?: OrganisationUser }) | null> {
-    if (this._primaryOrganisation == null) {
-      await this.loadOrganisation();
-      if (this.organisation != null) {
-        const userOrg = (
-          await (this as User).$get("organisations", {
-            limit: 1,
-            where: { id: this.organisation.id }
-          })
-        )[0];
-        return (this._primaryOrganisation = userOrg ?? this.organisation);
-      }
-
-      const confirmed = (await (this as User).$get("organisationsConfirmed", { limit: 1 }))[0];
-      if (confirmed != null) {
-        return (this._primaryOrganisation = confirmed);
-      }
-
-      const pending = (await (this as User).$get("organisationsPending", { limit: 1 }))[0];
-      if (pending != null) {
-        return (this._primaryOrganisation = pending);
-      }
-
-      this._primaryOrganisation = false;
-    }
-
-    return this._primaryOrganisation === false ? null : this._primaryOrganisation;
-  }
-
   @BelongsToMany(() => Framework, () => FrameworkUser)
   declare frameworks: Framework[] | null;
 
@@ -322,25 +266,5 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     }
 
     return this._myFrameworks;
-  }
-
-  async myOrgUuids(): Promise<string[]> {
-    const orgUuids: string[] = [];
-
-    let org = this.organisation;
-    if (org?.uuid == null) {
-      org = await this.$get("organisation", { attributes: ["uuid"] });
-    }
-    if (org != null) orgUuids.push(org.uuid);
-
-    let confirmed = this.organisationsConfirmed;
-    if (confirmed == null || confirmed.length === 0 || confirmed[0].uuid == null) {
-      confirmed = (await this.$get("organisationsConfirmed", {
-        attributes: ["uuid"]
-      })) as Array<Organisation & { OrganisationUser: OrganisationUser }>;
-    }
-    orgUuids.push(...confirmed.map(({ uuid }) => uuid));
-
-    return orgUuids;
   }
 }

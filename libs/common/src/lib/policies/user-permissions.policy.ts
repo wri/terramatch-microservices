@@ -28,11 +28,11 @@ export abstract class UserPermissionsPolicy {
       .map(name => name.substring("framework-".length) as FrameworkKey));
   }
 
-  protected _organisationUuids?: string[] | null;
-  protected async getOrgUuids() {
-    if (this._organisationUuids == null) this._organisationUuids = await User.orgUuids(this.userId);
+  protected _organisationUuid?: string | null;
+  protected async getOrgUuid() {
+    if (this._organisationUuid === undefined) this._organisationUuid = await User.orgUuid(this.userId);
 
-    return this._organisationUuids;
+    return this._organisationUuid;
   }
 
   abstract addRules(): Promise<void>;

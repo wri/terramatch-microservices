@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import {
+  DRAFT,
   DUE,
   INFORMATION_REQUIRED,
   PENDING_APPROVAL,
@@ -33,7 +34,7 @@ export type ReportFilter = {
   statuses?: readonly ReportStatus[];
   // Matched against the report's update request status. Reports without one never match.
   updateRequestStatuses?: readonly UpdateRequestStatus[];
-  // If true, reports are limited to those that are due or have information required (on the report or its update request)
+  // If true, reports are limited to those that are due, draft or need information, on the report or on its update request
   requiresAttention?: boolean;
   dueDateFrom?: Date;
   dueDateTo?: Date;
@@ -125,8 +126,8 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
     builder.in("updateRequestStatus", [...filter.updateRequestStatuses]);
   }
   if (filter.requiresAttention === true) {
-    const needsAttention = clauses.in("status", [DUE, INFORMATION_REQUIRED]);
-    const updateNeedsAttention = clauses.in("updateRequestStatus", [INFORMATION_REQUIRED]);
+    const needsAttention = clauses.in("status", [DUE, DRAFT, INFORMATION_REQUIRED]);
+    const updateNeedsAttention = clauses.in("updateRequestStatus", [DRAFT, INFORMATION_REQUIRED]);
     builder.andLiteral(`(${needsAttention} OR ${updateNeedsAttention})`);
   }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);

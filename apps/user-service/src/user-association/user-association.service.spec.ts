@@ -29,6 +29,7 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { APPROVED } from "@terramatch-microservices/database/constants/status";
 
 describe("UserAssociationService", () => {
   let service: UserAssociationService;
@@ -860,6 +861,7 @@ describe("UserAssociationService", () => {
     it("should clear organisationId for members whose home organisation is this one", async () => {
       const org = await OrganisationFactory.create();
       const member = await UserFactory.create({ organisationId: org.id });
+      await UserFactory.create({ organisationId: org.id });
 
       jest.spyOn(User, "findAll").mockResolvedValue([member] as User[]);
       jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(1);
@@ -869,6 +871,18 @@ describe("UserAssociationService", () => {
       await service.deleteBulkOrgUserAssociations(org.id, [member.uuid as string]);
 
       expect(updateSpy).toHaveBeenCalledWith({ organisationId: null }, { where: { id: { [Op.in]: [member.id] } } });
+    });
+
+    it("should allow removing the creator when another accepted member remains as a home member", async () => {
+      const org = await OrganisationFactory.create();
+      const creator = await UserFactory.create({ organisationId: org.id });
+      await UserFactory.create({ organisationId: org.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: creator.id, status: APPROVED });
+
+      await service.deleteBulkOrgUserAssociations(org.id, [creator.uuid as string]);
+
+      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(0);
+      expect(await User.count({ where: { organisationId: org.id } })).toBe(1);
     });
 
     it("should throw NotFoundException when no users found", async () => {
@@ -886,7 +900,7 @@ describe("UserAssociationService", () => {
     it("should throw BadRequestException when removing the last user from an organisation", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: APPROVED });
 
       await expect(service.deleteBulkOrgUserAssociations(org.id, [user.uuid as string])).rejects.toThrow(
         BadRequestException
@@ -898,8 +912,8 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create();
       const user1 = await UserFactory.create();
       const user2 = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id });
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id, status: APPROVED });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id, status: APPROVED });
 
       await expect(
         service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string, user2.uuid as string])
@@ -911,8 +925,8 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create();
       const user1 = await UserFactory.create();
       const user2 = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id });
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id, status: APPROVED });
+      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id, status: APPROVED });
 
       await service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string]);
 

@@ -400,19 +400,31 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
-    const organisationUserCount = await OrganisationUser.count({ where: { organisationId } });
-    const removedOrganisationUserCount = await OrganisationUser.count({
-      where: { organisationId, userId: { [Op.in]: userIds } }
-    });
-    if (removedOrganisationUserCount > 0 && organisationUserCount - removedOrganisationUserCount === 0) {
-      throw new BadRequestException("Cannot remove the last user from an organisation");
-    }
-    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
 
     // Approved and invited members stay visible through users.organisation_id, not only organisation_user.
     const homeMemberIds = users
       .filter(user => user.organisationId != null && Number(user.organisationId) === Number(organisationId))
       .map(user => user.id);
+
+    // The organisation's accepted members are its approved organisation_user rows plus its home members (the creator
+    // has no organisation_user row). Removing any of them must leave at least one other accepted member.
+    const removedAcceptedCount = await OrganisationUser.count({
+      where: { organisationId, status: APPROVED, userId: { [Op.in]: userIds } }
+    });
+    if (homeMemberIds.length > 0 || removedAcceptedCount > 0) {
+      const remainingOrganisationUserCount = await OrganisationUser.count({
+        where: { organisationId, status: APPROVED, userId: { [Op.notIn]: userIds } }
+      });
+      const remainingHomeMemberCount = await User.count({
+        where: { organisationId, id: { [Op.notIn]: userIds } }
+      });
+      if (remainingOrganisationUserCount + remainingHomeMemberCount === 0) {
+        throw new BadRequestException("Cannot remove the last user from an organisation");
+      }
+    }
+
+    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
+
     if (homeMemberIds.length > 0) {
       await User.update({ organisationId: null }, { where: { id: { [Op.in]: homeMemberIds } } });
     }

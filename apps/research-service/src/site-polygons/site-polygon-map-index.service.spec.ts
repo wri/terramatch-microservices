@@ -225,13 +225,13 @@ describe("SitePolygonMapIndexService", () => {
       const organisation = await OrganisationFactory.create();
       const matching = await ProjectFactory.create({
         frameworkKey: "ppc",
-        country: "KE",
+        level0Project: ["KE"],
         organisationId: organisation.id
       });
       await ProjectReportFactory.create({ projectId: matching.id, status: "approved", plantingStatus: "in-progress" });
       const otherFramework = await ProjectFactory.create({
         frameworkKey: "terrafund",
-        country: "KE",
+        level0Project: ["KE"],
         organisationId: organisation.id
       });
       await ProjectReportFactory.create({

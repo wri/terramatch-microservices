@@ -78,8 +78,12 @@ export class ProjectLightDto extends EntityDto {
   @ApiProperty({ nullable: true, type: Date })
   plantingStartDate: Date | null;
 
-  @ApiProperty({ nullable: true, type: String })
+  /** @deprecated Use level0Project instead. */
+  @ApiProperty({ nullable: true, type: String, deprecated: true, description: "Use level0Project instead" })
   country: string | null;
+
+  @ApiProperty({ nullable: true, type: String, isArray: true, description: "Project country codes (GADM level 0)" })
+  level0Project: string[] | null;
 
   @ApiProperty({ nullable: true, type: Number, description: "Latitude coordinate" })
   lat: number | null;
@@ -223,6 +227,24 @@ export class ProjectFullDto extends ProjectLightDto {
   @ApiProperty({ nullable: true, type: Number })
   jobsCreatedGoal: number | null;
 
+  @ApiProperty({
+    description:
+      "Project trees planted goal: sum of the trees-goal 'tree-planting' strategy entries, without the ANR and direct-seeding strategy amounts."
+  })
+  treesPlantedGoal: number;
+
+  @ApiProperty({
+    description:
+      "Sum of visible tree species amounts for collection 'nursery-seedling' across all nurseries of this project."
+  })
+  treesSeedlingsGoal: number;
+
+  @ApiProperty({
+    description:
+      "Sum of the gender entries of the project's demographics / jobs / full-time tracking (the aggregate full-time jobs goal)."
+  })
+  fullTimeJobsGoal: number;
+
   @ApiProperty({ nullable: true, type: Number })
   survivalRate: number | null;
 
@@ -243,6 +265,12 @@ export class ProjectFullDto extends ProjectLightDto {
 
   @ApiProperty()
   seedsPlantedCount: number;
+
+  @ApiProperty({
+    description:
+      "Sum of tree species amounts for collection 'nursery-seedling' across approved nursery reports for this project"
+  })
+  treesSeedlingsGrownCount: number;
 
   @ApiProperty()
   regeneratedTreesCount: number;

@@ -4,6 +4,13 @@ import { Polygon } from "geojson";
 import { User } from "./user.entity";
 import { InternalServerErrorException } from "@nestjs/common";
 import { polygonUpdate } from "../hooks/polygon-geometry-update";
+import { OVERLAP_SLIVER_TOLERANCE_DEGREES } from "../constants";
+
+const MIN_OVERLAP_CORE_AREA = 1e-12;
+const MAX_SLIVER_AREA = 1e-7;
+// First ISO country code of the project's level_0_project JSON array. Multi-country projects are not yet supported,
+// so only the first entry is used for the within-country check.
+const PROJECT_COUNTRY_ISO_SQL = "JSON_UNQUOTE(JSON_EXTRACT(p.level_0_project, '$[0]'))";
 
 @Table({
   tableName: "polygon_geometry",
@@ -145,24 +152,42 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
     return (await this.sql.query(
       `
         SELECT
-          target.uuid as targetUuid,
-          candidate.uuid as candidateUuid,
-          sp.poly_name as candidateName,
-          s.name as siteName,
-          ST_Area(target.geom) as targetArea,
-          ST_Area(candidate.geom) as candidateArea,
-          ST_Area(ST_Intersection(target.geom, candidate.geom)) as intersectionArea,
+          targetUuid,
+          candidateUuid,
+          candidateName,
+          siteName,
+          targetArea,
+          candidateArea,
+          ST_Area(intersection) as intersectionArea,
           35.0 as intersectionLatitude
-        FROM polygon_geometry target
-        CROSS JOIN polygon_geometry candidate
-        LEFT JOIN site_polygon sp ON sp.poly_id = candidate.uuid AND sp.is_active = 1
-        LEFT JOIN v2_sites s ON s.uuid = sp.site_id
-        WHERE target.uuid IN (:targetUuids)
-          AND candidate.uuid IN (:candidateUuids)
-          AND ST_Intersects(target.geom, candidate.geom)
+        FROM (
+          SELECT
+            target.uuid as targetUuid,
+            candidate.uuid as candidateUuid,
+            sp.poly_name as candidateName,
+            s.name as siteName,
+            ST_Area(target.geom) as targetArea,
+            ST_Area(candidate.geom) as candidateArea,
+            ST_Intersection(target.geom, candidate.geom) as intersection
+          FROM polygon_geometry target
+          CROSS JOIN polygon_geometry candidate
+          LEFT JOIN site_polygon sp ON sp.poly_id = candidate.uuid AND sp.is_active = 1
+          LEFT JOIN v2_sites s ON s.uuid = sp.site_id
+          WHERE target.uuid IN (:targetUuids)
+            AND candidate.uuid IN (:candidateUuids)
+            AND ST_Intersects(target.geom, candidate.geom)
+        ) pairs
+        WHERE ST_Area(intersection) > :maxSliverArea
+          OR COALESCE(ST_Area(ST_Buffer(intersection, :inwardBuffer)), 0) > :minCoreArea
       `,
       {
-        replacements: { targetUuids, candidateUuids },
+        replacements: {
+          targetUuids,
+          candidateUuids,
+          maxSliverArea: MAX_SLIVER_AREA,
+          inwardBuffer: -OVERLAP_SLIVER_TOLERANCE_DEGREES,
+          minCoreArea: MIN_OVERLAP_CORE_AREA
+        },
         type: QueryTypes.SELECT,
         transaction
       }
@@ -196,7 +221,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
         JOIN v2_sites s ON s.uuid = sp.site_id
         JOIN v2_projects p ON p.id = s.project_id
-        JOIN world_countries_generalized wcg ON wcg.iso = p.country
+        JOIN world_countries_generalized wcg ON wcg.iso = ${PROJECT_COUNTRY_ISO_SQL}
         WHERE pg.uuid = :polygonUuid
           AND ST_Area(pg.geom) > 0
           AND ST_Intersects(pg.geom, wcg.geometry)
@@ -236,12 +261,12 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
           pg.uuid as polygonUuid,
           ST_Area(pg.geom) as "polygonArea",
           ST_Area(ST_Intersection(pg.geom, wcg.geometry)) as "intersectionArea",
-          p.country
+          ${PROJECT_COUNTRY_ISO_SQL} as country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
         JOIN v2_sites s ON s.uuid = sp.site_id
         JOIN v2_projects p ON p.id = s.project_id
-        JOIN world_countries_generalized wcg ON wcg.iso = p.country
+        JOIN world_countries_generalized wcg ON wcg.iso = ${PROJECT_COUNTRY_ISO_SQL}
         WHERE pg.uuid IN (:polygonUuids)
           AND ST_Area(pg.geom) > 0
           AND ST_Intersects(pg.geom, wcg.geometry)
@@ -271,7 +296,7 @@ export class PolygonGeometry extends Model<PolygonGeometry> {
       `
         SELECT
           pg.uuid as polygonUuid,
-          p.country
+          ${PROJECT_COUNTRY_ISO_SQL} as country
         FROM polygon_geometry pg
         JOIN site_polygon sp ON sp.poly_id = pg.uuid AND sp.is_active = 1
         JOIN v2_sites s ON s.uuid = sp.site_id

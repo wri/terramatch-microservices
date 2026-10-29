@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
 import { col, fn, Op } from "sequelize";
@@ -127,11 +127,11 @@ describe("UsersService", () => {
       });
     });
 
-    it("should filter by role when primaryRole is provided", async () => {
+    it("should filter by role when role is provided", async () => {
       const builder = createBuilderMock();
       jest.spyOn(PaginatedQueryBuilder, "forNumberPage").mockReturnValue(builder as never);
 
-      await service.findMany({ page: 1, primaryRole: "admin-super" } as UserQueryDto);
+      await service.findMany({ page: 1, role: "admin-super" } as UserQueryDto);
 
       expect(builder.where).toHaveBeenCalledWith(fn("JSON_CONTAINS", col("User.roles"), '"admin-super"'));
     });
@@ -393,7 +393,34 @@ describe("UsersService", () => {
       await service.update(user, { organisationUuid: "org-uuid" });
 
       expect(user.organisationId).toBe(7);
+      expect(user.organisation).toEqual({ id: 7 });
       expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should clear the organisation when organisationUuid is null", async () => {
+      const user = createUserMock();
+      user.organisationId = 7;
+      user.organisation = { id: 7 } as Organisation;
+      const findOneSpy = jest.spyOn(Organisation, "findOne");
+
+      await service.update(user, { organisationUuid: null });
+
+      expect(findOneSpy).not.toHaveBeenCalled();
+      expect(user.organisationId).toBeNull();
+      expect(user.organisation).toBeNull();
+      expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should leave the organisation untouched when organisationUuid is absent", async () => {
+      const user = createUserMock();
+      const organisation = { id: 7 } as Organisation;
+      user.organisationId = 7;
+      user.organisation = organisation;
+
+      await service.update(user, { firstName: "New" });
+
+      expect(user.organisationId).toBe(7);
+      expect(user.organisation).toBe(organisation);
     });
 
     it("should replace direct frameworks when directFrameworks is provided", async () => {
@@ -426,10 +453,21 @@ describe("UsersService", () => {
       const user = createUserMock();
       user.roles = ["project-developer"];
 
-      const result = await service.update(user, { roles: ["admin-super", "funder"] });
+      const result = await service.update(user, { roles: ["admin-ppc", "admin-wcb"] });
 
-      expect(result.roles).toEqual(["admin-super", "funder"]);
+      expect(result.roles).toEqual(["admin-ppc", "admin-wcb"]);
       expect(user.save).toHaveBeenCalled();
+    });
+
+    it("should throw when roles are an invalid combination", async () => {
+      const user = createUserMock();
+      user.roles = ["project-developer"];
+
+      await expect(service.update(user, { roles: ["admin-ppc", "funder"] })).rejects.toThrow(
+        InternalServerErrorException
+      );
+      expect(user.roles).toEqual(["project-developer"]);
+      expect(user.save).not.toHaveBeenCalled();
     });
 
     it("should leave roles alone when roles are not provided", async () => {

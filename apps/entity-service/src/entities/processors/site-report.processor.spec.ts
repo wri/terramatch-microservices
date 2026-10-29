@@ -125,8 +125,8 @@ describe("SiteReportProcessor", () => {
     });
 
     it("should return site reports filtered by the update request status, country, site and project", async () => {
-      const p1 = await ProjectFactory.create({ country: "MX" });
-      const p2 = await ProjectFactory.create({ country: "CA" });
+      const p1 = await ProjectFactory.create({ level0Project: ["MX"] });
+      const p2 = await ProjectFactory.create({ level0Project: ["CA"] });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
       const s1 = await SiteFactory.create({ projectId: p1.id });

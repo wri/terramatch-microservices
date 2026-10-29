@@ -44,13 +44,11 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "projectUuid",
-  "organisationUuid",
-  "country"
+  "organisationUuid"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$project.organisation.uuid$",
-  country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
 
@@ -156,6 +154,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     for (const term of SIMPLE_FILTERS) {
       const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.country != null) {
+      builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.search != null || query.searchFilter != null) {
@@ -358,11 +360,129 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return { id: site.uuid, dto };
   }
 
+  /**
+   * Combined workdays for each site, keyed by site uuid. Matches the `combinedWorkdayCount` on the full DTO
+   * (demographic workdays from approved reports due on or after the cutoff, plus self-reported workdays from
+   * approved reports due before it), but batched so the index never queries per site.
+   */
+  private async getCombinedWorkdayCounts(sites: Site[]): Promise<Record<string, number>> {
+    if (sites.length === 0) return {};
+
+    const siteIds = sites.map(site => site.id);
+    // The cutoff is compared in SQL: dueAt is a DATE column, so comparing it in JS is unreliable.
+    const demographicReports = await SiteReport.findAll({
+      where: {
+        siteId: { [Op.in]: siteIds },
+        status: { [Op.in]: SiteReport.APPROVED_STATUSES },
+        dueAt: { [Op.gte]: Tracking.DEMOGRAPHIC_COUNT_CUTOFF }
+      },
+      attributes: ["id", "siteId"]
+    });
+    const selfReportedReports = await SiteReport.findAll({
+      where: {
+        siteId: { [Op.in]: siteIds },
+        status: { [Op.in]: SiteReport.APPROVED_STATUSES },
+        dueAt: { [Op.lt]: Tracking.DEMOGRAPHIC_COUNT_CUTOFF }
+      },
+      attributes: ["siteId", "workdaysPaid", "workdaysVolunteer"]
+    });
+
+    const trackings = await Tracking.findAll({
+      where: {
+        trackableType: SiteReport.LARAVEL_TYPE,
+        trackableId: { [Op.in]: demographicReports.map(({ id }) => id) },
+        domain: "demographics",
+        type: Tracking.WORKDAYS_TYPE,
+        hidden: false
+      },
+      attributes: ["id", "trackableId"]
+    });
+    const entries = await TrackingEntry.gender().findAll({
+      where: { trackingId: { [Op.in]: trackings.map(({ id }) => id) } },
+      attributes: ["trackingId", "amount"]
+    });
+
+    const siteIdByReportId = new Map(demographicReports.map(({ id, siteId }) => [id, siteId]));
+    const reportIdByTrackingId = new Map(trackings.map(({ id, trackableId }) => [id, trackableId]));
+    const workdaysBySiteId = new Map<number, number>();
+    const addWorkdays = (siteId: number, workdays: number) =>
+      workdaysBySiteId.set(siteId, (workdaysBySiteId.get(siteId) ?? 0) + workdays);
+
+    for (const { trackingId, amount } of entries) {
+      const reportId = reportIdByTrackingId.get(trackingId);
+      const siteId = reportId == null ? undefined : siteIdByReportId.get(reportId);
+      if (siteId != null) addWorkdays(siteId, amount ?? 0);
+    }
+    for (const report of selfReportedReports) {
+      addWorkdays(report.siteId, (report.workdaysPaid ?? 0) + (report.workdaysVolunteer ?? 0));
+    }
+
+    const result: Record<string, number> = {};
+    for (const site of sites) {
+      result[site.uuid] = workdaysBySiteId.get(site.id) ?? 0;
+    }
+    return result;
+  }
+
+  /**
+   * Trees restored (PPC estimate) for each site, keyed by site uuid. Matches `treesRestoredPpc` on the full DTO:
+   * trees regenerated on approved reports + trees planted × survival rate + seeds planted × direct seeding survival
+   * rate, using each site's parent project rates. Batched so the index never queries per site.
+   */
+  private async getTreesRestoredPpc(
+    sites: Site[],
+    treesPlantedData: Record<string, number>
+  ): Promise<Record<string, number>> {
+    if (sites.length === 0) return {};
+
+    const approvedReports = await SiteReport.findAll({
+      where: {
+        siteId: { [Op.in]: sites.map(site => site.id) },
+        status: { [Op.in]: SiteReport.APPROVED_STATUSES }
+      },
+      attributes: ["id", "siteId", "numTreesRegenerating"]
+    });
+    const seedings = await Seeding.visible()
+      .siteReports(approvedReports.map(({ id }) => id))
+      .findAll({ attributes: ["seedableId", "amount"] });
+
+    const regeneratedBySiteId = new Map<number, number>();
+    for (const { siteId, numTreesRegenerating } of approvedReports) {
+      regeneratedBySiteId.set(siteId, (regeneratedBySiteId.get(siteId) ?? 0) + (numTreesRegenerating ?? 0));
+    }
+    const siteIdByReportId = new Map(approvedReports.map(({ id, siteId }) => [id, siteId]));
+    const seedsBySiteId = new Map<number, number>();
+    for (const { seedableId, amount } of seedings) {
+      const siteId = siteIdByReportId.get(seedableId);
+      if (siteId != null) seedsBySiteId.set(siteId, (seedsBySiteId.get(siteId) ?? 0) + (amount ?? 0));
+    }
+
+    const projects = await Project.findAll({
+      where: { id: { [Op.in]: [...new Set(sites.map(site => site.projectId))] } },
+      attributes: ["id", "survivalRate", "directSeedingSurvivalRate"]
+    });
+    const projectById = new Map(projects.map(project => [project.id, project]));
+
+    const result: Record<string, number> = {};
+    for (const site of sites) {
+      const project = projectById.get(site.projectId);
+      const treesPlanted = treesPlantedData[site.uuid] ?? 0;
+      const seeds = seedsBySiteId.get(site.id) ?? 0;
+      result[site.uuid] =
+        (regeneratedBySiteId.get(site.id) ?? 0) +
+        (treesPlanted * ((project?.survivalRate ?? 0) / 100) +
+          (seeds * (project?.directSeedingSurvivalRate ?? 0)) / 100);
+    }
+    return result;
+  }
+
   async getLightDto(site: Site) {
-    const [hectaresData, treesPlantedData] = await Promise.all([
+    const [hectaresData, treesPlantedData, combinedWorkdayCounts] = await Promise.all([
       this.getHectaresRestoredSum([site.uuid]),
-      this.getTreesPlantedCount([site])
+      this.getTreesPlantedCount([site]),
+      this.getCombinedWorkdayCounts([site])
     ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc([site], treesPlantedData);
 
     const totalHectaresRestoredSum = hectaresData[site.uuid] ?? 0;
     const treesPlantedCount = treesPlantedData[site.uuid] ?? 0;
@@ -373,10 +493,37 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       dto: new SiteLightDto(site, {
         treesPlantedCount,
         totalHectaresRestoredSum,
+        combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+        treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0,
         plantingStatus: lastReport?.plantingStatus as PlantingStatus,
         totalSiteReports: await this.getTotalSiteReports(site.id)
       })
     };
+  }
+
+  /**
+   * Trees planted, hectares restored and workdays for each site, keyed by site uuid. Used by the sites meta
+   * index to total the section header metrics without building a light DTO for every site.
+   */
+  async getProgressMetrics(sites: Site[]) {
+    const siteUuids = sites.map(site => site.uuid);
+    const [hectaresData, treesPlantedData, combinedWorkdayCounts] = await Promise.all([
+      this.getHectaresRestoredSum(siteUuids),
+      this.getTreesPlantedCount(sites),
+      this.getCombinedWorkdayCounts(sites)
+    ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc(sites, treesPlantedData);
+    return new Map(
+      sites.map(site => [
+        site.uuid,
+        {
+          treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
+          totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
+          combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+          treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0
+        }
+      ])
+    );
   }
 
   async getLightDtos(sites: Site[]): Promise<{ id: string; dto: SiteLightDto }[]> {
@@ -384,11 +531,13 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     const siteUuids = sites.map(site => site.uuid);
 
-    const [hectaresData, treesPlantedData, plantingStatus] = await Promise.all([
+    const [hectaresData, treesPlantedData, combinedWorkdayCounts, plantingStatus] = await Promise.all([
       this.getHectaresRestoredSum(siteUuids),
       this.getTreesPlantedCount(sites),
+      this.getCombinedWorkdayCounts(sites),
       this.getPlantingStatus(sites)
     ]);
+    const treesRestoredPpcData = await this.getTreesRestoredPpc(sites, treesPlantedData);
 
     return Promise.all(
       sites.map(async site => ({
@@ -396,6 +545,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
         dto: new SiteLightDto(site, {
           treesPlantedCount: treesPlantedData[site.uuid] ?? 0,
           totalHectaresRestoredSum: hectaresData[site.uuid] ?? 0,
+          combinedWorkdayCount: combinedWorkdayCounts[site.uuid] ?? 0,
+          treesRestoredPpc: treesRestoredPpcData[site.uuid] ?? 0,
           plantingStatus: (plantingStatus[site.uuid] as PlantingStatus) ?? null,
           totalSiteReports: await this.getTotalSiteReports(site.id)
         })
@@ -466,8 +617,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     const permissions = this.entitiesService.permissions;
     const managesOwn = permissions?.includes("manage-own") && !permissions.includes(`framework-${site.frameworkKey}`);
     if (managesOwn) {
-      const reportCount = await SiteReport.count({ where: { siteId: site.id } });
-      if (reportCount > 0) {
+      if (site.status !== "draft") {
         throw new NotAcceptableException("You can only delete sites that do not have reports");
       }
     }

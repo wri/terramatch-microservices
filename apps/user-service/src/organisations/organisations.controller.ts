@@ -9,10 +9,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UnauthorizedException
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
+import { Response } from "express";
 import { OrganisationCreateBody } from "./dto/organisation-create.dto";
 import { OrganisationUpdateBody } from "./dto/organisation-update.dto";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
@@ -26,7 +28,7 @@ import {
 import { PolicyService } from "@terramatch-microservices/common";
 import { USER_ORG_RELATIONSHIP } from "../users/users.controller";
 import { OrganisationCreationService } from "./organisation-creation.service";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse } from "@nestjs/swagger";
 import {
   buildDeletedResponse,
   buildJsonApi,
@@ -45,7 +47,10 @@ import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.d
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { OrganisationApprovedEmail } from "@terramatch-microservices/common/email/organisation-approved.email";
+import {
+  ORGANISATION_APPROVED,
+  ProductEventService
+} from "@terramatch-microservices/common/product-events/product-event.service";
 import { OrganisationRejectedEmail } from "@terramatch-microservices/common/email/organisation-rejected.email";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
 import { DateTime } from "luxon";
@@ -63,7 +68,8 @@ export class OrganisationsController {
     private readonly organisationsService: OrganisationsService,
     private readonly organisationCreationService: OrganisationCreationService,
     @InjectQueue("email") private readonly emailQueue: Queue,
-    @InjectQueue(USER_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue
+    @InjectQueue(USER_SERVICE_EXPORT_QUEUE) private readonly exportQueue: Queue,
+    private readonly productEventService: ProductEventService
   ) {}
 
   @Get()
@@ -117,6 +123,27 @@ export class OrganisationsController {
     }
 
     return UserServiceExportsProcessor.queueOrganisationExport(this.exportQueue, fileName);
+  }
+
+  @Get(":uuid/export")
+  @ApiOperation({
+    operationId: "organisationExport",
+    summary: "Export a single organisation profile as CSV"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CSV file",
+    content: { "text/csv": { schema: { type: "string" } } }
+  })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Resource not found." })
+  async exportOrganisation(@Param("uuid") uuid: string, @Res({ passthrough: true }) response: Response) {
+    const organisation = await this.organisationsService.findOne(uuid);
+    await this.policyService.authorize("read", organisation);
+
+    await this.organisationsService.exportCsv(organisation, response);
   }
 
   @Get(":uuid")
@@ -186,11 +213,7 @@ export class OrganisationsController {
       if (userId != null) {
         try {
           if (newStatus === "approved") {
-            await new OrganisationApprovedEmail({
-              organisationId: organisation.id,
-              approvedByUserId: userId
-            }).sendLater(this.emailQueue);
-            this.logger.log(`Queued organisation approved email for organisation ${organisation.id}`);
+            await this.productEventService.notify(ORGANISATION_APPROVED, organisation);
           } else if (newStatus === "rejected") {
             await new OrganisationRejectedEmail({
               organisationId: organisation.id,

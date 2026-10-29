@@ -114,6 +114,11 @@ export class FormQuestionDto {
   @ApiProperty({ nullable: true, required: false, type: Object })
   additionalProps?: object | null;
 
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ required: false, type: Number, description: "Max upload size in bytes for file questions" })
+  maxFileSize?: number;
+
   @ApiProperty({ nullable: true, type: () => FormQuestionDto, isArray: true })
   children: FormQuestionDto[] | null;
 }

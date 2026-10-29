@@ -25,6 +25,7 @@ import { TreeSpeciesResearch } from "./tree-species-research.entity";
 import { Literal } from "sequelize/types/utils";
 import { SiteReport } from "./site-report.entity";
 import { chainScope } from "../util/chain-scope";
+import { Nursery } from "./nursery.entity";
 import { NurseryReport } from "./nursery-report.entity";
 import { ProjectReport } from "./project-report.entity";
 import { LaravelModel, laravelType } from "../types/util";
@@ -34,6 +35,12 @@ import { LaravelModel, laravelType } from "../types/util";
   siteReports: (ids: number[] | Literal) => ({
     where: {
       speciesableType: SiteReport.LARAVEL_TYPE,
+      speciesableId: { [Op.in]: ids }
+    }
+  }),
+  nurseries: (ids: number[] | Literal) => ({
+    where: {
+      speciesableType: Nursery.LARAVEL_TYPE,
       speciesableId: { [Op.in]: ids }
     }
   }),
@@ -80,6 +87,10 @@ export class TreeSpecies extends Model<InferAttributes<TreeSpecies>, InferCreati
 
   static siteReports(ids: number[] | Literal) {
     return chainScope(this, "siteReports", ids) as typeof TreeSpecies;
+  }
+
+  static nurseries(ids: number[] | Literal) {
+    return chainScope(this, "nurseries", ids) as typeof TreeSpecies;
   }
 
   static nurseryReports(ids: number[] | Literal) {

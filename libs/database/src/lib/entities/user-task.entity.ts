@@ -13,10 +13,14 @@ const userTaskUpdatedHook = async (userTask: UserTask) => {
 };
 
 const userTaskDestroyedHook = async (userTask: UserTask) => {
+  // The task itself may have been soft deleted along with this association.
+  const task = userTask.task ?? (await Task.findByPk(userTask.taskId, { attributes: ["uuid"], paranoid: false }));
+  if (task == null) return;
+
   await DatabaseModule.emitUserDataModelDeleted({
     userIds: [userTask.userId],
     model: "tasks",
-    modelId: userTask.taskId
+    uuid: task.uuid
   });
 };
 

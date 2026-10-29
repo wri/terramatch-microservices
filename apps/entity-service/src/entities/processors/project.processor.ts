@@ -26,8 +26,9 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, Project
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
-import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
+import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -54,8 +55,14 @@ import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { Literal } from "sequelize/types/utils";
 import { ProjectReportMetaDto, ReportMetaDto } from "../dto/project-report-meta.dto";
-import { DUE, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import {
+  NurseriesMetaQueryDto,
+  ProjectNurseriesMetaDto,
+  ProjectSitesMetaDto,
+  SitesMetaQueryDto
+} from "../dto/nurseries-meta.dto";
+import { SiteProcessor } from "./site.processor";
 import {
   filteredProjectsSubquery,
   filteredReportsSubquery,
@@ -63,10 +70,16 @@ import {
   ReportFilter
 } from "../report-filters";
 
+const ENTITY_ATTENTION_STATUSES: readonly string[] = [DRAFT, INFORMATION_REQUIRED];
+
+// Sites and nurseries need attention when the entity or its update request is a draft or needs information.
+const requiresAttention = ({ status, updateRequestStatus }: Pick<Site, "status" | "updateRequestStatus">) =>
+  ENTITY_ATTENTION_STATUSES.includes(status) ||
+  (updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
+
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
-  "country",
   "status",
   "updateRequestStatus",
   "frameworkKey",
@@ -173,7 +186,13 @@ export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
 
 const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
 
-const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED] as const;
+const REPORTS_META_TYPES = ["nurseryReports", "projectReports", "siteReports"] as const;
+
+const SITES_META_PROJECT_INCLUDE = [{ association: "project", attributes: [] }];
+
+const NURSERIES_META_PROJECT_INCLUDE = [
+  { association: "project", attributes: [], include: [{ association: "organisation", attributes: [] }] }
+];
 
 // Returns a map of site / nursery id to the number of matching reports
 const countReportsByParent = async (
@@ -238,7 +257,7 @@ export class ProjectProcessor extends EntityProcessor<
     ]);
 
     if (query.sort?.field != null) {
-      if (["name", "plantingStartDate", "country", "shortName"].includes(query.sort.field)) {
+      if (["name", "plantingStartDate", "country", "level0Project", "shortName"].includes(query.sort.field)) {
         builder.order([[query.sort.field, query.sort.direction ?? "ASC"]]);
       } else if (query.sort.field === "organisationName") {
         builder.order([["organisation", "name", query.sort.direction ?? "ASC"]]);
@@ -263,6 +282,10 @@ export class ProjectProcessor extends EntityProcessor<
     for (const term of SIMPLE_FILTERS) {
       const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
       if (query[term] != null) builder.where({ [field]: query[term] });
+    }
+
+    if (query.country != null) {
+      builder.where({ id: { [Op.in]: Project.forCountry(query.country) } });
     }
 
     if (query.landscape != null && query.landscape.length > 0) {
@@ -304,23 +327,283 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   /**
-   * Adds an index of report meta for all projects matching the query's scoping, project and search
-   * filters. Only sites / nurseries with at least one matching report are listed. If no statuses
-   * are requested, reports requiring attention (due, draft, information-required) are counted.
+   * Adds an index of the projects with at least one nursery matching the query's filters. Each project
+   * has its nursery counts and seedlings grown (for all nurseries and for the matching ones), which the
+   * nurseries index needs for each project section header.
+   */
+  async addNurseriesMetaIndex(document: DocumentBuilder, query: NurseriesMetaQueryDto) {
+    const indexData = {
+      resource: getDtoType(ProjectNurseriesMetaDto),
+      requestPath: `/entities/v3/${this.resource}/nurseriesMeta${getStableRequestQuery(query)}`,
+      pageNumber: query.page?.number ?? 1
+    };
+
+    const matchingNurseries = await Nursery.findAll({
+      attributes: ["id", "projectId"],
+      where: this.nurseriesMetaWhere(query),
+      include: NURSERIES_META_PROJECT_INCLUDE
+    });
+    const projectIds = [...new Set(matchingNurseries.map(({ projectId }) => projectId))];
+    if (projectIds.length === 0) {
+      document.addIndex({ ...indexData, total: 0, ids: [] });
+      return;
+    }
+
+    const builder = PaginatedQueryBuilder.forNumberPage(Project, query.page, [
+      { association: "organisation", attributes: ["name"] }
+    ])
+      .attributes(["id", "uuid", "name", "frameworkKey", "organisationId"])
+      .where({ id: { [Op.in]: projectIds } });
+    if (query.projectUuid != null) builder.where({ uuid: query.projectUuid });
+    const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
+
+    if (projects.length > 0) {
+      const pageProjectIds = projects.map(({ id }) => id);
+      const matchingNurseryIds = new Set(matchingNurseries.map(({ id }) => id));
+      const nurseries = await Nursery.findAll({
+        attributes: ["id", "projectId", "status", "updateRequestStatus"],
+        where: { projectId: { [Op.in]: pageProjectIds } }
+      });
+      const seedlingsByNursery = await this.seedlingsGrownByNursery(nurseries.map(({ id }) => id));
+      const seedlingsGoalByNursery = await this.seedlingsGoalByNursery(
+        nurseries.filter(({ status }) => Nursery.APPROVED_STATUSES.includes(status)).map(({ id }) => id)
+      );
+      const nurseriesByProject = groupBy(nurseries, "projectId");
+
+      for (const { id, uuid, name, frameworkKey, organisation } of projects) {
+        const projectNurseries = nurseriesByProject[id] ?? [];
+        const matchingProjectNurseries = projectNurseries.filter(({ id: nurseryId }) =>
+          matchingNurseryIds.has(nurseryId)
+        );
+        document.addData(
+          uuid,
+          new ProjectNurseriesMetaDto({
+            uuid,
+            name,
+            organisationName: organisation?.name ?? null,
+            frameworkKey: frameworkKey ?? null,
+            nurseriesTotal: projectNurseries.length,
+            nurseriesMatching: matchingProjectNurseries.length,
+            nurseriesRequiringAttention: matchingProjectNurseries.filter(requiresAttention).length,
+            seedlingsGrownTotal: sumBy(projectNurseries, ({ id: nurseryId }) => seedlingsByNursery.get(nurseryId) ?? 0),
+            seedlingsGrownMatching: sumBy(
+              matchingProjectNurseries,
+              ({ id: nurseryId }) => seedlingsByNursery.get(nurseryId) ?? 0
+            ),
+            seedlingsGrownGoalTotal: sumBy(
+              projectNurseries.filter(({ status }) => Nursery.APPROVED_STATUSES.includes(status)),
+              ({ id: nurseryId }) => seedlingsGoalByNursery.get(nurseryId) ?? 0
+            )
+          })
+        );
+      }
+    }
+
+    document.addIndex({ ...indexData, total, ids: projects.map(({ uuid }) => uuid) });
+  }
+
+  /** The same permission scope the entity index applies, so the meta lists only what the user can see. */
+  private metaPermissionScope(): WhereOptions[] {
+    const permissions = this.entitiesService.permissions;
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) return [{ frameworkKey: { [Op.in]: frameworkPermissions } }];
+    if (permissions?.includes("manage-own")) {
+      return [{ projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) } }];
+    }
+    if (permissions?.includes("projects-manage")) {
+      return [{ projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) } }];
+    }
+    return [];
+  }
+
+  private nurseriesMetaWhere(query: NurseriesMetaQueryDto): WhereOptions {
+    const clauses: WhereOptions[] = [...this.metaPermissionScope()];
+    if (query.status != null && query.status.length > 0) clauses.push({ status: { [Op.in]: query.status } });
+    if (query.updateRequestStatus != null && query.updateRequestStatus.length > 0) {
+      clauses.push({ updateRequestStatus: { [Op.in]: query.updateRequestStatus } });
+    }
+    if (query.search != null && query.search !== "") {
+      const pattern = `%${query.search}%`;
+      clauses.push({
+        [Op.or]: [
+          { name: { [Op.like]: pattern } },
+          { "$project.name$": { [Op.like]: pattern } },
+          { "$project.organisation.name$": { [Op.like]: pattern } }
+        ]
+      });
+    }
+    return clauses.length === 0 ? {} : { [Op.and]: clauses };
+  }
+
+  /**
+   * Seedlings grown per nursery, summed from the visible nursery-seedling tree species of its approved
+   * reports. Matches the per-nursery value the nursery index and detail pages show.
+   */
+  /**
+   * The seedlings goal for each nursery, keyed by nursery id: the "Tree Species (Nursery)" amounts entered on the
+   * nursery itself (not on its reports).
+   */
+  private async seedlingsGoalByNursery(nurseryIds: number[]) {
+    const totals = new Map<number, number>();
+    if (nurseryIds.length === 0) return totals;
+
+    const treeSpecies = await TreeSpecies.visible()
+      .collection("nursery-seedling")
+      .findAll({
+        where: { speciesableType: Nursery.LARAVEL_TYPE, speciesableId: { [Op.in]: nurseryIds } },
+        attributes: ["speciesableId", "amount"]
+      });
+    for (const { speciesableId, amount } of treeSpecies) {
+      totals.set(speciesableId, (totals.get(speciesableId) ?? 0) + (amount ?? 0));
+    }
+    return totals;
+  }
+
+  private async seedlingsGrownByNursery(nurseryIds: number[]) {
+    const totals = new Map<number, number>();
+    if (nurseryIds.length === 0) return totals;
+
+    const reports = await NurseryReport.nurseries(nurseryIds)
+      .approved()
+      .findAll({ attributes: ["id", "nurseryId"] });
+    if (reports.length === 0) return totals;
+    const nurseryIdByReportId = new Map(reports.map(({ id, nurseryId }) => [id, nurseryId]));
+
+    const treeSpecies = await TreeSpecies.visible()
+      .collection("nursery-seedling")
+      .nurseryReports(reports.map(({ id }) => id))
+      .findAll({ attributes: ["speciesableId", "amount"] });
+    for (const { speciesableId, amount } of treeSpecies) {
+      const nurseryId = nurseryIdByReportId.get(speciesableId);
+      if (nurseryId == null) continue;
+      totals.set(nurseryId, (totals.get(nurseryId) ?? 0) + (amount ?? 0));
+    }
+    return totals;
+  }
+
+  /**
+   * Adds an index of the projects with at least one site matching the query's filters. Each project has
+   * its site counts and trees planted / hectares restored totals (for all sites and for the matching ones),
+   * which the sites index needs for each project section header.
+   */
+  async addSitesMetaIndex(document: DocumentBuilder, query: SitesMetaQueryDto) {
+    const indexData = {
+      resource: getDtoType(ProjectSitesMetaDto),
+      requestPath: `/entities/v3/${this.resource}/sitesMeta${getStableRequestQuery(query)}`,
+      pageNumber: query.page?.number ?? 1
+    };
+
+    const matchingSites = await Site.findAll({
+      attributes: ["id", "projectId"],
+      where: this.sitesMetaWhere(query),
+      include: SITES_META_PROJECT_INCLUDE
+    });
+    const projectIds = [...new Set(matchingSites.map(({ projectId }) => projectId))];
+    if (projectIds.length === 0) {
+      document.addIndex({ ...indexData, total: 0, ids: [] });
+      return;
+    }
+
+    const builder = PaginatedQueryBuilder.forNumberPage(Project, query.page, [
+      { association: "organisation", attributes: ["name"] }
+    ])
+      .attributes(["id", "uuid", "name", "frameworkKey", "organisationId"])
+      .where({ id: { [Op.in]: projectIds } });
+    if (query.projectUuid != null) builder.where({ uuid: query.projectUuid });
+    const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
+
+    if (projects.length > 0) {
+      const pageProjectIds = projects.map(({ id }) => id);
+      const matchingSiteIds = new Set(matchingSites.map(({ id }) => id));
+      const sites = await Site.findAll({
+        attributes: ["id", "uuid", "projectId", "status", "updateRequestStatus", "aNatRegeneration"],
+        where: { projectId: { [Op.in]: pageProjectIds } }
+      });
+
+      const siteProcessor = this.entitiesService.createEntityProcessor("sites");
+      if (!(siteProcessor instanceof SiteProcessor)) {
+        throw new InternalServerErrorException("Site processor is not available");
+      }
+      const metricsBySiteUuid = await siteProcessor.getProgressMetrics(sites);
+      const metricsOf = (site: Site) =>
+        metricsBySiteUuid.get(site.uuid) ?? {
+          treesPlantedCount: 0,
+          totalHectaresRestoredSum: 0,
+          combinedWorkdayCount: 0,
+          treesRestoredPpc: 0
+        };
+      const sitesByProject = groupBy(sites, "projectId");
+
+      for (const { id, uuid, name, frameworkKey, organisation } of projects) {
+        const projectSites = sitesByProject[id] ?? [];
+        const matchingProjectSites = projectSites.filter(({ id: siteId }) => matchingSiteIds.has(siteId));
+        // The header's filtered totals only count approved sites, as the site index always has.
+        const approvedMatchingSites = matchingProjectSites.filter(({ status }) => status === "approved");
+        // The ANR goal is entered per site, so it totals every approved site in the project, not just the matches.
+        const approvedProjectSites = projectSites.filter(({ status }) => status === "approved");
+        document.addData(
+          uuid,
+          new ProjectSitesMetaDto({
+            uuid,
+            name,
+            organisationName: organisation?.name ?? null,
+            frameworkKey: frameworkKey ?? null,
+            sitesTotal: projectSites.length,
+            sitesMatching: matchingProjectSites.length,
+            sitesRequiringAttention: matchingProjectSites.filter(requiresAttention).length,
+            treesPlantedTotal: sumBy(projectSites, site => metricsOf(site).treesPlantedCount),
+            treesPlantedMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesPlantedCount),
+            hectaresRestoredTotal: sumBy(projectSites, site => metricsOf(site).totalHectaresRestoredSum),
+            hectaresRestoredMatching: sumBy(approvedMatchingSites, site => metricsOf(site).totalHectaresRestoredSum),
+            workdaysMatching: sumBy(approvedMatchingSites, site => metricsOf(site).combinedWorkdayCount),
+            treesRestoredPpcMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesRestoredPpc),
+            aNatRegenerationGoalTotal: sumBy(approvedProjectSites, site => site.aNatRegeneration ?? 0)
+          })
+        );
+      }
+    }
+
+    document.addIndex({ ...indexData, total, ids: projects.map(({ uuid }) => uuid) });
+  }
+
+  private sitesMetaWhere(query: SitesMetaQueryDto): WhereOptions {
+    const clauses: WhereOptions[] = [...this.metaPermissionScope()];
+    if (query.status != null && query.status.length > 0) clauses.push({ status: { [Op.in]: query.status } });
+    if (query.updateRequestStatus != null && query.updateRequestStatus.length > 0) {
+      clauses.push({ updateRequestStatus: { [Op.in]: query.updateRequestStatus } });
+    }
+    if (query.search != null && query.search !== "") {
+      const pattern = `%${query.search}%`;
+      clauses.push({
+        [Op.or]: [{ name: { [Op.like]: pattern } }, { "$project.name$": { [Op.like]: pattern } }]
+      });
+    }
+    return clauses.length === 0 ? {} : { [Op.and]: clauses };
+  }
+
+  /**
+   * Adds an index of report meta for all projects with at least one project, site or nursery report
+   * matching the query's filters. Only sites / nurseries with at least one matching report are
+   * listed. If no statuses are requested, reports requiring attention (due, draft or
+   * information-required, on the report or on its update request) are counted.
    */
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
-    const filter = this.entitiesService.reportFilter(query, REPORTS_REQUIRING_ATTENTION_STATUSES);
-    const reportTypes = query.reportTypes ?? [];
-    const includeProjectReports = reportTypes.length === 0 || reportTypes.includes("projectReports");
-    const includeSites = reportTypes.length === 0 || reportTypes.includes("siteReports");
-    const includeNurseries = reportTypes.length === 0 || reportTypes.includes("nurseryReports");
+    const filter = this.entitiesService.reportFilter(query);
+    const requestedTypes = query.reportTypes ?? [];
+    const reportTypes = REPORTS_META_TYPES.filter(type => requestedTypes.length === 0 || requestedTypes.includes(type));
+    const includeProjectReports = reportTypes.includes("projectReports");
+    const includeSites = reportTypes.includes("siteReports");
+    const includeNurseries = reportTypes.includes("nurseryReports");
     const indexData = {
       resource: getDtoType(ProjectReportMetaDto),
       requestPath: `/entities/v3/${this.resource}/reportsMeta${getStableRequestQuery(query)}`,
       pageNumber: query.page?.number ?? 1
     };
 
-    if (filter == null) {
+    if (filter == null || reportTypes.length === 0) {
       document.addIndex({ ...indexData, total: 0, ids: [] });
       return;
     }
@@ -329,13 +612,17 @@ export class ProjectProcessor extends EntityProcessor<
       { association: "organisation", attributes: ["name"] }
     ])
       .attributes(["id", "uuid", "name", "frameworkKey", "organisationId", "status"])
-      .where({ id: { [Op.in]: filteredProjectsSubquery(filter).literal } });
+      .where({ id: { [Op.in]: filteredProjectsSubquery(reportTypes, filter).literal } });
     const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
 
     if (projects.length > 0) {
       await this.entitiesService.authorize("read", projects);
 
-      const pageFilter = { ...filter, projectIds: projects.map(({ id }) => id) };
+      const pageFilter = {
+        ...filter,
+        requiresAttention: filter.statuses == null,
+        projectIds: projects.map(({ id }) => id)
+      };
       const parentWhere = (type: "siteReports" | "nurseryReports") => ({
         id: { [Op.in]: filteredReportsSubquery(type, "parent", pageFilter).literal }
       });
@@ -566,12 +853,22 @@ export class ProjectProcessor extends EntityProcessor<
     const treesRegeneratingSpeciesCount =
       (await TreeSpecies.visible().collection("anr").siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
     const seedsPlantedCount = (await Seeding.visible().siteReports(approvedSiteReportsQuery).sum("amount")) ?? 0;
+    const treesSeedlingsGrownCount =
+      (await TreeSpecies.visible()
+        .collection("nursery-seedling")
+        .nurseryReports(NurseryReport.approvedIdsSubquery(Nursery.approvedIdsSubquery(projectId)))
+        .sum("amount")) ?? 0;
     const lastReport = await this.getLastReport(projectId);
     const lastReportSurvivalRate = await this.getLastReportSurvivalRate(projectId);
     const plantingStatus = resolveReportPlantingStatus(lastReport);
 
     const treesToBePlantedSpeciesGoalTotal =
       (await TreeSpecies.visible().collection("tree-planted").for(project).sum("amount")) ?? 0;
+    const treesSeedlingsGoal =
+      (await TreeSpecies.visible()
+        .collection("nursery-seedling")
+        .nurseries(Nursery.idsSubquery(projectId))
+        .sum("amount")) ?? 0;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
@@ -582,12 +879,15 @@ export class ProjectProcessor extends EntityProcessor<
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
       totalProjectReports: await ProjectReport.project(projectId).count(),
       treesToBePlantedSpeciesGoalTotal,
+      treesSeedlingsGoal,
+      fullTimeJobsGoal: await this.getFullTimeJobsGoal(projectId),
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
       treesRegeneratingSpeciesCount,
       treesPlantedCount,
       seedsPlantedCount,
+      treesSeedlingsGrownCount,
       treesRestoredPpc:
         regeneratedTreesCount +
         (treesPlantedCount * ((project.survivalRate ?? 0) / 100) +
@@ -662,13 +962,36 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
+    // The by-year total also includes the ANR trees, so the planted goal is the "tree-planting" strategy row.
+    const treesPlantedGoalStrategy = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "tree-planting"),
+      "amount"
+    );
+
     return {
       totalHectaresRestoredGoal,
       treesGrownGoal,
+      treesPlantedGoal: treesPlantedGoalStrategy,
       goalTreesRestoredAnr,
       seedsGrownGoal,
       treesToBeRestoredGoal
     };
+  }
+
+  protected async getFullTimeJobsGoal(projectId: number) {
+    return (
+      (await TrackingEntry.gender().sum("amount", {
+        where: {
+          trackingId: {
+            [Op.in]: Tracking.idsSubquery([projectId], Project.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE,
+              collection: FULL_TIME
+            })
+          }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

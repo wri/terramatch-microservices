@@ -121,9 +121,37 @@ describe("EntitiesController", () => {
       expect(entitiesService().countReports).toHaveBeenCalledWith(query);
       expect(entitiesService().reportingPeriods).toHaveBeenCalledWith(query);
       expect(result.data).toEqual({
-        id: "reportCounts",
+        id: "?statuses%5B0%5D=due",
         type: "reportCounts",
         attributes: { totalReports: 42, reportingPeriods }
+      });
+    });
+  });
+
+  describe("sitesCountsGet", () => {
+    it("returns the total, with an ID that is tied to the requested filters", async () => {
+      processor.findMany.mockResolvedValue({ models: [], paginationTotal: 729 });
+      const query = { status: ["draft", "approved"] };
+      const result = serialize(await controller.sitesCountsGet(query));
+      expect(entitiesService().createEntityProcessor).toHaveBeenCalledWith("sites");
+      expect(processor.findMany).toHaveBeenCalledWith({ ...query, page: { number: 1, size: 1 } });
+      expect(result.data).toEqual({
+        id: "sitesCounts?status%5B0%5D=approved&status%5B1%5D=draft",
+        type: "entityCounts",
+        attributes: { total: 729 }
+      });
+    });
+  });
+
+  describe("nurseriesCountsGet", () => {
+    it("returns the total for the nurseries entity, with an ID that differs from the sites one for the same filters", async () => {
+      processor.findMany.mockResolvedValue({ models: [], paginationTotal: 12 });
+      const result = serialize(await controller.nurseriesCountsGet({ status: ["draft", "approved"] }));
+      expect(entitiesService().createEntityProcessor).toHaveBeenCalledWith("nurseries");
+      expect(result.data).toEqual({
+        id: "nurseriesCounts?status%5B0%5D=approved&status%5B1%5D=draft",
+        type: "entityCounts",
+        attributes: { total: 12 }
       });
     });
   });

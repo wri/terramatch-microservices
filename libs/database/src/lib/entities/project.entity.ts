@@ -133,6 +133,13 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     return Subquery.select(Project, "id").eq("landscape", landscapeName).literal;
   }
 
+  static forCountry(country: string) {
+    const clauses = Subquery.clauseBuilder(Project);
+    return Subquery.select(Project, "id").andLiteral(
+      `JSON_CONTAINS(${clauses.field("level0Project")}, ${clauses.escape(JSON.stringify(country))}, '$') = 1`
+    ).literal;
+  }
+
   static forUuid(uuid: string) {
     return Subquery.select(Project, "id").eq("uuid", uuid).literal;
   }

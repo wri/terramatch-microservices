@@ -129,6 +129,9 @@ export class SiteReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Number })
   numTreesRegenerating: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type SiteReportMedia = Pick<SiteReportFullDto, keyof typeof SiteReport.MEDIA>;
@@ -146,9 +149,6 @@ export class SiteReportFullDto extends SiteReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

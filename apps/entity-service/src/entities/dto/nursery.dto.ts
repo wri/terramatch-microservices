@@ -85,6 +85,9 @@ export class NurseryLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: String })
   projectUuid: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type NurseryMedia = Pick<NurseryFullDto, keyof typeof Nursery.MEDIA>;
@@ -102,9 +105,6 @@ export class NurseryFullDto extends NurseryLightDto {
     description: "When true, report generation is paused for this nursery. Independent of project archival."
   })
   isArchived: boolean;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

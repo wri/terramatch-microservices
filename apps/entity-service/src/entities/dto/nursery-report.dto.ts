@@ -119,6 +119,9 @@ export class NurseryReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Number })
   seedlingsYoungTrees: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type NurseryReportMedia = Pick<NurseryReportFullDto, keyof typeof NurseryReport.MEDIA>;
@@ -134,9 +137,6 @@ export class NurseryReportFullDto extends NurseryReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   projectReportTitle: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

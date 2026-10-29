@@ -577,8 +577,8 @@ export class ProjectProcessor extends EntityProcessor<
   /**
    * Adds an index of report meta for all projects with at least one project, site or nursery report
    * matching the query's filters. Only sites / nurseries with at least one matching report are
-   * listed. If no statuses are requested, reports requiring attention (due, or with
-   * information-required on the report or its update request) are counted.
+   * listed. If no statuses are requested, reports requiring attention (due, draft or
+   * information-required, on the report or on its update request) are counted.
    */
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
     const filter = this.entitiesService.reportFilter(query);

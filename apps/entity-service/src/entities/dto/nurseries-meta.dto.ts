@@ -60,6 +60,12 @@ export class ProjectNurseriesMetaDto {
   @ApiProperty({ description: "Number of nurseries in the project that match the filters" })
   nurseriesMatching: number;
 
+  @ApiProperty({
+    description:
+      'Number of nurseries that match the filters with a status or update request status of "draft" or "information-required"'
+  })
+  nurseriesRequiringAttention: number;
+
   @ApiProperty({ description: "Seedlings grown across all nurseries in the project" })
   seedlingsGrownTotal: number;
 
@@ -128,6 +134,12 @@ export class ProjectSitesMetaDto {
 
   @ApiProperty({ description: "Number of sites in the project that match the filters" })
   sitesMatching: number;
+
+  @ApiProperty({
+    description:
+      'Number of sites that match the filters with a status or update request status of "draft" or "information-required"'
+  })
+  sitesRequiringAttention: number;
 
   @ApiProperty({ description: "Trees planted across all sites in the project" })
   treesPlantedTotal: number;

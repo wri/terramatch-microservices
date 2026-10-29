@@ -65,6 +65,9 @@ export class FinancialReportLightDto extends EntityDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export class FinancialReportFullDto extends FinancialReportLightDto {
@@ -86,9 +89,6 @@ export class FinancialReportFullDto extends FinancialReportLightDto {
 
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

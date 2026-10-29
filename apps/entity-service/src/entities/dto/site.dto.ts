@@ -81,6 +81,12 @@ export class SiteLightDto extends EntityDto {
   @ApiProperty()
   totalSiteReports: number;
 
+  @ApiProperty({
+    nullable: true,
+    type: String
+  })
+  feedback: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -199,9 +205,6 @@ export class SiteFullDto extends SiteLightDto {
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   anrPractices: string[] | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

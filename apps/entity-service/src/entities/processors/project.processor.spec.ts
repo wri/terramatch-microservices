@@ -669,11 +669,23 @@ describe("ProjectProcessor", () => {
       await TreeSpeciesFactory.nurseryReportSeedling(draftNurseryReport).create({ amount: 30 });
 
       const beta = await ProjectFactory.create({ frameworkKey, organisationId, name: "Beta Nurseries" });
-      await NurseryFactory.create({ projectId: beta.id, frameworkKey, name: "Beta Nursery", status: "approved" });
+      await NurseryFactory.create({
+        projectId: beta.id,
+        frameworkKey,
+        name: "Beta Nursery",
+        status: "approved",
+        updateRequestStatus: null
+      });
 
       // Has only a draft nursery, so it is listed without filters and not when filtering by approved.
       const gamma = await ProjectFactory.create({ frameworkKey, organisationId, name: "Gamma" });
-      await NurseryFactory.create({ projectId: gamma.id, frameworkKey, name: "Gamma Nursery", status: "draft" });
+      await NurseryFactory.create({
+        projectId: gamma.id,
+        frameworkKey,
+        name: "Gamma Nursery",
+        status: "draft",
+        updateRequestStatus: null
+      });
 
       for (const { id: projectId } of [alpha, beta, gamma]) {
         await ProjectUserFactory.create({ userId: user.id, projectId, isManaging: true });
@@ -710,6 +722,7 @@ describe("ProjectProcessor", () => {
           frameworkKey,
           nurseriesTotal: 2,
           nurseriesMatching: 2,
+          nurseriesRequiringAttention: 1,
           seedlingsGrownTotal: 180,
           seedlingsGrownMatching: 180,
           seedlingsGrownGoalTotal: 400
@@ -721,6 +734,7 @@ describe("ProjectProcessor", () => {
           frameworkKey,
           nurseriesTotal: 1,
           nurseriesMatching: 1,
+          nurseriesRequiringAttention: 0,
           seedlingsGrownTotal: 0,
           seedlingsGrownMatching: 0,
           seedlingsGrownGoalTotal: 0
@@ -732,6 +746,7 @@ describe("ProjectProcessor", () => {
           frameworkKey,
           nurseriesTotal: 1,
           nurseriesMatching: 1,
+          nurseriesRequiringAttention: 1,
           seedlingsGrownTotal: 0,
           seedlingsGrownMatching: 0,
           seedlingsGrownGoalTotal: 0
@@ -749,9 +764,34 @@ describe("ProjectProcessor", () => {
         uuid: alpha.uuid,
         nurseriesTotal: 2,
         nurseriesMatching: 1,
+        nurseriesRequiringAttention: 0,
         seedlingsGrownTotal: 180,
         seedlingsGrownMatching: 150
       });
+    });
+
+    it("counts the matching nurseries with a draft or information-required status or change request", async () => {
+      const { alpha } = await createData();
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Info Nursery",
+        status: "approved",
+        updateRequestStatus: "information-required"
+      });
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Pending Nursery",
+        status: "approved",
+        updateRequestStatus: "pending-approval"
+      });
+
+      const all = await getIndex({ projectUuid: alpha.uuid });
+      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 4, nurseriesRequiringAttention: 2 });
+
+      const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
+      expect(filtered.attributes[0]).toMatchObject({ nurseriesMatching: 1, nurseriesRequiringAttention: 1 });
     });
 
     it("matches the search against the nursery, project and organisation names", async () => {
@@ -849,6 +889,7 @@ describe("ProjectProcessor", () => {
         name: "Alpha Sites",
         sitesTotal: 2,
         sitesMatching: 2,
+        sitesRequiringAttention: 1,
         treesPlantedTotal: 70,
         treesPlantedMatching: 50
       });
@@ -864,9 +905,34 @@ describe("ProjectProcessor", () => {
         uuid: alpha.uuid,
         sitesTotal: 2,
         sitesMatching: 1,
+        sitesRequiringAttention: 0,
         treesPlantedTotal: 70,
         treesPlantedMatching: 50
       });
+    });
+
+    it("counts the matching sites with a draft or information-required status or change request", async () => {
+      const { alpha } = await createData();
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Info Site",
+        status: "approved",
+        updateRequestStatus: "information-required"
+      });
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Pending Site",
+        status: "approved",
+        updateRequestStatus: "pending-approval"
+      });
+
+      const all = await getIndex({ projectUuid: alpha.uuid });
+      expect(all.attributes[0]).toMatchObject({ sitesMatching: 4, sitesRequiringAttention: 2 });
+
+      const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
+      expect(filtered.attributes[0]).toMatchObject({ sitesMatching: 1, sitesRequiringAttention: 1 });
     });
 
     it("matches the search against the site and project names", async () => {

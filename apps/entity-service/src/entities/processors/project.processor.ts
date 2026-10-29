@@ -26,6 +26,7 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, Project
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
@@ -68,6 +69,13 @@ import {
   REPORT_FILTER_MODELS,
   ReportFilter
 } from "../report-filters";
+
+const ENTITY_ATTENTION_STATUSES: readonly string[] = [DRAFT, INFORMATION_REQUIRED];
+
+// Sites and nurseries need attention when the entity or its update request is a draft or needs information.
+const requiresAttention = ({ status, updateRequestStatus }: Pick<Site, "status" | "updateRequestStatus">) =>
+  ENTITY_ATTENTION_STATUSES.includes(status) ||
+  (updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
 
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
@@ -353,7 +361,7 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingNurseryIds = new Set(matchingNurseries.map(({ id }) => id));
       const nurseries = await Nursery.findAll({
-        attributes: ["id", "projectId", "status"],
+        attributes: ["id", "projectId", "status", "updateRequestStatus"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
       const seedlingsByNursery = await this.seedlingsGrownByNursery(nurseries.map(({ id }) => id));
@@ -376,6 +384,7 @@ export class ProjectProcessor extends EntityProcessor<
             frameworkKey: frameworkKey ?? null,
             nurseriesTotal: projectNurseries.length,
             nurseriesMatching: matchingProjectNurseries.length,
+            nurseriesRequiringAttention: matchingProjectNurseries.filter(requiresAttention).length,
             seedlingsGrownTotal: sumBy(projectNurseries, ({ id: nurseryId }) => seedlingsByNursery.get(nurseryId) ?? 0),
             seedlingsGrownMatching: sumBy(
               matchingProjectNurseries,
@@ -510,7 +519,7 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingSiteIds = new Set(matchingSites.map(({ id }) => id));
       const sites = await Site.findAll({
-        attributes: ["id", "uuid", "projectId", "status", "aNatRegeneration"],
+        attributes: ["id", "uuid", "projectId", "status", "updateRequestStatus", "aNatRegeneration"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
 
@@ -544,6 +553,7 @@ export class ProjectProcessor extends EntityProcessor<
             frameworkKey: frameworkKey ?? null,
             sitesTotal: projectSites.length,
             sitesMatching: matchingProjectSites.length,
+            sitesRequiringAttention: matchingProjectSites.filter(requiresAttention).length,
             treesPlantedTotal: sumBy(projectSites, site => metricsOf(site).treesPlantedCount),
             treesPlantedMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesPlantedCount),
             hectaresRestoredTotal: sumBy(projectSites, site => metricsOf(site).totalHectaresRestoredSum),

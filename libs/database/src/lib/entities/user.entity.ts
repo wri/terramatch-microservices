@@ -159,11 +159,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   @Column(STRING)
   declare banners: string | null;
 
-  /** @deprecated API keys now live in the api_keys table (see ApiKey). To be removed in TM-4131. */
-  @AllowNull
-  @Column(STRING)
-  declare apiKey: string | null;
-
   @AllowNull
   @Column(STRING)
   declare country: string | null;

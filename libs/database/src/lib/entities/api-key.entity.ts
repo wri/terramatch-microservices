@@ -8,7 +8,16 @@ import {
   PrimaryKey,
   Table
 } from "sequelize-typescript";
-import { BIGINT, CreationOptional, DATE, InferAttributes, InferCreationAttributes, Op, STRING } from "sequelize";
+import {
+  Attributes,
+  BIGINT,
+  CreationOptional,
+  DATE,
+  InferAttributes,
+  InferCreationAttributes,
+  Op,
+  STRING
+} from "sequelize";
 import { InternalServerErrorException } from "@nestjs/common";
 import { DateTime, DurationLike } from "luxon";
 import crypto from "node:crypto";
@@ -34,15 +43,16 @@ export class ApiKey extends Model<InferAttributes<ApiKey>, InferCreationAttribut
   }
 
   /**
-   * Finds the id of the (non-deleted) user that owns the given key, if the key exists and has not expired.
+   * Finds the (non-deleted) user that owns the given key, if the key exists and has not expired.
+   * If `attributes` is provided, only those user attributes are loaded; otherwise all are.
    */
-  static async findUserId(key: string) {
+  static async findUser(key: string, attributes?: (keyof Attributes<User>)[]) {
     const apiKey = await ApiKey.findOne({
       where: { key, [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }] },
-      attributes: ["userId"],
-      include: [{ association: "user", attributes: [], required: true }]
+      attributes: ["id"],
+      include: [{ association: "user", attributes, required: true }]
     });
-    return apiKey?.userId ?? null;
+    return apiKey?.user ?? null;
   }
 
   /**

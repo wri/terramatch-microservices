@@ -69,6 +69,8 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { GeoJsonExportBodyDto } from "../geojson-export/dto/geojson-export-request.dto";
+import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "../geojson-export/geojson-export.processor";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
@@ -103,7 +105,8 @@ export class SitePolygonsController {
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
     private readonly sitePolygonSummaryService: SitePolygonSummaryService,
-    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
+    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue,
+    @InjectQueue(GEOJSON_EXPORT_QUEUE) private readonly geoJsonExportQueue: Queue
   ) {}
 
   private readonly logger = new Logger(SitePolygonsController.name);
@@ -250,6 +253,27 @@ export class SitePolygonsController {
     const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
 
     return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
+  }
+
+  @Post("exports")
+  @ApiOperation({
+    operationId: "createSitePolygonsGeoJsonExport",
+    summary: "Export active site polygons as a GeoJSON file in a delayed job",
+    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids. The file is written to S3
+    in the background; the completed delayed job payload holds a fileDownloads resource with a signed URL.`
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Exactly one of projectUuids, siteUuids or polygonUuids must be provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "A requested project or site was not found." })
+  async createGeoJsonExport(@Body() payload: GeoJsonExportBodyDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const scope = payload.data.attributes;
+    const { entityName, entityType } = await this.geoJsonExportService.getExportTarget(scope);
+    return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType);
   }
 
   @Get("mapIndex")

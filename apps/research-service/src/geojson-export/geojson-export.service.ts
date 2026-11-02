@@ -18,6 +18,16 @@ import { GeoJsonQueryDto } from "./dto/geojson-query.dto";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { Includeable, Op } from "sequelize";
 import { CustomAttributeMap, PolygonAttributeValuesService } from "../site-polygons/polygon-attribute-values.service";
+import { GeoJsonExportAttributes } from "./dto/geojson-export-request.dto";
+import { GEOJSON_EXPORT_SITE_ATTRIBUTES, GeoJsonExportQueryBuilder } from "./geojson-export-query.builder";
+import { once } from "events";
+import { uniq } from "lodash";
+
+const EXPORT_BATCH_SIZE = 500;
+
+const writeChunk = async (destination: NodeJS.WritableStream, chunk: string) => {
+  if (!destination.write(chunk)) await once(destination, "drain");
+};
 
 @Injectable()
 export class GeoJsonExportService {
@@ -26,7 +36,7 @@ export class GeoJsonExportService {
   constructor(private readonly polygonAttributeValuesService: PolygonAttributeValuesService) {}
 
   private siteIncludeForGeoJson(): Includeable[] {
-    return [{ model: Site, attributes: ["uuid", "name", "ppcExternalId", "frameworkKey"] }];
+    return [{ model: Site, attributes: GEOJSON_EXPORT_SITE_ATTRIBUTES }];
   }
 
   async getGeoJson(query: GeoJsonQueryDto): Promise<FeatureCollection> {
@@ -149,19 +159,7 @@ export class GeoJsonExportService {
       }
     }
 
-    const sitePolygonUuids = sitePolygons.map(sp => sp.uuid);
-    let extendedDataMap: Map<string, Record<string, unknown>> | null = null;
-    if (includeExtendedData) {
-      const extendedDataRecords = await SitePolygonData.findAll({
-        where: { sitePolygonUuid: sitePolygonUuids }
-      });
-      extendedDataMap = new Map();
-      for (const record of extendedDataRecords) {
-        if (record.data != null) {
-          extendedDataMap.set(record.sitePolygonUuid, record.data as Record<string, unknown>);
-        }
-      }
-    }
+    const extendedDataMap = includeExtendedData ? await this.loadExtendedDataMap(sitePolygons) : null;
 
     const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext(sitePolygons);
 
@@ -245,19 +243,7 @@ export class GeoJsonExportService {
       }
     }
 
-    const sitePolygonUuids = sitePolygons.map(sp => sp.uuid);
-    let extendedDataMap: Map<string, Record<string, unknown>> | null = null;
-    if (includeExtendedData) {
-      const extendedDataRecords = await SitePolygonData.findAll({
-        where: { sitePolygonUuid: sitePolygonUuids }
-      });
-      extendedDataMap = new Map();
-      for (const record of extendedDataRecords) {
-        if (record.data != null) {
-          extendedDataMap.set(record.sitePolygonUuid, record.data as Record<string, unknown>);
-        }
-      }
-    }
+    const extendedDataMap = includeExtendedData ? await this.loadExtendedDataMap(sitePolygons) : null;
 
     const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext(sitePolygons);
 
@@ -289,6 +275,111 @@ export class GeoJsonExportService {
     }
 
     return features;
+  }
+
+  /**
+   * Validates an export scope and resolves the name used for the delayed job and the file.
+   */
+  async getExportTarget({
+    projectUuids,
+    siteUuids,
+    polygonUuids
+  }: GeoJsonExportAttributes): Promise<{ entityName: string; entityType?: string }> {
+    if ([projectUuids, siteUuids, polygonUuids].filter(isNotNull).length !== 1) {
+      throw new BadRequestException("Exactly one of projectUuids, siteUuids or polygonUuids must be provided");
+    }
+
+    if (projectUuids != null) {
+      const uuids = uniq(projectUuids);
+      const projects = await Project.findAll({ where: { uuid: uuids }, attributes: ["name"] });
+      if (projects.length !== uuids.length) throw new NotFoundException("One or more projects were not found");
+      return {
+        entityName: projects.length === 1 ? (projects[0].name ?? "Project") : `${projects.length} projects`,
+        entityType: Project.LARAVEL_TYPE
+      };
+    }
+
+    if (siteUuids != null) {
+      const uuids = uniq(siteUuids);
+      const sites = await Site.findAll({ where: { uuid: uuids }, attributes: ["name"] });
+      if (sites.length !== uuids.length) throw new NotFoundException("One or more sites were not found");
+      return {
+        entityName: sites.length === 1 ? (sites[0].name ?? "Site") : `${sites.length} sites`,
+        entityType: Site.LARAVEL_TYPE
+      };
+    }
+
+    return { entityName: `${uniq(polygonUuids).length} selected` };
+  }
+
+  /**
+   * Streams a GeoJSON FeatureCollection for the requested scope to the destination in batches, so
+   * memory stays bounded by the batch size instead of the size of the project. Geometry JSON from
+   * the DB is written as-is instead of being parsed and re-serialized.
+   */
+  async writeFeatureCollection(
+    destination: NodeJS.WritableStream,
+    { projectUuids, siteUuids, polygonUuids }: GeoJsonExportAttributes,
+    onProgress: (processed: number, total: number) => Promise<void>
+  ) {
+    const builder = new GeoJsonExportQueryBuilder(EXPORT_BATCH_SIZE);
+    if (projectUuids != null) await builder.filterProjectUuids(projectUuids);
+    if (siteUuids != null) await builder.filterSiteUuids(siteUuids);
+    if (polygonUuids != null) await builder.filterPolygonUuids(polygonUuids);
+
+    // The destination must always be ended, or an S3 upload reading from it would never complete.
+    try {
+      const total = await builder.paginationTotal();
+      await onProgress(0, total);
+
+      await writeChunk(destination, '{"type":"FeatureCollection","features":[');
+      let processed = 0;
+      let written = 0;
+      for (let page = 1; page <= Math.ceil(total / EXPORT_BATCH_SIZE); page++) {
+        const sitePolygons = await builder.pageNumber(page).execute();
+        const features = await this.buildFeatureJson(sitePolygons);
+        if (features.length > 0) {
+          await writeChunk(destination, `${written > 0 ? "," : ""}${features.join(",")}`);
+          written += features.length;
+        }
+        processed += sitePolygons.length;
+        await onProgress(processed, total);
+      }
+      await writeChunk(destination, "]}");
+    } finally {
+      destination.end();
+    }
+  }
+
+  private async buildFeatureJson(sitePolygons: SitePolygon[]) {
+    const polygonUuids = sitePolygons.map(({ polygonUuid }) => polygonUuid).filter(isNotNull);
+    if (polygonUuids.length === 0) return [];
+
+    const geometries = new Map(
+      (await PolygonGeometry.getGeoJSONBatch(polygonUuids)).map(({ uuid, geoJson }) => [uuid, geoJson])
+    );
+    const extendedDataMap = await this.loadExtendedDataMap(sitePolygons);
+    const { keysByFramework, valuesByUuid } = await this.loadCustomAttributeExportContext(sitePolygons);
+
+    return sitePolygons.flatMap(sitePolygon => {
+      const geometry = sitePolygon.polygonUuid == null ? undefined : geometries.get(sitePolygon.polygonUuid);
+      if (geometry == null) return [];
+
+      const properties = this.buildProperties(sitePolygon, true, null, extendedDataMap, keysByFramework, valuesByUuid);
+      return [`{"type":"Feature","geometry":${geometry},"properties":${JSON.stringify(properties)}}`];
+    });
+  }
+
+  private async loadExtendedDataMap(sitePolygons: SitePolygon[]) {
+    const records = await SitePolygonData.findAll({
+      where: { sitePolygonUuid: sitePolygons.map(({ uuid }) => uuid) },
+      attributes: ["sitePolygonUuid", "data"]
+    });
+    const extendedDataMap = new Map<string, Record<string, unknown>>();
+    for (const { sitePolygonUuid, data } of records) {
+      if (data != null) extendedDataMap.set(sitePolygonUuid, data as Record<string, unknown>);
+    }
+    return extendedDataMap;
   }
 
   private async loadCustomAttributeExportContext(sitePolygons: SitePolygon[]): Promise<{

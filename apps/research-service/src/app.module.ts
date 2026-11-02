@@ -31,6 +31,7 @@ import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
 import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
+import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "./geojson-export/geojson-export.processor";
 import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 import { ProjectPolygonsController } from "./project-polygons/project-polygons.controller";
@@ -70,7 +71,8 @@ const IS_REPL = process.env["REPL"] === "true";
     BullModule.registerQueue({ name: "indicators" }),
     BullModule.registerQueue({ name: "clipping" }),
     BullModule.registerQueue({ name: "sitePolygons" }),
-    BullModule.registerQueue({ name: "email" })
+    BullModule.registerQueue({ name: "email" }),
+    BullModule.registerQueue({ name: GEOJSON_EXPORT_QUEUE })
   ],
   controllers: [
     SitePolygonsController,
@@ -111,7 +113,9 @@ const IS_REPL = process.env["REPL"] === "true";
     ResearchTreeCountsService,
     ProjectMapIndexService,
 
-    ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
+    ...(IS_REPL
+      ? []
+      : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor, GeoJsonExportProcessor])
   ]
 })
 export class AppModule {}

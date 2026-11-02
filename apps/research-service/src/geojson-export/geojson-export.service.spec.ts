@@ -568,7 +568,8 @@ describe("GeoJsonExportService", () => {
         expect(result.features[0].properties).toMatchObject(extendedData1);
         expect(result.features[1].properties).toMatchObject(extendedData2);
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
-          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2] }
+          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2] },
+          attributes: ["sitePolygonUuid", "data"]
         });
       });
 
@@ -901,7 +902,8 @@ describe("GeoJsonExportService", () => {
         expect(result.features[0].properties).toMatchObject(extendedData1);
         expect(result.features[1].properties).toMatchObject(extendedData2);
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
-          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2, sitePolygonUuid3] }
+          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2, sitePolygonUuid3] },
+          attributes: ["sitePolygonUuid", "data"]
         });
       });
 

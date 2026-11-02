@@ -13,8 +13,11 @@ export class UserQueryDto extends IndexQueryDto {
   @TransformBooleanString()
   isVerified?: boolean;
 
-  @ApiProperty({ required: false, description: "Filter users by primary role name" })
+  @ApiProperty({
+    required: false,
+    description: "Filter users by role; any user that has this role in their roles array is included."
+  })
   @IsOptional()
   @IsString()
-  primaryRole?: string;
+  role?: string;
 }

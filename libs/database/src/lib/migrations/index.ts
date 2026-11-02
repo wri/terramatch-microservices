@@ -52,6 +52,12 @@ import { addPitchProjectEthiopiaFields } from "./202610051200-add-pitch-project-
 import { removeUserProgramColumn } from "./202610071200-remove-user-program-column";
 import { addInviteNameColumns } from "./202610081200-add-invite-name-columns";
 import { removeProjectUsersIsMonitoringColumn } from "./202610081200-remove-project-users-is-monitoring-column";
+import { dropRolePermissionTables } from "./202610141200-drop-role-permission-tables";
+import { removeProjectUsersStatusColumn } from "./202610151200-remove-project-users-status-column";
+import { updateNotifications } from "./202610201200-update-notifications";
+import { addNotificationsUuid } from "./202610221200-add-notifications-uuid";
+import { extendSitePolygonSiteScopedQueryIndex } from "./202610221200-extend-site-polygon-site-scoped-query-index";
+import { createApiKeys } from "./202610231200-create-api-keys";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -105,5 +111,11 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addPitchProjectEthiopiaFields,
   removeUserProgramColumn,
   addInviteNameColumns,
-  removeProjectUsersIsMonitoringColumn
+  removeProjectUsersIsMonitoringColumn,
+  dropRolePermissionTables,
+  removeProjectUsersStatusColumn,
+  updateNotifications,
+  addNotificationsUuid,
+  extendSitePolygonSiteScopedQueryIndex,
+  createApiKeys
 ];

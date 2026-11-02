@@ -143,9 +143,14 @@ describe("SitePolygonSummaryService", () => {
     it("aggregates across a project context scope without a project or site, hiding test projects", async () => {
       const organisation = await OrganisationFactory.create();
       const [project, otherCountry, testProject] = await Promise.all([
-        ProjectFactory.create({ frameworkKey: "ppc", country: "KE", organisationId: organisation.id }),
-        ProjectFactory.create({ frameworkKey: "ppc", country: "GH", organisationId: organisation.id }),
-        ProjectFactory.create({ frameworkKey: "ppc", country: "KE", organisationId: organisation.id, isTest: true })
+        ProjectFactory.create({ frameworkKey: "ppc", level0Project: ["KE"], organisationId: organisation.id }),
+        ProjectFactory.create({ frameworkKey: "ppc", level0Project: ["GH"], organisationId: organisation.id }),
+        ProjectFactory.create({
+          frameworkKey: "ppc",
+          level0Project: ["KE"],
+          organisationId: organisation.id,
+          isTest: true
+        })
       ]);
       await Promise.all(
         [project, otherCountry, testProject].map(({ id }) =>

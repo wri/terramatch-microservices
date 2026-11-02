@@ -17,6 +17,7 @@ import bcrypt from "bcryptjs";
 import { Queue } from "bullmq";
 import crypto from "node:crypto";
 import { col, fn, Op } from "sequelize";
+import { assertValidRoleCombination } from "@terramatch-microservices/database/constants/permissions";
 import { UserQueryDto } from "./dto/user-query.dto";
 import { UserUpdateAttributes } from "./dto/user-update.dto";
 
@@ -95,8 +96,8 @@ export class UsersService {
       });
     }
 
-    if (query.primaryRole != null) {
-      builder.where(fn("JSON_CONTAINS", col("User.roles"), JSON.stringify(query.primaryRole)));
+    if (query.role != null) {
+      builder.where(fn("JSON_CONTAINS", col("User.roles"), JSON.stringify(query.role)));
     }
 
     if (query.isVerified != null) {
@@ -153,6 +154,9 @@ export class UsersService {
   }
 
   async update(user: User, update: UserUpdateAttributes) {
+    if (update.roles != null) {
+      assertValidRoleCombination(update.roles);
+    }
     let organisationEntity: Organisation | null = null;
     let frameworkEntities: Framework[] = [];
     if (update.organisationUuid != null) {
@@ -191,7 +195,12 @@ export class UsersService {
       user.password = await bcrypt.hash(update.password, 10);
     }
 
-    user.organisationId = organisationEntity?.id ?? user.organisationId;
+    // An explicit null clears the organisation, while an absent value leaves it untouched.
+    if (update.organisationUuid !== undefined) {
+      user.organisationId = organisationEntity?.id ?? null;
+      // Keep the preloaded association in sync so the response DTO reflects the change.
+      user.organisation = organisationEntity;
+    }
     user.firstName = update.firstName ?? user.firstName;
     user.lastName = update.lastName ?? user.lastName;
     user.emailAddress = update.emailAddress ?? user.emailAddress;

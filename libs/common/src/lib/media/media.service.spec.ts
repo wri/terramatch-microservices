@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { User } from "@terramatch-microservices/database/entities/user.entity";
-import { mediaConfiguration, MediaConfiguration } from "@terramatch-microservices/database/constants/media-owners";
+import {
+  mediaConfiguration,
+  MediaConfiguration,
+  sizeValidation
+} from "@terramatch-microservices/database/constants/media-owners";
 import { MediaService } from "./media.service";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
@@ -163,10 +167,12 @@ describe("MediaService", () => {
     });
 
     it("should throw when file size is above limit", async () => {
-      mockConfiguration({ dbCollection: "documents", multiple: false, validation: "general-documents" });
-      const file = createTestFile("application/pdf", "pdf", 10 * 1024 * 1024);
+      const validation = "general-documents";
+      mockConfiguration({ dbCollection: "documents", multiple: false, validation });
+      const sizeLimit = sizeValidation(validation) ?? "";
+      const file = createTestFile("application/pdf", "pdf", parseInt(sizeLimit) * 1024 * 1024 + 1);
       await expect(service.createMedia(new Project(), "projects", creator.id, "documents", file)).rejects.toThrow(
-        "File size must be less than 5MB"
+        `File size must be less than ${sizeLimit}`
       );
     });
 

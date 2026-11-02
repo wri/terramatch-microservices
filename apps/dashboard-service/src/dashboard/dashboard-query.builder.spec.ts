@@ -60,7 +60,7 @@ describe("DashboardProjectsQueryBuilder", () => {
     builder.queryFilters({ country: "MX" });
     const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
     expect(where[Op.and]).toBeDefined();
-    expect(where[Op.and]?.[0]).toMatchObject({ country: "MX", isTest: false });
+    expect(where[Op.and]?.[0]).toMatchObject({ id: { [Op.in]: Project.forCountry("MX") }, isTest: false });
     expect(builder["findOptions"].include).toBeDefined();
   });
 
@@ -85,7 +85,7 @@ describe("DashboardProjectsQueryBuilder", () => {
     });
     const where = builder["findOptions"].where as { [Op.and]?: unknown[] };
     expect(where[Op.and]).toBeDefined();
-    expect(where[Op.and]?.[0]).toMatchObject({ country: "Kenya" });
+    expect(where[Op.and]?.[0]).toMatchObject({ id: { [Op.in]: Project.forCountry("Kenya") } });
     expect(where[Op.and]?.[1]).toMatchObject({ cohort: { [Op.in]: ["2023"] } });
     expect((builder["findOptions"].include as Includeable[] | undefined)?.[0]).toHaveProperty(
       "association",

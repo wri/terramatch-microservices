@@ -11,9 +11,14 @@ const attributes = (roles?: unknown) => ({
 });
 
 describe("AdminUserCreateAttributes", () => {
-  it("accepts a list of valid roles", async () => {
-    const errors = await validate(plainToInstance(AdminUserCreateAttributes, attributes(["admin-ppc", "funder"])));
+  it("accepts multiple framework admin roles", async () => {
+    const errors = await validate(plainToInstance(AdminUserCreateAttributes, attributes(["admin-ppc", "admin-hbf"])));
     expect(errors).toHaveLength(0);
+  });
+
+  it("rejects a non framework admin role combined with another role", async () => {
+    const errors = await validate(plainToInstance(AdminUserCreateAttributes, attributes(["admin-ppc", "funder"])));
+    expect(errors.map(({ property }) => property)).toEqual(["roles"]);
   });
 
   it("rejects an empty list of roles", async () => {

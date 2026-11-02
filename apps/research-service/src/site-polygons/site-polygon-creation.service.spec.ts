@@ -23,7 +23,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CRITERIA_ID_TO_VALIDATION_TYPE } from "@terramatch-microservices/database/constants";
 import { FeatureCollection } from "geojson";
 import { EventService } from "@terramatch-microservices/common/events/event.service";
-import { Transaction } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
@@ -1292,7 +1292,7 @@ describe("SitePolygonCreationService", () => {
         transaction
       );
       expect(CriteriaSite.destroy).toHaveBeenCalledWith({
-        where: { polygonId: basePolygon.polygonUuid },
+        where: { polygonId: { [Op.in]: [basePolygon.polygonUuid] } },
         transaction
       });
     });

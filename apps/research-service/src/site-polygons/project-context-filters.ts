@@ -17,7 +17,12 @@ export const projectContextIdsSubquery = (
 ) => {
   const projectIds = Subquery.select(Project, "id");
   if (frameworkKey != null && frameworkKey.length > 0) projectIds.in("frameworkKey", frameworkKey);
-  if (country != null && country.length > 0) projectIds.in("country", country);
+  if (country != null && country.length > 0) {
+    // Projects are single-country for now: match only the first level0Project entry, which is the one displayed.
+    const clauses = Subquery.clauseBuilder(Project);
+    const countries = country.map(code => clauses.escape(code)).join(",");
+    projectIds.andLiteral(`JSON_UNQUOTE(JSON_EXTRACT(${clauses.field("level0Project")}, '$[0]')) IN (${countries})`);
+  }
   if (organisationUuid != null && organisationUuid.length > 0) {
     projectIds.in("organisationId", Subquery.select(Organisation, "id").in("uuid", organisationUuid).literal);
   }

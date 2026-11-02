@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import {
+  AnrPlotGeometry,
   SitePolygon,
   PolygonUpdates,
   PolygonGeometry,
@@ -62,6 +63,8 @@ describe("SitePolygonVersioningService", () => {
     // Default: no custom attribute values to copy. Individual tests override this as needed.
     jest.spyOn(SitePolygonAttributeValue, "findAll").mockResolvedValue([]);
     jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
+    jest.spyOn(AnrPlotGeometry, "findAll").mockResolvedValue([]);
+    jest.spyOn(AnrPlotGeometry, "bulkCreate").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -676,6 +679,74 @@ describe("SitePolygonVersioningService", () => {
 
         expect(callOrder).toEqual(["copyAttributeValues", "deactivateOtherVersions"]);
         expect(bulkCreateSpy).toHaveBeenCalledWith(expect.anything(), { transaction: mockTransaction });
+      });
+    });
+
+    describe("ANR plot copying", () => {
+      const buildBasePolygon = (id: number, uuid: string) =>
+        ({
+          id,
+          uuid,
+          primaryUuid: `primary-${uuid}`,
+          get: jest.fn().mockReturnValue({ id, uuid, primaryUuid: `primary-${uuid}` })
+        }) as unknown as SitePolygon;
+
+      beforeEach(() => {
+        jest.spyOn(SitePolygon, "update").mockResolvedValue([1] as [affectedCount: number]);
+        jest.spyOn(PolygonUpdates, "bulkCreate").mockResolvedValue([]);
+      });
+
+      it("should copy ANR plots to the new version when the geometry is unchanged", async () => {
+        const geojson = { type: "FeatureCollection", features: [] };
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ id: 20, uuid: "new-uuid" } as SitePolygon]);
+        const findAllSpy = jest
+          .spyOn(AnrPlotGeometry, "findAll")
+          .mockResolvedValue([{ sitePolygonId: 10, geojson, plotCount: 3, createdBy: 7 } as AnrPlotGeometry]);
+        const bulkCreateSpy = jest.spyOn(AnrPlotGeometry, "bulkCreate").mockResolvedValue([]);
+
+        await service.createVersions(
+          [
+            {
+              basePolygon: buildBasePolygon(10, "base-uuid"),
+              attributeChanges: { submissionCycle: "cycle-1" },
+              newPolygonGeometryUuid: null,
+              userId: 1,
+              changeReason: "Attribute only",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(findAllSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { sitePolygonId: { [Op.in]: [10] } }, transaction: mockTransaction })
+        );
+        expect(bulkCreateSpy).toHaveBeenCalledWith([{ sitePolygonId: 20, geojson, plotCount: 3, createdBy: 7 }], {
+          transaction: mockTransaction
+        });
+      });
+
+      it("should not copy ANR plots when the geometry changed", async () => {
+        jest.spyOn(SitePolygon, "bulkCreate").mockResolvedValue([{ id: 20, uuid: "new-uuid" } as SitePolygon]);
+        const findAllSpy = jest.spyOn(AnrPlotGeometry, "findAll");
+        const bulkCreateSpy = jest.spyOn(AnrPlotGeometry, "bulkCreate");
+
+        await service.createVersions(
+          [
+            {
+              basePolygon: buildBasePolygon(10, "base-uuid"),
+              attributeChanges: {},
+              newPolygonGeometryUuid: "new-geometry-uuid",
+              userId: 1,
+              changeReason: "Geometry",
+              userFullName: "User One"
+            }
+          ],
+          mockTransaction
+        );
+
+        expect(findAllSpy).not.toHaveBeenCalled();
+        expect(bulkCreateSpy).not.toHaveBeenCalled();
       });
     });
   });

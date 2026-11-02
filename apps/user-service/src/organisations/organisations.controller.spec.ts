@@ -1,4 +1,8 @@
 import { OrganisationsController } from "./organisations.controller";
+import {
+  ORGANISATION_APPROVED,
+  ProductEventService
+} from "@terramatch-microservices/common/product-events/product-event.service";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
@@ -40,6 +44,7 @@ import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-specie
 import { ORGANISATIONS_EXPORT, USER_SERVICE_EXPORT_QUEUE } from "../exports/user-service-exports.processor";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-download.dto";
+import { Response } from "express";
 
 const createRequest = (attributes: OrganisationCreateAttributes = new OrganisationCreateAttributes()) => ({
   data: { type: "organisations", attributes }
@@ -54,6 +59,7 @@ describe("OrganisationsController", () => {
   let emailQueue: DeepMocked<Queue>;
   let exportQueue: DeepMocked<Queue>;
   let csvExportService: DeepMocked<CsvExportService>;
+  let productEventService: DeepMocked<ProductEventService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -72,6 +78,7 @@ describe("OrganisationsController", () => {
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
         { provide: getQueueToken("email"), useValue: (emailQueue = createMock<Queue>()) },
         { provide: getQueueToken(USER_SERVICE_EXPORT_QUEUE), useValue: (exportQueue = createMock<Queue>()) },
+        { provide: ProductEventService, useValue: (productEventService = createMock<ProductEventService>()) },
         { provide: REQUEST, useValue: {} }
       ]
     }).compile();
@@ -1011,6 +1018,38 @@ describe("OrganisationsController", () => {
     });
   });
 
+  describe("exportOrganisation", () => {
+    it("should authorize read and delegate the CSV export to the service", async () => {
+      const org = await OrganisationFactory.create();
+      const response = {} as Response;
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockResolvedValue(undefined);
+
+      await controller.exportOrganisation(org.uuid, response);
+
+      expect(organisationsService.findOne).toHaveBeenCalledWith(org.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", org);
+      expect(organisationsService.exportCsv).toHaveBeenCalledWith(org, response);
+    });
+
+    it("should throw UnauthorizedException if policy does not authorize", async () => {
+      const org = await OrganisationFactory.create();
+      organisationsService.findOne.mockResolvedValue(org);
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.exportOrganisation(org.uuid, {} as Response)).rejects.toThrow(UnauthorizedException);
+      expect(organisationsService.exportCsv).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException if organisation does not exist", async () => {
+      organisationsService.findOne.mockRejectedValue(new NotFoundException());
+
+      await expect(controller.exportOrganisation("non-existent-uuid", {} as Response)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+  });
+
   describe("update", () => {
     it("should update organisation and return updated organisation", async () => {
       const org = await OrganisationFactory.create();
@@ -1107,10 +1146,7 @@ describe("OrganisationsController", () => {
       await controller.update(org.uuid, updatePayload);
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
-      expect(emailQueue.add).toHaveBeenCalledWith("organisationApproved", {
-        organisationId: org.id,
-        approvedByUserId: 123
-      });
+      expect(productEventService.notify).toHaveBeenCalledWith(ORGANISATION_APPROVED, org);
     });
 
     it("should use approveReject authorization when status changes to rejected", async () => {
@@ -1185,6 +1221,7 @@ describe("OrganisationsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
       expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(productEventService.notify).not.toHaveBeenCalled();
     });
 
     it("should not queue email if userId is null", async () => {
@@ -1209,6 +1246,7 @@ describe("OrganisationsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith("approveReject", org);
       expect(emailQueue.add).not.toHaveBeenCalled();
+      expect(productEventService.notify).not.toHaveBeenCalled();
     });
 
     it("should handle email queueing errors gracefully", async () => {
@@ -1220,7 +1258,7 @@ describe("OrganisationsController", () => {
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
       policyService.authorize.mockResolvedValue(undefined);
       mockUserContext({ userId: 123 });
-      emailQueue.add.mockRejectedValue(new Error("Queue error"));
+      productEventService.notify.mockRejectedValue(new Error("Queue error"));
 
       const updatePayload = {
         data: {
@@ -1231,7 +1269,7 @@ describe("OrganisationsController", () => {
       };
 
       await expect(controller.update(org.uuid, updatePayload)).resolves.toBeDefined();
-      expect(emailQueue.add).toHaveBeenCalled();
+      expect(productEventService.notify).toHaveBeenCalled();
     });
   });
 

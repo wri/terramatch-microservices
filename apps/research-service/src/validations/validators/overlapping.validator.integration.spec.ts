@@ -175,5 +175,45 @@ describe("OverlappingValidator - Integration Tests", () => {
         });
       }
     });
+
+    it("should ignore slivers along a shared edge but still report real overlaps", async () => {
+      const square = (west: number, east: number) => ({
+        type: "Polygon" as const,
+        coordinates: [
+          [
+            [west, -38.5],
+            [east, -38.5],
+            [east, -38.501],
+            [west, -38.501],
+            [west, -38.5]
+          ]
+        ]
+      });
+      // The neighbor drifts ~3cm past the shared edge; the overlapping polygon crosses the opposite edge by ~9m.
+      const geometries = [square(143.3, 143.301), square(143.3009997, 143.302), square(143.299, 143.3001)];
+      const names = ["Target", "Shared edge neighbor", "Overlapping neighbor"];
+      const polygonUuids: string[] = [];
+
+      try {
+        for (let i = 0; i < geometries.length; i++) {
+          const polygonGeometry = await PolygonGeometryFactory.create({ polygon: geometries[i] });
+          await SitePolygonFactory.create({
+            polygonUuid: polygonGeometry.uuid,
+            siteUuid: testSite.uuid,
+            polyName: names[i],
+            isActive: true
+          });
+          polygonUuids.push(polygonGeometry.uuid);
+        }
+
+        const result = await validator.validatePolygon(polygonUuids[0]);
+
+        expect(result.valid).toBe(false);
+        expect(result.extraInfo?.map(({ polyUuid }) => polyUuid)).toEqual([polygonUuids[2]]);
+      } finally {
+        await SitePolygon.destroy({ where: { polygonUuid: polygonUuids } });
+        await PolygonGeometry.destroy({ where: { uuid: polygonUuids } });
+      }
+    });
   });
 });

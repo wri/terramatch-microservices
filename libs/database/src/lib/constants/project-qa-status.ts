@@ -8,3 +8,6 @@ export const PROJECT_QA_STATUS_VALUES = [
 ] as const;
 
 export type ProjectQaStatus = (typeof PROJECT_QA_STATUS_VALUES)[number];
+
+export const isProjectQaStatus = (value: string | null | undefined): value is ProjectQaStatus =>
+  value != null && (PROJECT_QA_STATUS_VALUES as readonly string[]).includes(value);

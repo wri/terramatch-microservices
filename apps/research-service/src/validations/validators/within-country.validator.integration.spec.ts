@@ -46,7 +46,8 @@ describe("WithinCountryValidator - Integration Tests", () => {
 
     testProject = await ProjectFactory.create({
       name: "Test Project for WithinCountry Validator Integration",
-      country: "KHM"
+      country: "KHM",
+      level0Project: ["KHM"]
     });
 
     testSite = await SiteFactory.create({

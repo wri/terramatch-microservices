@@ -890,6 +890,8 @@ describe("SitePolygonsController", () => {
         "Test User",
         "terramatch",
         mockTransaction,
+        false,
+        true,
         false
       );
 
@@ -949,6 +951,8 @@ describe("SitePolygonsController", () => {
         "Test User",
         "terramatch",
         mockTransaction,
+        false,
+        true,
         false
       );
 
@@ -1031,6 +1035,7 @@ describe("SitePolygonsController", () => {
         "Test User",
         "terramatch",
         expect.anything(),
+        false,
         false
       );
     });

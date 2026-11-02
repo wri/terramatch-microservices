@@ -40,13 +40,11 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "updateRequestStatus",
   "frameworkKey",
   "organisationUuid",
-  "country",
   "projectUuid"
 ];
 
 const ASSOCIATION_FIELD_MAP = {
   organisationUuid: "$project.organisation.uuid$",
-  country: "$project.country$",
   projectUuid: "$project.uuid$"
 };
 
@@ -150,6 +148,10 @@ export class NurseryProcessor extends EntityProcessor<
       }
     }
 
+    if (query.country != null) {
+      builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
+    }
+
     if (query.search != null || query.searchFilter != null) {
       builder.where({
         [Op.or]: [
@@ -244,13 +246,8 @@ export class NurseryProcessor extends EntityProcessor<
     const managesOwn =
       permissions?.includes("manage-own") && !permissions.includes(`framework-${nursery.frameworkKey}`);
     if (managesOwn) {
-      const reportCount = await NurseryReport.count({ where: { nurseryId: nursery.id } });
-      if (reportCount > 0) {
-        // Draft nurseries may have auto-created reports; remove them so the nursery can be deleted.
-        if (nursery.status !== DRAFT) {
-          throw new NotAcceptableException("You can only delete nurseries that do not have reports");
-        }
-        await NurseryReport.destroy({ where: { nurseryId: nursery.id } });
+      if (nursery.status !== DRAFT) {
+        throw new NotAcceptableException("You can only delete nurseries that do not have reports");
       }
     }
 

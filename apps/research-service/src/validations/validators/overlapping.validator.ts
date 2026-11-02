@@ -275,13 +275,7 @@ export class OverlappingValidator implements PolygonValidator {
       const bboxTargets = [...new Set(bboxFilteredResults.map(r => r.targetUuid))];
       const bboxCandidates = [...new Set(bboxFilteredResults.map(r => r.candidateUuid))];
 
-      const intersectionResults = await PolygonGeometry.checkGeometryIntersections(
-        bboxTargets,
-        bboxCandidates,
-        transaction
-      );
-
-      return intersectionResults.filter(result => result.intersectionArea > 1e-13);
+      return await PolygonGeometry.checkGeometryIntersections(bboxTargets, bboxCandidates, transaction);
     } catch (error) {
       shouldCommit = false;
       await transaction.rollback();

@@ -19,6 +19,10 @@ import { PolicyService } from "@terramatch-microservices/common";
 import { SiteLightDto } from "../dto/site.dto";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { SiteReportFactory } from "@terramatch-microservices/database/factories/site-report.factory";
+import { TrackingEntryFactory } from "@terramatch-microservices/database/factories/tracking-entry.factory";
+import { TrackingFactory } from "@terramatch-microservices/database/factories/tracking.factory";
+import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories/tree-species.factory";
+import { SeedingFactory } from "@terramatch-microservices/database/factories/seeding.factory";
 import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
@@ -104,8 +108,8 @@ describe("SiteProcessor", () => {
     });
 
     it("filters", async () => {
-      const p1 = await ProjectFactory.create();
-      const p2 = await ProjectFactory.create();
+      const p1 = await ProjectFactory.create({ level0Project: ["MX"] });
+      const p2 = await ProjectFactory.create({ country: "MX", level0Project: ["CA"] });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p1.id });
       await ProjectUserFactory.create({ userId: policyService().userId, projectId: p2.id });
 
@@ -137,6 +141,8 @@ describe("SiteProcessor", () => {
       await expectSites([first, second, third], { updateRequestStatus: "pending-approval" });
 
       await expectSites([fourth], { projectUuid: p2.uuid });
+
+      await expectSites([fourth], { country: "CA" });
     });
 
     it("filters by the latest approved non-null plantingStatus", async () => {
@@ -353,6 +359,76 @@ describe("SiteProcessor", () => {
         expect(indexDto.plantingStatus).toBe("in-progress");
       });
     });
+
+    it("includes combined workdays in light DTOs, matching the full DTO", async () => {
+      const { id: siteId, uuid } = await SiteFactory.create();
+      await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2024-01-01"),
+        workdaysPaid: 3,
+        workdaysVolunteer: 2
+      });
+      await SiteReportFactory.create({
+        siteId,
+        status: "draft",
+        dueAt: new Date("2024-01-01"),
+        workdaysPaid: 10,
+        workdaysVolunteer: 10
+      });
+
+      const site = await processor.findOne(uuid);
+      const { dto: fullDto } = await processor.getFullDto(site!);
+      const { dto: lightDto } = await processor.getLightDto(site!);
+      const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+      const progressMetrics = await processor.getProgressMetrics([site!]);
+
+      expect(fullDto.combinedWorkdayCount).toBe(5);
+      expect(lightDto.combinedWorkdayCount).toBe(5);
+      expect(indexDto.combinedWorkdayCount).toBe(5);
+      expect(progressMetrics.get(uuid)?.combinedWorkdayCount).toBe(5);
+    });
+
+    it("counts demographic workdays from tracking entries for reports due after the cutoff", async () => {
+      const { id: siteId, uuid } = await SiteFactory.create();
+      const report = await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2025-01-01"),
+        workdaysPaid: 0,
+        workdaysVolunteer: 0
+      });
+      const tracking = await TrackingFactory.siteReportWorkday(report).create();
+      await TrackingEntryFactory.gender(tracking).create({ amount: 4 });
+      await TrackingEntryFactory.gender(tracking).create({ amount: 6 });
+
+      const [{ dto: indexDto }] = await processor.getLightDtos([(await processor.findOne(uuid))!]);
+
+      expect(indexDto.combinedWorkdayCount).toBe(10);
+    });
+
+    it("computes treesRestoredPpc per site, matching the full DTO", async () => {
+      const project = await ProjectFactory.create({ survivalRate: 50, directSeedingSurvivalRate: 10 });
+      const { id: siteId, uuid } = await SiteFactory.create({ projectId: project.id });
+      const report = await SiteReportFactory.create({
+        siteId,
+        status: "approved",
+        dueAt: new Date("2025-01-01"),
+        numTreesRegenerating: 7
+      });
+      await TreeSpeciesFactory.siteReportTreePlanted(report).create({ amount: 100 });
+      await SeedingFactory.siteReport(report).create({ amount: 20 });
+
+      const site = await processor.findOne(uuid);
+      const { dto: fullDto } = await processor.getFullDto(site!);
+      const [{ dto: indexDto }] = await processor.getLightDtos([site!]);
+      const progressMetrics = await processor.getProgressMetrics([site!]);
+
+      // 7 regenerated + 100 planted × 50% + 20 seeds × 10%
+      expect(fullDto.treesRestoredPpc).toBe(59);
+      expect(indexDto.treesRestoredPpc).toBe(59);
+      expect(progressMetrics.get(uuid)?.treesRestoredPpc).toBe(59);
+    });
   });
 
   describe("delete", () => {
@@ -363,15 +439,22 @@ describe("SiteProcessor", () => {
       expect(site.deletedAt).not.toBeNull();
     });
 
-    it("should not allow a non-admin to delete a site if it has reports", async () => {
-      const site = await SiteFactory.create();
-      await SiteReportFactory.create({ siteId: site.id });
+    it("should not allow a non-admin to delete a non-draft site", async () => {
+      const site = await SiteFactory.create({ status: "approved" });
       setMockedPermissions("manage-own");
       await expect(processor.delete(site)).rejects.toThrow(NotAcceptableException);
     });
 
-    it("should allow a non-admin to delete a site if it has no reports", async () => {
-      const site = await SiteFactory.create();
+    it("should allow a non-admin to delete a draft site even if it has reports", async () => {
+      const site = await SiteFactory.create({ status: "draft" });
+      await SiteReportFactory.create({ siteId: site.id });
+      setMockedPermissions("manage-own");
+      await processor.delete(site);
+      expect(site.deletedAt).not.toBeNull();
+    });
+
+    it("should allow a non-admin to delete a draft site if it has no reports", async () => {
+      const site = await SiteFactory.create({ status: "draft" });
       setMockedPermissions("manage-own");
       await processor.delete(site);
       expect(site.deletedAt).not.toBeNull();

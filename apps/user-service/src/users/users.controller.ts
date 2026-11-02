@@ -44,6 +44,7 @@ import { SendLoginDetailsRequestDto } from "../auth/dto/send-login-details.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
+import { NotificationDto } from "@terramatch-microservices/common/dto/notification.dto";
 import { ORGANISATION_USER_STATUSES } from "@terramatch-microservices/database/constants/status";
 
 export const USER_ORG_RELATIONSHIP = {
@@ -65,7 +66,7 @@ const USER_RESPONSE_SHAPE = {
   included: [OrganisationLightDto]
 };
 
-@ApiExtraModels(UserTaskDto, Roles, Frameworks)
+@ApiExtraModels(UserTaskDto, NotificationDto, Roles, Frameworks)
 @Controller("users/v3/users")
 export class UsersController {
   constructor(

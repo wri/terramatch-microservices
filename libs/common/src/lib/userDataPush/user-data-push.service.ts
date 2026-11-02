@@ -13,15 +13,23 @@ export type UserDataPushEvent = {
   modelId: number;
 };
 
+export type UserDataDeleteEvent = {
+  userIds: number[];
+  model: UserDataModel;
+  uuid: string;
+};
+
 @Injectable()
 export class UserDataPushService {
-  constructor(@InjectQueue(USER_DATA_PUSH_QUEUE) private readonly userDataQueue: Queue<UserDataPushEvent>) {}
+  constructor(
+    @InjectQueue(USER_DATA_PUSH_QUEUE) private readonly userDataQueue: Queue<UserDataPushEvent | UserDataDeleteEvent>
+  ) {}
 
   async sendData(userIds: number[], model: UserDataModel, modelId: number) {
     await this.userDataQueue.add(USER_DATA_PUSH_EVENT, { userIds, model, modelId });
   }
 
-  async sendDataDeletion(userIds: number[], model: UserDataModel, modelId: number) {
-    await this.userDataQueue.add(USER_DATA_DELETE_EVENT, { userIds, model, modelId });
+  async sendDataDeletion(userIds: number[], model: UserDataModel, uuid: string) {
+    await this.userDataQueue.add(USER_DATA_DELETE_EVENT, { userIds, model, uuid });
   }
 }

@@ -42,7 +42,20 @@ describe("ProjectsController", () => {
     it("returns the map index keyed by the stable request query", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       const query = { frameworkKey: ["ppc" as const], country: ["KE"] };
-      const entry = { uuid: "project-uuid", name: "Project", lat: 1, long: 2 };
+      const entry = {
+        uuid: "project-uuid",
+        name: "Project",
+        lat: 1,
+        long: 2,
+        frameworkKey: "ppc" as const,
+        level0Project: ["KE"],
+        cohort: "terrafund",
+        polygonCount: 3,
+        sumNumTrees: 1200,
+        sumCalcArea: 4.5,
+        latestQaCycle: 2,
+        latestQaStatus: "qa-in-progress" as const
+      };
       service.getMapIndex.mockResolvedValue(new ProjectMapIndexDto([entry]));
 
       const result = serialize(await controller.mapIndex(query));

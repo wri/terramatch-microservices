@@ -127,8 +127,7 @@ export class ReportingFrameworksService {
   /**
    * Delete a reporting framework (form links cleared, framework record removed).
    * Permissions are not removed here: permissions.ts is the source of truth. When retiring a
-   * framework, remove its permission from permissions.ts and run Permission.syncPermissions() in
-   * the REPL to clean up the DB.
+   * framework, remove its permission from permissions.ts.
    */
   async delete(framework: Framework): Promise<void> {
     for (const { key } of FRAMEWORK_FORM_MAP) {

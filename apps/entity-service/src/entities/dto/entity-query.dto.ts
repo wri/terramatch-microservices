@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsIn, IsInt, IsOptional, Max, Min, ValidateNested } from "class-validator";
+import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
 import {
   POLYGON_STATUSES_FILTERS,
   PolygonStatusFilter,
@@ -59,13 +59,15 @@ export class EntityQueryDto extends IndexQueryDto {
   @IsOptional()
   country?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, isArray: true, type: String })
   @IsOptional()
-  status?: string;
+  @IsString({ each: true })
+  status?: string | string[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, isArray: true, type: String })
   @IsOptional()
-  updateRequestStatus?: string;
+  @IsString({ each: true })
+  updateRequestStatus?: string | string[];
 
   @ApiProperty({ required: false })
   @IsOptional()

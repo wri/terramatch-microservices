@@ -1298,14 +1298,6 @@ Without an explicit `pool` setting, Sequelize uses at most 5 connections and wai
 - Origin: team proposal (external reference), not from the review corpus
 - Applies to: microservices
 
-### `permissions.ts`/the permissions config is the single source of truth — services never create or mutate permissions at runtime
-
-**Do:** add a new permission to the config file, then run the established sync process (`Permission.syncPermissions()`). **Don't:** write service code that creates, deletes, or otherwise manages permission records.
-
-- Evidence: "the current process has been to update the permissions in `permissions.ts` (which should be considered the source of truth), and then run `await Permission.syncPermissions()` in the REPL." — https://github.com/wri/terramatch-microservices/pull/567#discussion_r2843773463
-- Applies to: microservices
-- Frequency: ~5
-
 ### In an authenticated endpoint, the user id is guaranteed — narrow it, don't re-guard it
 
 **Do:** cast with `as number` (or use `UserContext.authenticatedUserId`). **Don't:** write `if (userId == null) throw` on an endpoint that doesn't opt out of auth — the guard already ran; that branch is dead code.

@@ -8,6 +8,7 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { Op } from "sequelize";
 import { ScheduledJobsService } from "./scheduled-jobs.service";
 import {
+  ApiKey,
   Framework,
   FundingProgramme,
   Notification,
@@ -17,8 +18,9 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
-import { FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
+import { ApiKeyFactory, FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
+import { DateTime } from "luxon";
 
 describe("ScheduledJobsService", () => {
   let service: ScheduledJobsService;
@@ -231,5 +233,25 @@ describe("ScheduledJobsService maintenance cleanup", () => {
     await service.removeStaleNotifications();
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Removed 5 stale read notifications"));
     destroySpy.mockRestore();
+  });
+
+  it("removeExpiredApiKeys only deletes keys that expired more than a week ago", async () => {
+    const expiresAt = (days: number) => DateTime.now().minus({ days }).toJSDate();
+    const longExpired = await ApiKeyFactory.create({ expiresAt: expiresAt(8) });
+    const recentlyExpired = await ApiKeyFactory.create({ expiresAt: expiresAt(6) });
+    const expiring = await ApiKeyFactory.create({ expiresAt: expiresAt(-1) });
+    const nonExpiring = await ApiKeyFactory.create();
+    const logSpy = jest.spyOn((service as any).logger, "log");
+
+    await service.removeExpiredApiKeys();
+
+    const remainingIds = (
+      await ApiKey.findAll({
+        where: { id: [longExpired.id, recentlyExpired.id, expiring.id, nonExpiring.id] },
+        attributes: ["id"]
+      })
+    ).map(({ id }) => id);
+    expect(remainingIds.sort()).toEqual([recentlyExpired.id, expiring.id, nonExpiring.id].sort());
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("expired API keys"));
   });
 });

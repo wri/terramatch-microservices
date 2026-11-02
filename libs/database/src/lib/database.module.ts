@@ -5,7 +5,7 @@ import { SequelizeConfigService } from "./sequelize-config.service";
 import { EventEmitter2, EventEmitterModule } from "@nestjs/event-emitter";
 import { Model } from "sequelize-typescript";
 import { Media, PolygonGeometry } from "./entities";
-import { UserDataModelUpdateEvent } from "./types/user-model";
+import { UserDataModelDeleteEvent, UserDataModelUpdateEvent } from "./types/user-model";
 
 @Module({
   imports: [
@@ -46,7 +46,7 @@ export class DatabaseModule {
     await this.eventEmitter?.emitAsync(`database.userDataModelUpdated`, event);
   }
 
-  static async emitUserDataModelDeleted(event: UserDataModelUpdateEvent) {
+  static async emitUserDataModelDeleted(event: UserDataModelDeleteEvent) {
     await this.eventEmitter?.emitAsync(`database.userDataModelDeleted`, event);
   }
 }

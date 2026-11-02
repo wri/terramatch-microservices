@@ -2,14 +2,23 @@ import {
   DisturbanceReport,
   Nursery,
   NurseryReport,
+  Organisation,
   Project,
   ProjectReport,
   Site,
   SiteReport,
-  SrpReport
+  SrpReport,
+  Task
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
-import { ReportStatus } from "@terramatch-microservices/database/constants/status";
+import {
+  DRAFT,
+  DUE,
+  INFORMATION_REQUIRED,
+  PENDING_APPROVAL,
+  ReportStatus,
+  UpdateRequestStatus
+} from "@terramatch-microservices/database/constants/status";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Attributes, ModelStatic } from "sequelize";
 import { Literal } from "sequelize/types/utils";
@@ -21,7 +30,12 @@ export type ReportFilter = {
   frameworkKeys: string[];
   // If set, reports are limited to these projects
   projectIds?: number[] | Literal;
+  // Matched against the status shown for the report (see SUBMITTED_UPDATE_REQUEST_STATUSES)
   statuses?: readonly ReportStatus[];
+  // Matched against the report's update request status. Reports without one never match.
+  updateRequestStatuses?: readonly UpdateRequestStatus[];
+  // If true, reports are limited to those that are due, draft or need information, on the report or on its update request
+  requiresAttention?: boolean;
   dueDateFrom?: Date;
   dueDateTo?: Date;
   dueMonth?: number;
@@ -34,6 +48,8 @@ type ReportFilterModel = {
   parentAttribute: "projectId" | "siteId" | "nurseryId";
   // Returns the ids of parents (the attribute above) that belong to the given projects
   parentIdsInProjects: (projectIds: number[] | Literal) => number[] | Literal;
+  // Returns the ids of the projects that the given parents belong to
+  projectIdsForParents: (parentIds: Literal) => Literal;
   // Returns the ids of parents whose own name or project name matches the search pattern
   parentIdsMatchingSearch: (pattern: string) => Literal;
 };
@@ -50,6 +66,7 @@ const projectChildIdsMatchingSearch = <M extends Site | Nursery>(model: ModelSta
 const PROJECT_REPORT_FILTER = {
   parentAttribute: "projectId",
   parentIdsInProjects: projectIds => projectIds,
+  projectIdsForParents: parentIds => parentIds,
   parentIdsMatchingSearch: projectIdsMatchingSearch
 } satisfies Omit<ReportFilterModel, "model">;
 
@@ -59,6 +76,7 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
     model: NurseryReport,
     parentAttribute: "nurseryId",
     parentIdsInProjects: projectIds => Nursery.idsSubquery(projectIds),
+    projectIdsForParents: parentIds => Subquery.select(Nursery, "projectId").in("id", parentIds).literal,
     parentIdsMatchingSearch: pattern => projectChildIdsMatchingSearch(Nursery, pattern)
   },
   projectReports: { model: ProjectReport, ...PROJECT_REPORT_FILTER },
@@ -66,31 +84,24 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
     model: SiteReport,
     parentAttribute: "siteId",
     parentIdsInProjects: projectIds => Site.idsSubquery(projectIds),
+    projectIdsForParents: parentIds => Subquery.select(Site, "projectId").in("id", parentIds).literal,
     parentIdsMatchingSearch: pattern => projectChildIdsMatchingSearch(Site, pattern)
   },
   srpReports: { model: SrpReport, ...PROJECT_REPORT_FILTER }
 };
 
-/**
- * Builds a subquery of the ids of projects matching the filter's scoping, project and search
- * filters. A project matches the search if its name, or the name of one of its sites or nurseries,
- * matches. Report-specific filters (statuses, due dates) are not applied.
- */
-export const filteredProjectsSubquery = ({ frameworkKeys, projectIds, search }: ReportFilter) => {
-  const builder = Subquery.select(Project, "id");
-  if (frameworkKeys.length > 0) builder.in("frameworkKey", frameworkKeys);
-  if (projectIds != null) builder.in("id", projectIds);
-  if (search != null) {
-    const pattern = `%${search}%`;
-    const siteProjectIds = Subquery.select(Site, "projectId").like("name", pattern).literal;
-    const nurseryProjectIds = Subquery.select(Nursery, "projectId").like("name", pattern).literal;
-    const { clauses } = builder;
-    builder.andLiteral(
-      `(${clauses.like("name", pattern)} OR ${clauses.in("id", siteProjectIds)} OR ${clauses.in("id", nurseryProjectIds)})`
-    );
-  }
-  return builder;
-};
+// A report with a submitted change request is shown with the change request's status instead of
+// its own, so the status filter matches on that (the FE resolves the status the same way).
+const SUBMITTED_UPDATE_REQUEST_STATUSES = [PENDING_APPROVAL, INFORMATION_REQUIRED];
+
+// The progress reports are listed through their tasks (see TasksService.getTasks), which leaves out deleted tasks and the
+// tasks of deleted projects or organisations. The counts have to leave out the same reports, or they won't match the list.
+const TASK_REPORT_TYPES: readonly ReportCountType[] = ["nurseryReports", "projectReports", "siteReports"];
+
+const listedTasksSubquery = () =>
+  Subquery.select(Task, "id")
+    .in("projectId", Subquery.select(Project, "id").literal)
+    .in("organisationId", Subquery.select(Organisation, "id").literal).literal;
 
 /**
  * Builds a subquery selecting the given attribute from all reports of the given type that match
@@ -104,7 +115,21 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   const { clauses } = builder;
 
   if (filter.frameworkKeys.length > 0) builder.in("frameworkKey", filter.frameworkKeys);
-  if (filter.statuses != null && filter.statuses.length > 0) builder.in("status", [...filter.statuses]);
+  if (TASK_REPORT_TYPES.includes(type)) builder.in("taskId" as keyof Attributes<ReportModel>, listedTasksSubquery());
+  if (filter.statuses != null && filter.statuses.length > 0) {
+    const isSubmitted = clauses.in("updateRequestStatus", SUBMITTED_UPDATE_REQUEST_STATUSES);
+    const shownStatus = `IF(${isSubmitted}, ${clauses.field("updateRequestStatus")}, ${clauses.field("status")})`;
+    const statuses = filter.statuses.map(status => clauses.escape(status)).join(",");
+    builder.andLiteral(`${shownStatus} IN (${statuses})`);
+  }
+  if (filter.updateRequestStatuses != null && filter.updateRequestStatuses.length > 0) {
+    builder.in("updateRequestStatus", [...filter.updateRequestStatuses]);
+  }
+  if (filter.requiresAttention === true) {
+    const needsAttention = clauses.in("status", [DUE, DRAFT, INFORMATION_REQUIRED]);
+    const updateNeedsAttention = clauses.in("updateRequestStatus", [DRAFT, INFORMATION_REQUIRED]);
+    builder.andLiteral(`(${needsAttention} OR ${updateNeedsAttention})`);
+  }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);
   if (filter.dueDateTo != null) {
     // dueDateTo is a date, so include the entire day.
@@ -120,4 +145,17 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   if (filter.search != null) builder.in(parent, parentIdsMatchingSearch(`%${filter.search}%`));
 
   return builder;
+};
+
+/**
+ * Builds a subquery of the ids of projects with at least one report of the given (non-empty) types
+ * matching the filter.
+ */
+export const filteredProjectsSubquery = (types: readonly ReportCountType[], filter: ReportFilter) => {
+  const builder = Subquery.select(Project, "id");
+  const matches = types.map(type => {
+    const parentIds = filteredReportsSubquery(type, "parent", filter).literal;
+    return builder.clauses.in("id", REPORT_FILTER_MODELS[type].projectIdsForParents(parentIds));
+  });
+  return builder.andLiteral(`(${matches.join(" OR ")})`);
 };

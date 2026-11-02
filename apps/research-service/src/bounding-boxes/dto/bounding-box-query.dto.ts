@@ -20,12 +20,13 @@ export class BoundingBoxQueryDto {
   polygonUuids?: string[];
 
   @ApiPropertyOptional({
-    description: "UUID of a site to get the bounding box of all its polygons",
-    type: String
+    description: "Array of site UUIDs to get one combined bounding box of all their polygons",
+    type: [String]
   })
   @IsOptional()
-  @IsUUID()
-  siteUuid?: string;
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  siteUuids?: string[];
 
   @ApiPropertyOptional({
     description: "UUID of a project to get the bounding box of all its site polygons",

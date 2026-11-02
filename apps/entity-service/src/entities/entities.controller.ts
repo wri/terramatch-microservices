@@ -20,9 +20,19 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto } from "
 import { SpecificEntityDto } from "./dto/specific-entity.dto";
 import { EntitiesService } from "./entities.service";
 import { PolicyService } from "@terramatch-microservices/common";
-import { buildDeletedResponse, buildJsonApi, getDtoType } from "@terramatch-microservices/common/util";
+import {
+  buildDeletedResponse,
+  buildJsonApi,
+  getDtoType,
+  getStableRequestQuery
+} from "@terramatch-microservices/common/util";
 import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
-import { EntityIndexParamsDto, ReportsMetaParamsDto } from "./dto/entity-index-params.dto";
+import {
+  EntityIndexParamsDto,
+  NurseriesMetaParamsDto,
+  ReportsMetaParamsDto,
+  SitesMetaParamsDto
+} from "./dto/entity-index-params.dto";
 import { EntityQueryDto, EntitySideload } from "./dto/entity-query.dto";
 import { MediaDto } from "@terramatch-microservices/common/dto/media.dto";
 import { ProjectReportFullDto, ProjectReportLightDto } from "./dto/project-report.dto";
@@ -67,7 +77,14 @@ import { FormTranslationDto } from "@terramatch-microservices/common/dto/form-tr
 import { LocalizationService } from "@terramatch-microservices/common/localization/localization.service";
 import { ProjectReportMetaDto, ReportMetaDto } from "./dto/project-report-meta.dto";
 import { ReportCountsQueryDto, ReportsMetaQueryDto } from "./dto/report-counts-query.dto";
+import {
+  NurseriesMetaQueryDto,
+  ProjectNurseriesMetaDto,
+  ProjectSitesMetaDto,
+  SitesMetaQueryDto
+} from "./dto/nurseries-meta.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
+import { EntityCountsDto, EntityCountsQueryDto } from "./dto/entity-counts.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -108,8 +125,44 @@ export class EntitiesController {
       this.entitiesService.reportingPeriods(query)
     ]);
     return buildJsonApi(ReportCountsDto).addData(
-      "reportCounts",
+      getStableRequestQuery(query),
       new ReportCountsDto({ totalReports, reportingPeriods })
+    );
+  }
+
+  @Get("sitesCounts")
+  @ApiOperation({
+    operationId: "sitesCountsGet",
+    summary: "Get the total number of sites matching the given filters."
+  })
+  @JsonApiResponse(EntityCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async sitesCountsGet(@Query() query: EntityCountsQueryDto) {
+    return await this.countEntities("sites", query);
+  }
+
+  @Get("nurseriesCounts")
+  @ApiOperation({
+    operationId: "nurseriesCountsGet",
+    summary: "Get the total number of nurseries matching the given filters."
+  })
+  @JsonApiResponse(EntityCountsDto)
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async nurseriesCountsGet(@Query() query: EntityCountsQueryDto) {
+    return await this.countEntities("nurseries", query);
+  }
+
+  /**
+   * Counts with the same filters and permission scope as the index, using findMany, which does not authorize the
+   * rows it returns. The count therefore never fails because of a single row the user can't read.
+   */
+  private async countEntities(entity: "sites" | "nurseries", query: EntityCountsQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const { paginationTotal } = await processor.findMany({ ...query, page: { number: 1, size: 1 } });
+    // Sites and nurseries share the entityCounts resource, so the entity is part of the ID.
+    return buildJsonApi(EntityCountsDto).addData(
+      `${entity}Counts${getStableRequestQuery(query)}`,
+      new EntityCountsDto({ total: paginationTotal })
     );
   }
 
@@ -148,6 +201,34 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor(entity);
     const document = buildJsonApi(ProjectReportMetaDto, { pagination: "number" });
     await processor.addReportsMetaIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/nurseriesMeta")
+  @ApiOperation({
+    operationId: "entityNurseriesMetaIndex",
+    summary: "Get a paginated and filtered list of projects with nursery meta for the nurseries index."
+  })
+  @JsonApiResponse({ data: ProjectNurseriesMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entityNurseriesMetaIndex(@Param() { entity }: NurseriesMetaParamsDto, @Query() query: NurseriesMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectNurseriesMetaDto, { pagination: "number" });
+    await processor.addNurseriesMetaIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/sitesMeta")
+  @ApiOperation({
+    operationId: "entitySitesMetaIndex",
+    summary: "Get a paginated and filtered list of projects with site meta for the sites index."
+  })
+  @JsonApiResponse({ data: ProjectSitesMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  async entitySitesMetaIndex(@Param() { entity }: SitesMetaParamsDto, @Query() query: SitesMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
+    await processor.addSitesMetaIndex(document, query);
     return document;
   }
 

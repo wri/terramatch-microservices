@@ -10,7 +10,7 @@ export class ReportingPeriodDto {
   dueMonth: number;
 }
 
-// This is a virtual resource with a fixed ID of "reportCounts"
+// This is a virtual resource whose ID is the stable request query
 @JsonApiDto({ type: "reportCounts", id: "string" })
 export class ReportCountsDto {
   constructor(data: ReportCountsDto) {

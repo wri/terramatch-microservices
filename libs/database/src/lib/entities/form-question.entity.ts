@@ -161,6 +161,6 @@ export class FormQuestion extends Model<FormQuestion> {
     const parent = this.parentId == null ? undefined : formQuestions.find(({ uuid }) => uuid == this.parentId);
     if (parent == null || parent.inputType !== "conditional" || this.showOnParentCondition == null) return false;
 
-    return (answers[parent.uuid] ?? false) !== this.showOnParentCondition;
+    return (answers[parent.formName] ?? false) !== this.showOnParentCondition;
   }
 }

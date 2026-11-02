@@ -77,6 +77,29 @@ describe("EntityApprovalProcessor", () => {
       expect(project.name).toBe("Test Project");
       expect(project.descriptionOfProjectTimeline).toBeNull();
     });
+
+    it("reads the parent conditional answer by question name", async () => {
+      const project = await ProjectFactory.create({
+        descriptionOfProjectTimeline: "Test Description",
+        status: APPROVED
+      });
+      await Form.truncate();
+      const form = await EntityFormFactory.project(project).create();
+      const section = await FormSectionFactory.form(form).create();
+      // Copied forms keep the original question name, so it no longer matches the uuid.
+      const conditional = await FormQuestionFactory.section(section).create({
+        inputType: "conditional",
+        name: faker.string.uuid()
+      });
+      await FormQuestionFactory.section(section).create({
+        linkedFieldKey: "pro-desc-of-proj-timeline",
+        parentId: conditional.uuid,
+        showOnParentCondition: true
+      });
+      await project.update({ answers: { [conditional.formName]: true } });
+      await process(project);
+      expect(project.descriptionOfProjectTimeline).toBe("Test Description");
+    });
   });
 
   describe("hidden relations processor", () => {

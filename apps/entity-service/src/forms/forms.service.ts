@@ -32,6 +32,7 @@ import { FormIndexQueryDto } from "./dto/form-query.dto";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import {
   acceptMimeTypes,
+  maxFileSizeBytes,
   MEDIA_OWNER_TYPES,
   MediaOwnerType
 } from "@terramatch-microservices/database/constants/media-owners";
@@ -276,6 +277,10 @@ export class FormsService {
       const collection =
         (question.inputType === "file" ? (config?.field as LinkedFile | undefined)?.collection : question.collection) ??
         null;
+      const maxFileSize =
+        question.inputType === "file" && config != null && collection != null
+          ? maxFileSizeBytes(config.model, collection)
+          : undefined;
       const childQuestions = sectionQuestions.filter(({ parentId }) => parentId === question.uuid);
       const options = optionsByQuestionId[question.id];
       const tableHeaders = tableHeadersByQuestionId[question.id];
@@ -304,6 +309,9 @@ export class FormsService {
       });
       if (linkedFieldMultiChoice != null) {
         dto.multiChoice = linkedFieldMultiChoice;
+      }
+      if (maxFileSize != null) {
+        dto.maxFileSize = maxFileSize;
       }
       return dto;
     };

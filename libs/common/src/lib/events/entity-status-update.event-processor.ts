@@ -19,7 +19,6 @@ import {
   Application,
   AuditStatus,
   FinancialReport,
-  Form,
   FormQuestion,
   FormSubmission,
   NurseryReport,
@@ -49,11 +48,11 @@ import { isField, LinkedField } from "@terramatch-microservices/database/constan
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { APPROVAL_PROCESSERS, DisturbanceReportEntryApprovalProcessor } from "./processors";
 import { LinkedAnswerCollector } from "../linkedFields/linkedAnswerCollector";
-import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { EntityStatusUpdateEmail } from "../email/entity-status-update.email";
 import { ProjectManagerEmail } from "../email/project-manager.email";
 import { FormSubmissionFeedbackEmail } from "../email/form-submission-feedback.email";
 import { UserContext } from "../contexts/user.context";
+import { APPLICATION_SUBMITTED } from "../product-events/product-event.service";
 
 const TASK_UPDATE_REPORT_STATUSES = [APPROVED, INFORMATION_REQUIRED, PENDING_APPROVAL];
 
@@ -227,7 +226,7 @@ export class EntityStatusUpdate extends EventProcessor {
         await ProjectPitch.update({ status: "active" }, { where: { uuid: submission.projectPitchUuid } });
       }
 
-      await this.sendApplicationSubmittedEmail(submission);
+      await this.eventService.productEventService.notify(APPLICATION_SUBMITTED, submission);
       return;
     }
 
@@ -260,24 +259,6 @@ export class EntityStatusUpdate extends EventProcessor {
   private async sendSubmissionStatusEmail(submission: FormSubmission) {
     this.logger.log(`Sending submission status email queue [${JSON.stringify({ id: submission.id })}]`);
     await new FormSubmissionFeedbackEmail({ submissionId: submission.id }).sendLater(this.eventService.emailQueue);
-  }
-
-  private async sendApplicationSubmittedEmail(submission: FormSubmission) {
-    this.logger.log(`Sending application submitted email queue [${JSON.stringify({ id: submission.id })}]`);
-
-    const userId = UserContext.authenticatedUserId;
-    if (userId == null) {
-      this.logger.error("Cannot send application submitted email without authenticated user");
-      return;
-    }
-
-    const form =
-      submission.form ??
-      (submission.formId == null ? undefined : await Form.findOne({ where: { uuid: submission.formId } }));
-    await new ApplicationSubmittedEmail({
-      message: form?.submissionMessage ?? "Thank you for sending your application.",
-      userId
-    }).sendLater(this.eventService.emailQueue);
   }
 
   private async updateActions() {

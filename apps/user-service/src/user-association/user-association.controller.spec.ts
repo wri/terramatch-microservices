@@ -205,6 +205,38 @@ describe("UserAssociationController", () => {
     });
   });
 
+  describe("createOrganisationInviteReminder", () => {
+    it("should authorize and re-send the invite for the user", async () => {
+      const organisation = await OrganisationFactory.create();
+      const invite = { uuid: "invite-uuid", organisationId: organisation.id, emailAddress: "invitee@example.com" };
+      (stubProcessor.getEntity as jest.Mock).mockResolvedValue(organisation);
+      userAssociationService.sendOrganisationInviteReminder.mockResolvedValue(invite as never);
+
+      const result = serialize(
+        await controller.createOrganisationInviteReminder(
+          { uuid: organisation.uuid as string, model: "organisations", userUuid: "user-uuid" },
+          { callbackUrl: "https://example.com/signup" }
+        )
+      );
+
+      expect(userAssociationService.createProcessor).toHaveBeenCalledWith("organisations", organisation.uuid);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", organisation);
+      expect(userAssociationService.sendOrganisationInviteReminder).toHaveBeenCalledWith(
+        organisation,
+        "user-uuid",
+        "https://example.com/signup"
+      );
+      expect((result.data as Resource).id).toBe("invite-uuid");
+    });
+
+    it("should reject reminders for projects", async () => {
+      await expect(
+        controller.createOrganisationInviteReminder({ uuid: "project-uuid", model: "projects", userUuid: "user-uuid" })
+      ).rejects.toThrow(BadRequestException);
+      expect(userAssociationService.sendOrganisationInviteReminder).not.toHaveBeenCalled();
+    });
+  });
+
   describe("acceptProjectInvite", () => {
     it("should accept a project invite and return ProjectInviteAcceptanceDto", async () => {
       const user = await UserFactory.create();
@@ -321,7 +353,6 @@ describe("UserAssociationController", () => {
                 status,
                 isManager: false,
                 organisationName: org.name ?? "",
-                roleName: user.primaryRole ?? null,
                 associatedType: "organisations"
               })
             );
@@ -357,7 +388,6 @@ describe("UserAssociationController", () => {
                 status,
                 isManager: false,
                 organisationName: org.name ?? "",
-                roleName: user.primaryRole ?? null,
                 associatedType: "organisations"
               })
             );

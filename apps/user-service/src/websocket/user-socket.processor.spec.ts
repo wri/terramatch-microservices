@@ -2,12 +2,21 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { UserSocketProcessor } from "./user-socket.processor";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { UserGateway } from "./user.gateway";
-import { UserDataPushEvent } from "@terramatch-microservices/common/userDataPush/user-data-push.service";
+import {
+  UserDataDeleteEvent,
+  UserDataPushEvent
+} from "@terramatch-microservices/common/userDataPush/user-data-push.service";
 import { Job } from "bullmq";
 import { Server } from "socket.io";
-import { TaskFactory, UserFactory, UserTaskFactory } from "@terramatch-microservices/database/factories";
+import {
+  NotificationFactory,
+  TaskFactory,
+  UserFactory,
+  UserTaskFactory
+} from "@terramatch-microservices/database/factories";
 import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
+import { NotificationDto } from "@terramatch-microservices/common/dto/notification.dto";
 
 describe("UserSocketProcessor", () => {
   let module: TestingModule;
@@ -115,6 +124,36 @@ describe("UserSocketProcessor", () => {
       );
     });
 
+    it("generates a notification data document", async () => {
+      const notification = await NotificationFactory.create();
+      const project = await notification.$get("project");
+      const emit = jest.fn();
+      const room = {
+        fetchSockets: jest.fn(() => Promise.resolve([1])), // what's in the room doesn't matter to the processor
+        emit
+      } as unknown as ReturnType<Server["in"]>;
+      gateway().server.in.mockReturnValue(room);
+      await processor.process({
+        name: "userDataPush",
+        data: { userIds: [notification.userId], model: "notifications", modelId: notification.id }
+      } as Job<UserDataPushEvent>);
+      expect(gateway().server.in).toHaveBeenCalledWith(`user:${notification.userId}`);
+
+      const [event, payload] = emit.mock.calls[0] as [string, JsonApiDocument];
+      expect(event).toBe("userDataPush");
+      const resource = payload.data as Resource;
+      expect(resource.type).toBe("notifications");
+      expect(resource.id).toBe(notification.uuid);
+      const dto = resource.attributes as unknown as NotificationDto;
+      expect(dto).toMatchObject({
+        projectUuid: project?.uuid,
+        projectName: project?.name,
+        summary: notification.summary,
+        category: notification.category,
+        unread: true
+      });
+    });
+
     it("generates a deletion document", async () => {
       const user = await UserFactory.create();
       const task = await TaskFactory.create();
@@ -125,10 +164,12 @@ describe("UserSocketProcessor", () => {
         emit
       } as unknown as ReturnType<Server["in"]>;
       gateway().server.in.mockReturnValue(room);
+      // Hard delete the task to show that the processor doesn't need to load it.
+      await task.destroy({ force: true });
       await processor.process({
         name: "userDataDelete",
-        data: { userIds: [user.id], model: "tasks", modelId: task.id }
-      } as Job<UserDataPushEvent>);
+        data: { userIds: [user.id], model: "tasks", uuid: task.uuid }
+      } as Job<UserDataDeleteEvent>);
       expect(gateway().server.in).toHaveBeenCalledWith(`user:${user.id}`);
       expect(room.emit).toHaveBeenCalled();
 
@@ -137,6 +178,35 @@ describe("UserSocketProcessor", () => {
       expect(payload.meta.resourceType).toBe("userTasks");
       expect(payload.meta.resourceIds).toEqual([task.uuid]);
       expect(payload.data).toBeUndefined();
+    });
+
+    it("throws if a deletion event is missing the uuid", async () => {
+      await expect(
+        processor.process({
+          name: "userDataDelete",
+          data: { userIds: [1], model: "tasks" }
+        } as Job<UserDataDeleteEvent>)
+      ).rejects.toThrow('Model missing for user push event {"userIds":[1],"model":"tasks"}');
+    });
+
+    it("generates a notification deletion document", async () => {
+      const notification = await NotificationFactory.create();
+      await notification.destroy();
+      const emit = jest.fn();
+      const room = {
+        fetchSockets: jest.fn(() => Promise.resolve([1])), // what's in the room doesn't matter to the processor
+        emit
+      } as unknown as ReturnType<Server["in"]>;
+      gateway().server.in.mockReturnValue(room);
+      await processor.process({
+        name: "userDataDelete",
+        data: { userIds: [notification.userId], model: "notifications", uuid: notification.uuid }
+      } as Job<UserDataDeleteEvent>);
+
+      const [event, payload] = emit.mock.calls[0] as [string, JsonApiDocument];
+      expect(event).toBe("userDataPush");
+      expect(payload.meta.resourceType).toBe("notifications");
+      expect(payload.meta.resourceIds).toEqual([notification.uuid]);
     });
 
     it("throws if the serializer is not defined", async () => {
@@ -152,8 +222,8 @@ describe("UserSocketProcessor", () => {
       await expect(
         processor.process({
           name: "userDataDelete",
-          data: { userIds: [user.id], model: "foo", modelId: task.id }
-        } as unknown as Job<UserDataPushEvent>)
+          data: { userIds: [user.id], model: "foo", uuid: task.uuid }
+        } as unknown as Job<UserDataDeleteEvent>)
       ).rejects.toThrow("Invalid model: foo");
     });
   });

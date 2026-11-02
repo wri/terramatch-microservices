@@ -42,7 +42,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
         organisationIds.push(...projectsOrganisationIds.filter((id): id is number => id !== null));
       }
     }
-    if (user?.primaryRole === "project-manager" && user.organisationId != null) {
+    if (user?.roles.includes("project-manager") === true && user.organisationId != null) {
       organisationIds.push(user.organisationId as number);
     }
     organisationIds.push(...monitoredOrganisationIds(user));

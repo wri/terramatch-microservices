@@ -58,14 +58,12 @@ jest.mock("@terramatch-microservices/common/linkedFields/linkedAnswerCollector",
     protected getCollector(resource: LinkedFieldResource): RelationResourceCollector {
       return super.getCollector(
         resource,
-        jest.fn(
-          (): RelationResourceCollector => ({
-            syncRelation: jest.fn(),
-            addField: jest.fn(),
-            collect: jest.fn(),
-            clearRelations: jest.fn()
-          })
-        )
+        jest.fn((): RelationResourceCollector => ({
+          syncRelation: jest.fn(),
+          addField: jest.fn(),
+          collect: jest.fn(),
+          clearRelations: jest.fn()
+        }))
       );
     }
   }
@@ -170,6 +168,31 @@ describe("FormDataService", () => {
       expect(site.name).toBe("Site Name");
       expect(site.answers).toStrictEqual({ [conditional.uuid]: true });
       expect(collector.treeSpecies.syncRelation).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads the parent conditional answer by question name", async () => {
+      const site = await SiteFactory.create();
+      const form = await EntityFormFactory.site(site).create();
+      const section = await FormSectionFactory.form(form).create();
+      // Copied forms keep the original question name, so it no longer matches the uuid.
+      const conditional = await FormQuestionFactory.section(section).create({
+        inputType: "conditional",
+        name: faker.string.uuid()
+      });
+      const trees = await FormQuestionFactory.section(section).create({
+        inputType: "treeSpecies",
+        linkedFieldKey: "site-rel-tree-species",
+        collection: "tree-planted",
+        parentId: conditional.uuid,
+        showOnParentCondition: true
+      });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
+      await service.storeEntityAnswers(site, await form.reload(), {
+        [conditional.formName]: true,
+        [trees.formName]: [{}]
+      });
+
+      expect(collector.treeSpecies.syncRelation).toHaveBeenCalledWith(site, expect.anything(), [{}], false);
     });
 
     it("normalizes completed planting answers to plantingStatus completed", async () => {

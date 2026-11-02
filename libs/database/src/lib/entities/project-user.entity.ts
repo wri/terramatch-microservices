@@ -1,7 +1,7 @@
-import { AllowNull, AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { AutoIncrement, Column, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { Project } from "./project.entity";
 import { User } from "./user.entity";
-import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes, STRING } from "sequelize";
+import { BIGINT, BOOLEAN, CreationOptional, InferAttributes, InferCreationAttributes } from "sequelize";
 import { Subquery } from "../util/subquery.builder";
 
 @Table({ tableName: "v2_project_users", underscored: true })
@@ -38,16 +38,6 @@ export class ProjectUser extends Model<InferAttributes<ProjectUser>, InferCreati
   @ForeignKey(() => User)
   @Column(BIGINT.UNSIGNED)
   declare userId: number;
-
-  /**
-   * @deprecated
-   *
-   * No logic or permissions depend on this value; project invite state lives in
-   * v2_project_invites.accepted_at. The column will be dropped in a follow-up migration.
-   */
-  @AllowNull
-  @Column(STRING)
-  declare status: string | null;
 
   // Note: this is marked as nullable in the current schema, but has a default value. The
   // nullability should be removed when v3 is responsible for the DB schema.

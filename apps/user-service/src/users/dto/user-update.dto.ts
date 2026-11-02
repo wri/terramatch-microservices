@@ -4,9 +4,17 @@ import { JsonApiBodyDto, JsonApiDataDto } from "@terramatch-microservices/common
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { FRAMEWORK_KEYS } from "@terramatch-microservices/database/constants/framework";
 import { ROLE_SLUGS } from "@terramatch-microservices/database/constants/permissions";
+import { IsValidRoleCombination, ROLE_COMBINATION_DESCRIPTION } from "./is-valid-role-combination.decorator";
 
 export class UserUpdateAttributes {
-  @ApiProperty({ description: "Organisation UUID", nullable: true, required: false, format: "uuid", type: String })
+  @ApiProperty({
+    description:
+      "Organisation UUID if set to null (instead of simply being absent from the payload), the existing organisation association will be removed.",
+    nullable: true,
+    required: false,
+    format: "uuid",
+    type: String
+  })
   organisationUuid?: string | null;
 
   @ApiProperty({ description: "First name", nullable: true, required: false, type: String })
@@ -41,7 +49,7 @@ export class UserUpdateAttributes {
   locale?: ValidLocale | null;
 
   @ApiProperty({
-    description: "Replaces the user's full set of roles",
+    description: `Replaces the user's full set of roles. ${ROLE_COMBINATION_DESCRIPTION}`,
     required: false,
     isArray: true,
     enum: ROLE_SLUGS
@@ -50,6 +58,7 @@ export class UserUpdateAttributes {
   @IsArray()
   @ArrayMinSize(1)
   @IsIn(ROLE_SLUGS, { each: true })
+  @IsValidRoleCombination()
   roles?: string[];
 
   @ApiProperty({ required: false, nullable: true, isArray: true, enum: FRAMEWORK_KEYS })

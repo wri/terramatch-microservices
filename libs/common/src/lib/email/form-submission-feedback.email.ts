@@ -2,7 +2,7 @@
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { TMLogger } from "../util/tm-logger";
-import { FormSubmission, Notification } from "@terramatch-microservices/database/entities";
+import { FormSubmission } from "@terramatch-microservices/database/entities";
 import { Dictionary, escape } from "lodash";
 
 export type FormSubmissionFeedbackEmailData = {
@@ -37,7 +37,7 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
       where: { id: this.data.submissionId },
       attributes: ["status", "feedback"],
       include: [
-        { association: "user", attributes: ["id", "emailAddress", "locale"] },
+        { association: "user", attributes: ["emailAddress", "locale"] },
         { association: "application", attributes: ["uuid"] },
         { association: "stage", attributes: ["order", "fundingProgrammeId"] }
       ]
@@ -59,7 +59,7 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
       status,
       feedback,
       applicationUuid,
-      user: { emailAddress, locale, id: userId },
+      user: { emailAddress, locale },
       stage
     } = submission;
 
@@ -70,19 +70,16 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
     };
     switch (status) {
       case "information-required":
-        await this.createNotification(userId, "Application Updated", "You have received feedback on your application");
         withPrefix("feedback-received", feedback, i18nKeys, i18nReplacements);
         i18nKeys.cta = "form-submission-feedback-received.cta";
         break;
 
       case "rejected":
-        await this.createNotification(userId, "Application Rejected", "Your application has been rejected");
         withPrefix("rejected", feedback, i18nKeys, i18nReplacements);
         delete additionalValues.link;
         break;
 
       case "approved": {
-        await this.createNotification(userId, "Application Updated", "Your application has been approved");
         const isFinalStage = stage == null || (await stage.isFinalStage());
         const prefix = isFinalStage ? "final-stage-approved" : "approved";
         withPrefix(prefix, feedback, i18nKeys, i18nReplacements);
@@ -98,16 +95,5 @@ export class FormSubmissionFeedbackEmail extends EmailSender<FormSubmissionFeedb
     }
 
     await emailService.sendI18nTemplateEmail(emailAddress, locale, i18nKeys, { additionalValues, i18nReplacements });
-  }
-
-  private async createNotification(userId: number, title: string, body: string) {
-    await Notification.create({
-      userId,
-      title,
-      body,
-      action: "form_submission_update",
-      referencedModel: FormSubmission.LARAVEL_TYPE,
-      referencedModelId: this.data.submissionId
-    });
   }
 }

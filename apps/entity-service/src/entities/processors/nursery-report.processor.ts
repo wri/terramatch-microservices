@@ -28,7 +28,6 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "frameworkKey",
   "nurseryUuid",
   "organisationUuid",
-  "country",
   "projectUuid",
   "nothingToReport"
 ];
@@ -36,7 +35,6 @@ const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
 const ASSOCIATION_FIELD_MAP = {
   nurseryUuid: "$nursery.uuid$",
   organisationUuid: "$nursery.project.organisation.uuid$",
-  country: "$nursery.project.country$",
   projectUuid: "$nursery.project.uuid$"
 };
 
@@ -182,6 +180,10 @@ export class NurseryReportProcessor extends ReportProcessor<
         });
       }
     });
+
+    if (query.country != null) {
+      builder.where({ "$nursery.project.id$": { [Op.in]: Project.forCountry(query.country) } });
+    }
 
     if (query.taskIds != null && query.taskIds.length > 0) {
       builder.where({ taskId: query.taskIds });

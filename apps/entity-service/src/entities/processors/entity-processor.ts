@@ -24,6 +24,7 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
 import { Literal } from "sequelize/types/utils";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import { NurseriesMetaQueryDto, SitesMetaQueryDto } from "../dto/nurseries-meta.dto";
 
 export type Aggregate<M extends Model> = {
   func: string;
@@ -169,6 +170,16 @@ export abstract class EntityProcessor<
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto): Promise<void> {
     throw new BadRequestException("Reports meta is not supported for this entity type");
   }
+
+  /* istanbul ignore next */
+  async addNurseriesMetaIndex(document: DocumentBuilder, query: NurseriesMetaQueryDto): Promise<void> {
+    throw new BadRequestException("Nurseries meta is not supported for this entity type");
+  }
+
+  /* istanbul ignore next */
+  async addSitesMetaIndex(document: DocumentBuilder, query: SitesMetaQueryDto): Promise<void> {
+    throw new BadRequestException("Sites meta is not supported for this entity type");
+  }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 
   async delete(model: ModelType) {
@@ -202,6 +213,9 @@ export abstract class EntityProcessor<
         const updateRequest = await UpdateRequest.for(model).current().findOne();
         if (updateRequest != null && entityAllowsChangeRequest(model.status)) {
           await updateRequest.update({ status: PENDING_APPROVAL });
+        } else if (model.status === APPROVED) {
+          // Approved with no change request: there is nothing to review, so the submit is accepted as-is.
+          return;
         } else {
           if (updateRequest != null) {
             await updateRequest.destroy();

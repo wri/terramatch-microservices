@@ -342,6 +342,19 @@ export class PolygonGeometryCreationService {
         replacements[`uuid${index}`] = uuid;
       });
 
+      // Includes soft deleted rows so deletes find their projects. Keep it out of the UPDATE: as a
+      // subquery there, MariaDB takes 33s instead of 0.5s on a 3.5k polygon project.
+      const projects = await PolygonGeometry.sql.query<{ projectId: number }>(
+        `
+        SELECT DISTINCT s.project_id AS projectId
+        FROM site_polygon sp
+        JOIN v2_sites s ON s.uuid = sp.site_id
+        WHERE sp.poly_id IN (${placeholders})
+      `,
+        { replacements, type: QueryTypes.SELECT, transaction }
+      );
+      if (projects.length === 0) return;
+
       const query = `
         UPDATE v2_projects p
         JOIN (
@@ -352,14 +365,10 @@ export class PolygonGeometryCreationService {
           FROM site_polygon sp
           JOIN polygon_geometry pg ON sp.poly_id = pg.uuid
           JOIN v2_sites s ON s.uuid = sp.site_id
-          WHERE s.project_id = (
-            SELECT DISTINCT s2.project_id
-            FROM site_polygon sp2
-            JOIN v2_sites s2 ON s2.uuid = sp2.site_id
-            WHERE sp2.poly_id IN (${placeholders})
-            LIMIT 1
-          )
+          WHERE s.project_id IN (:projectIds)
             AND sp.is_active = 1
+            AND sp.deleted_at IS NULL
+            AND pg.deleted_at IS NULL
             AND pg.geom IS NOT NULL
           GROUP BY s.project_id
         ) centroids ON centroids.project_id = p.id
@@ -369,12 +378,12 @@ export class PolygonGeometryCreationService {
       `;
 
       await PolygonGeometry.sql.query(query, {
-        replacements,
+        replacements: { projectIds: projects.map(({ projectId }) => projectId) },
         type: QueryTypes.UPDATE,
         transaction
       });
 
-      this.logger.log(`Updated project centroids for affected project`);
+      this.logger.log("Updated project centroids for affected projects");
     } catch (error) {
       this.logger.error("Error bulk updating project centroids", error);
       throw new InternalServerErrorException("Failed to update project centroids");

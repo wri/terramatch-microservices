@@ -300,18 +300,7 @@ export function JsonApiResponse(
   jsonApiOptions: ResourceType | JsonApiOptions | (ResourceType | JsonApiOptions)[],
   apiResponseOptions: ApiResponseOptions = {}
 ) {
-  const { documents, extraModels } = (isArray(jsonApiOptions) ? jsonApiOptions : [jsonApiOptions]).reduce(
-    ({ documents, extraModels }, options) => {
-      if (!isJsonApiOptions(options)) options = { data: options };
-      const { document, extraModels: models } = buildSchema(options);
-
-      return {
-        documents: [...documents, { type: "object", properties: document } as DocumentSchema],
-        extraModels: [...extraModels, ...models]
-      };
-    },
-    { documents: [] as DocumentSchema[], extraModels: [] as ResourceType[] }
-  );
+  const { documents, extraModels } = buildDocuments(isArray(jsonApiOptions) ? jsonApiOptions : [jsonApiOptions]);
 
   const fullOptions = {
     status: HttpStatus.OK,
@@ -322,7 +311,14 @@ export function JsonApiResponse(
   return applyDecorators(ApiResponse(fullOptions), ApiExtraModels(...uniq(extraModels)));
 }
 
-export function JsonApiDeletedResponse(types: string | string[], apiResponseOptions: ApiResponseOptions = {}) {
+/**
+ * @param alternatives Documents the endpoint may return instead, such as a DelayedJobDto.
+ */
+export function JsonApiDeletedResponse(
+  types: string | string[],
+  apiResponseOptions: ApiResponseOptions = {},
+  alternatives: (ResourceType | JsonApiOptions)[] = []
+) {
   const schema: DocumentMetaSchema = {
     type: "object",
     properties: {
@@ -335,12 +331,28 @@ export function JsonApiDeletedResponse(types: string | string[], apiResponseOpti
       }
     }
   };
+  const { documents, extraModels } = buildDocuments(alternatives);
 
   const fullOptions = {
     status: HttpStatus.OK,
     ...apiResponseOptions,
-    schema
+    schema: documents.length === 0 ? schema : { oneOf: [schema, ...documents] }
   } as ApiResponseOptions;
 
-  return applyDecorators(ApiResponse(fullOptions));
+  return applyDecorators(ApiResponse(fullOptions), ApiExtraModels(...uniq(extraModels)));
+}
+
+function buildDocuments(jsonApiOptions: (ResourceType | JsonApiOptions)[]) {
+  return jsonApiOptions.reduce(
+    ({ documents, extraModels }, options) => {
+      if (!isJsonApiOptions(options)) options = { data: options };
+      const { document, extraModels: models } = buildSchema(options);
+
+      return {
+        documents: [...documents, { type: "object", properties: document } as DocumentSchema],
+        extraModels: [...extraModels, ...models]
+      };
+    },
+    { documents: [] as DocumentSchema[], extraModels: [] as ResourceType[] }
+  );
 }

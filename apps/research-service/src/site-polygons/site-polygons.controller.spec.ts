@@ -7,7 +7,7 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
+import { buildDelayedJobResponse, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
@@ -37,6 +37,7 @@ import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.
 import { SitePolygonSummaryService } from "./site-polygon-summary.service";
 import { SitePolygonSummaryDto } from "./dto/site-polygon-summary.dto";
 import { SitePolygonSummaryQueryDto } from "./dto/site-polygon-summary-query.dto";
+import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
 
 function getSharedSequelize(): Sequelize {
   const connection = User.sequelize;
@@ -66,6 +67,7 @@ describe("SitePolygonsController", () => {
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
   let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
   let geometryUploadQueue: DeepMocked<Queue>;
+  let sitePolygonBulkQueue: DeepMocked<Queue>;
   let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
   let geoJsonExportService: DeepMocked<GeoJsonExportService>;
   let sitePolygonMapIndexService: DeepMocked<SitePolygonMapIndexService>;
@@ -179,6 +181,10 @@ describe("SitePolygonsController", () => {
         {
           provide: getQueueToken("geometry-upload"),
           useValue: (geometryUploadQueue = createMock<Queue>())
+        },
+        {
+          provide: getQueueToken(SITE_POLYGON_BULK_QUEUE),
+          useValue: (sitePolygonBulkQueue = createMock<Queue>())
         },
         {
           provide: GeoJsonExportService,
@@ -1229,11 +1235,11 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.bulkDelete(bulkDeletePayload(["delete-me"]))).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", [sitePolygon]);
       expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
     });
 
-    it("should authorize each polygon and return a deleted response", async () => {
+    it("should authorize every polygon and return a deleted response", async () => {
       const sitePolygon1 = await SitePolygonFactory.build({ uuid: "delete-me-1" });
       const sitePolygon2 = await SitePolygonFactory.build({ uuid: "delete-me-2" });
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
@@ -1242,10 +1248,42 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.bulkDelete(bulkDeletePayload(["delete-me-1", "delete-me-2"]));
 
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon2);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", [sitePolygon1, sitePolygon2]);
       expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([sitePolygon1, sitePolygon2]);
-      expect(result.meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
+      expect(sitePolygonBulkQueue.add).not.toHaveBeenCalled();
+      expect(serialize(result).meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
+    });
+
+    const buildSelection = (count: number) =>
+      Promise.all(Array.from({ length: count }, (_, index) => SitePolygonFactory.build({ uuid: `polygon-${index}` })));
+
+    it("should delete a selection at the threshold in the request", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(sitePolygons.map(({ uuid }) => uuid));
+
+      await controller.bulkDelete(bulkDeletePayload(sitePolygons.map(({ uuid }) => uuid)));
+
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(sitePolygons);
+      expect(sitePolygonBulkQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should queue a delayed job for a selection over the threshold", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkDelete = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkDelete")
+        .mockResolvedValue(delayedJobResponse);
+
+      const result = await controller.bulkDelete(bulkDeletePayload(sitePolygons.map(({ uuid }) => uuid)));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygons);
+      expect(queueBulkDelete).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
     });
   });
 

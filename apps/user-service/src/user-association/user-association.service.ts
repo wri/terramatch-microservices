@@ -56,6 +56,13 @@ export interface UserAssociationProcessor {
   handleUpdate(document: DocumentBuilder, userUuid: string, status: "approved" | "rejected"): Promise<void>;
 }
 
+const compareAscNullsLast = (a: number | null | undefined, b: number | null | undefined) => {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return a - b;
+};
+
 @Injectable()
 export class UserAssociationService {
   private readonly logger = new TMLogger(UserAssociationService.name);
@@ -344,30 +351,40 @@ export class UserAssociationService {
     });
     const filteredUsers = includeOwners ? users : users.filter(user => user.organisationId !== organisation.id);
     // Unregistered invitees already carry the organisation as their home organisation. Until they accept the
-    // invite (which happens at signup), the FE shows them as "Awaiting Response" instead of "Accepted".
-    const pendingInviteEmails = new Set(
+    // invite (which happens at signup), the FE shows them as "Invited" instead of "Accepted".
+    const pendingInviteIdsByEmail = new Map(
       (
         await OrganisationInvite.findAll({
           where: { organisationId: organisation.id, acceptedAt: null },
-          attributes: ["emailAddress"]
+          attributes: ["id", "emailAddress"]
         })
-      ).map(invite => invite.emailAddress)
+      ).map(invite => [invite.emailAddress, invite.id])
     );
-    filteredUsers.forEach(user => {
+    const entries = filteredUsers.map(user => {
       const orgUser = orgUsers.find(orgUser => orgUser.userId === user.id);
       const isOwner = user.organisationId === organisation.id;
       const status = isOwner ? "approved" : (orgUser?.status ?? null);
+      const invitePending = isOwner && pendingInviteIdsByEmail.has(user.emailAddress);
       const dto = new UserAssociationDto(user, {
         status,
         isManager: false,
         organisationName: organisation.name ?? "",
         associatedType: "organisations",
-        invitePending: isOwner && pendingInviteEmails.has(user.emailAddress)
+        invitePending
       });
       dto.lastLoggedInAt = user.lastLoggedInAt != null ? user.lastLoggedInAt.toISOString() : null;
-      document.addData(user.uuid as string, dto);
+      const inviteId = invitePending ? pendingInviteIdsByEmail.get(user.emailAddress) : undefined;
+      return { user, dto, inviteId, orgUserId: orgUser?.id };
     });
-    const indexIds = filteredUsers.map(user => user.uuid as string);
+    entries.sort((a, b) => {
+      const byInviteId = compareAscNullsLast(a.inviteId, b.inviteId);
+      if (byInviteId !== 0) return byInviteId;
+      const byOrgUserId = compareAscNullsLast(a.orgUserId, b.orgUserId);
+      if (byOrgUserId !== 0) return byOrgUserId;
+      return compareAscNullsLast(a.user.id, b.user.id);
+    });
+    entries.forEach(({ user, dto }) => document.addData(user.uuid as string, dto));
+    const indexIds = entries.map(({ user }) => user.uuid as string);
     document.addIndex({
       resource: "associatedUsers",
       requestPath: `/userAssociations/v3/organisations/${organisation.uuid}${getStableRequestQuery(query)}`,
@@ -383,19 +400,31 @@ export class UserAssociationService {
     });
     if (users.length === 0) throw new NotFoundException("Users not found");
     const userIds = users.map(user => user.id);
-    const organisationUserCount = await OrganisationUser.count({ where: { organisationId } });
-    const removedOrganisationUserCount = await OrganisationUser.count({
-      where: { organisationId, userId: { [Op.in]: userIds } }
-    });
-    if (removedOrganisationUserCount > 0 && organisationUserCount - removedOrganisationUserCount === 0) {
-      throw new BadRequestException("Cannot remove the last user from an organisation");
-    }
-    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
 
     // Approved and invited members stay visible through users.organisation_id, not only organisation_user.
     const homeMemberIds = users
       .filter(user => user.organisationId != null && Number(user.organisationId) === Number(organisationId))
       .map(user => user.id);
+
+    // The organisation's accepted members are its approved organisation_user rows plus its home members (the creator
+    // has no organisation_user row). Removing any of them must leave at least one other accepted member.
+    const removedAcceptedCount = await OrganisationUser.count({
+      where: { organisationId, status: APPROVED, userId: { [Op.in]: userIds } }
+    });
+    if (homeMemberIds.length > 0 || removedAcceptedCount > 0) {
+      const remainingOrganisationUserCount = await OrganisationUser.count({
+        where: { organisationId, status: APPROVED, userId: { [Op.notIn]: userIds } }
+      });
+      const remainingHomeMemberCount = await User.count({
+        where: { organisationId, id: { [Op.notIn]: userIds } }
+      });
+      if (remainingOrganisationUserCount + remainingHomeMemberCount === 0) {
+        throw new BadRequestException("Cannot remove the last user from an organisation");
+      }
+    }
+
+    await OrganisationUser.destroy({ where: { organisationId, userId: { [Op.in]: userIds } } });
+
     if (homeMemberIds.length > 0) {
       await User.update({ organisationId: null }, { where: { id: { [Op.in]: homeMemberIds } } });
     }
@@ -520,6 +549,31 @@ export class UserAssociationService {
     } catch (error) {
       this.logger.error(`Failed to queue organisation user approved email for organisation ${organisation.id}`, error);
     }
+
+    return invite;
+  }
+
+  async sendOrganisationInviteReminder(
+    organisation: Organisation,
+    userUuid: string,
+    callbackUrl?: string
+  ): Promise<OrganisationInvite> {
+    const user = await User.findOne({ where: { uuid: userUuid }, attributes: ["emailAddress"] });
+    if (user == null) throw new NotFoundException("User not found");
+
+    const invite = await OrganisationInvite.findOne({
+      where: { organisationId: organisation.id, emailAddress: user.emailAddress, acceptedAt: null }
+    });
+    if (invite?.token == null) {
+      throw new BadRequestException("This user does not have a pending invite to this organisation");
+    }
+
+    await new OrganisationInviteEmail({
+      organisationId: organisation.id,
+      emailAddress: invite.emailAddress,
+      token: invite.token,
+      callbackUrl
+    }).sendLater(this.emailQueue);
 
     return invite;
   }

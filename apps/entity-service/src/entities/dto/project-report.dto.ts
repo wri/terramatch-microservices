@@ -87,6 +87,9 @@ export class ProjectReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Number })
   pctSurvivalToDate: number | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type ProjectReportMedia = Pick<ProjectReportFullDto, keyof typeof ProjectReport.MEDIA>;
@@ -100,9 +103,6 @@ export class ProjectReportFullDto extends ProjectReportLightDto {
     super();
     populateDto<ProjectReportFullDto, ProjectReport>(this, projectReport, { lightResource: false, ...props });
   }
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

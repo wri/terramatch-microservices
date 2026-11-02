@@ -29,6 +29,8 @@ import { OrganisationInviteParamDto } from "./dto/organisation-invite-param.dto"
 import { OrganisationInviteDto } from "@terramatch-microservices/common/dto";
 import { ProjectInviteAcceptBodyDto } from "./dto/project-invite-accept-body.dto";
 import { ProjectInviteAcceptanceDto } from "./dto/project-invite-acceptance.dto";
+import { OrganisationInviteReminderRequestDto } from "./dto/organisation-invite-reminder-request.dto";
+import { Organisation } from "@terramatch-microservices/database/entities";
 
 @Controller("userAssociations/v3/:model")
 export class UserAssociationController {
@@ -125,6 +127,40 @@ export class UserAssociationController {
     await this.policyService.authorize("update", organisation);
 
     const invite = await this.userAssociationService.inviteOrganisationUser(organisation as never, body);
+
+    return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
+  }
+
+  @Post(":uuid/:userUuid/reminders")
+  @ApiOperation({
+    operationId: "createOrganisationInviteReminder",
+    summary: "Re-send the invitation email to a user who has not accepted their organisation invite yet"
+  })
+  @JsonApiResponse({ data: OrganisationInviteDto })
+  @ExceptionResponse(UnauthorizedException, {
+    description: "Authentication failed, or resource unavailable to current user."
+  })
+  @ExceptionResponse(NotFoundException, { description: "Organisation or user not found." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Reminders are only available for organisations, or the user has no pending invite."
+  })
+  async createOrganisationInviteReminder(
+    @Param() { model, uuid, userUuid }: UserAssociationUpdateParamDto,
+    @Body() body?: OrganisationInviteReminderRequestDto
+  ) {
+    if (model !== "organisations") {
+      throw new BadRequestException("Invite reminders are only available for organisations");
+    }
+
+    const processor = this.userAssociationService.createProcessor("organisations", uuid);
+    const organisation = await processor.getEntity();
+    await this.policyService.authorize("update", organisation);
+
+    const invite = await this.userAssociationService.sendOrganisationInviteReminder(
+      organisation as Organisation,
+      userUuid,
+      body?.callbackUrl
+    );
 
     return buildJsonApi(OrganisationInviteDto).addData(invite.uuid, new OrganisationInviteDto(invite)).document;
   }

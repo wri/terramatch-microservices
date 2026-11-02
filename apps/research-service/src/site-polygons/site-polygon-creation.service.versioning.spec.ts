@@ -631,6 +631,27 @@ describe("SitePolygonCreationService - Versioning", () => {
         expect(CriteriaSite.destroy).not.toHaveBeenCalled();
       });
 
+      it("should treat a DATE column plant start and the drawer's ISO date as unchanged", async () => {
+        jest
+          .spyOn(versioningService, "validateVersioningEligibility")
+          .mockResolvedValue({ ...approvedBase, plantStart: "2024-01-15" } as unknown as SitePolygon);
+
+        await createVersion({ ...unchangedForm, plantStart: "2024-01-15T00:00:00.000Z", submissionCycle: "2" }, true);
+
+        expect(appliedAttributes()).not.toHaveProperty("status");
+        expect(CriteriaSite.destroy).not.toHaveBeenCalled();
+      });
+
+      it("should reset to draft when the plant start date changes", async () => {
+        jest
+          .spyOn(versioningService, "validateVersioningEligibility")
+          .mockResolvedValue({ ...approvedBase, plantStart: "2024-01-15" } as unknown as SitePolygon);
+
+        await createVersion({ ...unchangedForm, plantStart: "2024-01-16T00:00:00.000Z" }, true);
+
+        expect(appliedAttributes().status).toBe("draft");
+      });
+
       it("should reset to draft when an admin changes a validated attribute", async () => {
         await createVersion({ ...unchangedForm, submissionCycle: "2", numTrees: 11 }, true);
 

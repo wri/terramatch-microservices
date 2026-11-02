@@ -20,6 +20,7 @@ import { Includeable, Op } from "sequelize";
 import { CustomAttributeMap, PolygonAttributeValuesService } from "../site-polygons/polygon-attribute-values.service";
 import { GeoJsonExportAttributes } from "./dto/geojson-export-request.dto";
 import { GEOJSON_EXPORT_SITE_ATTRIBUTES, GeoJsonExportQueryBuilder } from "./geojson-export-query.builder";
+import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { once } from "events";
 import { uniq } from "lodash";
 
@@ -335,8 +336,7 @@ export class GeoJsonExportService {
       await writeChunk(destination, '{"type":"FeatureCollection","features":[');
       let processed = 0;
       let written = 0;
-      for (let page = 1; page <= Math.ceil(total / EXPORT_BATCH_SIZE); page++) {
-        const sitePolygons = await builder.pageNumber(page).execute();
+      for await (const sitePolygons of batchFindAll(builder)) {
         const features = await this.buildFeatureJson(sitePolygons);
         if (features.length > 0) {
           await writeChunk(destination, `${written > 0 ? "," : ""}${features.join(",")}`);

@@ -43,7 +43,7 @@ export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobDat
       processedContent: 0,
       metadata: { entity_type: entityType, entity_name: entityName }
     });
-    // The job uuid keeps the S3 key unguessable; the bucket allows public reads by key.
+    // The job uuid keeps the S3 key unique when two exports share a name and timestamp.
     const fileName = `exports/polygon-exports/${delayedJob.uuid}/${timestampFileName(
       `${entityName} polygons`,
       ".geojson"

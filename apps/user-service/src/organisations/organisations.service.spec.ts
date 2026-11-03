@@ -24,10 +24,12 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { OrganisationFullDto } from "@terramatch-microservices/common/dto";
+import { Response } from "express";
 
 describe("OrganisationsService", () => {
   let service: OrganisationsService;
   let mediaService: DeepMocked<MediaService>;
+  let csvExportService: DeepMocked<CsvExportService>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -35,7 +37,7 @@ describe("OrganisationsService", () => {
         OrganisationsService,
         PolicyService,
         { provide: MediaService, useValue: (mediaService = createMock<MediaService>()) },
-        { provide: CsvExportService, useValue: createMock<CsvExportService>() },
+        { provide: CsvExportService, useValue: (csvExportService = createMock<CsvExportService>()) },
         { provide: getQueueToken("email"), useValue: {} }
       ]
     }).compile();
@@ -45,6 +47,56 @@ describe("OrganisationsService", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe("exportCsv", () => {
+    it("should write the organisation profile CSV to the response", async () => {
+      const org = await OrganisationFactory.create({ name: "Green Growers" });
+      const response = {} as Response;
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (_fileName, _target, _columns, writeRows) => {
+        await writeRows(addRow);
+      });
+
+      await service.exportCsv(org, response);
+
+      expect(csvExportService.writeCsv).toHaveBeenCalledWith(
+        "green-growers-profile.csv",
+        response,
+        expect.objectContaining({ name: "Name" }),
+        expect.any(Function)
+      );
+      expect(addRow).toHaveBeenCalledWith(org, {});
+    });
+
+    it("should use a fallback file name when the organisation has no name", async () => {
+      const org = await OrganisationFactory.create({ name: null });
+      csvExportService.writeCsv.mockResolvedValue(undefined);
+
+      await service.exportCsv(org, {} as Response);
+
+      expect(csvExportService.writeCsv).toHaveBeenCalledWith(
+        "organisation-profile.csv",
+        expect.anything(),
+        expect.anything(),
+        expect.any(Function)
+      );
+    });
+
+    it("should include media URLs keyed by collection name", async () => {
+      const org = await OrganisationFactory.create();
+      const logo = await MediaFactory.org(org).create({ collectionName: "logo" });
+      mediaService.getUrl.mockReturnValue("https://example.com/logo.png");
+      const addRow = jest.fn();
+      csvExportService.writeCsv.mockImplementation(async (_fileName, _target, _columns, writeRows) => {
+        await writeRows(addRow);
+      });
+
+      await service.exportCsv(org, {} as Response);
+
+      expect(mediaService.getUrl).toHaveBeenCalledWith(expect.objectContaining({ id: logo.id }));
+      expect(addRow).toHaveBeenCalledWith(org, { logo: "https://example.com/logo.png" });
+    });
   });
 
   describe("findMany", () => {

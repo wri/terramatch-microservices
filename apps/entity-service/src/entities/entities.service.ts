@@ -269,6 +269,7 @@ export class EntitiesService {
     dueMonth,
     dueYear,
     statuses,
+    updateRequestStatuses,
     search,
     projectUuid
   }: ReportCountsQueryDto): ReportFilter | undefined {
@@ -283,6 +284,8 @@ export class EntitiesService {
       frameworkKeys,
       projectIds: scopedProjectIds(userProjectIds, projectUuid),
       statuses: statuses != null && statuses.length > 0 ? statuses : undefined,
+      updateRequestStatuses:
+        updateRequestStatuses != null && updateRequestStatuses.length > 0 ? updateRequestStatuses : undefined,
       dueDateFrom: dueDateFrom == null ? undefined : DateTime.fromISO(dueDateFrom, { zone: "utc" }).toJSDate(),
       dueDateTo: dueDateTo == null ? undefined : DateTime.fromISO(dueDateTo, { zone: "utc" }).toJSDate(),
       dueMonth,

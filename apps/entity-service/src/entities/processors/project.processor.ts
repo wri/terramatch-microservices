@@ -26,8 +26,9 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, Project
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
+import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
-import { DIRECT } from "@terramatch-microservices/database/constants/demographic-collections";
+import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
   BadRequestException,
   InternalServerErrorException,
@@ -54,7 +55,6 @@ import { ServerResponse } from "node:http";
 import { streamZipToResponse } from "@terramatch-microservices/common/util/zip-stream";
 import { Literal } from "sequelize/types/utils";
 import { ProjectReportMetaDto, ReportMetaDto } from "../dto/project-report-meta.dto";
-import { DUE, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
 import {
   NurseriesMetaQueryDto,
@@ -69,6 +69,13 @@ import {
   REPORT_FILTER_MODELS,
   ReportFilter
 } from "../report-filters";
+
+const ENTITY_ATTENTION_STATUSES: readonly string[] = [DRAFT, INFORMATION_REQUIRED];
+
+// Sites and nurseries need attention when the entity or its update request is a draft or needs information.
+const requiresAttention = ({ status, updateRequestStatus }: Pick<Site, "status" | "updateRequestStatus">) =>
+  ENTITY_ATTENTION_STATUSES.includes(status) ||
+  (updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
 
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 
@@ -144,7 +151,8 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "directSeedingSurvivalRate",
   "landownerAgreement",
   "indirectEntities",
-  "gliComponents"
+  "gliComponents",
+  "incomeGeneratingActivities"
 ];
 
 const ADMIN_CSV_COLUMNS: Dictionary<string> = {
@@ -178,8 +186,6 @@ export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
 ];
 
 const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
-
-const REPORTS_REQUIRING_ATTENTION_STATUSES = [DUE, DRAFT, INFORMATION_REQUIRED] as const;
 
 const REPORTS_META_TYPES = ["nurseryReports", "projectReports", "siteReports"] as const;
 
@@ -356,7 +362,7 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingNurseryIds = new Set(matchingNurseries.map(({ id }) => id));
       const nurseries = await Nursery.findAll({
-        attributes: ["id", "projectId", "status"],
+        attributes: ["id", "projectId", "status", "updateRequestStatus"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
       const seedlingsByNursery = await this.seedlingsGrownByNursery(nurseries.map(({ id }) => id));
@@ -379,6 +385,7 @@ export class ProjectProcessor extends EntityProcessor<
             frameworkKey: frameworkKey ?? null,
             nurseriesTotal: projectNurseries.length,
             nurseriesMatching: matchingProjectNurseries.length,
+            nurseriesRequiringAttention: matchingProjectNurseries.filter(requiresAttention).length,
             seedlingsGrownTotal: sumBy(projectNurseries, ({ id: nurseryId }) => seedlingsByNursery.get(nurseryId) ?? 0),
             seedlingsGrownMatching: sumBy(
               matchingProjectNurseries,
@@ -513,7 +520,7 @@ export class ProjectProcessor extends EntityProcessor<
       const pageProjectIds = projects.map(({ id }) => id);
       const matchingSiteIds = new Set(matchingSites.map(({ id }) => id));
       const sites = await Site.findAll({
-        attributes: ["id", "uuid", "projectId", "status", "aNatRegeneration"],
+        attributes: ["id", "uuid", "projectId", "status", "updateRequestStatus", "aNatRegeneration"],
         where: { projectId: { [Op.in]: pageProjectIds } }
       });
 
@@ -547,6 +554,7 @@ export class ProjectProcessor extends EntityProcessor<
             frameworkKey: frameworkKey ?? null,
             sitesTotal: projectSites.length,
             sitesMatching: matchingProjectSites.length,
+            sitesRequiringAttention: matchingProjectSites.filter(requiresAttention).length,
             treesPlantedTotal: sumBy(projectSites, site => metricsOf(site).treesPlantedCount),
             treesPlantedMatching: sumBy(approvedMatchingSites, site => metricsOf(site).treesPlantedCount),
             hectaresRestoredTotal: sumBy(projectSites, site => metricsOf(site).totalHectaresRestoredSum),
@@ -580,8 +588,8 @@ export class ProjectProcessor extends EntityProcessor<
   /**
    * Adds an index of report meta for all projects with at least one project, site or nursery report
    * matching the query's filters. Only sites / nurseries with at least one matching report are
-   * listed. If no statuses are requested, reports requiring attention (due, draft,
-   * information-required) are counted.
+   * listed. If no statuses are requested, reports requiring attention (due, draft or
+   * information-required, on the report or on its update request) are counted.
    */
   async addReportsMetaIndex(document: DocumentBuilder, query: ReportsMetaQueryDto) {
     const filter = this.entitiesService.reportFilter(query);
@@ -613,7 +621,7 @@ export class ProjectProcessor extends EntityProcessor<
 
       const pageFilter = {
         ...filter,
-        statuses: filter.statuses ?? REPORTS_REQUIRING_ATTENTION_STATUSES,
+        requiresAttention: filter.statuses == null,
         projectIds: projects.map(({ id }) => id)
       };
       const parentWhere = (type: "siteReports" | "nurseryReports") => ({
@@ -857,6 +865,11 @@ export class ProjectProcessor extends EntityProcessor<
 
     const treesToBePlantedSpeciesGoalTotal =
       (await TreeSpecies.visible().collection("tree-planted").for(project).sum("amount")) ?? 0;
+    const treesSeedlingsGoal =
+      (await TreeSpecies.visible()
+        .collection("nursery-seedling")
+        .nurseries(Nursery.idsSubquery(projectId))
+        .sum("amount")) ?? 0;
 
     const dto = new ProjectFullDto(project, {
       ...(await this.getFeedback(project)),
@@ -867,6 +880,8 @@ export class ProjectProcessor extends EntityProcessor<
       totalOverdueReports: await this.getTotalOverdueReports(project.id),
       totalProjectReports: await ProjectReport.project(projectId).count(),
       treesToBePlantedSpeciesGoalTotal,
+      treesSeedlingsGoal,
+      fullTimeJobsGoal: await this.getFullTimeJobsGoal(projectId),
 
       assistedNaturalRegenerationList,
       regeneratedTreesCount,
@@ -948,13 +963,36 @@ export class ProjectProcessor extends EntityProcessor<
       "amount"
     );
 
+    // The by-year total also includes the ANR trees, so the planted goal is the "tree-planting" strategy row.
+    const treesPlantedGoalStrategy = sumBy(
+      (trees?.entries ?? []).filter(({ type, subtype }) => type === "strategy" && subtype === "tree-planting"),
+      "amount"
+    );
+
     return {
       totalHectaresRestoredGoal,
       treesGrownGoal,
+      treesPlantedGoal: treesPlantedGoalStrategy,
       goalTreesRestoredAnr,
       seedsGrownGoal,
       treesToBeRestoredGoal
     };
+  }
+
+  protected async getFullTimeJobsGoal(projectId: number) {
+    return (
+      (await TrackingEntry.gender().sum("amount", {
+        where: {
+          trackingId: {
+            [Op.in]: Tracking.idsSubquery([projectId], Project.LARAVEL_TYPE, {
+              domain: "demographics",
+              type: Tracking.JOBS_TYPE,
+              collection: FULL_TIME
+            })
+          }
+        }
+      })) ?? 0
+    );
   }
 
   protected async getWorkdayCount(projectId: number, useDemographicsCutoff = false) {

@@ -64,7 +64,8 @@ const DRAFT_REVIEW_STATE: Pick<SitePolygon, "status" | "validationStatus"> = {
 
 const normalizeComparableValue = (key: string, value: unknown): unknown => {
   if (key === "numTrees") return value ?? 0;
-  if (value instanceof Date) return value.getTime();
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (key === "plantStart" && typeof value === "string") return value.slice(0, 10);
   if (Array.isArray(value)) return value.length === 0 ? null : [...value].sort();
   return value ?? null;
 };

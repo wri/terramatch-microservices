@@ -736,6 +736,26 @@ describe("SitePolygonCreationService - Versioning", () => {
     });
   });
 
+  describe("validateBulkAttributeUpdate", () => {
+    it("should check versioning eligibility and the attribute changes without writing anything", async () => {
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(new Map());
+      const createVersions = jest.spyOn(versioningService, "createVersions");
+
+      await service.validateBulkAttributeUpdate(["uuid-1", "uuid-2"], { numTrees: 10 });
+
+      expect(versioningService.validateBulkVersioningEligibility).toHaveBeenCalledWith(["uuid-1", "uuid-2"]);
+      expect(createVersions).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid attribute changes", async () => {
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(new Map());
+
+      await expect(service.validateBulkAttributeUpdate(["uuid-1"], { numTrees: -1 })).rejects.toThrow(
+        "numTrees must be a non-negative integer"
+      );
+    });
+  });
+
   describe("bulkUpdateSitePolygonAttributes", () => {
     const userId = 123;
     const userFullName = "Test User";

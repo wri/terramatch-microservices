@@ -260,18 +260,13 @@ export class SitePolygonsService {
     return await this.deleteAllVersions(getPrimaryUuids(sitePolygons));
   }
 
-  async bulkDeleteSitePolygonsInBatches(
-    primaryUuids: string[],
-    onProgress: (processed: number) => Promise<void>
-  ): Promise<string[]> {
-    const sitePolygonUuids: string[] = [];
+  async bulkDeleteSitePolygonsInBatches(primaryUuids: string[], onProgress: (processed: number) => Promise<void>) {
     const polygonUuids: string[] = [];
     const activePolygonUuids: string[] = [];
     let processed = 0;
     try {
       for (const batch of chunk(primaryUuids, BULK_DELETE_BATCH_SIZE)) {
         const deleted = await this.transaction(transaction => this.deleteVersionGroups(batch, transaction));
-        sitePolygonUuids.push(...deleted.sitePolygonUuids);
         polygonUuids.push(...deleted.polygonUuids);
         activePolygonUuids.push(...deleted.activePolygonUuids);
 
@@ -284,8 +279,6 @@ export class SitePolygonsService {
       }
       await this.invalidateDeletedPolygonTiles(activePolygonUuids);
     }
-
-    return sitePolygonUuids;
   }
 
   async deleteSitePolygon(uuid: string): Promise<void> {
@@ -656,27 +649,36 @@ export class SitePolygonsService {
     user: User | null
   ) {
     const uuids = sitePolygonsUpdate.map(d => d.id);
+    await this.assertStatusUpdateAllowed(status, uuids);
 
-    if (status === POLYGON_PENDING_APPROVAL) {
-      const requestedSitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
-      this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
-    }
+    const sitePolygons = await this.transaction(async transaction => {
+      await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: uuids } }, transaction });
+      const updated = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } }, transaction });
 
-    await SitePolygon.update({ status }, { where: { uuid: { [Op.in]: uuids } } });
-    const sitePolygons = await SitePolygon.findAll({ where: { uuid: { [Op.in]: uuids } } });
-
-    const auditStatusRecords = this.createAuditStatusRecords(sitePolygons, status, comment, user) as Array<
-      Attributes<AuditStatus>
-    >;
-    if (auditStatusRecords.length > 0) {
-      await AuditStatus.bulkCreate(auditStatusRecords);
-    }
+      const auditStatusRecords = this.createAuditStatusRecords(updated, status, comment, user) as Array<
+        Attributes<AuditStatus>
+      >;
+      if (auditStatusRecords.length > 0) {
+        await AuditStatus.bulkCreate(auditStatusRecords, { transaction });
+      }
+      return updated;
+    });
 
     if (status === "approved" && user != null) {
       await this.triggerProjectValidationJobs(sitePolygons, user.id);
     }
 
     return sitePolygons;
+  }
+
+  async assertStatusUpdateAllowed(status: PolygonStatus, uuids: string[]) {
+    if (status !== POLYGON_PENDING_APPROVAL) return;
+
+    const requestedSitePolygons = await SitePolygon.findAll({
+      where: { uuid: { [Op.in]: uuids } },
+      attributes: ["uuid", "status", "validationStatus"]
+    });
+    this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
   }
 
   private assertSitePolygonsEligibleForSubmission(uuids: string[], sitePolygons: SitePolygon[]): void {

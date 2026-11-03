@@ -27,6 +27,7 @@ import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.c
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
 import { SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygons/site-polygon-bulk.processor";
+import { SitePolygonBulkUpdateService } from "./site-polygons/site-polygon-bulk-update.service";
 import { GeometryUploadComparisonService } from "./site-polygons/geometry-upload-comparison.service";
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
@@ -93,6 +94,7 @@ const IS_REPL = process.env["REPL"] === "true";
     SitePolygonMapIndexService,
     SitePolygonSummaryService,
     SitePolygonCreationService,
+    SitePolygonBulkUpdateService,
     SitePolygonVersioningService,
     PolygonAttributeValuesService,
     PolygonGeometryCreationService,

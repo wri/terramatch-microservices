@@ -37,6 +37,7 @@ import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.
 import { SitePolygonSummaryService } from "./site-polygon-summary.service";
 import { SitePolygonSummaryDto } from "./dto/site-polygon-summary.dto";
 import { SitePolygonSummaryQueryDto } from "./dto/site-polygon-summary-query.dto";
+import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
 import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
 
 function getSharedSequelize(): Sequelize {
@@ -54,6 +55,9 @@ function restoreSitePolygonSequelize(): void {
     configurable: true
   });
 }
+
+const buildSelection = (count: number) =>
+  Promise.all(Array.from({ length: count }, (_, index) => SitePolygonFactory.build({ uuid: `polygon-${index}` })));
 
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
@@ -197,7 +201,8 @@ describe("SitePolygonsController", () => {
         {
           provide: SitePolygonSummaryService,
           useValue: (sitePolygonSummaryService = createMock<SitePolygonSummaryService>())
-        }
+        },
+        SitePolygonBulkUpdateService
       ]
     }).compile();
 
@@ -1005,7 +1010,7 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow("Site polygons not found for UUIDs: missing-uuid");
     });
 
-    it("should authorize update for each polygon and call bulkUpdateSitePolygonAttributes", async () => {
+    it("should authorize every polygon and call bulkUpdateSitePolygonAttributes", async () => {
       const sitePolygon1 = await SitePolygonFactory.build();
       const sitePolygon2 = await SitePolygonFactory.build();
       const newVersion1 = await SitePolygonFactory.build({ uuid: "new-version-1" });
@@ -1032,8 +1037,7 @@ describe("SitePolygonsController", () => {
 
       await controller.bulkUpdateAttributes({ data, attributeChanges });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", [sitePolygon1, sitePolygon2]);
       expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
         [sitePolygon1.uuid, sitePolygon2.uuid],
         attributeChanges,
@@ -1077,6 +1081,50 @@ describe("SitePolygonsController", () => {
         triggerType: "gh_push"
       });
     });
+
+    it("should validate and queue a delayed job for a selection over the threshold", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      const uuids = sitePolygons.map(({ uuid }) => uuid);
+      const attributeChanges = { numTrees: 100 };
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkAttributeUpdate = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkAttributeUpdate")
+        .mockResolvedValue(delayedJobResponse);
+
+      const result = await controller.bulkUpdateAttributes({
+        data: uuids.map(id => ({ type: "sitePolygons", id })),
+        attributeChanges
+      });
+
+      expect(sitePolygonCreationService.validateBulkAttributeUpdate).toHaveBeenCalledWith(uuids, attributeChanges);
+      expect(queueBulkAttributeUpdate).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons, {
+        userId: 1,
+        sitePolygonUuids: uuids,
+        attributeChanges
+      });
+      expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
+    });
+
+    it("should reject an invalid update over the threshold without queueing it", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonCreationService.validateBulkAttributeUpdate.mockRejectedValue(
+        new BadRequestException("numTrees must be a non-negative integer")
+      );
+      const queueBulkAttributeUpdate = jest.spyOn(SitePolygonBulkProcessor, "queueBulkAttributeUpdate");
+
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid })),
+          attributeChanges: { numTrees: -1 }
+        })
+      ).rejects.toThrow(BadRequestException);
+      expect(queueBulkAttributeUpdate).not.toHaveBeenCalled();
+    });
   });
 
   describe("bulkStatusUpdate", () => {
@@ -1108,6 +1156,47 @@ describe("SitePolygonsController", () => {
       Object.defineProperty(policyService, "userId", { value: userParams.id });
       await controller.updateBulkStatus("pending-approval", { comment: "comment", data });
       expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("pending-approval", data, "comment", userParams);
+    });
+
+    it("should validate and queue a delayed job for a selection over the threshold", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: 1 });
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkStatusUpdate = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkStatusUpdate")
+        .mockResolvedValue(delayedJobResponse);
+      const data = sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid }));
+
+      const result = await controller.updateBulkStatus("pending-approval", { comment: "Ready for review", data });
+
+      expect(sitePolygonService.assertStatusUpdateAllowed).toHaveBeenCalledWith(
+        "pending-approval",
+        sitePolygons.map(({ uuid }) => uuid)
+      );
+      expect(queueBulkStatusUpdate).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons, {
+        userId: 1,
+        status: "pending-approval",
+        data,
+        comment: "Ready for review"
+      });
+      expect(sitePolygonService.updateBulkStatus).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
+    });
+
+    it("should reject an ineligible submission over the threshold without queueing it", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      sitePolygonService.assertStatusUpdateAllowed.mockRejectedValue(new BadRequestException("Ineligible UUIDs"));
+      const queueBulkStatusUpdate = jest.spyOn(SitePolygonBulkProcessor, "queueBulkStatusUpdate");
+
+      await expect(
+        controller.updateBulkStatus("pending-approval", {
+          data: sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid }))
+        })
+      ).rejects.toThrow(BadRequestException);
+      expect(queueBulkStatusUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -1253,9 +1342,6 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonBulkQueue.add).not.toHaveBeenCalled();
       expect(serialize(result).meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
     });
-
-    const buildSelection = (count: number) =>
-      Promise.all(Array.from({ length: count }, (_, index) => SitePolygonFactory.build({ uuid: `polygon-${index}` })));
 
     it("should delete a selection at the threshold in the request", async () => {
       const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD);

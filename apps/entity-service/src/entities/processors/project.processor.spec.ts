@@ -1542,7 +1542,8 @@ describe("ProjectProcessor", () => {
         projectName: "Test Pitch",
         descriptionOfProjectTimeline: faker.lorem.paragraph(),
         indirectEntities: faker.lorem.paragraph(),
-        gliComponents: ["restoration-of-degraded-landscapes", "knowledge-management-and-monitoring-system"]
+        gliComponents: ["restoration-of-degraded-landscapes", "knowledge-management-and-monitoring-system"],
+        incomeGeneratingActivities: ["cookstoves", "beekeeping"]
       });
       await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
 
@@ -1554,6 +1555,7 @@ describe("ProjectProcessor", () => {
       expect(project.descriptionOfProjectTimeline).toBe(pitch.descriptionOfProjectTimeline);
       expect(project.indirectEntities).toBe(pitch.indirectEntities);
       expect(project.gliComponents).toEqual(pitch.gliComponents);
+      expect(project.incomeGeneratingActivities).toEqual(pitch.incomeGeneratingActivities);
     });
 
     it("copies trees, demographics and media from the pitch when creating the project", async () => {

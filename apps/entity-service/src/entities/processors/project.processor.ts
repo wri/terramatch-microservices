@@ -151,7 +151,8 @@ const PITCH_COPY_ATTRIBUTES: SharedPitchAttributes[] = [
   "directSeedingSurvivalRate",
   "landownerAgreement",
   "indirectEntities",
-  "gliComponents"
+  "gliComponents",
+  "incomeGeneratingActivities"
 ];
 
 const ADMIN_CSV_COLUMNS: Dictionary<string> = {

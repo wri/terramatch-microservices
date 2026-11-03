@@ -59,6 +59,7 @@ import { addNotificationsUuid } from "./202610221200-add-notifications-uuid";
 import { extendSitePolygonSiteScopedQueryIndex } from "./202610221200-extend-site-polygon-site-scoped-query-index";
 import { createApiKeys } from "./202610231200-create-api-keys";
 import { removeUserApiKeyColumn } from "./202610281200-remove-user-api-key-column";
+import { addPitchIncomeGeneratingActivities } from "./202611031200-add-pitch-income-generating-activities";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -119,5 +120,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   addNotificationsUuid,
   extendSitePolygonSiteScopedQueryIndex,
   createApiKeys,
-  removeUserApiKeyColumn
+  removeUserApiKeyColumn,
+  addPitchIncomeGeneratingActivities
 ];

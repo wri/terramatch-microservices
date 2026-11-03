@@ -82,6 +82,9 @@ export class DisturbanceReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Date })
   disturbanceEndDate: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type DisturbanceReportMedia = Pick<DisturbanceReportFullDto, keyof typeof DisturbanceReport.MEDIA>;
@@ -117,9 +120,6 @@ export class DisturbanceReportFullDto extends DisturbanceReportLightDto {
 
   @ApiProperty({ nullable: true, type: Boolean })
   nothingToReport: boolean | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

@@ -751,6 +751,47 @@ describe("UserAssociationService", () => {
 
       expect(addIndexSpy).toHaveBeenCalledWith(expect.objectContaining({ total: 0, ids: [] }));
     });
+
+    it("should flag a member whose organisation invite has not been accepted yet", async () => {
+      const org = await OrganisationFactory.create({ name: "Test Org" });
+      const invitee = await UserFactory.create({ organisationId: org.id });
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: invitee.emailAddress, token: "token" });
+      const document = new DocumentBuilder("associatedUsers");
+      const addDataSpy = jest.spyOn(document, "addData");
+
+      await service.addOrgUserDtos(document, org, [], {});
+
+      expect(addDataSpy).toHaveBeenCalledWith(invitee.uuid, expect.objectContaining({ invitePending: true }));
+    });
+
+    it("should order invited members by invite id, then join requests by id, then other members", async () => {
+      const org = await OrganisationFactory.create();
+      const member = await UserFactory.create({ organisationId: org.id });
+      const [firstInvitee, secondInvitee] = await UserFactory.createMany(2, { organisationId: org.id });
+      const [laterRequester, earlierRequester] = await UserFactory.createMany(2);
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: secondInvitee.emailAddress, token: "a" });
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: firstInvitee.emailAddress, token: "b" });
+      const earlierRequest = await OrganisationJoinRequestFactory.create({
+        organisationId: org.id,
+        userId: earlierRequester.id,
+        status: "pending"
+      });
+      const laterRequest = await OrganisationJoinRequestFactory.create({
+        organisationId: org.id,
+        userId: laterRequester.id,
+        status: "pending"
+      });
+      const document = new DocumentBuilder("associatedUsers");
+      const addIndexSpy = jest.spyOn(document, "addIndex");
+
+      await service.addOrgUserDtos(document, org, [laterRequest, earlierRequest], {});
+
+      expect(addIndexSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ids: [secondInvitee.uuid, firstInvitee.uuid, earlierRequester.uuid, laterRequester.uuid, member.uuid]
+        })
+      );
+    });
   });
 
   describe("deleteBulkOrgUserAssociations", () => {
@@ -794,6 +835,18 @@ describe("UserAssociationService", () => {
         )
       ).rejects.toThrow(new BadRequestException("Cannot remove the last user from an organisation"));
       expect(await User.count({ where: { organisationId: org.id } })).toBe(2);
+    });
+
+    it("should allow removing the creator when another member remains", async () => {
+      const org = await OrganisationFactory.create();
+      const creator = await UserFactory.create({ organisationId: org.id });
+      await UserFactory.create({ organisationId: org.id });
+
+      await service.deleteBulkOrgUserAssociations(org.id, [creator.uuid as string]);
+
+      await creator.reload();
+      expect(creator.organisationId).toBeNull();
+      expect(await User.count({ where: { organisationId: org.id } })).toBe(1);
     });
 
     it("should allow removing only join requests from an organisation without members", async () => {
@@ -1025,6 +1078,19 @@ describe("UserAssociationService", () => {
       expect(result).toBe(invite);
     });
 
+    it("should still add a registered user when the approval email cannot be queued", async () => {
+      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+      const invite = { uuid: "invite-uuid" } as OrganisationInvite;
+      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
+      jest.spyOn(User, "findOne").mockResolvedValue(registeredUser());
+      jest.spyOn(OrganisationJoinRequest, "count").mockResolvedValue(0);
+      jest.spyOn(OrganisationJoinRequest, "destroy").mockResolvedValue(0);
+      jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
+      emailQueue.add.mockRejectedValue(new Error("queue unavailable"));
+
+      await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).resolves.toBe(invite);
+    });
+
     it("should reject a registered user who is not a project developer", async () => {
       const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
       jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
@@ -1113,6 +1179,45 @@ describe("UserAssociationService", () => {
       );
       expect(emailQueue.add).toHaveBeenCalled();
       expect(result).toBe(invite);
+    });
+  });
+
+  describe("sendOrganisationInviteReminder", () => {
+    const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
+
+    it("should re-send the invite email with the original token for a pending invite", async () => {
+      const invite = {
+        uuid: "invite-uuid",
+        organisationId: org.id,
+        emailAddress: "new@example.com",
+        token: "fake-token",
+        acceptedAt: null
+      } as OrganisationInvite;
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: "new@example.com" } as User);
+      jest.spyOn(OrganisationInvite, "findOne").mockResolvedValue(invite);
+      emailQueue.add.mockResolvedValue({} as Job);
+
+      const result = await service.sendOrganisationInviteReminder(org, "user-uuid", "http://frontend/auth/signup");
+
+      expect(OrganisationInvite.findOne).toHaveBeenCalledWith({
+        where: { organisationId: org.id, emailAddress: "new@example.com", acceptedAt: null }
+      });
+      expect(emailQueue.add).toHaveBeenCalled();
+      expect(result).toBe(invite);
+    });
+
+    it("should throw BadRequestException when the user has no pending invite", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue({ emailAddress: "new@example.com" } as User);
+      jest.spyOn(OrganisationInvite, "findOne").mockResolvedValue(null);
+
+      await expect(service.sendOrganisationInviteReminder(org, "user-uuid")).rejects.toThrow(BadRequestException);
+      expect(emailQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when the user does not exist", async () => {
+      jest.spyOn(User, "findOne").mockResolvedValue(null);
+
+      await expect(service.sendOrganisationInviteReminder(org, "missing-uuid")).rejects.toThrow(NotFoundException);
     });
   });
 

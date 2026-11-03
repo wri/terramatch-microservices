@@ -80,6 +80,9 @@ export class SrpReportLightDto extends EntityDto {
 
   @ApiProperty({ nullable: true, type: Date })
   submittedAt: Date | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  feedback: string | null;
 }
 
 export type SrpReportMedia = Pick<SrpReportFullDto, keyof typeof SrpReport.MEDIA>;
@@ -106,9 +109,6 @@ export class SrpReportFullDto extends SrpReportLightDto {
 
   @ApiProperty({ nullable: true, type: String })
   frameworkKey: string | null;
-
-  @ApiProperty({ nullable: true, type: String })
-  feedback: string | null;
 
   @ApiProperty({ nullable: true, type: String, isArray: true })
   feedbackFields: string[] | null;

@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Response } from "express";
+import { kebabCase } from "lodash";
 import {
   FinancialIndicator,
   FinancialReport,
@@ -28,12 +30,15 @@ import { LeadershipDto } from "@terramatch-microservices/common/dto/leadership.d
 import { OwnershipStakeDto } from "@terramatch-microservices/common/dto/ownership-stake.dto";
 import { TreeSpeciesDto } from "@terramatch-microservices/common/dto/tree-species.dto";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
+import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
+import { ORGANISATION_CSV_COLUMNS } from "../exports/user-service-exports.processor";
 
 @Injectable()
 export class OrganisationsService {
   constructor(
     private readonly policyService: PolicyService,
-    private readonly mediaService: MediaService
+    private readonly mediaService: MediaService,
+    private readonly csvExportService: CsvExportService
   ) {}
 
   async findMany(query: OrganisationIndexQueryDto) {
@@ -134,6 +139,19 @@ export class OrganisationsService {
     } else if (query.view !== "public") {
       builder.order([["createdAt", "DESC"]]);
     }
+  }
+
+  async exportCsv(organisation: Organisation, response: Response) {
+    const media = await Media.for(organisation).findAll();
+    const additional = media.reduce(
+      (acc, item) => ({ ...acc, [item.collectionName]: this.mediaService.getUrl(item) }),
+      {}
+    );
+    const fileName = `${kebabCase(organisation.name ?? "organisation")}-profile.csv`;
+
+    await this.csvExportService.writeCsv(fileName, response, ORGANISATION_CSV_COLUMNS, async addRow => {
+      addRow(organisation, additional);
+    });
   }
 
   async findOne(uuid: string): Promise<Organisation> {

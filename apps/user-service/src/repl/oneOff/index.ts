@@ -8,5 +8,4 @@
 // * Export script in this index file - it will be added to the `oneOff` context member in the REPL,
 //   which means it will be runnable in the REPL at > await oneOff.fooScript()
 
-export { migrateUserApiKeys } from "./2026-10-23-migrateUserApiKeys";
 export { resolveApprovedOrganisationJoinRequests } from "./2026-10-28-resolveApprovedOrganisationJoinRequests";

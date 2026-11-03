@@ -180,6 +180,26 @@ describe("EntityProcessor", () => {
       expect(project.updateRequestStatus).toBeNull();
     });
 
+    it("moves the main status to pending-approval when submitting from information-required", async () => {
+      const project = await ProjectFactory.create({
+        status: "information-required",
+        updateRequestStatus: "pending-approval"
+      });
+      const updateRequest = await UpdateRequestFactory.project(project).create({ status: "pending-approval" });
+      await createProcessor().update(project, { status: "pending-approval" });
+      expect(await UpdateRequest.findByPk(updateRequest.id)).toBeNull();
+      expect(project.status).toBe("pending-approval");
+      expect(project.updateRequestStatus).toBeNull();
+    });
+
+    it("clears updateRequestStatus when an approved entity is returned for more information", async () => {
+      const project = await ProjectFactory.create({ status: "approved", updateRequestStatus: "pending-approval" });
+      jest.spyOn(policyService, "authorize").mockResolvedValue();
+      await createProcessor().update(project, { status: "information-required" });
+      expect(project.status).toBe("information-required");
+      expect(project.updateRequestStatus).toBeNull();
+    });
+
     it("clears updateRequestStatus when requesting more information on pending-approval", async () => {
       const project = await ProjectFactory.create({
         status: "pending-approval",

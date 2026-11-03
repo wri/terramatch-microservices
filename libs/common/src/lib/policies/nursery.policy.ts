@@ -1,6 +1,6 @@
 import { Nursery, Project, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 
 export class NurseryPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -47,7 +47,10 @@ export class NurseryPolicy extends UserPermissionsPolicy {
               projectId: { $in: projectIds }
             }
           );
-          this.builder.can("updateAnswers", Nursery, { projectId: { $in: projectIds }, status: DRAFT });
+          this.builder.can("updateAnswers", Nursery, {
+            projectId: { $in: projectIds },
+            status: { $in: [DRAFT, INFORMATION_REQUIRED] }
+          });
         }
       }
     }

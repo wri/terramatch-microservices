@@ -1,5 +1,5 @@
 import { Op, WhereOptions } from "sequelize";
-import { Disturbance, Project, Site, SitePolygon } from "@terramatch-microservices/database/entities";
+import { Disturbance, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-query.dto";
 import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.builder";
@@ -28,14 +28,6 @@ export class SitePolygonMapIndexQueryBuilder extends SitePolygonColumnQueryBuild
         required: false
       }
     ];
-  }
-
-  async filterProjectUuids(projectUuids: string[]) {
-    const siteUuids = Subquery.select(Site, "uuid").in(
-      "projectId",
-      Subquery.select(Project, "id").in("uuid", projectUuids).literal
-    ).literal;
-    return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 
   async addSearch(searchTerm: string, fields?: SitePolygonSearchField[]) {

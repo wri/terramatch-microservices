@@ -31,6 +31,8 @@ import { VersionUpdateBody } from "./dto/version-update.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { GeoJsonExportBodyDto } from "../geojson-export/dto/geojson-export-request.dto";
+import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "../geojson-export/geojson-export.processor";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
 import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
@@ -67,6 +69,7 @@ describe("SitePolygonsController", () => {
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
   let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
   let geometryUploadQueue: DeepMocked<Queue>;
+  let geoJsonExportQueue: DeepMocked<Queue>;
   let sitePolygonBulkQueue: DeepMocked<Queue>;
   let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
   let geoJsonExportService: DeepMocked<GeoJsonExportService>;
@@ -181,6 +184,10 @@ describe("SitePolygonsController", () => {
         {
           provide: getQueueToken("geometry-upload"),
           useValue: (geometryUploadQueue = createMock<Queue>())
+        },
+        {
+          provide: getQueueToken(GEOJSON_EXPORT_QUEUE),
+          useValue: (geoJsonExportQueue = createMock<Queue>())
         },
         {
           provide: getQueueToken(SITE_POLYGON_BULK_QUEUE),
@@ -2122,6 +2129,51 @@ describe("SitePolygonsController", () => {
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("createGeoJsonExport", () => {
+    const payload = {
+      data: { type: "geojsonExports", attributes: { projectUuids: ["project-uuid"] } }
+    } as GeoJsonExportBodyDto;
+
+    it("authorizes, validates the scope and queues the export", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getExportTarget.mockResolvedValue({ entityName: "Project", entityType: "project" });
+      const delayedJob = await DelayedJob.create({ name: "Polygon GeoJSON Export" });
+      const queueExport = jest
+        .spyOn(GeoJsonExportProcessor, "queueExport")
+        .mockResolvedValue(buildDelayedJobResponse(delayedJob));
+
+      const result = serialize(await controller.createGeoJsonExport(payload));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getExportTarget).toHaveBeenCalledWith({ projectUuids: ["project-uuid"] });
+      expect(queueExport).toHaveBeenCalledWith(
+        geoJsonExportQueue,
+        { projectUuids: ["project-uuid"] },
+        "Project",
+        "project"
+      );
+      expect((result.data as Resource).id).toBe(delayedJob.uuid);
+    });
+
+    it("does not queue an export when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const queueExport = jest.spyOn(GeoJsonExportProcessor, "queueExport");
+
+      await expect(controller.createGeoJsonExport(payload)).rejects.toThrow(UnauthorizedException);
+      expect(geoJsonExportService.getExportTarget).not.toHaveBeenCalled();
+      expect(queueExport).not.toHaveBeenCalled();
+    });
+
+    it("does not queue an export for an invalid scope", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getExportTarget.mockRejectedValue(new BadRequestException());
+      const queueExport = jest.spyOn(GeoJsonExportProcessor, "queueExport");
+
+      await expect(controller.createGeoJsonExport(payload)).rejects.toThrow(BadRequestException);
+      expect(queueExport).not.toHaveBeenCalled();
     });
   });
 

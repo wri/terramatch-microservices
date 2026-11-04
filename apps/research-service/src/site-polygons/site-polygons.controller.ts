@@ -56,6 +56,7 @@ import { Op } from "sequelize";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
 import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
@@ -103,7 +104,8 @@ export class SitePolygonsController {
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
     private readonly sitePolygonSummaryService: SitePolygonSummaryService,
-    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
+    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue,
+    @InjectQueue(SITE_POLYGON_BULK_QUEUE) private readonly sitePolygonBulkQueue: Queue
   ) {}
 
   private readonly logger = new Logger(SitePolygonsController.name);
@@ -651,11 +653,16 @@ export class SitePolygonsController {
        criteria site records, audit statuses, and geometry data. This operation soft deletes
        ALL related site polygons by primaryUuid (version management) and deletes polygon
        geometry for all related site polygons. The request body follows JSON:API format with
-       an array of resource identifiers (type and id).`
+       an array of resource identifiers (type and id).
+
+       Up to ${BULK_ASYNC_THRESHOLD} polygons are deleted in the request. Larger selections return a
+       delayed job instead; its payload holds the same deleted response once it completes.`
   })
-  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
-    description: "Site polygons and all associated records were deleted"
-  })
+  @JsonApiDeletedResponse(
+    [getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)],
+    { description: "Site polygons and all associated records were deleted, or a delayed job is deleting them" },
+    [DelayedJobDto]
+  )
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
@@ -677,8 +684,10 @@ export class SitePolygonsController {
       throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
-    for (const sitePolygon of sitePolygons) {
-      await this.policyService.authorize("delete", sitePolygon);
+    await this.policyService.authorize("delete", sitePolygons);
+
+    if (sitePolygons.length > BULK_ASYNC_THRESHOLD) {
+      return await SitePolygonBulkProcessor.queueBulkDelete(this.sitePolygonBulkQueue, sitePolygons);
     }
 
     const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(sitePolygons);

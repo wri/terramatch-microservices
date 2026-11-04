@@ -26,6 +26,7 @@ import { VoronoiService } from "./voronoi/voronoi.service";
 import { PolygonClippingController } from "./polygon-clipping/polygon-clipping.controller";
 import { PolygonClippingService } from "./polygon-clipping/polygon-clipping.service";
 import { GeometryUploadProcessor } from "./site-polygons/geometry-upload.processor";
+import { SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygons/site-polygon-bulk.processor";
 import { GeometryUploadComparisonService } from "./site-polygons/geometry-upload-comparison.service";
 import { IndicatorsController } from "./indicators/indicators.controller";
 import { IndicatorsService } from "./indicators/indicators.service";
@@ -70,7 +71,8 @@ const IS_REPL = process.env["REPL"] === "true";
     BullModule.registerQueue({ name: "indicators" }),
     BullModule.registerQueue({ name: "clipping" }),
     BullModule.registerQueue({ name: "sitePolygons" }),
-    BullModule.registerQueue({ name: "email" })
+    BullModule.registerQueue({ name: "email" }),
+    BullModule.registerQueue({ name: SITE_POLYGON_BULK_QUEUE })
   ],
   controllers: [
     SitePolygonsController,
@@ -111,7 +113,15 @@ const IS_REPL = process.env["REPL"] === "true";
     ResearchTreeCountsService,
     ProjectMapIndexService,
 
-    ...(IS_REPL ? [] : [ClippingProcessor, IndicatorsProcessor, ValidationProcessor, GeometryUploadProcessor])
+    ...(IS_REPL
+      ? []
+      : [
+          ClippingProcessor,
+          IndicatorsProcessor,
+          ValidationProcessor,
+          GeometryUploadProcessor,
+          SitePolygonBulkProcessor
+        ])
   ]
 })
 export class AppModule {}

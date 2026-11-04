@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import crypto from "crypto";
-import { SitePolygonsService } from "./site-polygons.service";
+import { getPrimaryUuids, SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   IndicatorOutputFieldMonitoringFactory,
@@ -1088,6 +1088,78 @@ describe("SitePolygonsService", () => {
       await sitePolygon2.reload({ paranoid: false });
       expect(sitePolygon1.deletedAt).not.toBeNull();
       expect(sitePolygon2.deletedAt).not.toBeNull();
+    });
+  });
+
+  describe("bulkDeleteSitePolygonsInBatches", () => {
+    it("should delete every version in batches and refresh centroids and tiles once", async () => {
+      const site = await SiteFactory.create();
+      const user = await UserFactory.create();
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id
+      });
+      const oldVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: sitePolygon.primaryUuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id,
+        isActive: false
+      });
+      const others = await SitePolygonFactory.createMany(100, {
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id
+      });
+      const onProgress = jest.fn().mockResolvedValue(undefined);
+
+      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches(
+        getPrimaryUuids([sitePolygon, ...others]),
+        onProgress
+      );
+
+      expect(deletedUuids.sort()).toEqual(
+        [sitePolygon.uuid, oldVersion.uuid, ...others.map(({ uuid }) => uuid)].sort()
+      );
+      expect(onProgress.mock.calls).toEqual([[100], [101]]);
+      expect(await SitePolygon.count({ where: { siteUuid: site.uuid } })).toBe(0);
+      const deletedGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
+      expect(deletedGeometry?.deletedAt).not.toBeNull();
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledTimes(1);
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid])
+      );
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledTimes(1);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still refresh centroids and tiles for committed batches when the job fails", async () => {
+      const sitePolygon = await SitePolygonFactory.create();
+      const onProgress = jest.fn().mockRejectedValue(new Error("Redis unavailable"));
+
+      await expect(service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress)).rejects.toThrow(
+        "Redis unavailable"
+      );
+
+      await sitePolygon.reload({ paranoid: false });
+      expect(sitePolygon.deletedAt).not.toBeNull();
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith([sitePolygon.polygonUuid]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should skip polygons that are already deleted", async () => {
+      const sitePolygon = await SitePolygonFactory.create();
+      await sitePolygon.destroy();
+      const onProgress = jest.fn().mockResolvedValue(undefined);
+
+      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress);
+
+      expect(deletedUuids).toEqual([]);
+      expect(onProgress).toHaveBeenCalledWith(1);
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).not.toHaveBeenCalled();
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
     });
   });
 

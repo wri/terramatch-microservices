@@ -1,6 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, ProjectReport, User } from "@terramatch-microservices/database/entities";
-import { DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
+import { DUE, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 
 export class ProjectReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -45,7 +45,7 @@ export class ProjectReportPolicy extends UserPermissionsPolicy {
           });
           this.builder.can("updateAnswers", ProjectReport, {
             projectId: { $in: projectIds },
-            status: { $in: [DRAFT, DUE] }
+            status: { $in: [DRAFT, DUE, INFORMATION_REQUIRED] }
           });
         }
       }

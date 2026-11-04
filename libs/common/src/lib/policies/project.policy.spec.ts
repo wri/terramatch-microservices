@@ -74,6 +74,24 @@ describe("ProjectPolicy", () => {
     });
   });
 
+  it("allows updating answers directly on draft and information-required own projects only", async () => {
+    const org = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: org.id });
+    mockContextForUser(user, "manage-own");
+
+    const draft = await ProjectFactory.create({ status: "draft", organisationId: org.id });
+    const informationRequired = await ProjectFactory.create({ status: "information-required", organisationId: org.id });
+    const approved = await ProjectFactory.create({ status: "approved", organisationId: org.id });
+    await expectAuthority(service, {
+      can: [
+        ["updateAnswers", draft],
+        ["updateAnswers", informationRequired]
+      ],
+      // Approved entities go through a change request instead of editing answers directly.
+      cannot: [["updateAnswers", approved]]
+    });
+  });
+
   it("allows reading and deleting managed projects", async () => {
     const user = await UserFactory.create();
     mockContextForUser(user, "projects-manage");

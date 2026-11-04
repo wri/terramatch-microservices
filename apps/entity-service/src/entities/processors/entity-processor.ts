@@ -203,8 +203,9 @@ export abstract class EntityProcessor<
         model.feedback = update.feedback ?? null;
         model.feedbackFields = update.feedbackFields ?? null;
         if (isReport(model)) model.completion = 100;
-        // First-review transitions must not leave a stale change request on draft/pending-approval.
-        if (!entityAllowsChangeRequest(model.status)) {
+        // An update status only exists on approved entities, so first-review transitions and returning
+        // an approved entity must not leave one behind.
+        if (!entityAllowsChangeRequest(model.status) || !entityAllowsChangeRequest(update.status)) {
           model.updateRequestStatus = null;
         }
         model.status = update.status as ModelType["status"];

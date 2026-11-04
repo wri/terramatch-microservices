@@ -1,6 +1,11 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, SrpReport, User } from "@terramatch-microservices/database/entities";
-import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
+import {
+  PENDING_APPROVAL,
+  DUE,
+  DRAFT,
+  INFORMATION_REQUIRED
+} from "@terramatch-microservices/database/constants/status";
 
 export class SrpReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -50,7 +55,7 @@ export class SrpReportPolicy extends UserPermissionsPolicy {
           );
           this.builder.can("updateAnswers", SrpReport, {
             projectId: { $in: projectIds },
-            status: { $in: [DRAFT, DUE] }
+            status: { $in: [DRAFT, DUE, INFORMATION_REQUIRED] }
           });
           this.builder.can("updateAnswers", SrpReport, {
             projectId: { $in: projectIds },

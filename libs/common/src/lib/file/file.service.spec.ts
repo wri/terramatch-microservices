@@ -171,6 +171,21 @@ describe("FileService", () => {
       expect(spy.mock.calls[0][1]).toBeInstanceOf(GetObjectCommand);
       expect(spy.mock.calls[0][1]).toMatchObject({ input: { Bucket: "test-bucket", Key: "test-key" } });
       expect(spy.mock.calls[0][2]).toMatchObject({ expiresIn: 3600 });
+      expect(spy.mock.calls[0][1]).toMatchObject({ input: { ResponseContentDisposition: undefined } });
+    });
+
+    it("should ask S3 to serve the file as a named attachment", async () => {
+      const spy = jest.mocked(getSignedUrl);
+      spy.mockClear();
+      await service.generatePresignedUrl("test-bucket", "exports/O'Neil (draft) polygons.geojson", {
+        asAttachment: true
+      });
+      expect(spy.mock.calls[0][1]).toMatchObject({
+        input: {
+          Key: "exports/O'Neil (draft) polygons.geojson",
+          ResponseContentDisposition: "attachment; filename*=UTF-8''O%27Neil%20%28draft%29%20polygons.geojson"
+        }
+      });
     });
   });
 

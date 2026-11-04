@@ -101,7 +101,9 @@ describe("GeoJsonExportProcessor", () => {
       );
       expect(update).toHaveBeenCalledWith({ processedContent: 2, totalContent: 2 }, { where: { id: 1 } });
       expect(stream.writableEnded).toBe(true);
-      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", job.data.fileName);
+      expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", job.data.fileName, {
+        asAttachment: true
+      });
       expect(serialize(result.payload)).toMatchObject({
         data: {
           type: "fileDownloads",

@@ -90,7 +90,7 @@ export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobDat
     return {
       payload: buildJsonApi(FileDownloadDto).addData(
         `geojsonExport|${job.data.delayedJobId}`,
-        new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, fileName))
+        new FileDownloadDto(await this.fileService.generatePresignedUrl(this.bucket, fileName, { asAttachment: true }))
       )
     };
   }

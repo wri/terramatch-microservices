@@ -328,27 +328,22 @@ export class GeoJsonExportService {
     if (siteUuids != null) await builder.filterSiteUuids(siteUuids);
     if (polygonUuids != null) await builder.filterPolygonUuids(polygonUuids);
 
-    // The destination must always be ended, or an S3 upload reading from it would never complete.
-    try {
-      const total = await builder.paginationTotal();
-      await onProgress(0, total);
+    const total = await builder.paginationTotal();
+    await onProgress(0, total);
 
-      await writeChunk(destination, '{"type":"FeatureCollection","features":[');
-      let processed = 0;
-      let written = 0;
-      for await (const sitePolygons of batchFindAll(builder)) {
-        const features = await this.buildFeatureJson(sitePolygons);
-        if (features.length > 0) {
-          await writeChunk(destination, `${written > 0 ? "," : ""}${features.join(",")}`);
-          written += features.length;
-        }
-        processed += sitePolygons.length;
-        await onProgress(processed, total);
+    await writeChunk(destination, '{"type":"FeatureCollection","features":[');
+    let processed = 0;
+    let written = 0;
+    for await (const sitePolygons of batchFindAll(builder)) {
+      const features = await this.buildFeatureJson(sitePolygons);
+      if (features.length > 0) {
+        await writeChunk(destination, `${written > 0 ? "," : ""}${features.join(",")}`);
+        written += features.length;
       }
-      await writeChunk(destination, "]}");
-    } finally {
-      destination.end();
+      processed += sitePolygons.length;
+      await onProgress(processed, total);
     }
+    await writeChunk(destination, "]}");
   }
 
   private async buildFeatureJson(sitePolygons: SitePolygon[]) {

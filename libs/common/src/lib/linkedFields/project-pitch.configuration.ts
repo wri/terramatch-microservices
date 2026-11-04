@@ -665,6 +665,13 @@ export const ProjectPitchConfiguration: LinkedFieldConfiguration<ProjectPitch> =
       inputType: "select",
       multiChoice: true,
       optionListKey: "gli-components"
+    },
+    "pro-pit-income-generating-activities": {
+      property: "incomeGeneratingActivities",
+      label: "Income generating activities",
+      inputType: "select",
+      multiChoice: true,
+      optionListKey: "income-generating-activities"
     }
   },
   fileCollections: {

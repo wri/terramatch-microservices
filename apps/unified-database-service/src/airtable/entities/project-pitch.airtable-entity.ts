@@ -94,7 +94,13 @@ const COLUMNS: ColumnMapping<ProjectPitch, ProjectPitchAssociations>[] = [
   "goalTreesRestoredDescription",
   "jobsCreatedBeneficiariesDescription",
   associatedValueColumn("treePlantedAmount"),
-  associatedValueColumn("treePlantedNameAndAmount")
+  associatedValueColumn("treePlantedNameAndAmount"),
+  "indirectEntities",
+  "landAccessDescription",
+  "cofinancingAmount",
+  "cofinancingDetails",
+  "gliComponents",
+  "incomeGeneratingActivities"
 ];
 
 const TREE_ASSOCIATION: UpdateAssociation<ProjectPitch, TreeSpecies> = {

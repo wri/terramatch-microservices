@@ -29,7 +29,7 @@ import {
   TreeSpeciesDto
 } from "./dto/site-polygon.dto";
 import { INDICATOR_DTOS } from "./dto/indicators.dto";
-import { groupBy, pick, uniq } from "lodash";
+import { chunk, groupBy, pick, uniq } from "lodash";
 import { INDICATOR_MODEL_CLASSES, SitePolygonQueryBuilder } from "./site-polygon-query.builder";
 import { Attributes, Op, Transaction } from "sequelize";
 import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-microservices/common/dto/page.dto";
@@ -53,6 +53,17 @@ import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc
 import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
 import { apiAttributes } from "@terramatch-microservices/common/dto/json-api-attributes";
+
+type DeletedPolygons = {
+  sitePolygonUuids: string[];
+  polygonUuids: string[];
+  activePolygonUuids: string[];
+};
+
+const BULK_DELETE_BATCH_SIZE = 100;
+
+export const getPrimaryUuids = (sitePolygons: SitePolygon[]) =>
+  uniq(sitePolygons.map(({ primaryUuid }) => primaryUuid).filter(isNotNull));
 
 type AssociationDtos = {
   indicators?: IndicatorDto[];
@@ -136,29 +147,36 @@ export class SitePolygonsService {
   private queueGwcInvalidationForDelete(activePolygonUuids: string[], transaction: Transaction): void {
     if (activePolygonUuids.length === 0) return;
 
-    transaction.afterCommit(async () => {
-      await invalidatePolygonTileCache({
-        boundingBoxService: this.boundingBoxService,
-        gwcTileInvalidationService: this.gwcTileInvalidationService,
-        polygonUuids: activePolygonUuids,
-        layers: ["active", "deleted"],
-        onError: error => this.logger.error("Failed to invalidate GWC cache after deleting polygon(s)", error)
-      });
+    transaction.afterCommit(() => this.invalidateDeletedPolygonTiles(activePolygonUuids));
+  }
+
+  private async invalidateDeletedPolygonTiles(activePolygonUuids: string[]) {
+    await invalidatePolygonTileCache({
+      boundingBoxService: this.boundingBoxService,
+      gwcTileInvalidationService: this.gwcTileInvalidationService,
+      polygonUuids: activePolygonUuids,
+      layers: ["active", "deleted"],
+      onError: error => this.logger.error("Failed to invalidate GWC cache after deleting polygon(s)", error)
     });
   }
 
-  private async deleteSitePolygonRelatedRecords(
-    sitePolygonIds: number[],
-    sitePolygonUuids: string[],
-    polygonUuids: string[],
-    pointUuids: string[],
-    primaryUuids: string[],
-    activePolygonUuids: string[],
-    transaction: Transaction
-  ): Promise<void> {
-    this.queueGwcInvalidationForDelete(activePolygonUuids, transaction);
+  private async deleteVersionGroups(primaryUuids: string[], transaction: Transaction): Promise<DeletedPolygons> {
+    const versions = await SitePolygon.findAll({
+      where: { primaryUuid: { [Op.in]: primaryUuids } },
+      attributes: ["id", "uuid", "polygonUuid", "pointUuid", "isActive"],
+      transaction
+    });
+    const sitePolygonIds = versions.map(({ id }) => id);
+    const sitePolygonUuids = versions.map(({ uuid }) => uuid);
+    const polygonUuids = versions.map(({ polygonUuid }) => polygonUuid).filter(isNotNull);
+    const pointUuids = versions.map(({ pointUuid }) => pointUuid).filter(isNotNull);
+    const activePolygonUuids = versions
+      .filter(({ isActive }) => isActive)
+      .map(({ polygonUuid }) => polygonUuid)
+      .filter(isNotNull);
 
-    for (const IndicatorClass of Object.values(INDICATOR_MODEL_CLASSES)) {
+    // Several indicator slugs share a model, so delete from each table once.
+    for (const IndicatorClass of uniq(Object.values(INDICATOR_MODEL_CLASSES))) {
       await IndicatorClass.destroy({
         where: { sitePolygonId: { [Op.in]: sitePolygonIds } },
         transaction
@@ -219,9 +237,19 @@ export class SitePolygonsService {
       where: { primaryUuid: { [Op.in]: primaryUuids } },
       transaction
     });
-    if (polygonUuids.length > 0) {
-      await this.polygonGeometryService.bulkUpdateProjectCentroids(polygonUuids, transaction);
-    }
+
+    return { sitePolygonUuids, polygonUuids, activePolygonUuids };
+  }
+
+  private async deleteAllVersions(primaryUuids: string[]) {
+    return await this.transaction(async transaction => {
+      const deleted = await this.deleteVersionGroups(primaryUuids, transaction);
+      if (deleted.polygonUuids.length > 0) {
+        await this.polygonGeometryService.bulkUpdateProjectCentroids(deleted.polygonUuids, transaction);
+      }
+      this.queueGwcInvalidationForDelete(deleted.activePolygonUuids, transaction);
+      return deleted.sitePolygonUuids;
+    });
   }
 
   async bulkDeleteSitePolygons(sitePolygons: SitePolygon[]): Promise<string[]> {
@@ -229,80 +257,44 @@ export class SitePolygonsService {
       return [];
     }
 
-    return await this.transaction(async transaction => {
-      const uniquePrimaryUuids = uniq(sitePolygons.map(sp => sp.primaryUuid).filter(isNotNull));
+    return await this.deleteAllVersions(getPrimaryUuids(sitePolygons));
+  }
 
-      const allRelatedSitePolygons = await SitePolygon.findAll({
-        where: { primaryUuid: { [Op.in]: uniquePrimaryUuids } },
-        attributes: ["id", "uuid", "polygonUuid", "pointUuid", "isActive"],
-        transaction
-      });
+  async bulkDeleteSitePolygonsInBatches(
+    primaryUuids: string[],
+    onProgress: (processed: number) => Promise<void>
+  ): Promise<string[]> {
+    const sitePolygonUuids: string[] = [];
+    const polygonUuids: string[] = [];
+    const activePolygonUuids: string[] = [];
+    let processed = 0;
+    try {
+      for (const batch of chunk(primaryUuids, BULK_DELETE_BATCH_SIZE)) {
+        const deleted = await this.transaction(transaction => this.deleteVersionGroups(batch, transaction));
+        sitePolygonUuids.push(...deleted.sitePolygonUuids);
+        polygonUuids.push(...deleted.polygonUuids);
+        activePolygonUuids.push(...deleted.activePolygonUuids);
 
-      const allSitePolygonIds = allRelatedSitePolygons.map(sp => sp.id);
-      const allSitePolygonUuids = allRelatedSitePolygons.map(sp => sp.uuid);
-      const allPolygonUuids = allRelatedSitePolygons.map(sp => sp.polygonUuid).filter(isNotNull);
-      const allPointUuids = allRelatedSitePolygons.map(sp => sp.pointUuid).filter(isNotNull);
-      const allActivePolygonUuids = allRelatedSitePolygons
-        .filter(sp => sp.isActive)
-        .map(sp => sp.polygonUuid)
-        .filter(isNotNull);
+        processed += batch.length;
+        await onProgress(processed);
+      }
+    } finally {
+      if (polygonUuids.length > 0) {
+        await this.polygonGeometryService.bulkUpdateProjectCentroids(polygonUuids);
+      }
+      await this.invalidateDeletedPolygonTiles(activePolygonUuids);
+    }
 
-      await this.deleteSitePolygonRelatedRecords(
-        allSitePolygonIds,
-        allSitePolygonUuids,
-        allPolygonUuids,
-        allPointUuids,
-        uniquePrimaryUuids,
-        allActivePolygonUuids,
-        transaction
-      );
-
-      return allSitePolygonUuids;
-    });
+    return sitePolygonUuids;
   }
 
   async deleteSitePolygon(uuid: string): Promise<void> {
-    await this.transaction(async transaction => {
-      const sitePolygon = await SitePolygon.findOne({
-        where: { uuid },
-        include: [
-          { model: Site, attributes: ["id", "uuid", "projectId"] },
-          { model: PolygonGeometry, attributes: ["id", "uuid"] },
-          { model: PointGeometry, attributes: ["id", "uuid"] }
-        ],
-        transaction
-      });
+    const sitePolygon = await SitePolygon.findOne({ where: { uuid }, attributes: ["primaryUuid"] });
+    if (sitePolygon == null) {
+      throw new NotFoundException(`SitePolygon not found for uuid: ${uuid}`);
+    }
 
-      if (sitePolygon == null) {
-        throw new NotFoundException(`SitePolygon not found for uuid: ${uuid}`);
-      }
-
-      const relatedSitePolygons = await SitePolygon.findAll({
-        where: { primaryUuid: sitePolygon.primaryUuid },
-        attributes: ["id", "uuid", "polygonUuid", "pointUuid", "isActive"],
-        transaction
-      });
-
-      const sitePolygonIds = relatedSitePolygons.map(sp => sp.id);
-      const sitePolygonUuids = relatedSitePolygons.map(sp => sp.uuid);
-      const polygonUuids = relatedSitePolygons.map(sp => sp.polygonUuid).filter((uuid): uuid is string => uuid != null);
-      const pointUuids = relatedSitePolygons.map(sp => sp.pointUuid).filter((uuid): uuid is string => uuid != null);
-      const activePolygonUuids = relatedSitePolygons
-        .filter(sp => sp.isActive)
-        .map(sp => sp.polygonUuid)
-        .filter((uuid): uuid is string => uuid != null);
-      const primaryUuid = sitePolygon.primaryUuid;
-
-      await this.deleteSitePolygonRelatedRecords(
-        sitePolygonIds,
-        sitePolygonUuids,
-        polygonUuids,
-        pointUuids,
-        [primaryUuid],
-        activePolygonUuids,
-        transaction
-      );
-    });
+    await this.deleteAllVersions([sitePolygon.primaryUuid]);
   }
 
   async deleteSingleVersion(uuid: string): Promise<void> {

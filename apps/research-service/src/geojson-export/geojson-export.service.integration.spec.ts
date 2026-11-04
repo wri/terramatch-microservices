@@ -83,7 +83,8 @@ describe("GeoJsonExportService (database)", () => {
         [0, 2],
         [2, 2]
       ]);
-      expect(ended).toBe(true);
+      // Ending the stream is the caller's responsibility.
+      expect(ended).toBe(false);
     });
 
     it("exports only the requested sites", async () => {
@@ -132,14 +133,14 @@ describe("GeoJsonExportService (database)", () => {
       ]);
     });
 
-    it("ends the stream when a query fails", async () => {
+    it("leaves the stream open for the caller when a query fails", async () => {
       jest.spyOn(GeoJsonExportQueryBuilder.prototype, "paginationTotal").mockRejectedValue(new Error("DB down"));
       const stream = new PassThrough();
 
       await expect(service.writeFeatureCollection(stream, { siteUuids: [site.uuid] }, jest.fn())).rejects.toThrow(
         "DB down"
       );
-      expect(stream.writableEnded).toBe(true);
+      expect(stream.writableEnded).toBe(false);
     });
   });
 

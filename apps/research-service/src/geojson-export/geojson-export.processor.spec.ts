@@ -100,6 +100,7 @@ describe("GeoJsonExportProcessor", () => {
         expect.any(Function)
       );
       expect(update).toHaveBeenCalledWith({ processedContent: 2, totalContent: 2 }, { where: { id: 1 } });
+      expect(stream.writableEnded).toBe(true);
       expect(fileService.generatePresignedUrl).toHaveBeenCalledWith("test-bucket", job.data.fileName);
       expect(serialize(result.payload)).toMatchObject({
         data: {
@@ -108,6 +109,20 @@ describe("GeoJsonExportProcessor", () => {
           attributes: { url: "https://signed.example/export.geojson" }
         }
       });
+    });
+
+    it("ends the stream and fails the job when the export fails", async () => {
+      const stream = new PassThrough();
+      fileService.uploadStream.mockImplementation(async (_bucket, _key, _mimeType, writer) => {
+        await writer(stream);
+      });
+      geoJsonExportService.writeFeatureCollection.mockRejectedValue(new Error("DB down"));
+
+      await expect(processor.processDelayedJob(buildJob())).rejects.toThrow(
+        new DelayedJobException(500, "Failed to export polygons: DB down")
+      );
+      expect(stream.writableEnded).toBe(true);
+      expect(fileService.generatePresignedUrl).not.toHaveBeenCalled();
     });
 
     it("fails the job when the upload fails", async () => {

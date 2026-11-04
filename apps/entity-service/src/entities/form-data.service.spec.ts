@@ -142,6 +142,16 @@ describe("FormDataService", () => {
       expect(site.updateRequestStatus).toBeNull();
     });
 
+    it("does not create a change request when the entity is information-required", async () => {
+      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
+      const form = await EntityFormFactory.site(site).create();
+      await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
+      expect(await UpdateRequest.for(site).findOne()).toBeNull();
+      await site.reload();
+      expect(site.updateRequestStatus).toBeNull();
+    });
+
     it("updates the entity content", async () => {
       const site = await SiteFactory.create();
       const form = await EntityFormFactory.site(site).create();

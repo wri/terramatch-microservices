@@ -33,8 +33,8 @@ export async function applySitePolygonScopeFilters(
   if (projectId != null && projectId.length === 0) {
     throw new BadRequestException("projectId[] must contain at least one UUID.");
   }
-  if (deletedOnly === true && (siteId == null || siteId.length !== 1)) {
-    throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
+  if (deletedOnly === true && !hasSiteOrProject) {
+    throw new BadRequestException("deletedOnly requires at least one siteId[] or projectId[] value.");
   }
   if (
     query.plantStartFrom != null &&

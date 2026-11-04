@@ -73,9 +73,14 @@ export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobDat
 
     try {
       await this.fileService.uploadStream(this.bucket, fileName, "application/geo+json", async stream => {
-        await this.geoJsonExportService.writeFeatureCollection(stream, scope, async (processed, total) => {
-          await this.updateJobProgress(job, { processedContent: processed, totalContent: total });
-        });
+        try {
+          await this.geoJsonExportService.writeFeatureCollection(stream, scope, async (processed, total) => {
+            await this.updateJobProgress(job, { processedContent: processed, totalContent: total });
+          });
+        } finally {
+          // uploadStream waits for the stream to end, so it must be ended even when the export fails.
+          stream.end();
+        }
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;

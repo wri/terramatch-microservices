@@ -50,9 +50,7 @@ export class UpdateRequestsController {
       await this.policyService.authorize("approve", model);
 
       if (!entityAllowsChangeRequest(model.status)) {
-        throw new BadRequestException(
-          "Change requests can only be reviewed when the entity is approved or information-required"
-        );
+        throw new BadRequestException("Change requests can only be reviewed when the entity is approved");
       }
 
       // Calling update() below when the status is approved kicks off a series of updates and model

@@ -1,7 +1,12 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Nursery, NurseryReport, Project, User } from "@terramatch-microservices/database/entities";
 import { Op, WhereAttributeHash } from "sequelize";
-import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
+import {
+  PENDING_APPROVAL,
+  DUE,
+  DRAFT,
+  INFORMATION_REQUIRED
+} from "@terramatch-microservices/database/constants/status";
 
 export class NurseryReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -49,7 +54,7 @@ export class NurseryReportPolicy extends UserPermissionsPolicy {
           });
           this.builder.can("updateAnswers", NurseryReport, {
             nurseryId: { $in: nurseryIds },
-            status: { $in: [DRAFT, DUE] }
+            status: { $in: [DRAFT, DUE, INFORMATION_REQUIRED] }
           });
           this.builder.can("updateAnswers", NurseryReport, {
             nurseryId: { $in: nurseryIds },

@@ -45,7 +45,7 @@ describe("ProductEventService", () => {
 
   describe("taskCreated", () => {
     it("should queue report reminder emails when a TF report-reminder framework task is created", async () => {
-      const project = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
+      const project = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       const dueAt = DateTime.utc(2027, 1, 31).toJSDate();
       const task = await TaskFactory.create({ projectId: project.id, dueAt });
 

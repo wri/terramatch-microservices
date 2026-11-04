@@ -96,8 +96,11 @@ describe("TreeService", () => {
 
   describe("getEstablishmentTrees", () => {
     it("should return establishment trees", async () => {
-      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
-      const tfProjectReport = await ProjectReportFactory.create({ projectId: tfProject.id, frameworkKey: "terrafund" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
+      const tfProjectReport = await ProjectReportFactory.create({
+        projectId: tfProject.id,
+        frameworkKey: "terrafund-non-profits"
+      });
       const site = await SiteFactory.create({ projectId: tfProject.id });
       const siteReport = await SiteReportFactory.create({ siteId: site.id });
       const nursery = await NurseryFactory.create({ projectId: tfProject.id });
@@ -388,7 +391,7 @@ describe("TreeService", () => {
       const ppcSeedlingSum = sumBy(ppcSeedlings, "amount");
       await TreeSpeciesFactory.projectReportNurserySeedling(ppcReport).create({ hidden: true });
 
-      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-landscapes" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       const nursery = await NurseryFactory.create({ projectId: tfProject.id, status: "approved" });
       const nurseryReport = await NurseryReportFactory.create({ nurseryId: nursery.id, status: "approved" });
       const tfSeedlings = await TreeSpeciesFactory.nurseryReportSeedling(nurseryReport).createMany(2, { name: "Oak" });

@@ -84,7 +84,7 @@ describe("TreeRestorationGoalService", () => {
     it("should return complete tree restoration goal data", async () => {
       const query: DashboardQueryDto = {
         country: "BEN",
-        programmes: ["terrafund"],
+        programmes: ["terrafund-non-profits"],
         landscapes: ["gcb"]
       };
 
@@ -176,7 +176,7 @@ describe("TreeRestorationGoalService", () => {
       const query: DashboardQueryDto = {
         organisationType: ["for-profit-organization", "non-profit-organization"],
         country: "CMR",
-        programmes: ["terrafund", "terrafund-landscapes"],
+        programmes: ["terrafund-non-profits", "enterprises"],
         projectUuid: "uuid-123",
         landscapes: ["gcb"],
         cohort: ["cohort-2024"]

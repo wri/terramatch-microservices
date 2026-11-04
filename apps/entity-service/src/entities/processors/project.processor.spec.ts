@@ -139,11 +139,11 @@ describe("ProjectProcessor", () => {
     it("returns framework projects", async () => {
       const projects = await ProjectFactory.createMany(3, { frameworkKey: "hbf" });
       await ProjectFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await ProjectFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await ProjectFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         projects.push(p);
       }
 
-      await expectProjects(projects, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectProjects(projects, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("filters", async () => {
@@ -404,10 +404,10 @@ describe("ProjectProcessor", () => {
       });
 
       it("includes sideloaded sites and nurseries", async () => {
-        const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund" });
-        await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund" });
-        await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund" });
-        setMockedPermissions("framework-terrafund");
+        const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
+        await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund-non-profits" });
+        await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund-non-profits" });
+        setMockedPermissions("framework-terrafund-non-profits");
         const document = buildJsonApi(ProjectLightDto);
         await processor.addIndex(document, {
           sideloads: [
@@ -1462,7 +1462,7 @@ describe("ProjectProcessor", () => {
         "Invalid form for project creation: fake-uuid"
       );
 
-      let form = await EntityFormFactory.site().create({ frameworkKey: "terrafund" });
+      let form = await EntityFormFactory.site().create({ frameworkKey: "terrafund-non-profits" });
       await expect(processor.create({ formUuid: form.uuid })).rejects.toThrow(
         `Invalid form for project creation: ${form.uuid}`
       );
@@ -1696,7 +1696,7 @@ describe("ProjectProcessor", () => {
         await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
       ];
       // non-framework project should be ignored
-      await ProjectFactory.create({ frameworkKey: "terrafund" });
+      await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.project(projects[0]).create();
 
       const addRow = jest.fn();

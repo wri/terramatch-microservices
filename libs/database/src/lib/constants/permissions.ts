@@ -6,10 +6,8 @@ import { Dictionary, uniq } from "lodash";
 
 export const PERMISSIONS = {
   "framework-ppc": "Framework PPC",
-  "framework-terrafund": "Framework Terrafund",
+  "framework-terrafund-non-profits": "Framework Terrafund Non-Profits",
   "framework-enterprises": "Framework Terrafund Enterprises",
-  "framework-terrafund-landscapes": "Framework Terrafund Landscapes",
-  "framework-terrafund-3": "Framework Terrafund 3",
   "framework-hbf": "Framework Harit Bharat Fund",
   "framework-epa-ghana-pilot": "Framework EPA Ghana Pilot",
   "framework-fundo-flora-1": "Framework Fundo Flora 1",
@@ -30,11 +28,9 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export const ROLES = {
   "admin-super": [
-    "framework-terrafund",
+    "framework-terrafund-non-profits",
     "framework-ppc",
     "framework-enterprises",
-    "framework-terrafund-landscapes",
-    "framework-terrafund-3",
     "framework-hbf",
     "framework-epa-ghana-pilot",
     "framework-fundo-flora-1",
@@ -44,13 +40,7 @@ export const ROLES = {
     "users-manage"
   ],
   "admin-ppc": ["framework-ppc", "users-manage"],
-  "admin-terrafund": [
-    "framework-terrafund",
-    "framework-enterprises",
-    "framework-terrafund-landscapes",
-    "framework-terrafund-3",
-    "users-manage"
-  ],
+  "admin-terrafund": ["framework-terrafund-non-profits", "framework-enterprises", "users-manage"],
   "admin-hbf": ["framework-hbf", "users-manage"],
   "admin-epa-ghana-pilot": ["framework-epa-ghana-pilot", "users-manage"],
   "admin-fundo-flora": ["framework-fundo-flora-1", "users-manage"],

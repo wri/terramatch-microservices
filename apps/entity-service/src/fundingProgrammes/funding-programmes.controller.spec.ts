@@ -54,7 +54,7 @@ describe("FundingProgrammesController", () => {
   describe("indexFundingProgrammes", () => {
     it("returns all funding programmes", async () => {
       await FundingProgramme.truncate();
-      setMockedPermissions("framework-terrafund");
+      setMockedPermissions("framework-terrafund-non-profits");
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       const programmes = await FundingProgrammeFactory.createMany(3);
       await controller.index();

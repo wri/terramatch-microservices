@@ -26,7 +26,7 @@ describe("FormSubmissionPolicy", () => {
   });
 
   it("allows reading form submission for all admins", async () => {
-    mockUserContext({ userId: 123, permissions: ["framework-terrafund"] });
+    mockUserContext({ userId: 123, permissions: ["framework-terrafund-non-profits"] });
     await expectCan(service, "read", new FormSubmission());
   });
 

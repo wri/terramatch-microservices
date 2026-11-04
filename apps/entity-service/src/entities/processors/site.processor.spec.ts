@@ -100,11 +100,11 @@ describe("SiteProcessor", () => {
     it("should returns framework sites", async () => {
       const sites = await SiteFactory.createMany(3, { frameworkKey: "hbf" });
       await SiteFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         sites.push(p);
       }
 
-      await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("filters", async () => {
@@ -250,8 +250,8 @@ describe("SiteProcessor", () => {
 
     describe("processSideloads", () => {
       it("should throw", async () => {
-        setMockedPermissions("framework-terrafund");
-        await SiteFactory.create({ frameworkKey: "terrafund" });
+        setMockedPermissions("framework-terrafund-non-profits");
+        await SiteFactory.create({ frameworkKey: "terrafund-non-profits" });
         await expect(
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
         ).rejects.toThrow(BadRequestException);
@@ -588,7 +588,7 @@ describe("SiteProcessor", () => {
         await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
       // non-framework site should be ignored
-      await SiteFactory.create({ frameworkKey: "terrafund" });
+      await SiteFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.site(sites[0]).create();
 
       const addRow = jest.fn();

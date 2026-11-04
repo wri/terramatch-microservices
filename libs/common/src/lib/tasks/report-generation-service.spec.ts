@@ -322,10 +322,14 @@ describe("ReportGenerationService", () => {
 
     it("should create a report even if one already exists for the year", async () => {
       const org = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-landscapes", status: "approved" });
+      await ProjectFactory.create({
+        organisationId: org.id,
+        frameworkKey: "terrafund-non-profits",
+        status: "approved"
+      });
       await FinancialReportFactory.org(org).create({ yearOfReport: 2027 });
 
-      await service.createFinancialReports("terrafund-landscapes", DateTime.utc(2027, 1, 31).toJSDate());
+      await service.createFinancialReports("terrafund-non-profits", DateTime.utc(2027, 1, 31).toJSDate());
 
       expect(await FinancialReport.count({ where: { organisationId: org.id, yearOfReport: 2027 } })).toBe(2);
     });

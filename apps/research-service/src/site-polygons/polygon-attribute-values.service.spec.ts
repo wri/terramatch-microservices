@@ -29,7 +29,7 @@ describe("PolygonAttributeValuesService", () => {
     key: "anrSubcategory",
     inputType: "single_select",
     isActive: true,
-    frameworkKey: "terrafund",
+    frameworkKey: "terrafund-non-profits",
     options: [
       { value: "farmer-managed", label: "Farmer managed" },
       { value: "assisted", label: "Assisted" }
@@ -113,7 +113,7 @@ describe("PolygonAttributeValuesService", () => {
       const destroySpy = jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
       const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
 
-      await service.upsert("poly-uuid", "terrafund", { anrSubcategory: "farmer-managed" }, mockTransaction);
+      await service.upsert("poly-uuid", "terrafund-non-profits", { anrSubcategory: "farmer-managed" }, mockTransaction);
 
       expect(destroySpy).not.toHaveBeenCalled();
       expect(bulkCreateSpy).toHaveBeenCalledWith(
@@ -127,7 +127,7 @@ describe("PolygonAttributeValuesService", () => {
       const destroySpy = jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(1);
       const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
 
-      await service.upsert("poly-uuid", "terrafund", { anrSubcategory: null }, mockTransaction);
+      await service.upsert("poly-uuid", "terrafund-non-profits", { anrSubcategory: null }, mockTransaction);
 
       expect(destroySpy).toHaveBeenCalledWith({
         where: {
@@ -143,7 +143,7 @@ describe("PolygonAttributeValuesService", () => {
       jest.spyOn(SitePolygonAttributeValue, "destroy").mockResolvedValue(0);
       const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
 
-      await service.upsert("poly-uuid", "terrafund", { anrSubcategory: " assisted " }, mockTransaction);
+      await service.upsert("poly-uuid", "terrafund-non-profits", { anrSubcategory: " assisted " }, mockTransaction);
 
       expect(bulkCreateSpy).toHaveBeenCalledWith(
         [{ sitePolygonUuid: "poly-uuid", polygonAttributeDefinitionId: 1, value: "assisted" }],
@@ -154,16 +154,16 @@ describe("PolygonAttributeValuesService", () => {
     it("rejects unknown keys", async () => {
       jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([singleSelectDefinition] as never);
 
-      await expect(service.upsert("poly-uuid", "terrafund", { unknown_key: "x" }, mockTransaction)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.upsert("poly-uuid", "terrafund-non-profits", { unknown_key: "x" }, mockTransaction)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("rejects invalid option values", async () => {
       jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([singleSelectDefinition] as never);
 
       await expect(
-        service.upsert("poly-uuid", "terrafund", { anrSubcategory: "not-an-option" }, mockTransaction)
+        service.upsert("poly-uuid", "terrafund-non-profits", { anrSubcategory: "not-an-option" }, mockTransaction)
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -278,7 +278,7 @@ describe("PolygonAttributeValuesService", () => {
       const bulkCreateSpy = jest.spyOn(SitePolygonAttributeValue, "bulkCreate").mockResolvedValue([]);
 
       await service.bulkUpsert(
-        "terrafund",
+        "terrafund-non-profits",
         [
           { sitePolygonUuid: "poly-1", attributes: { anrSubcategory: "farmer-managed" } },
           { sitePolygonUuid: "poly-2", attributes: { anrSubcategory: "assisted" } }
@@ -300,7 +300,7 @@ describe("PolygonAttributeValuesService", () => {
       const findAllSpy = jest.spyOn(PolygonAttributeDefinition, "findAll");
 
       await service.bulkUpsert(
-        "terrafund",
+        "terrafund-non-profits",
         [
           { sitePolygonUuid: "poly-1", attributes: {} },
           { sitePolygonUuid: "poly-2", attributes: {} }
@@ -318,7 +318,7 @@ describe("PolygonAttributeValuesService", () => {
 
       const [matched] = await service.pickMatchingFromPropertiesBatch(
         [{ anrSubcategory: "assisted", plantend: "2020-01-01", est_area: 1.2 }],
-        "terrafund",
+        "terrafund-non-profits",
         mockTransaction
       );
 
@@ -330,7 +330,7 @@ describe("PolygonAttributeValuesService", () => {
 
       const result = await service.pickMatchingFromPropertiesBatch(
         [{ anrSubcategory: "assisted" }],
-        "terrafund",
+        "terrafund-non-profits",
         mockTransaction
       );
 
@@ -342,7 +342,7 @@ describe("PolygonAttributeValuesService", () => {
 
       const [matched] = await service.pickMatchingFromPropertiesBatch(
         [{ anrSubcategory: "not-an-option" }],
-        "terrafund",
+        "terrafund-non-profits",
         mockTransaction
       );
 
@@ -380,7 +380,7 @@ describe("PolygonAttributeValuesService", () => {
 
       const [matched] = await service.pickMatchingFromPropertiesBatch(
         [{ anrSubcategory: "not-an-option", strata: "a,nope,b" }],
-        "terrafund",
+        "terrafund-non-profits",
         mockTransaction
       );
 
@@ -444,18 +444,18 @@ describe("PolygonAttributeValuesService", () => {
   describe("getActiveKeysByFrameworkKeys", () => {
     it("returns ordered active keys grouped by framework", async () => {
       jest.spyOn(PolygonAttributeDefinition, "findAll").mockResolvedValue([
-        { frameworkKey: "terrafund", key: "anrSubcategory" },
-        { frameworkKey: "terrafund", key: "strata" },
+        { frameworkKey: "terrafund-non-profits", key: "anrSubcategory" },
+        { frameworkKey: "terrafund-non-profits", key: "strata" },
         { frameworkKey: "ppc", key: "ppcOnly" }
       ] as never);
 
-      const keys = await service.getActiveKeysByFrameworkKeys(["terrafund", "ppc", null]);
+      const keys = await service.getActiveKeysByFrameworkKeys(["terrafund-non-profits", "ppc", null]);
 
-      expect(keys.get("terrafund")).toEqual(["anrSubcategory", "strata"]);
+      expect(keys.get("terrafund-non-profits")).toEqual(["anrSubcategory", "strata"]);
       expect(keys.get("ppc")).toEqual(["ppcOnly"]);
       expect(PolygonAttributeDefinition.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { frameworkKey: { [Op.in]: ["terrafund", "ppc"] }, isActive: true }
+          where: { frameworkKey: { [Op.in]: ["terrafund-non-profits", "ppc"] }, isActive: true }
         })
       );
     });

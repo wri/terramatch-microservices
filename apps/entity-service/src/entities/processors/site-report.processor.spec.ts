@@ -95,11 +95,11 @@ describe("SiteReportProcessor", () => {
     it("should returns framework site reports", async () => {
       const siteReports = await SiteReportFactory.createMany(3, { frameworkKey: "hbf" });
       await SiteReportFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await SiteReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await SiteReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         siteReports.push(p);
       }
 
-      await expectSiteReports(siteReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectSiteReports(siteReports, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("should return site reports that match the search term", async () => {
@@ -158,7 +158,7 @@ describe("SiteReportProcessor", () => {
         title: "fourth project report",
         status: "approved",
         updateRequestStatus: "approved",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         siteId: s2.id
       });
 
@@ -577,7 +577,7 @@ describe("SiteReportProcessor", () => {
 
     it("should use the else external branch for non-ppc framework", async () => {
       const dueAt = new Date("2023-05-15T00:00:00.000Z");
-      await processor["getReportTitleBase"](dueAt, "Test Title", "terrafund");
+      await processor["getReportTitleBase"](dueAt, "Test Title", "terrafund-non-profits");
       expect(processor["entitiesService"].localizeText).toHaveBeenCalledWith(
         "{title} for {startDate} - {endDate}",
         expect.objectContaining({ title: "Test Title" })
@@ -640,7 +640,7 @@ describe("SiteReportProcessor", () => {
         await SiteReportFactory.create({ siteId: sites[1].id, frameworkKey: "ppc" })
       ];
       // non framework reports should be ignored
-      await SiteReportFactory.create({ frameworkKey: "terrafund" });
+      await SiteReportFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.siteReport(reports[0]).create();
 
       const firstTreeSum = sum(

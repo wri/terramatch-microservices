@@ -90,11 +90,11 @@ describe("NurseryProcessor", () => {
     it("should return nurseries associated with specific frameworks", async () => {
       const nurseries = await NurseryFactory.createMany(3, { frameworkKey: "hbf" });
       await NurseryFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await NurseryFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await NurseryFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         nurseries.push(p);
       }
 
-      await expectNurseries(nurseries, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectNurseries(nurseries, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("should return nurseries that match the search term", async () => {
@@ -515,7 +515,7 @@ describe("NurseryProcessor", () => {
         await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
       // non-framework nursery should be ignored
-      await NurseryFactory.create({ frameworkKey: "terrafund" });
+      await NurseryFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.nursery(nurseries[0]).create();
 
       const addRow = jest.fn();

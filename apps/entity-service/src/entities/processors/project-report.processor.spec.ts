@@ -88,11 +88,15 @@ describe("ProjectReportProcessor", () => {
     it("should returns framework project reports", async () => {
       const projectReports = await ProjectReportFactory.createMany(3, { frameworkKey: "hbf" });
       await ProjectReportFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await ProjectReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await ProjectReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         projectReports.push(p);
       }
 
-      await expectProjectReports(projectReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectProjectReports(
+        projectReports,
+        {},
+        { permissions: ["framework-hbf", "framework-terrafund-non-profits"] }
+      );
     });
 
     it("should return project reports that match the search term", async () => {
@@ -138,7 +142,7 @@ describe("ProjectReportProcessor", () => {
         title: "fourth project report",
         status: "approved",
         updateRequestStatus: "approved",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         projectId: p2.id
       });
 
@@ -340,13 +344,13 @@ describe("ProjectReportProcessor", () => {
 
     it("should include calculated fields in ProjectReportFullDto", async () => {
       const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
-      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       const hbfProject = await ProjectFactory.create({ frameworkKey: "hbf" });
 
       const { uuid: ppcUuid } = await ProjectReportFactory.create({ projectId: ppcProject.id, frameworkKey: "ppc" });
       const { uuid: tfUuid } = await ProjectReportFactory.create({
         projectId: tfProject.id,
-        frameworkKey: "terrafund"
+        frameworkKey: "terrafund-non-profits"
       });
       const { uuid: hbfUuid } = await ProjectReportFactory.create({
         projectId: hbfProject.id,
@@ -560,7 +564,7 @@ describe("ProjectReportProcessor", () => {
         await ProjectReportFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
       // non framework reports should be ignored
-      await ProjectReportFactory.create({ frameworkKey: "terrafund" });
+      await ProjectReportFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.projectReport(reports[0]).create();
 
       // For PPC, we do some calculations based on trees planted in the project reports

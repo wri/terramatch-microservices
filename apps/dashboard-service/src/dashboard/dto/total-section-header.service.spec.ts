@@ -63,7 +63,7 @@ describe("TotalSectionHeaderService - filters", () => {
     const filters: DashboardQueryDto = {
       organisationType: ["non-profit-organization"],
       country: "BJ",
-      programmes: ["terrafund"],
+      programmes: ["terrafund-non-profits"],
       projectUuid: "uuid",
       landscapes: ["gcb"]
     };
@@ -178,7 +178,7 @@ describe("TotalSectionHeaderService - filters", () => {
 
   it("should apply programmes filter (array)", async () => {
     const filters: DashboardQueryDto = {
-      programmes: ["terrafund", "epa-ghana-pilot"]
+      programmes: ["terrafund-non-profits", "epa-ghana-pilot"]
     };
 
     const mockBuilder = baseMocks();
@@ -228,7 +228,7 @@ describe("TotalSectionHeaderService - filters", () => {
   it("should apply combined filters", async () => {
     const filters: DashboardQueryDto = {
       country: "BJ",
-      programmes: ["terrafund"],
+      programmes: ["terrafund-non-profits"],
       organisationType: ["for-profit-organization"],
       cohort: ["terrafund"]
     };

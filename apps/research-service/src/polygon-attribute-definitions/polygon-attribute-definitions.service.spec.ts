@@ -54,7 +54,7 @@ describe("PolygonAttributeDefinitionsService", () => {
       const definition = await service.create({
         label,
         inputType: "single_select",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         options: [{ label: "Farmer managed" }, { label: "Assisted" }]
       });
       createdDefinitionIds.push(definition.id);
@@ -109,14 +109,14 @@ describe("PolygonAttributeDefinitionsService", () => {
       const terrafund = await service.create({
         label,
         inputType: "single_select",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         options: [{ label: "A" }]
       });
       createdDefinitionIds.push(ppc.id, terrafund.id);
 
       expect(ppc.key).toBe(terrafund.key);
       expect(ppc.frameworkKey).toBe("ppc");
-      expect(terrafund.frameworkKey).toBe("terrafund");
+      expect(terrafund.frameworkKey).toBe("terrafund-non-profits");
     });
 
     it("rejects duplicate option values generated from labels", async () => {
@@ -184,20 +184,20 @@ describe("PolygonAttributeDefinitionsService", () => {
       const first = await service.create({
         label: uniqueLabel("Z last"),
         inputType: "single_select",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         order: 2,
         options: [{ label: "One" }]
       });
       const second = await service.create({
         label: uniqueLabel("A first"),
         inputType: "single_select",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         order: 1,
         options: [{ label: "One" }]
       });
       createdDefinitionIds.push(first.id, second.id);
 
-      const orderedCreatedIds = (await service.findAll("terrafund"))
+      const orderedCreatedIds = (await service.findAll("terrafund-non-profits"))
         .map(d => d.id)
         .filter(id => id === first.id || id === second.id);
       expect(orderedCreatedIds).toEqual([second.id, first.id]);
@@ -433,7 +433,7 @@ describe("PolygonAttributeDefinitionsService", () => {
       const terrafund = await service.create({
         label: uniqueLabel("Other"),
         inputType: "single_select",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         options: [{ label: "One" }]
       });
       createdDefinitionIds.push(ppcActive.id, ppcInactive.id, terrafund.id);

@@ -1,12 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test } from "@nestjs/testing";
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
-import {
-  REPORT_REMINDER_EVENT,
-  ScheduledJobsProcessor,
-  SITE_AND_NURSERY_REMINDER_EVENT,
-  TASK_DUE_EVENT
-} from "./scheduled-jobs.processor";
+import { ScheduledJobsProcessor, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Job, Queue } from "bullmq";
 import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
@@ -61,7 +56,7 @@ describe("ScheduledJobsProcessor", () => {
       await Project.truncate();
       const projects = await ProjectFactory.createMany(150, { frameworkKey: "ppc", status: "approved" });
       await ProjectFactory.create({ frameworkKey: "ppc", status: "approved", isArchived: true });
-      await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      await ProjectFactory.create({ frameworkKey: "terrafund-non-profits", status: "approved" });
       await ProjectFactory.create({ frameworkKey: "hbf", status: "approved" });
       const dueAt = DateTime.now().plus({ months: 1 }).set({ millisecond: 0 }).toISO();
       await processor.process({
@@ -78,86 +73,38 @@ describe("ScheduledJobsProcessor", () => {
     it("should log an error if the service fails", async () => {
       await Project.truncate();
       reportGenerationService.createTask.mockRejectedValue(new Error("Failed"));
-      await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      await ProjectFactory.create({ frameworkKey: "terrafund-non-profits", status: "approved" });
       const dueAt = DateTime.now().plus({ months: 1 }).set({ millisecond: 0 }).toISO();
       const logSpy = jest.spyOn((processor as any).logger, "error");
       await processor.process({
         name: TASK_DUE_EVENT,
-        data: { taskDefinition: { frameworkKey: "terrafund", dueAt } }
+        data: { taskDefinition: { frameworkKey: "terrafund-non-profits", dueAt } }
       } as Job);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to create task for some projects:"));
     });
 
     it("should not queue report reminder emails for Top 100 terrafund TaskDue", async () => {
       await Project.truncate();
-      await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      await ProjectFactory.create({ frameworkKey: "terrafund-non-profits", status: "approved" });
       const dueAt = DateTime.utc(2027, 1, 31).toISO();
       await processor.process({
         name: TASK_DUE_EVENT,
-        data: { taskDefinition: { frameworkKey: "terrafund", dueAt } }
+        data: { taskDefinition: { frameworkKey: "terrafund-non-profits", dueAt } }
       } as Job);
 
       expect(queue.add).not.toHaveBeenCalled();
     });
   });
 
-  describe("processReportReminder", () => {
-    it("should skip TF report-reminder frameworks handled by TaskDue", async () => {
-      const logSpy = jest.spyOn((processor as any).logger, "debug");
-      const projectSpy = jest.spyOn(Project, "findAll");
-      await processor.process({
-        name: REPORT_REMINDER_EVENT,
-        data: { taskDefinition: { frameworkKey: "enterprises" } }
-      } as Job);
-      expect(logSpy).toHaveBeenCalledWith(
-        "Report reminder for enterprises is sent from TaskDue job processing; skipping duplicate"
-      );
-      expect(projectSpy).not.toHaveBeenCalled();
-    });
-
-    it("should log a warning and quit if the framework is not terrafund", async () => {
-      const logSpy = jest.spyOn((processor as any).logger, "warn");
-      const projectSpy = jest.spyOn(Project, "findAll");
-      await processor.process({
-        name: REPORT_REMINDER_EVENT,
-        data: { taskDefinition: { frameworkKey: "ppc" } }
-      } as Job);
-      expect(logSpy).toHaveBeenCalledWith("Report reminder for unsupported framework: ppc, ignoring");
-      expect(projectSpy).not.toHaveBeenCalled();
-    });
-
-    it("should add to the email queue with all appropriate project ids", async () => {
-      const projects = await ProjectFactory.createMany(3, { frameworkKey: "terrafund", status: "approved" });
-      for (const project of projects) {
-        await SiteFactory.create({ projectId: project.id });
-        await NurseryFactory.create({ projectId: project.id });
-      }
-      await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
-      await processor.process({
-        name: REPORT_REMINDER_EVENT,
-        data: { taskDefinition: { frameworkKey: "terrafund" } }
-      } as Job);
-
-      expect(queue.add).toHaveBeenCalledWith(
-        "terrafundReportReminder",
-        expect.objectContaining({
-          projectIds: expect.arrayContaining(projects.map(({ id }) => id))
-        })
-      );
-    });
-  });
-
   describe("processSiteAndNurseryReminder", () => {
-    it("should log a warning and quit if the framework is not terrafund", async () => {
+    it("should log a warning and quit if the framework is not terrafund-non-profits", async () => {
       const logSpy = jest.spyOn((processor as any).logger, "warn");
       const projectSpy = jest.spyOn(Project, "findAll");
       await processor.process({
         name: SITE_AND_NURSERY_REMINDER_EVENT,
         data: { taskDefinition: { frameworkKey: "ppc" } }
       } as Job);
-      expect(logSpy).toHaveBeenCalledWith(
-        "Site and Nursery reminder for framework other than terrafund: ppc, ignoring"
-      );
+      expect(logSpy).toHaveBeenCalledWith("Site and Nursery reminder for unsupported framework: ppc, ignoring");
       expect(projectSpy).not.toHaveBeenCalled();
     });
 
@@ -165,14 +112,22 @@ describe("ScheduledJobsProcessor", () => {
       await Project.truncate();
       await Site.truncate();
       await Nursery.truncate();
-      const projects = await ProjectFactory.createMany(3, { frameworkKey: "terrafund", status: "approved" });
-      const siteProject = await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      const projects = await ProjectFactory.createMany(3, {
+        frameworkKey: "terrafund-non-profits",
+        status: "approved"
+      });
+      const siteProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits", status: "approved" });
       await SiteFactory.create({ projectId: siteProject.id });
-      const nurseryProject = await ProjectFactory.create({ frameworkKey: "terrafund", status: "approved" });
+      const nurseryProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits", status: "approved" });
       await NurseryFactory.create({ projectId: nurseryProject.id });
+      const archivedProject = await ProjectFactory.create({
+        frameworkKey: "terrafund-non-profits",
+        status: "approved",
+        isArchived: true
+      });
       await processor.process({
         name: SITE_AND_NURSERY_REMINDER_EVENT,
-        data: { taskDefinition: { frameworkKey: "terrafund" } }
+        data: { taskDefinition: { frameworkKey: "terrafund-non-profits" } }
       } as Job);
 
       expect(queue.add).toHaveBeenCalledWith(
@@ -181,6 +136,7 @@ describe("ScheduledJobsProcessor", () => {
           projectIds: expect.arrayContaining(projects.map(({ id }) => id))
         })
       );
+      expect(queue.add.mock.calls[0][1].projectIds).not.toContain(archivedProject.id);
     });
   });
 });

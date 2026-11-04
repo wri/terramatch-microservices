@@ -12,10 +12,7 @@ import {
   User
 } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
-import {
-  FRAMEWORK_KEYS_TF_REPORT_REMINDER,
-  FrameworkKeyTFReportReminder
-} from "@terramatch-microservices/database/constants";
+import { FRAMEWORK_KEYS_TF, FrameworkKeyTF } from "@terramatch-microservices/database/constants";
 import { TerrafundReportReminderEmail } from "../email/terrafund-report-reminder.email";
 import { ApplicationSubmittedEmail } from "../email/application-submitted.email";
 import { OrganisationApprovedEmail } from "../email/organisation-approved.email";
@@ -60,10 +57,7 @@ export class ProductEventService {
     if (task.category === "project-reporting") {
       const project = await task.$get("project", { attributes: ["id", "frameworkKey"] });
       const frameworkKey = project?.frameworkKey;
-      if (
-        frameworkKey != null &&
-        FRAMEWORK_KEYS_TF_REPORT_REMINDER.includes(frameworkKey as FrameworkKeyTFReportReminder)
-      ) {
+      if (frameworkKey != null && FRAMEWORK_KEYS_TF.includes(frameworkKey as FrameworkKeyTF)) {
         await new TerrafundReportReminderEmail({
           projectIds: [project?.id as number],
           dueAt: task.dueAt?.toISOString()

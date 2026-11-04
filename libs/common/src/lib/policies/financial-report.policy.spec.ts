@@ -29,7 +29,7 @@ describe("FinancialReportPolicy", () => {
   it("allows managing financial reports in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await FinancialReportFactory.org().create({ frameworkKey: "ppc" });
-    const tf = await FinancialReportFactory.org().create({ frameworkKey: "terrafund" });
+    const tf = await FinancialReportFactory.org().create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete"], ppc]],
       cannot: [[["read", "delete"], tf]]

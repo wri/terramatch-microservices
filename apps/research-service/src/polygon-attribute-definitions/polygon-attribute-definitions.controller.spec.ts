@@ -22,7 +22,7 @@ describe("PolygonAttributeDefinitionsController", () => {
   const attributes = (): CreatePolygonAttributeDefinitionAttributes => ({
     label: "ANR Subcategory",
     inputType: "single_select",
-    frameworkKey: "terrafund",
+    frameworkKey: "terrafund-non-profits",
     options: [{ label: "Farmer managed" }]
   });
 
@@ -90,7 +90,7 @@ describe("PolygonAttributeDefinitionsController", () => {
 
     it("treats admin permissions for a different framework as non-admin for this request", async () => {
       Object.defineProperty(policyService, "permissions", {
-        value: ["framework-terrafund"],
+        value: ["framework-terrafund-non-profits"],
         writable: true,
         configurable: true
       });
@@ -139,7 +139,7 @@ describe("PolygonAttributeDefinitionsController", () => {
 
   describe("create", () => {
     it("authorizes create on a built instance for the payload framework", async () => {
-      const definition = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "terrafund" });
+      const definition = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "terrafund-non-profits" });
       createdDefinitionIds.push(definition.id);
       service.create.mockResolvedValue(definition as never);
 
@@ -149,7 +149,7 @@ describe("PolygonAttributeDefinitionsController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith(
         "create",
-        expect.objectContaining({ frameworkKey: "terrafund" })
+        expect.objectContaining({ frameworkKey: "terrafund-non-profits" })
       );
       expect(service.create).toHaveBeenCalledWith(attributes());
     });

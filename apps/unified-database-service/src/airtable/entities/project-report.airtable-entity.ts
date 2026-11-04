@@ -59,7 +59,7 @@ const COLUMNS: ColumnMapping<ProjectReport, ProjectReportAssociations>[] = [
     valueMap: async ({ frameworkKey }, { trees, associatedNurseryReports }) =>
       frameworkKey === "ppc"
         ? trees.reduce((total, { amount }) => total + (amount ?? 0), 0)
-        : frameworkKey === "terrafund"
+        : frameworkKey === "terrafund-non-profits"
           ? associatedNurseryReports.reduce((total, { seedlingsYoungTrees }) => total + (seedlingsYoungTrees ?? 0), 0)
           : 0
   },

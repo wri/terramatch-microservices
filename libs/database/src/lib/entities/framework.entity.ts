@@ -15,7 +15,7 @@ export class Framework extends Model<InferAttributes<Framework>, InferCreationAt
 
   @AllowNull
   @Index
-  @Column(STRING(20))
+  @Column(STRING)
   declare slug: FrameworkKey | null;
 
   @Column(STRING)
@@ -25,7 +25,7 @@ export class Framework extends Model<InferAttributes<Framework>, InferCreationAt
   // around applications and funding programmes will break if the value of this column is different
   // from the slug.
   @AllowNull
-  @Column(STRING(20))
+  @Column(STRING)
   declare accessCode: string | null;
 
   @AllowNull

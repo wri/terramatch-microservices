@@ -360,7 +360,7 @@ describe("DashboardEntitiesController", () => {
     const params: DashboardEntityParamsDto = { entity: "dashboardProjects" };
     const query: DashboardQueryDto = {
       country: "Test Country",
-      programmes: ["terrafund"],
+      programmes: ["terrafund-non-profits"],
       cohort: ["terrafund"],
       landscapes: ["gcb"]
     };

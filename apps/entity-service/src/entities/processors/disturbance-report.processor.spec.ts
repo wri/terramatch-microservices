@@ -151,11 +151,15 @@ describe("DisturbanceReportProcessor", () => {
     it("should returns framework disturbance reports", async () => {
       const disturbanceReports = await DisturbanceReportFactory.createMany(3, { frameworkKey: "hbf" });
       await DisturbanceReportFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         disturbanceReports.push(p);
       }
 
-      await expectDisturbanceReports(disturbanceReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectDisturbanceReports(
+        disturbanceReports,
+        {},
+        { permissions: ["framework-hbf", "framework-terrafund-non-profits"] }
+      );
     });
 
     it("should returns own project disturbance reports", async () => {
@@ -169,7 +173,7 @@ describe("DisturbanceReportProcessor", () => {
 
     it("should filter by framework key when user has framework permissions", async () => {
       const ppcReports = await DisturbanceReportFactory.createMany(2, { frameworkKey: "ppc" });
-      await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund" });
+      await DisturbanceReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" });
 
       await expectDisturbanceReports(ppcReports, {}, { permissions: ["framework-ppc"] });
     });
@@ -446,7 +450,7 @@ describe("DisturbanceReportProcessor", () => {
     it("writes only the reports for the given framework to the CSV", async () => {
       await DisturbanceReport.truncate();
       const ppcReports = await DisturbanceReportFactory.createMany(2, { frameworkKey: "ppc" });
-      await DisturbanceReportFactory.createMany(2, { frameworkKey: "terrafund" });
+      await DisturbanceReportFactory.createMany(2, { frameworkKey: "terrafund-non-profits" });
 
       const addRow = jest.fn();
       csvExportService.writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {

@@ -17,7 +17,7 @@ import {
   Verification
 } from "@terramatch-microservices/database/entities";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
-import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
+import { SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { ApiKeyFactory, FrameworkFactory, FundingProgrammeFactory } from "@terramatch-microservices/database/factories";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { DateTime } from "luxon";
@@ -50,7 +50,7 @@ describe("ScheduledJobsService", () => {
 
     it("should ignore jobs that aren't scheduled yet", async () => {
       const processSpy = jest.spyOn(service as any, "processJob");
-      const job = await ScheduledJobFactory.forReportReminder.create({ executionTime: faker.date.future() });
+      const job = await ScheduledJobFactory.forTaskDue.create({ executionTime: faker.date.future() });
       expect(processSpy).not.toHaveBeenCalled();
       await job.reload();
       expect(job.deletedAt).toBeNull();
@@ -58,7 +58,7 @@ describe("ScheduledJobsService", () => {
 
     it("should log an error if the job type is not recognized", async () => {
       const logSpy = jest.spyOn((service as any).logger, "error");
-      const job = await ScheduledJobFactory.forReportReminder.create({
+      const job = await ScheduledJobFactory.forTaskDue.create({
         executionTime: faker.date.recent(),
         // @ts-expect-error bad job type for testing
         type: "fake"
@@ -71,20 +71,12 @@ describe("ScheduledJobsService", () => {
     });
 
     it("should add to the queue for ready jobs", async () => {
-      const reportReminder = await ScheduledJobFactory.forReportReminder.create();
       const siteAndNurseryReminder = await ScheduledJobFactory.forSiteAndNurseryReminder.create();
       const taskDue = await ScheduledJobFactory.forTaskDue.create();
       await service.processScheduledJobs();
       expect(queue.add).toHaveBeenCalledWith(
         TASK_DUE_EVENT,
         expect.objectContaining({ id: taskDue.id, taskDefinition: expect.objectContaining(taskDue.taskDefinition) })
-      );
-      expect(queue.add).toHaveBeenCalledWith(
-        REPORT_REMINDER_EVENT,
-        expect.objectContaining({
-          id: reportReminder.id,
-          taskDefinition: expect.objectContaining(reportReminder.taskDefinition)
-        })
       );
       expect(queue.add).toHaveBeenCalledWith(
         SITE_AND_NURSERY_REMINDER_EVENT,

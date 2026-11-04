@@ -43,7 +43,7 @@ describe("AggregateReportsController", () => {
     });
 
     it("throws UnauthorizedException when user is not authorized", async () => {
-      const project = createMock<Project>({ id: 1, uuid: "project-uuid", frameworkKey: "terrafund" });
+      const project = createMock<Project>({ id: 1, uuid: "project-uuid", frameworkKey: "terrafund-non-profits" });
       jest.spyOn(Project, "findOne").mockResolvedValue(project);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
@@ -53,7 +53,7 @@ describe("AggregateReportsController", () => {
     });
 
     it("returns JSON:API document with aggregateReports resource and camelCase attributes for a project", async () => {
-      const project = createMock<Project>({ id: 1, uuid: "project-uuid", frameworkKey: "terrafund" });
+      const project = createMock<Project>({ id: 1, uuid: "project-uuid", frameworkKey: "terrafund-non-profits" });
       jest.spyOn(Project, "findOne").mockResolvedValue(project);
 
       const stubAttributes: AggregateReportsResponseDto = {

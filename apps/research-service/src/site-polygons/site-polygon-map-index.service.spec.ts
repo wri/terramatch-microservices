@@ -227,7 +227,7 @@ describe("SitePolygonMapIndexService", () => {
       });
       await ProjectReportFactory.create({ projectId: matching.id, status: "approved", plantingStatus: "in-progress" });
       const otherFramework = await ProjectFactory.create({
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         level0Project: ["KE"],
         organisationId: organisation.id
       });

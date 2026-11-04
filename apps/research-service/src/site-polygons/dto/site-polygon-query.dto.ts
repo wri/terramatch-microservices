@@ -270,7 +270,8 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
     required: false,
     default: false,
     type: "boolean",
-    description: "Soft-deleted polygons for one site. Search is supported; other filters are ignored."
+    description:
+      "Soft-deleted polygons for the siteId[] and / or projectId[] scope. Search is supported; other filters are ignored."
   })
   @IsOptional()
   @IsBoolean()

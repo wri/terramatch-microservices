@@ -60,6 +60,7 @@ import { extendSitePolygonSiteScopedQueryIndex } from "./202610221200-extend-sit
 import { createApiKeys } from "./202610231200-create-api-keys";
 import { removeUserApiKeyColumn } from "./202610281200-remove-user-api-key-column";
 import { addPitchIncomeGeneratingActivities } from "./202611031200-add-pitch-income-generating-activities";
+import { renameOrganisationUserToJoinRequests } from "./202610281200-rename-organisation-user-to-join-requests";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -121,5 +122,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   extendSitePolygonSiteScopedQueryIndex,
   createApiKeys,
   removeUserApiKeyColumn,
-  addPitchIncomeGeneratingActivities
+  addPitchIncomeGeneratingActivities,
+  renameOrganisationUserToJoinRequests
 ];

@@ -6,7 +6,7 @@ import { FormSubmission } from "@terramatch-microservices/database/entities";
 import {
   FormSubmissionFactory,
   OrganisationFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 
@@ -40,13 +40,12 @@ describe("FormSubmissionPolicy", () => {
     await expectCannot(service, "read", submission);
   });
 
-  it("allows reading associated org submissions", async () => {
+  it("does not allow reading submissions of an org the user has requested to join", async () => {
     const associatedOrg = await OrganisationFactory.create();
     const pendingOrg = await OrganisationFactory.create();
-    const user = await UserFactory.create();
+    const user = await UserFactory.create({ organisationId: associatedOrg.id });
     mockContextForUser(user, "manage-own");
-    await OrganisationUserFactory.create({ organisationId: associatedOrg.id, userId: user.id, status: "approved" });
-    await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "pending" });
+    await OrganisationJoinRequestFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "pending" });
     const associatedSubmission = await FormSubmissionFactory.create({ organisationUuid: associatedOrg.uuid });
     const pendingSubmission = await FormSubmissionFactory.create({ organisationUuid: pendingOrg.uuid });
     await expectCan(service, "read", associatedSubmission);

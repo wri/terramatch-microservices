@@ -4,7 +4,7 @@ import { expectCan, expectCannot } from "./policy.service.spec";
 import { Organisation } from "@terramatch-microservices/database/entities";
 import {
   OrganisationFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   ProjectFactory,
   ProjectUserFactory,
   UserFactory
@@ -109,12 +109,12 @@ describe("OrganisationPolicy", () => {
       await expectCan(service, "read", org);
     });
 
-    it("allows reading organisations via organisationsConfirmed", async () => {
+    it("disallows reading organisations the user has requested to join", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
       mockContextForUser(user, "manage-own");
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
-      await expectCan(service, "read", org);
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
+      await expectCannot(service, "read", org);
     });
 
     it("disallows reading organisations not in orgUuids", async () => {
@@ -167,20 +167,16 @@ describe("OrganisationPolicy", () => {
       await expectCannot(service, ["uploadFiles", "deleteFiles"], orgs[1]);
     });
 
-    it("allows updating organisations via organisationsConfirmed", async () => {
-      const org = await OrganisationFactory.create();
+    it("disallows managing an organisation the user without an organisation has requested to join", async () => {
+      const requestedOrg = await OrganisationFactory.create({ status: "draft" });
       const user = await UserFactory.create();
       mockContextForUser(user, "manage-own");
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
-      await expectCan(service, "update", org);
-    });
-
-    it("disallows updating organisations not in organisationsConfirmed", async () => {
-      const orgs = await OrganisationFactory.createMany(2);
-      const user = await UserFactory.create();
-      mockContextForUser(user, "manage-own");
-      await OrganisationUserFactory.create({ organisationId: orgs[0].id, userId: user.id, status: "approved" });
-      await expectCannot(service, "update", orgs[1]);
+      await OrganisationJoinRequestFactory.create({
+        organisationId: requestedOrg.id,
+        userId: user.id,
+        status: "pending"
+      });
+      await expectCannot(service, ["update", "uploadFiles", "deleteFiles", "updateFiles", "delete"], requestedOrg);
     });
 
     it("disallows updating organisations with requested status when user has primary org", async () => {
@@ -188,7 +184,11 @@ describe("OrganisationPolicy", () => {
       const requestedOrg = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: primaryOrg.id });
       mockContextForUser(user, "manage-own");
-      await OrganisationUserFactory.create({ organisationId: requestedOrg.id, userId: user.id, status: "pending" });
+      await OrganisationJoinRequestFactory.create({
+        organisationId: requestedOrg.id,
+        userId: user.id,
+        status: "pending"
+      });
       await expectCan(service, "update", primaryOrg);
       await expectCannot(service, "update", requestedOrg);
     });
@@ -272,18 +272,10 @@ describe("OrganisationPolicy", () => {
       await expectCannot(service, "approveReject", orgs[1]);
     });
 
-    it("allows approveReject for previously approved partners (organisationsConfirmed)", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "approved" });
-      mockContextForUser(user);
-      await expectCan(service, "approveReject", org);
-    });
-
     it("disallows approveReject for users with requested status", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
       mockContextForUser(user);
       await expectCannot(service, "approveReject", org);
     });
@@ -291,19 +283,9 @@ describe("OrganisationPolicy", () => {
     it("disallows approveReject for users with rejected status", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: "rejected" });
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "rejected" });
       mockContextForUser(user);
       await expectCannot(service, "approveReject", org);
-    });
-
-    it("allows approveReject for approved partners of multiple orgs", async () => {
-      const orgs = await OrganisationFactory.createMany(2);
-      const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: orgs[0].id, userId: user.id, status: "approved" });
-      await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
-      mockContextForUser(user);
-      await expectCan(service, "approveReject", orgs[0]);
-      await expectCan(service, "approveReject", orgs[1]);
     });
   });
 

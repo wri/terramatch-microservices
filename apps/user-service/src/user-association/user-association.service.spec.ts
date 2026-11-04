@@ -8,12 +8,12 @@ import { Op } from "sequelize";
 import {
   OrganisationFactory,
   UserFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   ProjectFactory,
   ProjectUserFactory
 } from "@terramatch-microservices/database/factories";
 import {
-  OrganisationUser,
+  OrganisationJoinRequest,
   User,
   ProjectUser,
   ProjectInvite,
@@ -28,8 +28,8 @@ import {
   BadRequestException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { DocumentBuilder } from "@terramatch-microservices/common/util";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
+import { DocumentBuilder, Resource } from "@terramatch-microservices/common/util";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("UserAssociationService", () => {
   let service: UserAssociationService;
@@ -212,9 +212,9 @@ describe("UserAssociationService", () => {
 
       it("should call addDtos through processor", async () => {
         const org = await OrganisationFactory.create();
-        const orgUser = await OrganisationUserFactory.create({ organisationId: org.id });
+        const joinRequest = await OrganisationJoinRequestFactory.create({ organisationId: org.id });
         jest.spyOn(Organisation, "findOne").mockResolvedValue(org);
-        jest.spyOn(service, "queryOrg").mockResolvedValue([orgUser] as OrganisationUser[]);
+        jest.spyOn(service, "queryOrg").mockResolvedValue([joinRequest]);
         jest.spyOn(service, "addOrgUserDtos").mockResolvedValue(undefined);
         const document = new DocumentBuilder("associatedUsers");
 
@@ -222,7 +222,7 @@ describe("UserAssociationService", () => {
         await processor.addDtos(document, {});
 
         expect(service.queryOrg).toHaveBeenCalledWith(org, {});
-        expect(service.addOrgUserDtos).toHaveBeenCalledWith(document, org, [orgUser], {});
+        expect(service.addOrgUserDtos).toHaveBeenCalledWith(document, org, [joinRequest], {});
       });
 
       it("should call handleCreate through processor for organisations", async () => {
@@ -677,113 +677,85 @@ describe("UserAssociationService", () => {
   });
 
   describe("queryOrg", () => {
-    it("should query OrganisationUser records for an organisation", async () => {
+    it("should return the organisation's join requests, filtered by status", async () => {
       const org = await OrganisationFactory.create();
-      const orgUser1 = await OrganisationUserFactory.create({ organisationId: org.id });
-      const orgUser2 = await OrganisationUserFactory.create({ organisationId: org.id });
+      const pending = await OrganisationJoinRequestFactory.create({ organisationId: org.id, status: "pending" });
+      const rejected = await OrganisationJoinRequestFactory.create({ organisationId: org.id, status: "rejected" });
+      await OrganisationJoinRequestFactory.create({ status: "pending" });
 
-      jest.spyOn(OrganisationUser, "findAll").mockResolvedValue([orgUser1, orgUser2] as OrganisationUser[]);
+      expect((await service.queryOrg(org, {})).map(({ id }) => id).sort()).toEqual([pending.id, rejected.id].sort());
+      expect((await service.queryOrg(org, { status: "rejected" })).map(({ id }) => id)).toEqual([rejected.id]);
+    });
 
-      const result = await service.queryOrg(org, {});
+    it("should return no join requests when filtering for approved members", async () => {
+      const org = await OrganisationFactory.create();
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, status: "pending" });
 
-      expect(OrganisationUser.findAll).toHaveBeenCalledWith({
-        where: { organisationId: org.id },
-        attributes: ["id", "userId", "status"]
-      });
-      expect(result).toEqual([orgUser1, orgUser2]);
+      expect(await service.queryOrg(org, { status: "approved" })).toEqual([]);
     });
   });
 
   describe("addOrgUserDtos", () => {
-    it("should add user associations to document with correct DTOs", async () => {
-      const org = await OrganisationFactory.create({ name: "Test Org" });
-      const user1 = await UserFactory.create({ organisationId: org.id });
-      const user2 = await UserFactory.create({ organisationId: org.id });
+    const getStatuses = (document: DocumentBuilder) =>
+      Object.fromEntries((serialize(document).data as Resource[]).map(({ id, attributes }) => [id, attributes.status]));
 
-      const orgUser1 = await OrganisationUserFactory.create({
+    it("should list members as approved alongside users with join requests", async () => {
+      const org = await OrganisationFactory.create({ name: "Test Org" });
+      const member = await UserFactory.create({ organisationId: org.id });
+      const requester = await UserFactory.create();
+      const joinRequest = await OrganisationJoinRequestFactory.create({
         organisationId: org.id,
-        userId: user1.id,
-        status: "approved"
-      });
-      const orgUser2 = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user2.id,
+        userId: requester.id,
         status: "pending"
       });
-
-      const ownersMock = [{ id: user1.id }, { id: user2.id }];
-      jest
-        .spyOn(User, "findAll")
-        .mockResolvedValueOnce(ownersMock as User[])
-        .mockResolvedValueOnce([user1, user2] as User[]);
       const document = new DocumentBuilder("associatedUsers");
-
-      const addDataSpy = jest.spyOn(document, "addData");
       const addIndexSpy = jest.spyOn(document, "addIndex");
 
-      await service.addOrgUserDtos(document, org, [orgUser1, orgUser2] as OrganisationUser[], {});
+      await service.addOrgUserDtos(document, org, [joinRequest], {});
 
-      expect(User.findAll).toHaveBeenNthCalledWith(1, {
-        where: { organisationId: org.id },
-        attributes: ["id"]
+      expect(getStatuses(document)).toEqual({
+        [member.uuid as string]: "approved",
+        [requester.uuid as string]: "pending"
       });
-      expect(User.findAll).toHaveBeenNthCalledWith(2, {
-        where: { id: { [Op.in]: [user1.id, user2.id] } },
-        attributes: [
-          "id",
-          "uuid",
-          "emailAddress",
-          "firstName",
-          "lastName",
-          "organisationId",
-          "phoneNumber",
-          "jobRole",
-          "lastLoggedInAt",
-          "roles"
-        ]
-      });
-      expect(addDataSpy).toHaveBeenCalledTimes(2);
       expect(addIndexSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           resource: "associatedUsers",
           requestPath: expect.stringContaining(`/userAssociations/v3/organisations/${org.uuid}`),
-          total: 2,
-          ids: [user1.uuid, user2.uuid]
+          total: 2
         })
       );
     });
 
-    it("should handle empty orgUsers array", async () => {
+    it("should leave members out when filtering by a join request status", async () => {
       const org = await OrganisationFactory.create();
+      await UserFactory.create({ organisationId: org.id });
+      const requester = await UserFactory.create();
+      const joinRequest = await OrganisationJoinRequestFactory.create({
+        organisationId: org.id,
+        userId: requester.id,
+        status: "rejected"
+      });
       const document = new DocumentBuilder("associatedUsers");
 
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
+      await service.addOrgUserDtos(document, org, [joinRequest], { status: "rejected" });
+
+      expect(getStatuses(document)).toEqual({ [requester.uuid as string]: "rejected" });
+    });
+
+    it("should handle an organisation with no users", async () => {
+      const org = await OrganisationFactory.create();
+      const document = new DocumentBuilder("associatedUsers");
       const addIndexSpy = jest.spyOn(document, "addIndex");
 
       await service.addOrgUserDtos(document, org, [], {});
 
-      expect(addIndexSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resource: "associatedUsers",
-          requestPath: expect.stringContaining(`/userAssociations/v3/organisations/${org.uuid}`),
-          total: 0,
-          ids: []
-        })
-      );
+      expect(addIndexSpy).toHaveBeenCalledWith(expect.objectContaining({ total: 0, ids: [] }));
     });
-  });
 
-  describe("addOrgUserDtos invitePending", () => {
-    it("should flag an owner whose organisation invite has not been accepted yet", async () => {
+    it("should flag a member whose organisation invite has not been accepted yet", async () => {
       const org = await OrganisationFactory.create({ name: "Test Org" });
       const invitee = await UserFactory.create({ organisationId: org.id });
-      jest
-        .spyOn(User, "findAll")
-        .mockResolvedValueOnce([{ id: invitee.id }] as User[])
-        .mockResolvedValueOnce([invitee] as User[]);
-      jest
-        .spyOn(OrganisationInvite, "findAll")
-        .mockResolvedValue([{ emailAddress: invitee.emailAddress }] as OrganisationInvite[]);
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: invitee.emailAddress, token: "token" });
       const document = new DocumentBuilder("associatedUsers");
       const addDataSpy = jest.spyOn(document, "addData");
 
@@ -791,243 +763,154 @@ describe("UserAssociationService", () => {
 
       expect(addDataSpy).toHaveBeenCalledWith(invitee.uuid, expect.objectContaining({ invitePending: true }));
     });
-  });
 
-  describe("addOrgUserDtos ordering", () => {
-    it("should order invited members by invite id, then accepted members by organisation user id", async () => {
+    it("should order invited members by invite id, then join requests by id, then other members", async () => {
       const org = await OrganisationFactory.create();
-      const firstInvitee = await UserFactory.create({ organisationId: org.id });
-      const secondInvitee = await UserFactory.create({ organisationId: org.id });
-      const acceptedLater = await UserFactory.create();
-      const acceptedEarlier = await UserFactory.create();
-      jest
-        .spyOn(User, "findAll")
-        .mockResolvedValueOnce([{ id: firstInvitee.id }, { id: secondInvitee.id }] as User[])
-        .mockResolvedValueOnce([acceptedLater, firstInvitee, acceptedEarlier, secondInvitee] as User[]);
-      jest.spyOn(OrganisationInvite, "findAll").mockResolvedValue([
-        { id: 9, emailAddress: firstInvitee.emailAddress },
-        { id: 4, emailAddress: secondInvitee.emailAddress }
-      ] as OrganisationInvite[]);
-      const orgUsers = [
-        { id: 5, userId: acceptedLater.id, status: "approved" },
-        { id: 3, userId: acceptedEarlier.id, status: "approved" }
-      ] as OrganisationUser[];
+      const member = await UserFactory.create({ organisationId: org.id });
+      const [firstInvitee, secondInvitee] = await UserFactory.createMany(2, { organisationId: org.id });
+      const [laterRequester, earlierRequester] = await UserFactory.createMany(2);
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: secondInvitee.emailAddress, token: "a" });
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: firstInvitee.emailAddress, token: "b" });
+      const earlierRequest = await OrganisationJoinRequestFactory.create({
+        organisationId: org.id,
+        userId: earlierRequester.id,
+        status: "pending"
+      });
+      const laterRequest = await OrganisationJoinRequestFactory.create({
+        organisationId: org.id,
+        userId: laterRequester.id,
+        status: "pending"
+      });
       const document = new DocumentBuilder("associatedUsers");
       const addIndexSpy = jest.spyOn(document, "addIndex");
 
-      await service.addOrgUserDtos(document, org, orgUsers, {});
+      await service.addOrgUserDtos(document, org, [laterRequest, earlierRequest], {});
 
       expect(addIndexSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          ids: [secondInvitee.uuid, firstInvitee.uuid, acceptedEarlier.uuid, acceptedLater.uuid]
+          ids: [secondInvitee.uuid, firstInvitee.uuid, earlierRequester.uuid, laterRequester.uuid, member.uuid]
         })
       );
     });
   });
 
   describe("deleteBulkOrgUserAssociations", () => {
-    it("should delete organisation user associations", async () => {
+    it("should remove members and join requests, and clear their invites", async () => {
       const org = await OrganisationFactory.create();
-      const user1 = await UserFactory.create();
-      const user2 = await UserFactory.create();
+      const [member, remainingMember] = await UserFactory.createMany(2, { organisationId: org.id });
+      const requester = await UserFactory.create();
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: requester.id, status: "pending" });
+      await OrganisationInvite.create({ organisationId: org.id, emailAddress: member.emailAddress, token: "token" });
 
-      jest.spyOn(User, "findAll").mockResolvedValue([user1, user2] as User[]);
-      jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(2);
-      const updateSpy = jest.spyOn(User, "update").mockResolvedValue([0]);
-      const inviteDestroySpy = jest.spyOn(OrganisationInvite, "destroy").mockResolvedValue(0);
+      const result = await service.deleteBulkOrgUserAssociations(org.id, [
+        member.uuid as string,
+        requester.uuid as string
+      ]);
 
-      const result = await service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string, user2.uuid as string]);
-
-      expect(User.findAll).toHaveBeenCalledWith({
-        where: { uuid: { [Op.in]: [user1.uuid, user2.uuid] } },
-        attributes: ["id", "uuid", "emailAddress", "organisationId"]
-      });
-      expect(OrganisationUser.destroy).toHaveBeenCalledWith({
-        where: {
-          organisationId: org.id,
-          userId: { [Op.in]: [user1.id, user2.id] }
-        }
-      });
-      expect(updateSpy).not.toHaveBeenCalled();
-      expect(inviteDestroySpy).toHaveBeenCalledWith({
-        where: {
-          organisationId: org.id,
-          emailAddress: { [Op.in]: [user1.emailAddress, user2.emailAddress] }
-        }
-      });
-      expect(result).toEqual([user1.uuid, user2.uuid]);
-    });
-
-    it("should clear organisationId for members whose home organisation is this one", async () => {
-      const org = await OrganisationFactory.create();
-      const member = await UserFactory.create({ organisationId: org.id });
-      await UserFactory.create({ organisationId: org.id });
-
-      jest.spyOn(User, "findAll").mockResolvedValue([member] as User[]);
-      jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(1);
-      const updateSpy = jest.spyOn(User, "update").mockResolvedValue([1]);
-      jest.spyOn(OrganisationInvite, "destroy").mockResolvedValue(1);
-
-      await service.deleteBulkOrgUserAssociations(org.id, [member.uuid as string]);
-
-      expect(updateSpy).toHaveBeenCalledWith({ organisationId: null }, { where: { id: { [Op.in]: [member.id] } } });
-    });
-
-    it("should allow removing the creator when another accepted member remains as a home member", async () => {
-      const org = await OrganisationFactory.create();
-      const creator = await UserFactory.create({ organisationId: org.id });
-      await UserFactory.create({ organisationId: org.id });
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: creator.id, status: APPROVED });
-
-      await service.deleteBulkOrgUserAssociations(org.id, [creator.uuid as string]);
-
-      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(0);
-      expect(await User.count({ where: { organisationId: org.id } })).toBe(1);
+      expect(result).toEqual(expect.arrayContaining([member.uuid, requester.uuid]));
+      await member.reload();
+      await remainingMember.reload();
+      expect(member.organisationId).toBeNull();
+      expect(remainingMember.organisationId).toBe(org.id);
+      expect(await OrganisationJoinRequest.count({ where: { organisationId: org.id } })).toBe(0);
+      expect(await OrganisationInvite.count({ where: { organisationId: org.id } })).toBe(0);
     });
 
     it("should throw NotFoundException when no users found", async () => {
       const org = await OrganisationFactory.create();
 
-      jest.spyOn(User, "findAll").mockResolvedValue([]);
-      const destroySpy = jest.spyOn(OrganisationUser, "destroy").mockResolvedValue(0);
-
       await expect(service.deleteBulkOrgUserAssociations(org.id, ["non-existent-uuid"])).rejects.toThrow(
         NotFoundException
       );
-      expect(destroySpy).not.toHaveBeenCalled();
     });
 
-    it("should throw BadRequestException when removing the last user from an organisation", async () => {
+    it("should throw BadRequestException when the request removes every member of an organisation", async () => {
       const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user.id, status: APPROVED });
-
-      await expect(service.deleteBulkOrgUserAssociations(org.id, [user.uuid as string])).rejects.toThrow(
-        BadRequestException
-      );
-      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(1);
-    });
-
-    it("should throw BadRequestException when the request removes every user from an organisation", async () => {
-      const org = await OrganisationFactory.create();
-      const user1 = await UserFactory.create();
-      const user2 = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id, status: APPROVED });
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id, status: APPROVED });
+      const members = await UserFactory.createMany(2, { organisationId: org.id });
 
       await expect(
-        service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string, user2.uuid as string])
-      ).rejects.toThrow(BadRequestException);
-      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(2);
+        service.deleteBulkOrgUserAssociations(
+          org.id,
+          members.map(({ uuid }) => uuid as string)
+        )
+      ).rejects.toThrow(new BadRequestException("Cannot remove the last user from an organisation"));
+      expect(await User.count({ where: { organisationId: org.id } })).toBe(2);
     });
 
-    it("should allow removing users when at least one user remains in the organisation", async () => {
+    it("should allow removing the creator when another member remains", async () => {
       const org = await OrganisationFactory.create();
-      const user1 = await UserFactory.create();
-      const user2 = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user1.id, status: APPROVED });
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: user2.id, status: APPROVED });
+      const creator = await UserFactory.create({ organisationId: org.id });
+      await UserFactory.create({ organisationId: org.id });
 
-      await service.deleteBulkOrgUserAssociations(org.id, [user1.uuid as string]);
+      await service.deleteBulkOrgUserAssociations(org.id, [creator.uuid as string]);
 
-      expect(await OrganisationUser.count({ where: { organisationId: org.id } })).toBe(1);
+      await creator.reload();
+      expect(creator.organisationId).toBeNull();
+      expect(await User.count({ where: { organisationId: org.id } })).toBe(1);
+    });
+
+    it("should allow removing only join requests from an organisation without members", async () => {
+      const org = await OrganisationFactory.create();
+      const requester = await UserFactory.create();
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: requester.id, status: "pending" });
+
+      await service.deleteBulkOrgUserAssociations(org.id, [requester.uuid as string]);
+
+      expect(await OrganisationJoinRequest.count({ where: { organisationId: org.id } })).toBe(0);
     });
   });
 
   describe("requestOrgJoin", () => {
-    it("should create new organisation user join request", async () => {
+    it("should create a pending join request", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
-        await OrganisationUserFactory.create({
-          organisationId: org.id,
-          userId: user.id,
-          status: "pending"
-        }),
-        true
-      ] as [OrganisationUser, boolean]);
       emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.requestOrgJoin(org, user.id);
 
-      expect(User.findOne).toHaveBeenCalledWith({
-        where: { id: user.id },
-        attributes: ["id", "uuid", "emailAddress"]
-      });
-      expect(OrganisationUser.findOrCreate).toHaveBeenCalledWith({
-        where: { organisationId: org.id, userId: user.id },
-        defaults: { organisationId: org.id, userId: user.id, status: "pending" }
-      });
+      expect(result.id).toBe(user.id);
+      expect(
+        await OrganisationJoinRequest.findOne({ where: { organisationId: org.id, userId: user.id } })
+      ).toMatchObject({ status: "pending" });
       expect(emailQueue.add).toHaveBeenCalled();
-      expect(result).toEqual(user);
     });
 
-    it("should update existing organisation user status to requested", async () => {
+    it("should reopen a rejected join request", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
+      const joinRequest = await OrganisationJoinRequestFactory.create({
         organisationId: org.id,
         userId: user.id,
-        status: "approved"
+        status: "rejected"
       });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
-      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
       emailQueue.add.mockResolvedValue({} as Job);
 
       await service.requestOrgJoin(org, user.id);
 
-      expect(orgUser.status).toBe("pending");
-      expect(orgUser.save).toHaveBeenCalled();
+      await joinRequest.reload();
+      expect(joinRequest.status).toBe("pending");
+      expect(await OrganisationJoinRequest.count({ where: { userId: user.id } })).toBe(1);
     });
 
-    it("should not update status if already requested", async () => {
+    it("should throw BadRequestException when the user is already a member", async () => {
       const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "pending"
-      });
+      const user = await UserFactory.create({ organisationId: org.id });
 
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([orgUser, false] as [OrganisationUser, boolean]);
-      jest.spyOn(orgUser, "save");
-      emailQueue.add.mockResolvedValue({} as Job);
-
-      await service.requestOrgJoin(org, user.id);
-
-      expect(orgUser.save).not.toHaveBeenCalled();
+      await expect(service.requestOrgJoin(org, user.id)).rejects.toThrow(
+        new BadRequestException("User is already a member of this organisation")
+      );
+      expect(await OrganisationJoinRequest.count({ where: { userId: user.id } })).toBe(0);
     });
 
     it("should throw UnauthorizedException when user not found", async () => {
       const org = await OrganisationFactory.create();
 
-      jest.spyOn(User, "findOne").mockResolvedValue(null);
-      const findOrCreateSpy = jest
-        .spyOn(OrganisationUser, "findOrCreate")
-        .mockResolvedValue([await OrganisationUserFactory.create(), false] as [OrganisationUser, boolean]);
-
-      await expect(service.requestOrgJoin(org, 999)).rejects.toThrow(UnauthorizedException);
-      expect(findOrCreateSpy).not.toHaveBeenCalled();
+      await expect(service.requestOrgJoin(org, -1)).rejects.toThrow(UnauthorizedException);
     });
 
     it("should handle email queue failure gracefully", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOrCreate").mockResolvedValue([
-        await OrganisationUserFactory.create({
-          organisationId: org.id,
-          userId: user.id,
-          status: "pending"
-        }),
-        true
-      ] as [OrganisationUser, boolean]);
       emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 
@@ -1037,84 +920,62 @@ describe("UserAssociationService", () => {
         expect.stringContaining("Failed to queue organisation join request email"),
         expect.any(Error)
       );
-      expect(result).toEqual(user);
+      expect(result.id).toBe(user.id);
     });
   });
 
   describe("updateOrgUserStatus", () => {
-    it("should approve a user and update organisationId", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "pending"
-      });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      jest.spyOn(user, "save").mockResolvedValue(user);
+    beforeEach(() => {
       emailQueue.add.mockResolvedValue({} as Job);
+    });
+
+    it("should approve a join request by making the user a member", async () => {
+      const [org, otherOrg] = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create();
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
+      await OrganisationJoinRequestFactory.create({ organisationId: otherOrg.id, userId: user.id, status: "pending" });
 
       const result = await service.updateOrgUserStatus(org, user.uuid as string, "approved");
 
-      expect(orgUser.status).toBe("approved");
-      expect(orgUser.save).toHaveBeenCalled();
+      expect(result.organisationId).toBe(org.id);
+      await user.reload();
       expect(user.organisationId).toBe(org.id);
-      expect(user.save).toHaveBeenCalled();
+      expect(await OrganisationJoinRequest.count({ where: { userId: user.id } })).toBe(0);
       expect(emailQueue.add).toHaveBeenCalled();
-      expect(result).toEqual(user);
     });
 
-    it("should reject a user without updating organisationId", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
+    it("should reject a join request without updating organisationId", async () => {
+      const [org, otherOrg] = await OrganisationFactory.createMany(2);
+      const user = await UserFactory.create({ organisationId: otherOrg.id });
+      const joinRequest = await OrganisationJoinRequestFactory.create({
         organisationId: org.id,
         userId: user.id,
         status: "pending"
       });
 
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      jest.spyOn(user, "save");
-      emailQueue.add.mockResolvedValue({} as Job);
+      await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
 
-      const result = await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
-
-      expect(orgUser.status).toBe("rejected");
-      expect(orgUser.save).toHaveBeenCalled();
-      expect(user.save).not.toHaveBeenCalled();
+      await joinRequest.reload();
+      await user.reload();
+      expect(joinRequest.status).toBe("rejected");
+      expect(user.organisationId).toBe(otherOrg.id);
       expect(emailQueue.add).toHaveBeenCalled();
-      expect(result).toEqual(user);
     });
 
     it("should allow approving a previously rejected user", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "rejected"
-      });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
-      jest.spyOn(user, "save").mockResolvedValue(user);
-      emailQueue.add.mockResolvedValue({} as Job);
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "rejected" });
 
       await service.updateOrgUserStatus(org, user.uuid as string, "approved");
 
-      expect(orgUser.status).toBe("approved");
+      await user.reload();
+      expect(user.organisationId).toBe(org.id);
+      expect(await OrganisationJoinRequest.count({ where: { userId: user.id } })).toBe(0);
     });
 
     it("should throw NotFoundException when user not found", async () => {
       const org = await OrganisationFactory.create();
-
-      jest.spyOn(User, "findOne").mockResolvedValue(null);
 
       await expect(service.updateOrgUserStatus(org, "non-existent-uuid", "approved")).rejects.toThrow(
         NotFoundException
@@ -1125,110 +986,49 @@ describe("UserAssociationService", () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
 
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
-
       await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
-        BadRequestException
-      );
-      await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
-        "User does not have a relationship with this organisation"
+        new BadRequestException("User does not have a relationship with this organisation")
       );
     });
 
-    it("should throw BadRequestException when trying to approve an already approved user", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "approved"
-      });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-
-      await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
-        BadRequestException
-      );
-    });
-
-    it("should reject an accepted member and clear their home organisation", async () => {
+    it("should throw BadRequestException when trying to approve a member", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "approved"
-      });
-      const otherUser = await UserFactory.create();
-      await OrganisationUserFactory.create({ organisationId: org.id, userId: otherUser.id, status: "approved" });
 
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      emailQueue.add.mockResolvedValue({} as Job);
+      await expect(service.updateOrgUserStatus(org, user.uuid as string, "approved")).rejects.toThrow(
+        new BadRequestException("Cannot approved a user with status 'approved'")
+      );
+    });
+
+    it("should reject a member by clearing their organisation and recording the rejection", async () => {
+      const org = await OrganisationFactory.create();
+      const [user] = await UserFactory.createMany(2, { organisationId: org.id });
 
       await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
 
-      expect(orgUser.status).toBe("rejected");
+      await user.reload();
       expect(user.organisationId).toBeNull();
+      expect(
+        await OrganisationJoinRequest.findOne({ where: { organisationId: org.id, userId: user.id } })
+      ).toMatchObject({ status: "rejected" });
     });
 
-    it("should create the membership row for a home member before rejecting them", async () => {
+    it("should throw BadRequestException when removing the last member", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
-      const created = {
-        status: "approved",
-        save: jest.fn().mockResolvedValue(undefined)
-      } as unknown as OrganisationUser;
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
-      jest.spyOn(OrganisationUser, "create").mockResolvedValue(created);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(1);
-      jest.spyOn(User, "count").mockResolvedValue(0);
-      emailQueue.add.mockResolvedValue({} as Job);
-
-      await service.updateOrgUserStatus(org, user.uuid as string, "rejected");
-
-      expect(OrganisationUser.create).toHaveBeenCalledWith(
-        expect.objectContaining({ organisationId: org.id, userId: user.id, status: "approved" })
-      );
-      expect(created.status).toBe("rejected");
-      expect(user.organisationId).toBeNull();
-    });
-
-    it("should throw BadRequestException when removing the last accepted member", async () => {
-      const org = await OrganisationFactory.create();
-      const user = await UserFactory.create({ organisationId: null });
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "approved"
-      });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
-      jest.spyOn(User, "count").mockResolvedValue(0);
 
       await expect(service.updateOrgUserStatus(org, user.uuid as string, "rejected")).rejects.toThrow(
         new BadRequestException("Cannot remove the last user from the organisation")
       );
-      expect(orgUser.status).toBe("approved");
+      await user.reload();
+      expect(user.organisationId).toBe(org.id);
+      expect(await OrganisationJoinRequest.count({ where: { userId: user.id } })).toBe(0);
     });
 
     it("should handle email queue failure gracefully", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      const orgUser = await OrganisationUserFactory.create({
-        organisationId: org.id,
-        userId: user.id,
-        status: "pending"
-      });
-
-      jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(orgUser);
-      jest.spyOn(orgUser, "save").mockResolvedValue(orgUser);
+      await OrganisationJoinRequestFactory.create({ organisationId: org.id, userId: user.id, status: "pending" });
       emailQueue.add.mockRejectedValue(new Error("Queue error"));
       const errorSpy = jest.spyOn(service["logger"], "error");
 
@@ -1238,9 +1038,10 @@ describe("UserAssociationService", () => {
         expect.stringContaining("Failed to queue organisation user approved email"),
         expect.any(Error)
       );
-      expect(result).toEqual(user);
+      expect(result.id).toBe(user.id);
     });
   });
+
   describe("inviteOrganisationUser", () => {
     const registeredUser = (overrides: Partial<User> = {}) =>
       ({
@@ -1260,41 +1061,21 @@ describe("UserAssociationService", () => {
 
       jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
       jest.spyOn(User, "findOne").mockResolvedValue(user);
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
-      jest.spyOn(OrganisationUser, "create").mockResolvedValue({} as OrganisationUser);
+      jest.spyOn(OrganisationJoinRequest, "count").mockResolvedValue(0);
+      jest.spyOn(OrganisationJoinRequest, "destroy").mockResolvedValue(0);
       jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
       const createUserSpy = jest.spyOn(User, "create");
       emailQueue.add.mockResolvedValue({} as Job);
 
       const result = await service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" });
 
-      expect(OrganisationUser.create).toHaveBeenCalledWith(
-        expect.objectContaining({ organisationId: org.id, userId: user.id, status: "approved" })
-      );
       expect(user.organisationId).toBe(org.id);
+      expect(OrganisationJoinRequest.destroy).toHaveBeenCalledWith({
+        where: { organisationId: org.id, userId: user.id }
+      });
       expect(OrganisationInvite.create).toHaveBeenCalledWith(expect.objectContaining({ acceptedAt: expect.any(Date) }));
       expect(createUserSpy).not.toHaveBeenCalled();
       expect(result).toBe(invite);
-    });
-
-    it("should reactivate an existing membership for a registered user", async () => {
-      const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
-      const membership = {
-        status: "rejected",
-        save: jest.fn().mockResolvedValue(undefined)
-      } as unknown as OrganisationUser;
-      jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
-      jest.spyOn(User, "findOne").mockResolvedValue(registeredUser());
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(membership);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
-      jest.spyOn(OrganisationInvite, "create").mockResolvedValue({} as OrganisationInvite);
-      emailQueue.add.mockResolvedValue({} as Job);
-
-      await service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" });
-
-      expect(membership.status).toBe("approved");
-      expect(membership.save).toHaveBeenCalled();
     });
 
     it("should still add a registered user when the approval email cannot be queued", async () => {
@@ -1302,9 +1083,8 @@ describe("UserAssociationService", () => {
       const invite = { uuid: "invite-uuid" } as OrganisationInvite;
       jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
       jest.spyOn(User, "findOne").mockResolvedValue(registeredUser());
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(0);
-      jest.spyOn(OrganisationUser, "create").mockResolvedValue({} as OrganisationUser);
+      jest.spyOn(OrganisationJoinRequest, "count").mockResolvedValue(0);
+      jest.spyOn(OrganisationJoinRequest, "destroy").mockResolvedValue(0);
       jest.spyOn(OrganisationInvite, "create").mockResolvedValue(invite);
       emailQueue.add.mockRejectedValue(new Error("queue unavailable"));
 
@@ -1337,8 +1117,7 @@ describe("UserAssociationService", () => {
       const org = { id: 1, uuid: "org-uuid", name: "Test Org" } as Organisation;
       jest.spyOn(OrganisationInvite, "count").mockResolvedValue(0);
       jest.spyOn(User, "findOne").mockResolvedValue(registeredUser());
-      jest.spyOn(OrganisationUser, "findOne").mockResolvedValue(null);
-      jest.spyOn(OrganisationUser, "count").mockResolvedValue(1);
+      jest.spyOn(OrganisationJoinRequest, "count").mockResolvedValue(1);
 
       await expect(service.inviteOrganisationUser(org, { emailAddress: "exists@example.com" })).rejects.toThrow(
         UnprocessableEntityException

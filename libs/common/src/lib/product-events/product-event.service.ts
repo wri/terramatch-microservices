@@ -8,12 +8,10 @@ import {
   FormSubmission,
   Notification,
   Organisation,
-  OrganisationUser,
   Task,
   User
 } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
-import { APPROVED } from "@terramatch-microservices/database/constants/status";
 import {
   FRAMEWORK_KEYS_TF_REPORT_REMINDER,
   FrameworkKeyTFReportReminder
@@ -132,18 +130,7 @@ export class ProductEventService {
 
     const organisationId = Subquery.select(Organisation, "id").eq("uuid", organisationUuid).literal;
     const users = await User.findAll({
-      where: {
-        [Op.or]: [
-          { organisationId: { [Op.in]: organisationId } },
-          {
-            id: {
-              [Op.in]: Subquery.select(OrganisationUser, "userId")
-                .in("organisationId", organisationId)
-                .eq("status", APPROVED).literal
-            }
-          }
-        ]
-      },
+      where: { organisationId: { [Op.in]: organisationId } },
       attributes: ["id"]
     });
     if (users.length === 0) return;

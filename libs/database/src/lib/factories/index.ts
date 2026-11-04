@@ -38,7 +38,7 @@ export * from "./media.factory";
 export * from "./nursery.factory";
 export * from "./nursery-report.factory";
 export * from "./organisation.factory";
-export * from "./organisation-user.factory";
+export * from "./organisation-join-request.factory";
 export * from "./ownership-stake.factory";
 export * from "./polygon-attribute-definition.factory";
 export * from "./polygon-attribute-definition-option.factory";

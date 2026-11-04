@@ -125,8 +125,8 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
     return Subquery.select(Project, "id").eq("organisationId", organisationId).literal;
   }
 
-  static forCohort(cohort: string) {
-    return Subquery.select(Project, "id").eq("cohort", cohort).literal;
+  static forCohort(cohorts: string[]) {
+    return Subquery.select(Project, "id").in("cohort", cohorts).literal;
   }
 
   static forLandscape(landscapeName: string) {

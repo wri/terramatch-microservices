@@ -49,3 +49,4 @@ export { clearStaleDraftUpdateRequestStatuses } from "./2026-09-30-clearStaleDra
 export { createGliComponentsOptionList } from "./2026-10-05-createGliComponentsOptionList";
 export { deleteAllNotifications } from "./2026-10-20-deleteAllNotifications";
 export { backfillInviteNamesFromUsers } from "./2026-10-29-backfillInviteNamesFromUsers";
+export { migrateNonApprovedUpdateStatuses } from "./2026-11-04-migrateNonApprovedUpdateStatuses";

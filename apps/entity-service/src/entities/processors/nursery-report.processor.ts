@@ -184,6 +184,9 @@ export class NurseryReportProcessor extends ReportProcessor<
     if (query.country != null) {
       builder.where({ "$nursery.project.id$": { [Op.in]: Project.forCountry(query.country) } });
     }
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ "$nursery.project.id$": { [Op.in]: Project.forCohort(query.cohort) } });
+    }
 
     if (query.taskIds != null && query.taskIds.length > 0) {
       builder.where({ taskId: query.taskIds });

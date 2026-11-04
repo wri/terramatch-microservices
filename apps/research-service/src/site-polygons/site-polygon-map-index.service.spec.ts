@@ -45,11 +45,8 @@ describe("SitePolygonMapIndexService", () => {
       await expect(getMapIndex({ frameworkKey: ["ppc"], country: ["KE"] })).rejects.toThrow(BadRequestException);
     });
 
-    it("rejects deletedOnly without exactly one siteId[]", async () => {
-      await expect(getMapIndex({ projectId: ["project-uuid"], deletedOnly: true })).rejects.toThrow(
-        BadRequestException
-      );
-      await expect(getMapIndex({ siteId: ["a", "b"], deletedOnly: true })).rejects.toThrow(BadRequestException);
+    it("rejects deletedOnly without siteId[] or projectId[]", async () => {
+      await expect(getMapIndex({ frameworkKey: ["ppc"], deletedOnly: true })).rejects.toThrow(BadRequestException);
     });
 
     it("rejects an inverted plantStart range", async () => {

@@ -55,8 +55,8 @@ describe("SitePolygonSummaryService", () => {
       );
     });
 
-    it("rejects deletedOnly without exactly one siteId[]", async () => {
-      await expect(getSummary({ projectId: ["project-uuid"], deletedOnly: true })).rejects.toThrow(BadRequestException);
+    it("rejects deletedOnly without siteId[] or projectId[]", async () => {
+      await expect(getSummary({ frameworkKey: ["ppc"], deletedOnly: true })).rejects.toThrow(BadRequestException);
     });
 
     it("rejects using missingIndicator[] and presentIndicator[] together", async () => {

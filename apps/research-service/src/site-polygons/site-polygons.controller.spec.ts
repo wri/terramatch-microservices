@@ -580,6 +580,7 @@ describe("SitePolygonsController", () => {
   describe("findMany with deletedOnly", () => {
     interface MockDeletedQueryBuilder {
       filterSiteUuids: jest.Mock;
+      filterProjectUuids: jest.Mock;
       addSearch: jest.Mock;
       execute: jest.Mock;
       paginationTotal: jest.Mock;
@@ -588,11 +589,13 @@ describe("SitePolygonsController", () => {
     const mockDeletedQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockDeletedQueryBuilder => {
       const builder: MockDeletedQueryBuilder = {
         filterSiteUuids: jest.fn(),
+        filterProjectUuids: jest.fn(),
         addSearch: jest.fn(),
         execute: jest.fn().mockResolvedValue(executeResult),
         paginationTotal: jest.fn().mockResolvedValue(totalResult)
       };
       builder.filterSiteUuids.mockResolvedValue(builder);
+      builder.filterProjectUuids.mockResolvedValue(builder);
       builder.addSearch.mockResolvedValue(builder);
 
       sitePolygonService.buildDeletedQuery.mockReturnValue(
@@ -602,7 +605,7 @@ describe("SitePolygonsController", () => {
       return builder;
     };
 
-    it("should throw when siteId is missing", async () => {
+    it("should throw when neither siteId nor projectId is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       mockDeletedQueryBuilder();
 
@@ -611,13 +614,23 @@ describe("SitePolygonsController", () => {
       );
     });
 
-    it("should throw when more than one siteId is provided", async () => {
+    it("should filter by every requested site when more than one siteId is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockDeletedQueryBuilder();
+      const builder = mockDeletedQueryBuilder();
 
-      await expect(
-        controller.findMany({ deletedOnly: true, siteId: ["site-1", "site-2"], page: { number: 1 } })
-      ).rejects.toThrow(BadRequestException);
+      await controller.findMany({ deletedOnly: true, siteId: ["site-1", "site-2"], page: { number: 1 } });
+
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["site-1", "site-2"]);
+    });
+
+    it("should filter by the requested project when only projectId is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockDeletedQueryBuilder();
+
+      await controller.findMany({ deletedOnly: true, projectId: ["project-1"], page: { number: 1 } });
+
+      expect(builder.filterProjectUuids).toHaveBeenCalledWith(["project-1"]);
+      expect(builder.filterSiteUuids).not.toHaveBeenCalled();
     });
 
     it("should throw when number pagination is not used", async () => {

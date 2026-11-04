@@ -457,9 +457,9 @@ export class SitePolygonsController {
   }
 
   private async findDeletedSitePolygons(query: SitePolygonQueryDto) {
-    const { siteId, search, searchFields } = query;
-    if (siteId == null || siteId.length !== 1) {
-      throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
+    const { siteId, projectId, search, searchFields } = query;
+    if (siteId == null && projectId == null) {
+      throw new BadRequestException("deletedOnly requires at least one siteId[] or projectId[] value.");
     }
 
     const page = query.page ?? {};
@@ -475,7 +475,8 @@ export class SitePolygonsController {
     }
 
     let queryBuilder = this.sitePolygonService.buildDeletedQuery(page);
-    queryBuilder = await queryBuilder.filterSiteUuids(siteId);
+    if (siteId != null) queryBuilder = await queryBuilder.filterSiteUuids(siteId);
+    if (projectId != null) queryBuilder = await queryBuilder.filterProjectUuids(projectId);
     if (search != null) {
       queryBuilder = await queryBuilder.addSearch(search, searchFields);
     }

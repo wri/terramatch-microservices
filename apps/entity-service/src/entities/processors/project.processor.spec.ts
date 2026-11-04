@@ -579,6 +579,7 @@ describe("ProjectProcessor", () => {
       await create("approved", "information-required");
       await create("approved", "draft");
       await create("pending-approval");
+      await create("pending-approval", "draft");
       await create("approved", "pending-approval");
       await create("approved");
       await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
@@ -786,9 +787,16 @@ describe("ProjectProcessor", () => {
         status: "approved",
         updateRequestStatus: "pending-approval"
       });
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Submitted Nursery",
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 4, nurseriesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 5, nurseriesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ nurseriesMatching: 1, nurseriesRequiringAttention: 1 });
@@ -927,9 +935,16 @@ describe("ProjectProcessor", () => {
         status: "approved",
         updateRequestStatus: "pending-approval"
       });
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Submitted Site",
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ sitesMatching: 4, sitesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ sitesMatching: 5, sitesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ sitesMatching: 1, sitesRequiringAttention: 1 });

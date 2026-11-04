@@ -12,6 +12,7 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import {
+  APPROVED,
   DRAFT,
   DUE,
   INFORMATION_REQUIRED,
@@ -127,7 +128,11 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
   }
   if (filter.requiresAttention === true) {
     const needsAttention = clauses.in("status", [DUE, DRAFT, INFORMATION_REQUIRED]);
-    const updateNeedsAttention = clauses.in("updateRequestStatus", [DRAFT, INFORMATION_REQUIRED]);
+    // The effective status is the change request's only while the report itself is approved.
+    const updateNeedsAttention = `(${clauses.in("status", [APPROVED])} AND ${clauses.in("updateRequestStatus", [
+      DRAFT,
+      INFORMATION_REQUIRED
+    ])})`;
     builder.andLiteral(`(${needsAttention} OR ${updateNeedsAttention})`);
   }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);

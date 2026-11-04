@@ -26,7 +26,7 @@ import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, Project
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
-import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
+import { APPROVED, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
 import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
@@ -72,10 +72,11 @@ import {
 
 const ENTITY_ATTENTION_STATUSES: readonly string[] = [DRAFT, INFORMATION_REQUIRED];
 
-// Sites and nurseries need attention when the entity or its update request is a draft or needs information.
+// Sites and nurseries need attention when their effective status is a draft or needs information. The effective
+// status is the change request's only while the entity itself is approved.
 const requiresAttention = ({ status, updateRequestStatus }: Pick<Site, "status" | "updateRequestStatus">) =>
   ENTITY_ATTENTION_STATUSES.includes(status) ||
-  (updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
+  (status === APPROVED && updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
 
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 

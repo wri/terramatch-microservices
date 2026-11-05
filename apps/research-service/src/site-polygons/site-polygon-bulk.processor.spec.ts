@@ -4,7 +4,7 @@ import { Job, Queue } from "bullmq";
 import { DelayedJob, Site } from "@terramatch-microservices/database/entities";
 import { SiteFactory, SitePolygonFactory } from "@terramatch-microservices/database/factories";
 import { serialize } from "@terramatch-microservices/common/util/testing";
-import { Resource } from "@terramatch-microservices/common/util";
+import { buildDeletedResponse, buildJsonApi, getDtoType, Resource } from "@terramatch-microservices/common/util";
 import {
   BULK_ATTRIBUTE_UPDATE,
   BULK_DELETE,
@@ -16,6 +16,7 @@ import {
 } from "./site-polygon-bulk.processor";
 import { SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
+import { SitePolygonFullDto, SitePolygonLightDto } from "./dto/site-polygon.dto";
 
 describe("SitePolygonBulkProcessor", () => {
   let processor: SitePolygonBulkProcessor;
@@ -136,10 +137,12 @@ describe("SitePolygonBulkProcessor", () => {
     const buildJob = (name = BULK_DELETE) =>
       ({ name, data: { delayedJobId: 1, primaryUuids: ["primary-1", "primary-2"] } }) as Job<BulkDeleteJobData>;
 
-    it("deletes in batches, records progress and returns a summary", async () => {
+    it("deletes in batches, records progress and returns the endpoint's deleted response", async () => {
       const update = jest.spyOn(DelayedJob, "update").mockResolvedValue([1] as never);
+      const deletedUuids = ["version-1", "version-2", "version-3"];
       sitePolygonsService.bulkDeleteSitePolygonsInBatches.mockImplementation(async (_primaryUuids, onProgress) => {
         await onProgress(2);
+        return deletedUuids;
       });
 
       const { processedContent, payload } = await processor.processDelayedJob(buildJob());
@@ -150,14 +153,14 @@ describe("SitePolygonBulkProcessor", () => {
       );
       expect(update).toHaveBeenCalledWith({ processedContent: 2 }, { where: { id: 1 } });
       expect(processedContent).toBe(2);
-      expect(serialize(payload)).toMatchObject({
-        data: { type: "sitePolygonBulkSummaries", id: "bulkDelete|1", attributes: { processedPolygons: 2 } }
-      });
+      expect(payload).toEqual(buildDeletedResponse(getDtoType(SitePolygonFullDto), deletedUuids));
     });
 
-    it("updates the status and returns a summary", async () => {
+    it("updates the status and returns the endpoint's light DTO document", async () => {
       const sitePolygons = await Promise.all([SitePolygonFactory.build(), SitePolygonFactory.build()]);
       sitePolygonBulkUpdateService.updateStatus.mockResolvedValue(sitePolygons);
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonsService.buildLightDocument.mockResolvedValue(document);
       const data = sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid }));
       const job = {
         name: BULK_STATUS_UPDATE,
@@ -167,15 +170,16 @@ describe("SitePolygonBulkProcessor", () => {
       const { processedContent, payload } = await processor.processDelayedJob(job);
 
       expect(sitePolygonBulkUpdateService.updateStatus).toHaveBeenCalledWith("approved", data, undefined, 3);
+      expect(sitePolygonsService.buildLightDocument).toHaveBeenCalledWith(sitePolygons);
       expect(processedContent).toBe(2);
-      expect(serialize(payload)).toMatchObject({
-        data: { type: "sitePolygonBulkSummaries", id: "bulkStatusUpdate|4", attributes: { processedPolygons: 2 } }
-      });
+      expect(payload).toBe(document);
     });
 
-    it("updates the attributes and returns a summary", async () => {
+    it("updates the attributes and returns the endpoint's light DTO document", async () => {
       const newVersions = await Promise.all([SitePolygonFactory.build(), SitePolygonFactory.build()]);
       sitePolygonBulkUpdateService.updateAttributes.mockResolvedValue(newVersions);
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonsService.buildLightDocument.mockResolvedValue(document);
       const job = {
         name: BULK_ATTRIBUTE_UPDATE,
         data: { delayedJobId: 5, userId: 3, sitePolygonUuids: ["a", "b"], attributeChanges: { numTrees: 10 } }
@@ -184,14 +188,9 @@ describe("SitePolygonBulkProcessor", () => {
       const { processedContent, payload } = await processor.processDelayedJob(job);
 
       expect(sitePolygonBulkUpdateService.updateAttributes).toHaveBeenCalledWith(["a", "b"], { numTrees: 10 }, 3);
+      expect(sitePolygonsService.buildLightDocument).toHaveBeenCalledWith(newVersions);
       expect(processedContent).toBe(2);
-      expect(serialize(payload)).toMatchObject({
-        data: {
-          type: "sitePolygonBulkSummaries",
-          id: "bulkAttributeUpdate|5",
-          attributes: { processedPolygons: 2 }
-        }
-      });
+      expect(payload).toBe(document);
     });
 
     it("rejects an unknown job name", async () => {

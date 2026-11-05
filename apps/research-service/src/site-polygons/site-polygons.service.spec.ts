@@ -43,6 +43,7 @@ import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -729,6 +730,22 @@ describe("SitePolygonsService", () => {
     }
   });
 
+  it("should build a light DTO document whose data is an array, even for one polygon", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+    const { data } = serialize(await service.buildLightDocument([sitePolygon]));
+
+    expect(data).toEqual([
+      expect.objectContaining({
+        type: "sitePolygons",
+        id: sitePolygon.uuid,
+        attributes: expect.objectContaining({ siteName: site.name, projectName: project.name })
+      })
+    ]);
+  });
+
   it("should load the sites of many polygons in one query and reuse sites that are already loaded", async () => {
     const project = await ProjectFactory.create();
     const [siteA, siteB, joinedSite] = await SiteFactory.createMany(3, { projectId: project.id });
@@ -1158,8 +1175,12 @@ describe("SitePolygonsService", () => {
       });
       const onProgress = jest.fn().mockResolvedValue(undefined);
 
-      await service.bulkDeleteSitePolygonsInBatches(getPrimaryUuids([sitePolygon, ...others]), onProgress);
+      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches(
+        getPrimaryUuids([sitePolygon, ...others]),
+        onProgress
+      );
 
+      expect(deletedUuids.sort()).toEqual([sitePolygon, oldVersion, ...others].map(({ uuid }) => uuid).sort());
       expect(onProgress.mock.calls).toEqual([[100], [101]]);
       expect(await SitePolygon.count({ where: { siteUuid: site.uuid } })).toBe(0);
       await oldVersion.reload({ paranoid: false });

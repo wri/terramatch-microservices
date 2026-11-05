@@ -57,6 +57,7 @@ import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
 import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
+import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
 import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
@@ -106,6 +107,7 @@ export class SitePolygonsController {
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
     private readonly sitePolygonSummaryService: SitePolygonSummaryService,
+    private readonly sitePolygonBulkUpdateService: SitePolygonBulkUpdateService,
     @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue,
     @InjectQueue(GEOJSON_EXPORT_QUEUE) private readonly geoJsonExportQueue: Queue,
     @InjectQueue(SITE_POLYGON_BULK_QUEUE) private readonly sitePolygonBulkQueue: Queue
@@ -531,9 +533,11 @@ export class SitePolygonsController {
     description: `Creates a new version for each site polygon with the same attribute changes applied.
     Supported fields: plantStart, practice, targetSys, distr, numTrees, submissionCycle.
     At least one attribute field must be provided. Empty string or empty array explicitly clears a field.
-    Omitted fields inherit values from each polygon's active version.`
+    Omitted fields inherit values from each polygon's active version.
+
+    Up to ${BULK_ASYNC_THRESHOLD} polygons are updated in the request. Larger selections return a delayed job.`
   })
-  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @JsonApiResponse([{ data: SitePolygonLightDto, hasMany: true }, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data or empty attributeChanges." })
   @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
@@ -557,47 +561,19 @@ export class SitePolygonsController {
       throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
-    for (const sitePolygon of sitePolygons) {
-      await this.policyService.authorize("update", sitePolygon);
-    }
-
+    await this.policyService.authorize("update", sitePolygons);
     const userId = this.policyService.userId as number;
 
-    const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName", "roles"]
-    });
-    const source = user?.getSourceFromRoles() ?? "terramatch";
-    const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
-
-    const newVersions = await SitePolygon.sql.transaction(async transaction =>
-      this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
-        uuids,
-        attributeChanges,
+    if (sitePolygons.length > BULK_ASYNC_THRESHOLD) {
+      await this.sitePolygonCreationService.validateBulkAttributeUpdate(uuids, attributeChanges);
+      return await SitePolygonBulkProcessor.queueBulkAttributeUpdate(this.sitePolygonBulkQueue, sitePolygons, {
         userId,
-        userFullName,
-        source,
-        transaction,
-        isAdminSession,
-        user?.canReviewPolygons ?? false
-      )
-    );
-
-    if (source === "greenhouse") {
-      const polygonUuids = newVersions
-        .map(sp => sp.polygonUuid)
-        .filter((uuid): uuid is string => uuid != null && uuid !== "");
-      if (polygonUuids.length > 0) {
-        this.sitePolygonService
-          .enqueuePolygonValidation(polygonUuids, userId, {
-            siteUuid: newVersions[0]?.siteUuid ?? undefined,
-            triggerType: "gh_push"
-          })
-          .catch(err =>
-            this.logger.error("Failed to enqueue automated polygon validation after bulk attribute update", err)
-          );
-      }
+        sitePolygonUuids: uuids,
+        attributeChanges
+      });
     }
+
+    const newVersions = await this.sitePolygonBulkUpdateService.updateAttributes(uuids, attributeChanges, userId);
 
     const document = buildJsonApi(SitePolygonLightDto);
     const associations = await this.sitePolygonService.loadAssociationDtos(newVersions, true);
@@ -609,8 +585,6 @@ export class SitePolygonsController {
       );
     }
 
-    this.logger.log(`Bulk attribute update created ${newVersions.length} version(s) by user ${userId}`);
-
     return document;
   }
 
@@ -618,9 +592,11 @@ export class SitePolygonsController {
   @ApiOperation({
     operationId: "updateSitePolygonStatus",
     summary: "Update the status of the list of site polygons",
-    description: "Update the status of the list of site polygons"
+    description: `Update the status of the list of site polygons.
+
+    Up to ${BULK_ASYNC_THRESHOLD} polygons are updated in the request. Larger selections return a delayed job.`
   })
-  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @JsonApiResponse([{ data: SitePolygonLightDto, hasMany: true }, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
   @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
@@ -631,11 +607,24 @@ export class SitePolygonsController {
 
     await this.policyService.authorize("update", SitePolygon);
     const userId = this.policyService.userId as number;
-    const user = await User.findByPk(userId, {
-      attributes: ["id", "firstName", "lastName", "emailAddress"]
-    });
     const { data, comment } = request;
-    const updatedSitePolygons = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
+
+    if (data.length > BULK_ASYNC_THRESHOLD) {
+      const uuids = data.map(({ id }) => id);
+      await this.sitePolygonService.assertStatusUpdateAllowed(status, uuids);
+      const sitePolygons = await SitePolygon.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        attributes: ["siteUuid"]
+      });
+      return await SitePolygonBulkProcessor.queueBulkStatusUpdate(this.sitePolygonBulkQueue, sitePolygons, {
+        userId,
+        status,
+        data,
+        comment
+      });
+    }
+
+    const updatedSitePolygons = await this.sitePolygonBulkUpdateService.updateStatus(status, data, comment, userId);
     const associations = await this.sitePolygonService.loadAssociationDtos(updatedSitePolygons, true);
     const document = buildJsonApi(SitePolygonLightDto);
     for (const sitePolygon of updatedSitePolygons) {
@@ -684,8 +673,7 @@ export class SitePolygonsController {
        geometry for all related site polygons. The request body follows JSON:API format with
        an array of resource identifiers (type and id).
 
-       Up to ${BULK_ASYNC_THRESHOLD} polygons are deleted in the request. Larger selections return a
-       delayed job instead; its payload holds the same deleted response once it completes.`
+       Up to ${BULK_ASYNC_THRESHOLD} polygons are deleted in the request. Larger selections return a delayed job.`
   })
   @JsonApiDeletedResponse(
     [getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)],

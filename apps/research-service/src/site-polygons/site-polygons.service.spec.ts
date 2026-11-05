@@ -1158,16 +1158,12 @@ describe("SitePolygonsService", () => {
       });
       const onProgress = jest.fn().mockResolvedValue(undefined);
 
-      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches(
-        getPrimaryUuids([sitePolygon, ...others]),
-        onProgress
-      );
+      await service.bulkDeleteSitePolygonsInBatches(getPrimaryUuids([sitePolygon, ...others]), onProgress);
 
-      expect(deletedUuids.sort()).toEqual(
-        [sitePolygon.uuid, oldVersion.uuid, ...others.map(({ uuid }) => uuid)].sort()
-      );
       expect(onProgress.mock.calls).toEqual([[100], [101]]);
       expect(await SitePolygon.count({ where: { siteUuid: site.uuid } })).toBe(0);
+      await oldVersion.reload({ paranoid: false });
+      expect(oldVersion.deletedAt).not.toBeNull();
       const deletedGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
       expect(deletedGeometry?.deletedAt).not.toBeNull();
       expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledTimes(1);
@@ -1197,9 +1193,8 @@ describe("SitePolygonsService", () => {
       await sitePolygon.destroy();
       const onProgress = jest.fn().mockResolvedValue(undefined);
 
-      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress);
+      await service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress);
 
-      expect(deletedUuids).toEqual([]);
       expect(onProgress).toHaveBeenCalledWith(1);
       expect(polygonGeometryService.bulkUpdateProjectCentroids).not.toHaveBeenCalled();
       expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
@@ -1502,6 +1497,24 @@ describe("SitePolygonsService", () => {
     });
   });
 
+  describe("assertStatusUpdateAllowed", () => {
+    it("should only check eligibility for submissions", async () => {
+      const findAll = jest.spyOn(SitePolygon, "findAll");
+
+      await service.assertStatusUpdateAllowed("approved", ["uuid-1"]);
+
+      expect(findAll).not.toHaveBeenCalled();
+    });
+
+    it("should reject a submission for an ineligible polygon", async () => {
+      const sitePolygon = await SitePolygonFactory.create({ status: "approved" });
+
+      await expect(service.assertStatusUpdateAllowed("pending-approval", [sitePolygon.uuid])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
   describe("updateBulkStatus", () => {
     it("should create audit status records with null user fields", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-a" }];
@@ -1514,18 +1527,33 @@ describe("SitePolygonsService", () => {
 
       await service.updateBulkStatus(status, data, null, null);
 
-      expect(bulkCreateSpy).toHaveBeenCalledWith([
-        expect.objectContaining({
-          auditableType: SitePolygon.LARAVEL_TYPE,
-          auditableId: 10,
-          createdBy: null,
-          firstName: null,
-          lastName: null,
-          comment: null,
-          status,
-          type: "status"
-        })
-      ]);
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            auditableType: SitePolygon.LARAVEL_TYPE,
+            auditableId: 10,
+            createdBy: null,
+            firstName: null,
+            lastName: null,
+            comment: null,
+            status,
+            type: "status"
+          })
+        ],
+        { transaction: expect.anything() }
+      );
+    });
+
+    it("should roll back the status change when the audit records cannot be written", async () => {
+      const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval" });
+      jest.spyOn(AuditStatus, "bulkCreate").mockRejectedValue(new Error("Audit insert failed"));
+
+      await expect(
+        service.updateBulkStatus("approved", [{ type: "sitePolygons", id: sitePolygon.uuid }], null, null)
+      ).rejects.toThrow("Audit insert failed");
+
+      await sitePolygon.reload();
+      expect(sitePolygon.status).toBe("pending-approval");
     });
 
     it("should skip audit status bulkCreate when no polygons were returned", async () => {
@@ -1559,7 +1587,7 @@ describe("SitePolygonsService", () => {
       await service.updateBulkStatus(status, data, comment, user);
       expect(SitePolygon.update).toHaveBeenCalledWith(
         { status },
-        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
       );
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
@@ -1657,7 +1685,10 @@ describe("SitePolygonsService", () => {
 
         await service.updateBulkStatus(status, data, null, user);
 
-        expect(updateSpy).toHaveBeenCalledWith({ status }, { where: { uuid: { [Op.in]: data.map(d => d.id) } } });
+        expect(updateSpy).toHaveBeenCalledWith(
+          { status },
+          { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
+        );
         expect(validationQueue.add).not.toHaveBeenCalled();
       }
     );
@@ -1732,7 +1763,7 @@ describe("SitePolygonsService", () => {
 
       expect(SitePolygon.update).toHaveBeenCalledWith(
         { status },
-        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
       );
       expect(validationQueue.add).not.toHaveBeenCalled();
       expect(findOneSpy).not.toHaveBeenCalled();

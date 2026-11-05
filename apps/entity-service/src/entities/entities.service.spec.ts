@@ -150,27 +150,63 @@ describe("EntitiesService", () => {
       expect(await service.countReports({ projectUuid, reportTypes: ["siteReports"] })).toBe(1);
     });
 
-    it("matches the status of a submitted change request instead of the report's own status", async () => {
+    it("matches the report's own status, regardless of its change request", async () => {
       const frameworkKey = "ppc";
       const { id: projectId, uuid: projectUuid } = await ProjectFactory.create({ frameworkKey });
-      await ProjectReportFactory.create({
-        projectId,
-        frameworkKey,
-        status: "information-required",
-        updateRequestStatus: "pending-approval"
-      });
+      await ProjectReportFactory.create({ projectId, frameworkKey, status: "information-required" });
       await ProjectReportFactory.create({
         projectId,
         frameworkKey,
         status: "approved",
         updateRequestStatus: "information-required"
       });
-      await ProjectReportFactory.create({ projectId, frameworkKey, status: "approved", updateRequestStatus: "draft" });
+      await ProjectReportFactory.create({
+        projectId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "pending-approval"
+      });
       setMockedPermissions("framework-ppc");
 
       expect(await service.countReports({ projectUuid, statuses: ["information-required"] })).toBe(1);
-      expect(await service.countReports({ projectUuid, statuses: ["pending-approval"] })).toBe(1);
-      expect(await service.countReports({ projectUuid, statuses: ["approved"] })).toBe(1);
+      expect(await service.countReports({ projectUuid, statuses: ["pending-approval"] })).toBe(0);
+      expect(await service.countReports({ projectUuid, statuses: ["approved"] })).toBe(2);
+      expect(
+        await service.countReports({
+          projectUuid,
+          statuses: ["approved"],
+          updateRequestStatuses: ["pending-approval", "information-required"]
+        })
+      ).toBe(2);
+      expect(
+        await service.countReports({
+          projectUuid,
+          statuses: ["information-required"],
+          updateRequestStatuses: ["information-required"]
+        })
+      ).toBe(0);
+    });
+
+    it("never matches the update request status of a nothing to report report", async () => {
+      const frameworkKey = "ppc";
+      const { id: projectId, uuid: projectUuid } = await ProjectFactory.create({ frameworkKey });
+      const { id: siteId } = await SiteFactory.create({ projectId, frameworkKey });
+      await SiteReportFactory.create({
+        siteId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "pending-approval",
+        nothingToReport: true
+      });
+      await SiteReportFactory.create({
+        siteId,
+        frameworkKey,
+        status: "approved",
+        updateRequestStatus: "pending-approval"
+      });
+      setMockedPermissions("framework-ppc");
+
+      expect(await service.countReports({ projectUuid, updateRequestStatuses: ["pending-approval"] })).toBe(1);
     });
 
     it("filters by the update request status, excluding reports without a change request", async () => {

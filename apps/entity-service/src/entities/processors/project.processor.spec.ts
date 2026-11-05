@@ -547,24 +547,23 @@ describe("ProjectProcessor", () => {
       expect((await getIndex({ projectUuid: coastal.uuid })).data.map(({ id }) => id)).toEqual([coastal.uuid]);
     });
 
-    it("matches the status of a submitted change request instead of the report's own status", async () => {
-      const { alpha, river } = await createData();
+    it("matches the report's own status and update request status together", async () => {
+      await createData();
       const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
       const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
       await NurseryReportFactory.create({
         nurseryId: foxtrotNursery.id,
         frameworkKey,
-        status: "information-required",
+        status: "approved",
         updateRequestStatus: "pending-approval"
       });
       await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
 
-      expect((await getIndex({ statuses: ["information-required"] })).attributes).toEqual([
-        row(alpha, 0, meta(river, 1))
-      ]);
-      expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["pending-approval"] })).attributes).toEqual([
+      const query = { reportTypes: ["nurseryReports" as const], updateRequestStatuses: ["pending-approval" as const] };
+      expect((await getIndex({ ...query, statuses: ["approved"] })).attributes).toEqual([
         row(foxtrot, 0, {}, meta(foxtrotNursery, 1))
       ]);
+      expect((await getIndex({ ...query, statuses: ["pending-approval"] })).data).toEqual([]);
     });
 
     it("counts reports that are due, draft or information-required on the report or its change request", async () => {

@@ -1178,6 +1178,24 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("pending-approval", data, "comment", userParams);
     });
 
+    it("should build the response from the shared associations so site and project names are kept", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(User, "findByPk").mockResolvedValue(null);
+      const sitePolygon = await SitePolygonFactory.build();
+      const association = { indicators: [] };
+      sitePolygonService.updateBulkStatus.mockResolvedValue([sitePolygon]);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({ [sitePolygon.id]: association });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+
+      await controller.updateBulkStatus("approved", {
+        comment: "",
+        data: [{ type: "sitePolygons", id: sitePolygon.uuid }]
+      });
+
+      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([sitePolygon], true);
+      expect(sitePolygonService.buildLightDto).toHaveBeenCalledWith(sitePolygon, association);
+    });
+
     it("should validate and queue a delayed job for a selection over the threshold", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       Object.defineProperty(policyService, "userId", { value: 1 });
@@ -1838,9 +1856,14 @@ describe("SitePolygonsController", () => {
   });
 
   describe("getVersions", () => {
-    it("should throw UnauthorizedException when user is not authorized", async () => {
+    it("should throw UnauthorizedException when the user cannot read the loaded versions", async () => {
+      const versions = [await SitePolygonFactory.build({ primaryUuid: "test-primary-uuid" })];
+      versioningService.getVersionHistory.mockResolvedValue(versions);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
       await expect(controller.getVersions("test-primary-uuid")).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", versions);
+      expect(sitePolygonService.loadAssociationDtos).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when polygon is not found", async () => {
@@ -1848,7 +1871,7 @@ describe("SitePolygonsController", () => {
       versioningService.getVersionHistory.mockResolvedValue([]);
 
       await expect(controller.getVersions("non-existent-primary-uuid")).rejects.toThrow(NotFoundException);
-      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(policyService.authorize).not.toHaveBeenCalled();
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith("non-existent-primary-uuid");
     });
 
@@ -1880,7 +1903,7 @@ describe("SitePolygonsController", () => {
 
       const result = serialize(await controller.getVersions(primaryUuid));
 
-      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", versions);
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, true);
       expect(result.data).toBeDefined();
@@ -1895,9 +1918,12 @@ describe("SitePolygonsController", () => {
 
   describe("updateVersion", () => {
     let originalSequelize: typeof SitePolygon.sequelize;
+    let targetVersion: SitePolygon;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       originalSequelize = SitePolygon.sequelize;
+      targetVersion = await SitePolygonFactory.build({ uuid: "test-uuid" });
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(targetVersion);
       Object.defineProperty(policyService, "userId", {
         value: 1,
         writable: true,
@@ -1928,6 +1954,19 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
+      expect(versioningService.activateVersion).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when the version does not exist", async () => {
+      jest.mocked(SitePolygon.findOne).mockResolvedValue(null);
+      const request: VersionUpdateBody = {
+        data: { type: "sitePolygons", id: "test-uuid", attributes: { isActive: true } }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(versioningService.activateVersion).not.toHaveBeenCalled();
     });
 
     it("should throw UnauthorizedException when userId is null", async () => {
@@ -2038,7 +2077,7 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.updateVersion("version-uuid", request);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
       expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
       expect(versioningService.trackChange).not.toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -2084,7 +2123,7 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.updateVersion("version-uuid", request);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
       expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
       expect(versioningService.trackChange).toHaveBeenCalledWith(
         activatedVersion.primaryUuid,

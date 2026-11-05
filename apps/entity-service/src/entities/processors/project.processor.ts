@@ -73,10 +73,9 @@ import {
 const ENTITY_ATTENTION_STATUSES: readonly string[] = [DRAFT, INFORMATION_REQUIRED];
 
 // Sites and nurseries need attention when their effective status is a draft or needs information. The effective
-// status is the change request's only while the entity itself is approved.
+// status is the change request's only while the entity itself is approved, and a draft change request is ignored.
 const requiresAttention = ({ status, updateRequestStatus }: Pick<Site, "status" | "updateRequestStatus">) =>
-  ENTITY_ATTENTION_STATUSES.includes(status) ||
-  (status === APPROVED && updateRequestStatus != null && ENTITY_ATTENTION_STATUSES.includes(updateRequestStatus));
+  ENTITY_ATTENTION_STATUSES.includes(status) || (status === APPROVED && updateRequestStatus === INFORMATION_REQUIRED);
 
 const PROJECT_QA_STATUS_FIELDS = Object.keys(PROJECT_QA_STATUS_FIELD_AUDIT_TYPE) as ProjectQaStatusField[];
 

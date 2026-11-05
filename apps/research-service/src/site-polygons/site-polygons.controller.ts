@@ -574,18 +574,7 @@ export class SitePolygonsController {
     }
 
     const newVersions = await this.sitePolygonBulkUpdateService.updateAttributes(uuids, attributeChanges, userId);
-
-    const document = buildJsonApi(SitePolygonLightDto);
-    const associations = await this.sitePolygonService.loadAssociationDtos(newVersions, true);
-
-    for (const sitePolygon of newVersions) {
-      document.addData(
-        sitePolygon.uuid,
-        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
-      );
-    }
-
-    return document;
+    return await this.sitePolygonService.buildLightDocument(newVersions);
   }
 
   @Patch("status/:status")
@@ -625,15 +614,7 @@ export class SitePolygonsController {
     }
 
     const updatedSitePolygons = await this.sitePolygonBulkUpdateService.updateStatus(status, data, comment, userId);
-    const associations = await this.sitePolygonService.loadAssociationDtos(updatedSitePolygons, true);
-    const document = buildJsonApi(SitePolygonLightDto);
-    for (const sitePolygon of updatedSitePolygons) {
-      document.addData(
-        sitePolygon.uuid,
-        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
-      );
-    }
-    return document;
+    return await this.sitePolygonService.buildLightDocument(updatedSitePolygons);
   }
 
   @Patch()

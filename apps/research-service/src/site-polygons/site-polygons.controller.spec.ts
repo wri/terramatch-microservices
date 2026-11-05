@@ -7,7 +7,12 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { buildDelayedJobResponse, getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
+import {
+  buildDelayedJobResponse,
+  buildJsonApi,
+  getStableRequestQuery,
+  Resource
+} from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
@@ -1046,8 +1051,8 @@ describe("SitePolygonsController", () => {
         fullName: "Test User"
       } as User);
       sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion1, newVersion2]);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockImplementation(async polygon => new SitePolygonLightDto(polygon, []));
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonService.buildLightDocument.mockResolvedValue(document);
 
       const attributeChanges = { plantStart: "2024-01-01T00:00:00Z", numTrees: 200 };
       const data = [
@@ -1055,9 +1060,11 @@ describe("SitePolygonsController", () => {
         { type: "sitePolygons", id: sitePolygon2.uuid }
       ];
 
-      await controller.bulkUpdateAttributes({ data, attributeChanges });
+      const result = await controller.bulkUpdateAttributes({ data, attributeChanges });
 
       expect(policyService.authorize).toHaveBeenCalledWith("update", [sitePolygon1, sitePolygon2]);
+      expect(sitePolygonService.buildLightDocument).toHaveBeenCalledWith([newVersion1, newVersion2]);
+      expect(result).toBe(document);
       expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
         [sitePolygon1.uuid, sitePolygon2.uuid],
         attributeChanges,
@@ -1088,8 +1095,6 @@ describe("SitePolygonsController", () => {
         fullName: "Green House"
       } as User);
       sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion]);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
 
       await controller.bulkUpdateAttributes({
         data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
@@ -1178,22 +1183,21 @@ describe("SitePolygonsController", () => {
       expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("pending-approval", data, "comment", userParams);
     });
 
-    it("should build the response from the shared associations so site and project names are kept", async () => {
+    it("should return the shared light DTO document for the updated polygons", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       jest.spyOn(User, "findByPk").mockResolvedValue(null);
       const sitePolygon = await SitePolygonFactory.build();
-      const association = { indicators: [] };
       sitePolygonService.updateBulkStatus.mockResolvedValue([sitePolygon]);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({ [sitePolygon.id]: association });
-      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(sitePolygon, []));
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonService.buildLightDocument.mockResolvedValue(document);
 
-      await controller.updateBulkStatus("approved", {
+      const result = await controller.updateBulkStatus("approved", {
         comment: "",
         data: [{ type: "sitePolygons", id: sitePolygon.uuid }]
       });
 
-      expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([sitePolygon], true);
-      expect(sitePolygonService.buildLightDto).toHaveBeenCalledWith(sitePolygon, association);
+      expect(sitePolygonService.buildLightDocument).toHaveBeenCalledWith([sitePolygon]);
+      expect(result).toBe(document);
     });
 
     it("should validate and queue a delayed job for a selection over the threshold", async () => {

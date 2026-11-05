@@ -19,6 +19,7 @@ import {
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
+import { buildJsonApi } from "@terramatch-microservices/common/util";
 import { PolygonGeometryCreationService } from "./polygon-geometry-creation.service";
 import {
   CustomAttributesDto,
@@ -262,12 +263,14 @@ export class SitePolygonsService {
   }
 
   async bulkDeleteSitePolygonsInBatches(primaryUuids: string[], onProgress: (processed: number) => Promise<void>) {
+    const sitePolygonUuids: string[] = [];
     const polygonUuids: string[] = [];
     const activePolygonUuids: string[] = [];
     let processed = 0;
     try {
       for (const batch of chunk(primaryUuids, BULK_DELETE_BATCH_SIZE)) {
         const deleted = await this.transaction(transaction => this.deleteVersionGroups(batch, transaction));
+        sitePolygonUuids.push(...deleted.sitePolygonUuids);
         polygonUuids.push(...deleted.polygonUuids);
         activePolygonUuids.push(...deleted.activePolygonUuids);
 
@@ -280,6 +283,8 @@ export class SitePolygonsService {
       }
       await this.invalidateDeletedPolygonTiles(activePolygonUuids);
     }
+
+    return sitePolygonUuids;
   }
 
   async deleteSitePolygon(uuid: string): Promise<void> {
@@ -489,6 +494,15 @@ export class SitePolygonsService {
     { indicators, customAttributes, site }: AssociationDtos
   ): Promise<SitePolygonLightDto> {
     return new SitePolygonLightDto(sitePolygon, indicators, customAttributes, site);
+  }
+
+  async buildLightDocument(sitePolygons: SitePolygon[]) {
+    const associations = await this.loadAssociationDtos(sitePolygons, true);
+    const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
+    for (const sitePolygon of sitePolygons) {
+      document.addData(sitePolygon.uuid, await this.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {}));
+    }
+    return document;
   }
 
   async buildFullDto(

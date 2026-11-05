@@ -7,15 +7,14 @@ import {
   DelayedJobWorker
 } from "@terramatch-microservices/common/workers/delayed-job-worker.processor";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
-import { buildDelayedJobResponse, buildJsonApi } from "@terramatch-microservices/common/util";
+import { buildDelayedJobResponse, buildDeletedResponse, getDtoType } from "@terramatch-microservices/common/util";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
-import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { DelayedJob, Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { PolygonStatus } from "@terramatch-microservices/database/constants";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { getPrimaryUuids, SitePolygonsService } from "./site-polygons.service";
 import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
-import { SitePolygonBulkSummaryDto } from "./dto/site-polygon-bulk-summary.dto";
+import { SitePolygonFullDto } from "./dto/site-polygon.dto";
 import { SitePolygonStatusUpdate } from "./dto/site-polygon-status-update.dto";
 import { SitePolygonBulkAttributeChangesDto } from "./dto/site-polygon-bulk-attribute-update.dto";
 
@@ -138,18 +137,6 @@ export class SitePolygonBulkProcessor extends DelayedJobWorker<SitePolygonBulkJo
   }
 
   async processDelayedJob(job: Job<SitePolygonBulkJobData>): Promise<DelayedJobResult> {
-    const processedPolygons = await this.runBulkAction(job);
-
-    return {
-      processedContent: processedPolygons,
-      payload: buildJsonApi(SitePolygonBulkSummaryDto).addData(
-        `${job.name}|${job.data.delayedJobId}`,
-        populateDto(new SitePolygonBulkSummaryDto(), { processedPolygons })
-      )
-    };
-  }
-
-  private async runBulkAction(job: Job<SitePolygonBulkJobData>) {
     if (job.name === BULK_DELETE) {
       return await this.deletePolygons(job as Job<BulkDeleteJobData>);
     } else if (job.name === BULK_STATUS_UPDATE) {
@@ -161,25 +148,38 @@ export class SitePolygonBulkProcessor extends DelayedJobWorker<SitePolygonBulkJo
     }
   }
 
-  private async deletePolygons(job: Job<BulkDeleteJobData>) {
+  private async deletePolygons(job: Job<BulkDeleteJobData>): Promise<DelayedJobResult> {
     const { primaryUuids } = job.data;
-    await this.sitePolygonsService.bulkDeleteSitePolygonsInBatches(primaryUuids, processed =>
+    const deletedUuids = await this.sitePolygonsService.bulkDeleteSitePolygonsInBatches(primaryUuids, processed =>
       this.updateJobProgress(job, { processedContent: processed })
     );
-    return primaryUuids.length;
+    return {
+      processedContent: primaryUuids.length,
+      payload: buildDeletedResponse(getDtoType(SitePolygonFullDto), deletedUuids)
+    };
   }
 
-  private async updateStatus({ userId, status, data, comment }: BulkStatusUpdateJobData) {
+  private async updateStatus({ userId, status, data, comment }: BulkStatusUpdateJobData): Promise<DelayedJobResult> {
     const sitePolygons = await this.sitePolygonBulkUpdateService.updateStatus(status, data, comment, userId);
-    return sitePolygons.length;
+    return {
+      processedContent: sitePolygons.length,
+      payload: await this.sitePolygonsService.buildLightDocument(sitePolygons)
+    };
   }
 
-  private async updateAttributes({ userId, sitePolygonUuids, attributeChanges }: BulkAttributeUpdateJobData) {
+  private async updateAttributes({
+    userId,
+    sitePolygonUuids,
+    attributeChanges
+  }: BulkAttributeUpdateJobData): Promise<DelayedJobResult> {
     const newVersions = await this.sitePolygonBulkUpdateService.updateAttributes(
       sitePolygonUuids,
       attributeChanges,
       userId
     );
-    return newVersions.length;
+    return {
+      processedContent: newVersions.length,
+      payload: await this.sitePolygonsService.buildLightDocument(newVersions)
+    };
   }
 }

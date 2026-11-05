@@ -22,7 +22,7 @@ import { Dictionary, flatten } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
-import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
 
@@ -397,7 +397,9 @@ export class DisturbanceReportProcessor extends ReportProcessor<
   async exportAll({ target, frameworkKey, uuids, fileNamePrefix }: ExportAllOptions = {}) {
     const reportsLabel = await this.entitiesService.localizeText("Disturbance Reports Export");
     const fileName =
-      fileNamePrefix == null ? timestampFileName(reportsLabel) : `${fileNamePrefix} - ${reportsLabel}.csv`;
+      fileNamePrefix == null
+        ? timestampFileName(reportsLabel)
+        : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`);
     await this.entitiesService.writeCsv(fileName, target, CSV_COLUMNS, async addRow => {
       const builder = new PaginatedQueryBuilder(DisturbanceReport, 10, [
         {

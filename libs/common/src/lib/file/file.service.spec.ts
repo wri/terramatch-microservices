@@ -176,7 +176,6 @@ describe("FileService", () => {
 
     it("should ask S3 to serve the file as a named attachment", async () => {
       const spy = jest.mocked(getSignedUrl);
-      spy.mockClear();
       await service.generatePresignedUrl("test-bucket", "exports/O'Neil (draft) polygons.geojson", {
         asAttachment: true
       });

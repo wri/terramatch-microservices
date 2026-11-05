@@ -17,6 +17,7 @@ import { Dictionary } from "lodash";
 import { parse } from "csv";
 import { NodeJsClient } from "@smithy/types";
 import { Injectable } from "@nestjs/common";
+import { posix } from "node:path";
 import Stream, { PassThrough } from "node:stream";
 
 export type CsvRowCallback = (row: Dictionary<string>) => void | Promise<void>;
@@ -30,8 +31,7 @@ export type PresignedUrlOptions = {
 const encodeRfc5987 = (value: string) =>
   encodeURIComponent(value).replace(/['()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 
-const attachmentDisposition = (key: string) =>
-  `attachment; filename*=UTF-8''${encodeRfc5987(key.split("/").pop() ?? key)}`;
+const attachmentDisposition = (key: string) => `attachment; filename*=UTF-8''${encodeRfc5987(posix.basename(key))}`;
 
 export const parseCsvStream = async (stream: Stream, onRow: CsvRowCallback) => {
   for await (const row of stream.pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))) {

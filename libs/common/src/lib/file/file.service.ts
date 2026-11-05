@@ -23,6 +23,16 @@ export type CsvRowCallback = (row: Dictionary<string>) => void | Promise<void>;
 
 const PRESIGNED_URL_TIMEOUT = 3600; // 1 hour
 
+export type PresignedUrlOptions = {
+  asAttachment?: boolean;
+};
+
+const encodeRfc5987 = (value: string) =>
+  encodeURIComponent(value).replace(/['()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+
+const attachmentDisposition = (key: string) =>
+  `attachment; filename*=UTF-8''${encodeRfc5987(key.split("/").pop() ?? key)}`;
+
 export const parseCsvStream = async (stream: Stream, onRow: CsvRowCallback) => {
   for await (const row of stream.pipe(parse({ columns: true, skipEmptyLines: true, trim: true, bom: true }))) {
     await onRow(row);
@@ -125,12 +135,13 @@ export class FileService {
     }
   }
 
-  async generatePresignedUrl(bucket: string, key: string) {
+  async generatePresignedUrl(bucket: string, key: string, { asAttachment = false }: PresignedUrlOptions = {}) {
     return await getSignedUrl(
       this.s3,
       new GetObjectCommand({
         Bucket: bucket,
-        Key: key
+        Key: key,
+        ResponseContentDisposition: asAttachment ? attachmentDisposition(key) : undefined
       }),
       { expiresIn: PRESIGNED_URL_TIMEOUT }
     );

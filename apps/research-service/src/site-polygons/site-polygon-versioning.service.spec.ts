@@ -1,5 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
+import { buildSitePolygonSiteInclude } from "./site-polygon-query.builder";
+import { SitePolygonLightDto } from "./dto/site-polygon.dto";
+import { ProjectFactory, SiteFactory, SitePolygonFactory } from "@terramatch-microservices/database/factories";
 import {
   AnrPlotGeometry,
   SitePolygon,
@@ -852,9 +855,24 @@ describe("SitePolygonVersioningService", () => {
               Disturbance.disturbanceReportUuidAttribute()
             ],
             required: false
-          }
+          },
+          buildSitePolygonSiteInclude()
         ]
       });
+    });
+
+    it("loads the site and project the light DTO reads", async () => {
+      jest.restoreAllMocks();
+      const project = await ProjectFactory.create();
+      const site = await SiteFactory.create({ projectId: project.id });
+      const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      const [version] = await service.getVersionHistory(sitePolygon.primaryUuid);
+      const dto = new SitePolygonLightDto(version);
+
+      expect(dto.siteName).toBe(site.name);
+      expect(dto.projectName).toBe(project.name);
+      expect(dto.projectId).toBe(project.uuid);
     });
   });
 

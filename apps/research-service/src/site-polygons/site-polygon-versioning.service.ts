@@ -15,6 +15,7 @@ import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { invalidatePolygonTileCache } from "./gwc-polygon-cache.util";
+import { buildSitePolygonSiteInclude } from "./site-polygon-query.builder";
 
 export interface VersionCreateEntry {
   basePolygon: SitePolygon;
@@ -352,7 +353,8 @@ export class SitePolygonVersioningService {
           model: Disturbance,
           attributes: ["id", "disturbanceableId", "disturbanceableType", Disturbance.disturbanceReportUuidAttribute()],
           required: false
-        }
+        },
+        buildSitePolygonSiteInclude()
       ]
     });
   }

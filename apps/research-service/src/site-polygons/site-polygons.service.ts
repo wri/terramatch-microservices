@@ -70,6 +70,7 @@ type AssociationDtos = {
   establishmentTreeSpecies?: TreeSpeciesDto[];
   reportingPeriods?: ReportingPeriodDto[];
   customAttributes?: CustomAttributesDto;
+  site?: Site | null;
 };
 
 @Injectable()
@@ -448,22 +449,11 @@ export class SitePolygonsService {
     const associationDtos: Record<number, AssociationDtos> = {};
     if (sitePolygons.length === 0) return associationDtos;
 
-    const customAttributesByUuid = await this.polygonAttributeValuesService.getMapsByPolygonUuids(
-      sitePolygons.map(sitePolygon => sitePolygon.uuid)
-    );
-
-    if (lightResource) {
-      for (const [sitePolygonId, indicators] of Object.entries(await this.getIndicators(sitePolygons))) {
-        associationDtos[Number(sitePolygonId)] = { indicators };
-      }
-      for (const sitePolygon of sitePolygons) {
-        associationDtos[sitePolygon.id] ??= {};
-        associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
-      }
-      return associationDtos;
-    }
-
-    const [indicatorsMap, sites] = await Promise.all([this.getIndicators(sitePolygons), this.getSites(sitePolygons)]);
+    const [customAttributesByUuid, indicatorsMap, sitesByUuid] = await Promise.all([
+      this.polygonAttributeValuesService.getMapsByPolygonUuids(sitePolygons.map(sitePolygon => sitePolygon.uuid)),
+      this.getIndicators(sitePolygons),
+      this.getDtoSites(sitePolygons)
+    ]);
 
     for (const [sitePolygonId, indicators] of Object.entries(indicatorsMap)) {
       associationDtos[Number(sitePolygonId)] = { indicators };
@@ -472,16 +462,19 @@ export class SitePolygonsService {
     for (const sitePolygon of sitePolygons) {
       associationDtos[sitePolygon.id] ??= {};
       associationDtos[sitePolygon.id].customAttributes = customAttributesByUuid.get(sitePolygon.uuid) ?? {};
+      associationDtos[sitePolygon.id].site = sitesByUuid.get(sitePolygon.siteUuid) ?? null;
     }
 
-    const siteIds = uniq(Object.values(sites));
+    if (lightResource) return associationDtos;
+
+    const siteIds = uniq(Array.from(sitesByUuid.values(), ({ id }) => id));
     const [reports, { siteTrees, reportTrees }] = await Promise.all([
       this.getSiteReportsBySiteIds(siteIds),
       this.getTreeSpeciesBySiteIds(siteIds)
     ]);
 
     for (const { id, siteUuid } of sitePolygons) {
-      const siteId = sites[siteUuid];
+      const siteId = sitesByUuid.get(siteUuid)?.id;
       if (siteId == null) continue;
 
       associationDtos[id] ??= {};
@@ -500,21 +493,22 @@ export class SitePolygonsService {
 
   async buildLightDto(
     sitePolygon: SitePolygon,
-    { indicators, customAttributes }: AssociationDtos
+    { indicators, customAttributes, site }: AssociationDtos
   ): Promise<SitePolygonLightDto> {
-    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes);
+    return new SitePolygonLightDto(sitePolygon, indicators, customAttributes, site);
   }
 
   async buildFullDto(
     sitePolygon: SitePolygon,
-    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes }: AssociationDtos
+    { indicators, establishmentTreeSpecies, reportingPeriods, customAttributes, site }: AssociationDtos
   ): Promise<SitePolygonFullDto> {
     return new SitePolygonFullDto(
       sitePolygon,
       indicators,
       establishmentTreeSpecies,
       reportingPeriods,
-      customAttributes
+      customAttributes,
+      site
     );
   }
 
@@ -582,20 +576,29 @@ export class SitePolygonsService {
    * between the two to correctly deal with the aggregate data from getTreeSpeciesBySiteIds() and
    * getSiteReportsBySiteIds().
    */
-  private async getSites(sitePolygons: SitePolygon[]) {
-    if (sitePolygons.length === 0) return {};
+  /**
+   * Get a mapping from site uuid to the site (with its project) that the polygon DTOs read. Polygons loaded with
+   * the index query's site join already carry it; the rest are loaded in one query.
+   */
+  private async getDtoSites(sitePolygons: SitePolygon[]) {
+    const sitesByUuid = new Map<string, Site>();
+    for (const { site, siteUuid } of sitePolygons) {
+      if (site?.project != null) sitesByUuid.set(siteUuid, site);
+    }
 
-    const sites = await Site.findAll({
-      where: { uuid: { [Op.in]: sitePolygons.map(({ siteUuid }) => siteUuid) } },
-      attributes: ["id", "uuid"]
-    });
-    return sites.reduce(
-      (mapping, { id, uuid }) => ({
-        ...mapping,
-        [uuid]: id
-      }),
-      {} as Record<string, number>
+    const missingSiteUuids = uniq(sitePolygons.map(({ siteUuid }) => siteUuid)).filter(
+      siteUuid => !sitesByUuid.has(siteUuid)
     );
+    if (missingSiteUuids.length > 0) {
+      const sites = await Site.findAll({
+        where: { uuid: { [Op.in]: missingSiteUuids } },
+        attributes: ["id", "uuid", "projectId", "name", "ppcExternalId"],
+        include: [{ association: "project", attributes: ["uuid", "shortName", "name", "level0Project"] }]
+      });
+      for (const site of sites) sitesByUuid.set(site.uuid, site);
+    }
+
+    return sitesByUuid;
   }
 
   /**

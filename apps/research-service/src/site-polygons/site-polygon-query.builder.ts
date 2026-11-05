@@ -16,12 +16,6 @@ import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.build
 
 export { INDICATOR_MODEL_CLASSES } from "./site-polygon-column-query.builder";
 
-export const buildSitePolygonSiteInclude = (): IncludeOptions => ({
-  model: Site,
-  include: [{ association: "project", attributes: ["uuid", "shortName", "name", "level0Project"] }],
-  attributes: ["id", "projectId", "name", "ppcExternalId"]
-});
-
 export type SitePolygonQueryBuilderOptions = {
   includeGeometry?: boolean;
 };
@@ -40,7 +34,12 @@ export class SitePolygonQueryBuilder extends SitePolygonColumnQueryBuilder {
     attributes: ["polygon"]
   };
 
-  private siteJoin: IncludeOptions = { ...buildSitePolygonSiteInclude(), required: true };
+  private siteJoin: IncludeOptions = {
+    model: Site,
+    include: [{ association: "project", attributes: ["uuid", "shortName", "name", "level0Project"] }],
+    attributes: ["id", "projectId", "name", "ppcExternalId"],
+    required: true
+  };
 
   private disturbanceJoin: IncludeOptions = {
     model: Disturbance,

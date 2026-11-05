@@ -635,10 +635,14 @@ export class SitePolygonsController {
       attributes: ["id", "firstName", "lastName", "emailAddress"]
     });
     const { data, comment } = request;
-    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
+    const updatedSitePolygons = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
+    const associations = await this.sitePolygonService.loadAssociationDtos(updatedSitePolygons, true);
     const document = buildJsonApi(SitePolygonLightDto);
-    for (const sitePolygon of updatedUuids) {
-      document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));
+    for (const sitePolygon of updatedSitePolygons) {
+      document.addData(
+        sitePolygon.uuid,
+        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
+      );
     }
     return document;
   }
@@ -730,12 +734,12 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
   async getVersions(@Param("primaryUuid") primaryUuid: string) {
-    await this.policyService.authorize("read", SitePolygon);
-
     const versions = await this.versioningService.getVersionHistory(primaryUuid);
     if (versions.length === 0) {
       throw new NotFoundException(`Site polygon not found: ${primaryUuid}`);
     }
+
+    await this.policyService.authorize("read", versions);
 
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
     const associations = await this.sitePolygonService.loadAssociationDtos(versions, true);
@@ -777,7 +781,12 @@ export class SitePolygonsController {
       throw new BadRequestException("Entity id in path and payload do not match");
     }
 
-    await this.policyService.authorize("update", SitePolygon);
+    const version = await SitePolygon.findOne({ where: { uuid }, attributes: ["id", "siteUuid", "createdBy"] });
+    if (version == null) {
+      throw new NotFoundException(`Site polygon version not found: ${uuid}`);
+    }
+
+    await this.policyService.authorize("update", version);
 
     const userId = this.policyService.userId;
     if (userId == null) {

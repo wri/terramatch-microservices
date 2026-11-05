@@ -709,6 +709,49 @@ describe("SitePolygonsService", () => {
     expect(fullDto.name).toBe(sitePolygon.polyName);
   });
 
+  it("should give light and full DTOs the site and project of polygons loaded without their site", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const created = await SitePolygonFactory.create({ siteUuid: site.uuid });
+    const sitePolygon = (await SitePolygon.findByPk(created.id)) as SitePolygon;
+    expect(sitePolygon.site).toBeUndefined();
+
+    const lightAssociations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, lightAssociations[sitePolygon.id]);
+    const fullAssociations = await service.loadAssociationDtos([sitePolygon], false);
+    const fullDto = await service.buildFullDto(sitePolygon, fullAssociations[sitePolygon.id]);
+
+    for (const dto of [lightDto, fullDto]) {
+      expect(dto.siteName).toBe(site.name);
+      expect(dto.projectName).toBe(project.name);
+      expect(dto.projectId).toBe(project.uuid);
+      expect(dto.ppcExternalId).toBe(site.ppcExternalId);
+    }
+  });
+
+  it("should load the sites of many polygons in one query and reuse sites that are already loaded", async () => {
+    const project = await ProjectFactory.create();
+    const [siteA, siteB, joinedSite] = await SiteFactory.createMany(3, { projectId: project.id });
+    const polygons = await Promise.all([
+      SitePolygonFactory.create({ siteUuid: siteA.uuid }),
+      SitePolygonFactory.create({ siteUuid: siteA.uuid }),
+      SitePolygonFactory.create({ siteUuid: siteB.uuid })
+    ]);
+    const joinedPolygon = (await SitePolygon.findOne({
+      where: { id: (await SitePolygonFactory.create({ siteUuid: joinedSite.uuid })).id },
+      include: [{ association: "site", include: [{ association: "project" }] }]
+    })) as SitePolygon;
+    const siteFindAll = jest.spyOn(Site, "findAll");
+
+    const associations = await service.loadAssociationDtos([...polygons, joinedPolygon], true);
+
+    expect(siteFindAll).toHaveBeenCalledTimes(1);
+    expect(siteFindAll.mock.calls[0][0]?.where).toEqual({ uuid: { [Op.in]: [siteA.uuid, siteB.uuid] } });
+    expect(associations[polygons[0].id].site?.name).toBe(siteA.name);
+    expect(associations[polygons[2].id].site?.name).toBe(siteB.name);
+    expect(associations[joinedPolygon.id].site?.name).toBe(joinedSite.name);
+  });
+
   it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
     await SitePolygon.truncate();
     await PolygonGeometry.truncate();

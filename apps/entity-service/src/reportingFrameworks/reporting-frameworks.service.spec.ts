@@ -151,7 +151,7 @@ describe("ReportingFrameworksService", () => {
 
     it("should handle null form UUIDs", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "enterprises",
+        slug: "terrafund-enterprises",
         projectFormUuid: null,
         siteFormUuid: null,
         nurseryFormUuid: null

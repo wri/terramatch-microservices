@@ -106,13 +106,15 @@ describe("ScheduledJobsService", () => {
       const dueAtISO = "2027-01-31T00:00:00.000Z";
       const scheduleSpy = jest.spyOn(ScheduledJob, "scheduleTaskDue").mockResolvedValue(undefined);
       const taskDueSpy = jest.spyOn(ScheduledJob, "taskDue").mockReturnValue({
-        findAll: jest.fn().mockResolvedValue([{ taskDefinition: { frameworkKey: "enterprises", dueAt: dueAtISO } }])
+        findAll: jest
+          .fn()
+          .mockResolvedValue([{ taskDefinition: { frameworkKey: "terrafund-enterprises", dueAt: dueAtISO } }])
       } as unknown as typeof ScheduledJob);
 
       await service.ensureAnnualTaskDueJobs();
 
       const enterprisesJan2027Calls = scheduleSpy.mock.calls.filter(
-        ([, fw, due]) => fw === "enterprises" && due.toISOString().startsWith("2027-01-31")
+        ([, fw, due]) => fw === "terrafund-enterprises" && due.toISOString().startsWith("2027-01-31")
       );
       expect(enterprisesJan2027Calls).toHaveLength(0);
       scheduleSpy.mockRestore();

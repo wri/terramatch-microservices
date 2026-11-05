@@ -191,7 +191,7 @@ describe("TreeRestorationGoalController", () => {
       const query: DashboardQueryDto = {
         organisationType: ["for-profit-organization", "non-profit-organization"],
         country: "CMR",
-        programmes: ["terrafund-non-profits", "enterprises"],
+        programmes: ["terrafund-non-profits", "terrafund-enterprises"],
         projectUuid: "uuid-123",
         landscapes: ["gcb", "grv"],
         cohort: ["cohort-2024"]

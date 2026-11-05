@@ -8,13 +8,18 @@ import { AggregateReportSeriesItemDto, AggregateReportsResponseDto } from "./dto
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { EntityModel } from "@terramatch-microservices/database/constants/entities";
 
-const SUPPORTED_FRAMEWORKS: ReadonlySet<FrameworkKey> = new Set(["terrafund-non-profits", "enterprises", "ppc", "hbf"]);
+const SUPPORTED_FRAMEWORKS: ReadonlySet<FrameworkKey> = new Set([
+  "terrafund-non-profits",
+  "terrafund-enterprises",
+  "ppc",
+  "hbf"
+]);
 
 type AggregateReportCollectionKey = keyof AggregateReportsResponseDto;
 
 const FRAMEWORK_COLLECTIONS: Record<string, ReadonlyArray<AggregateReportCollectionKey>> = {
   "terrafund-non-profits": ["treePlanted", "treesRegenerating"],
-  enterprises: ["treePlanted", "treesRegenerating"],
+  "terrafund-enterprises": ["treePlanted", "treesRegenerating"],
   ppc: ["treePlanted", "seedingRecords", "treesRegenerating"],
   hbf: ["treePlanted", "seedingRecords", "treesRegenerating"]
 };

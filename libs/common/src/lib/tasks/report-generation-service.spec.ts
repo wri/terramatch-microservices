@@ -204,7 +204,11 @@ describe("ReportGenerationService", () => {
 
     it("should create a financial report for an organisation with due_at on July 30", async () => {
       const org = await OrganisationFactory.create({ finStartMonth: 4, currency: "USD" });
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({
+        organisationId: org.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
 
       const dueAt = DateTime.utc(2027, 7, 30).toJSDate();
       const report = await service.createFinancialReport(org.id, dueAt);
@@ -212,7 +216,7 @@ describe("ReportGenerationService", () => {
       expect(report).toMatchObject({
         organisationId: org.id,
         yearOfReport: 2027,
-        frameworkKey: "enterprises",
+        frameworkKey: "terrafund-enterprises",
         status: "due",
         updateRequestStatus: null,
         finStartMonth: 4,
@@ -223,7 +227,11 @@ describe("ReportGenerationService", () => {
 
     it("should clone org financial indicators, funding types, and documentation media", async () => {
       const org = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({
+        organisationId: org.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
       const orgIndicator = await FinancialIndicatorFactory.org(org).create({
         year: 2026,
         collection: "financial-collection",
@@ -266,7 +274,11 @@ describe("ReportGenerationService", () => {
 
     it("should create another report even if one already exists for the year", async () => {
       const org = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({
+        organisationId: org.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
       await FinancialReportFactory.org(org).create({ yearOfReport: 2027 });
 
       const report = await service.createFinancialReport(org.id, DateTime.utc(2027, 7, 30).toJSDate());
@@ -290,18 +302,30 @@ describe("ReportGenerationService", () => {
 
     it("should noop for non-January report periods", async () => {
       const createSpy = jest.spyOn(FinancialReport, "create");
-      await service.createFinancialReports("enterprises", DateTime.utc(2027, 7, 30).toJSDate());
+      await service.createFinancialReports("terrafund-enterprises", DateTime.utc(2027, 7, 30).toJSDate());
       expect(createSpy).not.toHaveBeenCalled();
     });
 
     it("should create a financial report per organisation with due_at on July 30", async () => {
       const org1 = await OrganisationFactory.create({ finStartMonth: 4, currency: "USD" });
       const org2 = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org1.id, frameworkKey: "enterprises", status: "approved" });
-      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
-      await ProjectFactory.create({ organisationId: org2.id, frameworkKey: "enterprises", status: "approved" });
+      await ProjectFactory.create({
+        organisationId: org1.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
+      await ProjectFactory.create({
+        organisationId: org2.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
+      await ProjectFactory.create({
+        organisationId: org2.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
 
-      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+      await service.createFinancialReports("terrafund-enterprises", DateTime.utc(2027, 1, 31).toJSDate());
 
       const reports = await FinancialReport.findAll({
         where: { organisationId: [org1.id, org2.id] },
@@ -311,7 +335,7 @@ describe("ReportGenerationService", () => {
       expect(reports[0]).toMatchObject({
         organisationId: org1.id,
         yearOfReport: 2027,
-        frameworkKey: "enterprises",
+        frameworkKey: "terrafund-enterprises",
         status: "due",
         finStartMonth: 4,
         currency: "USD"
@@ -336,9 +360,9 @@ describe("ReportGenerationService", () => {
 
     it("should not create reports for projects in started status", async () => {
       const org = await OrganisationFactory.create();
-      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "enterprises", status: "draft" });
+      await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-enterprises", status: "draft" });
 
-      await service.createFinancialReports("enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+      await service.createFinancialReports("terrafund-enterprises", DateTime.utc(2027, 1, 31).toJSDate());
 
       expect(await FinancialReport.count({ where: { organisationId: org.id } })).toBe(0);
     });

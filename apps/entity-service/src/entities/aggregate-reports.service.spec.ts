@@ -100,8 +100,8 @@ describe("AggregateReportsService", () => {
       }
     });
 
-    it("returns only treePlanted and treesRegenerating for enterprises", async () => {
-      const project = createMock<Project>({ id: 1, frameworkKey: "enterprises" });
+    it("returns only treePlanted and treesRegenerating for terrafund-enterprises", async () => {
+      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-enterprises" });
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
       jest.spyOn(SiteReport, "approved").mockReturnValue({

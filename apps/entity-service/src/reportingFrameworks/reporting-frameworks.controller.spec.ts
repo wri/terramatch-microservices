@@ -262,7 +262,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should return framework with slug as id", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "enterprises"
+        slug: "terrafund-enterprises"
       });
       createdFrameworkIds.push(framework.id);
 
@@ -271,20 +271,20 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "enterprises",
+          id: "terrafund-enterprises",
           attributes: {
-            slug: "enterprises"
+            slug: "terrafund-enterprises"
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("enterprises");
+      const document = await controller.get("terrafund-enterprises");
       const result = document.serialize();
 
       const data = result.data as unknown as { id: string; attributes: { slug: string } };
-      expect(data.id).toBe("enterprises");
-      expect(data.attributes.slug).toBe("enterprises");
+      expect(data.id).toBe("terrafund-enterprises");
+      expect(data.attributes.slug).toBe("terrafund-enterprises");
     });
 
     it("should work for admin users", async () => {
@@ -312,7 +312,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should include null form UUIDs correctly", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "fundo-flora-1",
+        slug: "fundo-flora",
         projectFormUuid: null,
         projectReportFormUuid: null,
         siteFormUuid: null,
@@ -339,7 +339,7 @@ describe("ReportingFrameworksController", () => {
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora-1");
+      const document = await controller.get("fundo-flora");
       const result = document.serialize();
 
       const data = result.data as unknown as {
@@ -374,7 +374,7 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should handle framework with zero projects count", async () => {
-      const framework = await FrameworkFactory.create({ slug: "fundo-flora-1" });
+      const framework = await FrameworkFactory.create({ slug: "fundo-flora" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -382,19 +382,19 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "fundo-flora-1",
+          id: "fundo-flora",
           attributes: {
-            slug: "fundo-flora-1",
+            slug: "fundo-flora",
             totalProjectsCount: 0
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora-1");
+      const document = await controller.get("fundo-flora");
       const result = document.serialize();
 
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora-1");
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       const data = result.data as unknown as { id: string; attributes: { slug: string; totalProjectsCount: number } };
       expect(data.attributes.totalProjectsCount).toBe(0);

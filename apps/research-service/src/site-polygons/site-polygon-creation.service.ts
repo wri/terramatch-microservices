@@ -910,6 +910,11 @@ export class SitePolygonCreationService {
     }
   }
 
+  async validateBulkAttributeUpdate(sitePolygonUuids: string[], attributeChanges: SitePolygonBulkAttributeChangesDto) {
+    await this.versioningService.validateBulkVersioningEligibility(sitePolygonUuids);
+    this.applyAttributeChanges(attributeChanges);
+  }
+
   async bulkUpdateSitePolygonAttributes(
     sitePolygonUuids: string[],
     attributeChanges: SitePolygonBulkAttributeChangesDto,

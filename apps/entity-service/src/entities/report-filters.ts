@@ -130,7 +130,6 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
     const needsAttention = clauses.in("status", [DUE, DRAFT, INFORMATION_REQUIRED]);
     // The effective status is the change request's only while the report itself is approved.
     const updateNeedsAttention = `(${clauses.in("status", [APPROVED])} AND ${clauses.in("updateRequestStatus", [
-      DRAFT,
       INFORMATION_REQUIRED
     ])})`;
     builder.andLiteral(`(${needsAttention} OR ${updateNeedsAttention})`);

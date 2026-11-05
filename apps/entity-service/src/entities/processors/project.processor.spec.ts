@@ -567,7 +567,7 @@ describe("ProjectProcessor", () => {
       ]);
     });
 
-    it("counts reports that are due, draft or information-required on the report or its change request", async () => {
+    it("counts reports by effective status, ignoring draft change requests", async () => {
       await createData();
       const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
       const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
@@ -585,7 +585,7 @@ describe("ProjectProcessor", () => {
       await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
 
       expect((await getIndex({ projectUuid: foxtrot.uuid })).attributes).toEqual([
-        row(foxtrot, 0, {}, meta(foxtrotNursery, 3))
+        row(foxtrot, 0, {}, meta(foxtrotNursery, 2))
       ]);
     });
 
@@ -771,7 +771,7 @@ describe("ProjectProcessor", () => {
       });
     });
 
-    it("counts the matching nurseries with a draft or information-required status or change request", async () => {
+    it("counts the matching nurseries by effective status, ignoring draft change requests", async () => {
       const { alpha } = await createData();
       await NurseryFactory.create({
         projectId: alpha.id,
@@ -794,9 +794,16 @@ describe("ProjectProcessor", () => {
         status: "pending-approval",
         updateRequestStatus: "draft"
       });
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Editing Nursery",
+        status: "approved",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 5, nurseriesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 6, nurseriesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ nurseriesMatching: 1, nurseriesRequiringAttention: 1 });
@@ -919,7 +926,7 @@ describe("ProjectProcessor", () => {
       });
     });
 
-    it("counts the matching sites with a draft or information-required status or change request", async () => {
+    it("counts the matching sites by effective status, ignoring draft change requests", async () => {
       const { alpha } = await createData();
       await SiteFactory.create({
         projectId: alpha.id,
@@ -942,9 +949,16 @@ describe("ProjectProcessor", () => {
         status: "pending-approval",
         updateRequestStatus: "draft"
       });
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Editing Site",
+        status: "approved",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ sitesMatching: 5, sitesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ sitesMatching: 6, sitesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ sitesMatching: 1, sitesRequiringAttention: 1 });

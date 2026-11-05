@@ -298,7 +298,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
     const reportLabel = await this.entitiesService.localizeText("Project Report");
-    const fileName = timestampFileName(`${report.projectName?.replace(/\/\\/g, "-")} - ${reportLabel}`);
+    const fileName = timestampFileName(`${report.projectName} - ${reportLabel}`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 

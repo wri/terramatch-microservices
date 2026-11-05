@@ -10,4 +10,5 @@ export const isoForFilename = (date: string | Date | DateTime = DateTime.now(), 
 export const timestampFileName = (prefix: string, extension = ".csv") =>
   normalizedFileName(`${prefix} - ${isoForFilename()}`, extension);
 
-export const normalizedFileName = (prefix: string, extension = ".csv") => `${prefix}${extension}`.replace(/\/\\/g, "-");
+export const normalizedFileName = (prefix: string, extension = ".csv") =>
+  `${prefix}${extension}`.replace(/[/\\]/g, "-");

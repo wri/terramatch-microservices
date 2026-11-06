@@ -54,7 +54,7 @@ describe("CacheService", () => {
     it("should add a job to the dashboardQueue", async () => {
       const fakeJob = { id: 1 };
       queueMock.add?.mockResolvedValue(fakeJob);
-      const query: DashboardQueryDto = { programmes: ["terrafund"] };
+      const query: DashboardQueryDto = { programmes: ["terrafund-non-profits"] };
       const result = await service.getTotalSectionHeader("cacheKey1", query, 123);
       expect(queueMock.add).toHaveBeenCalledWith("totalSectionHeader", {
         ...query,
@@ -147,7 +147,7 @@ describe("CacheService", () => {
   describe("getCacheKeyFromQuery", () => {
     it("should build correct cache key with full query", () => {
       const query: DashboardQueryDto = {
-        programmes: ["terrafund", "enterprises"],
+        programmes: ["terrafund-non-profits", "terrafund-enterprises"],
         landscapes: ["grv", "gcb"],
         country: "USA",
         organisationType: ["non-profit-organization", "for-profit-organization"],
@@ -156,7 +156,7 @@ describe("CacheService", () => {
       };
 
       const key = service.getCacheKeyFromQuery(query);
-      expect(key).toBe("enterprises,terrafund|gcb,grv|USA|all-orgs|cohort2025|uuid-123");
+      expect(key).toBe("terrafund-enterprises,terrafund-non-profits|gcb,grv|USA|all-orgs|cohort2025|uuid-123");
     });
 
     it("should build cache key with missing fields", () => {

@@ -61,6 +61,7 @@ import { createApiKeys } from "./202610231200-create-api-keys";
 import { removeUserApiKeyColumn } from "./202610281200-remove-user-api-key-column";
 import { addPitchIncomeGeneratingActivities } from "./202611031200-add-pitch-income-generating-activities";
 import { renameOrganisationUserToJoinRequests } from "./202610281200-rename-organisation-user-to-join-requests";
+import { widenFrameworkKeyColumns } from "./202611041200-widen-framework-key-columns";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -123,5 +124,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   createApiKeys,
   removeUserApiKeyColumn,
   addPitchIncomeGeneratingActivities,
-  renameOrganisationUserToJoinRequests
+  renameOrganisationUserToJoinRequests,
+  widenFrameworkKeyColumns
 ];

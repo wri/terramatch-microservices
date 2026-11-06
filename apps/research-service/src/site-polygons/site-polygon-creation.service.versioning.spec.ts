@@ -566,7 +566,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         submissionCycle: null,
         status: "approved",
         validationStatus: "passed",
-        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund-non-profits" })
       } as unknown as SitePolygon;
 
       const unchangedForm: AttributeChangesDto = {
@@ -681,7 +681,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         uuid: baseSitePolygonUuid,
         primaryUuid: "primary-uuid",
         polyName: "Original Name",
-        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund-non-profits" })
       } as unknown as SitePolygon;
 
       const newVersion = { uuid: "new-version-uuid" } as SitePolygon;
@@ -701,7 +701,7 @@ describe("SitePolygonCreationService - Versioning", () => {
 
       expect(polygonAttributeValuesService.upsert).toHaveBeenCalledWith(
         "new-version-uuid",
-        "terrafund",
+        "terrafund-non-profits",
         { anrSubcategory: "farmer-managed" },
         mockTransaction
       );

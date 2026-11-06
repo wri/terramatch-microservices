@@ -121,7 +121,7 @@ describe("TasksService", () => {
         await ProjectFactory.create({ frameworkKey: "hbf" }),
         await ProjectFactory.create({ frameworkKey: "ppc" })
       ];
-      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       const tasks: Task[] = [];
       for (const { id } of projects) {
         tasks.push(...(await TaskFactory.createMany(2, { projectId: id })));
@@ -134,13 +134,13 @@ describe("TasksService", () => {
     it("should filter", async () => {
       const ppcProject = await ProjectFactory.create({ frameworkKey: "ppc" });
       const ppcTask = await TaskFactory.create({ projectId: ppcProject.id, status: "pending-approval" });
-      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund" });
+      const tfProject = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       const tfTask1 = await TaskFactory.create({ projectId: tfProject.id, status: "pending-approval" });
       const tfTask2 = await TaskFactory.create({ projectId: tfProject.id, status: "approved" });
 
-      const permissions = ["framework-ppc", "framework-terrafund"];
+      const permissions = ["framework-ppc", "framework-terrafund-non-profits"];
       await expectTasks([ppcTask, tfTask1], { status: "pending-approval" }, { permissions });
-      await expectTasks([tfTask1, tfTask2], { frameworkKey: "terrafund" }, { permissions });
+      await expectTasks([tfTask1, tfTask2], { frameworkKey: "terrafund-non-profits" }, { permissions });
       await expectTasks([tfTask1, tfTask2], { projectUuid: tfProject.uuid }, { permissions });
     });
 

@@ -38,7 +38,7 @@ describe("AboutSectionsController", () => {
 
   describe("index", () => {
     it("calls addIndex on the service", async () => {
-      const query: AboutSectionIndexQueryDto = { type: "project", framework: "terrafund" };
+      const query: AboutSectionIndexQueryDto = { type: "project", framework: "terrafund-non-profits" };
       await controller.index(query);
       expect(aboutSectionService().addIndex).toHaveBeenCalledWith(expect.any(DocumentBuilder), query);
     });

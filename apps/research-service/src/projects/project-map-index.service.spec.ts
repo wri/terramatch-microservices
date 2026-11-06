@@ -172,7 +172,7 @@ describe("ProjectMapIndexService", () => {
     const otherFramework = await ProjectFactory.create({
       lat: 1,
       long: 1,
-      frameworkKey: "terrafund",
+      frameworkKey: "terrafund-non-profits",
       level0Project: ["KE"],
       organisationId: organisation.id
     });

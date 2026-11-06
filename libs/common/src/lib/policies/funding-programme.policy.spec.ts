@@ -23,7 +23,7 @@ describe("FundingProgrammePolicy", () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     let fp = await FundingProgrammeFactory.create({ frameworkKey: "ppc" });
     await expectCan(service, "uploadFiles", fp);
-    fp = await FundingProgrammeFactory.create({ frameworkKey: "terrafund" });
+    fp = await FundingProgrammeFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectCannot(service, "uploadFiles", fp);
   });
 });

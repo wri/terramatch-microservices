@@ -125,7 +125,7 @@ describe("TotalJobsCreatedController", () => {
       cacheService.get.mockResolvedValue(null);
       const query: DashboardQueryDto = {
         country: "Kenya",
-        programmes: ["terrafund"],
+        programmes: ["terrafund-non-profits"],
         cohort: ["2023"],
         organisationType: ["non-profit-organization"]
       };

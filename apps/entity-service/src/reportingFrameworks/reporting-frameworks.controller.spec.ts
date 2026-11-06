@@ -55,7 +55,7 @@ describe("ReportingFrameworksController", () => {
   describe("index", () => {
     it("should return all frameworks for admin users", async () => {
       const frameworks = await Promise.all([
-        FrameworkFactory.create({ slug: "terrafund" }),
+        FrameworkFactory.create({ slug: "terrafund-non-profits" }),
         FrameworkFactory.create({ slug: "ppc" }),
         FrameworkFactory.create({ slug: "hbf" })
       ]);
@@ -79,7 +79,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should throw UnauthorizedException for non-admin users", async () => {
       const frameworks = await Promise.all([
-        FrameworkFactory.create({ slug: "terrafund" }),
+        FrameworkFactory.create({ slug: "terrafund-non-profits" }),
         FrameworkFactory.create({ slug: "ppc" })
       ]);
       createdFrameworkIds.push(...frameworks.map(f => f.id));
@@ -147,7 +147,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should throw UnauthorizedException when authorize fails", async () => {
       const frameworks = await Promise.all([
-        FrameworkFactory.create({ slug: "terrafund" }),
+        FrameworkFactory.create({ slug: "terrafund-non-profits" }),
         FrameworkFactory.create({ slug: "ppc" })
       ]);
       createdFrameworkIds.push(...frameworks.map(f => f.id));
@@ -162,7 +162,7 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should handle query parameters correctly", async () => {
-      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund-non-profits" })]);
       createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
@@ -206,7 +206,7 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should handle error when addDtos throws", async () => {
-      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund" })]);
+      const frameworks = await Promise.all([FrameworkFactory.create({ slug: "terrafund-non-profits" })]);
       createdFrameworkIds.push(...frameworks.map(f => f.id));
 
       reportingFrameworksService.findAll.mockResolvedValue(frameworks);
@@ -223,7 +223,7 @@ describe("ReportingFrameworksController", () => {
 
   describe("get", () => {
     it("should return a framework by slug for authenticated users", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
       await ProjectFactory.createMany(5, { frameworkKey: framework.slug });
 
@@ -232,24 +232,24 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "terrafund",
+          id: "terrafund-non-profits",
           attributes: {
-            slug: "terrafund",
+            slug: "terrafund-non-profits",
             totalProjectsCount: 5
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("terrafund");
+      const document = await controller.get("terrafund-non-profits");
       const result = document.serialize();
 
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund");
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund-non-profits");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
       const data = result.data as unknown as { id: string; attributes: { slug: string; totalProjectsCount: number } };
-      expect(data.id).toBe("terrafund");
-      expect(data.attributes.slug).toBe("terrafund");
+      expect(data.id).toBe("terrafund-non-profits");
+      expect(data.attributes.slug).toBe("terrafund-non-profits");
       expect(data.attributes.totalProjectsCount).toBe(5);
     });
 
@@ -262,7 +262,7 @@ describe("ReportingFrameworksController", () => {
 
     it("should return framework with slug as id", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "enterprises"
+        slug: "terrafund-enterprises"
       });
       createdFrameworkIds.push(framework.id);
 
@@ -271,24 +271,24 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "enterprises",
+          id: "terrafund-enterprises",
           attributes: {
-            slug: "enterprises"
+            slug: "terrafund-enterprises"
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("enterprises");
+      const document = await controller.get("terrafund-enterprises");
       const result = document.serialize();
 
       const data = result.data as unknown as { id: string; attributes: { slug: string } };
-      expect(data.id).toBe("enterprises");
-      expect(data.attributes.slug).toBe("enterprises");
+      expect(data.id).toBe("terrafund-enterprises");
+      expect(data.attributes.slug).toBe("terrafund-enterprises");
     });
 
     it("should work for admin users", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -297,22 +297,22 @@ describe("ReportingFrameworksController", () => {
       mockDocument.serialize.mockReturnValue({
         data: {
           attributes: {
-            slug: "terrafund"
+            slug: "terrafund-non-profits"
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("terrafund");
+      const document = await controller.get("terrafund-non-profits");
       const result = document.serialize();
 
       const data = result.data as unknown as { attributes: { slug: string } };
-      expect(data.attributes.slug).toBe("terrafund");
+      expect(data.attributes.slug).toBe("terrafund-non-profits");
     });
 
     it("should include null form UUIDs correctly", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "fundo-flora-1",
+        slug: "fundo-flora",
         projectFormUuid: null,
         projectReportFormUuid: null,
         siteFormUuid: null,
@@ -339,7 +339,7 @@ describe("ReportingFrameworksController", () => {
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora-1");
+      const document = await controller.get("fundo-flora");
       const result = document.serialize();
 
       const data = result.data as unknown as {
@@ -361,20 +361,20 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should throw UnauthorizedException when authorize fails", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
 
-      await expect(controller.get("terrafund")).rejects.toThrow(UnauthorizedException);
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund");
+      await expect(controller.get("terrafund-non-profits")).rejects.toThrow(UnauthorizedException);
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund-non-profits");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       expect(reportingFrameworksService.addDto).not.toHaveBeenCalled();
     });
 
     it("should handle framework with zero projects count", async () => {
-      const framework = await FrameworkFactory.create({ slug: "fundo-flora-1" });
+      const framework = await FrameworkFactory.create({ slug: "fundo-flora" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -382,26 +382,26 @@ describe("ReportingFrameworksController", () => {
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
         data: {
-          id: "fundo-flora-1",
+          id: "fundo-flora",
           attributes: {
-            slug: "fundo-flora-1",
+            slug: "fundo-flora",
             totalProjectsCount: 0
           }
         }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
-      const document = await controller.get("fundo-flora-1");
+      const document = await controller.get("fundo-flora");
       const result = document.serialize();
 
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora-1");
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("fundo-flora");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       const data = result.data as unknown as { id: string; attributes: { slug: string; totalProjectsCount: number } };
       expect(data.attributes.totalProjectsCount).toBe(0);
     });
 
     it("should handle error when addDto throws", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
@@ -409,8 +409,8 @@ describe("ReportingFrameworksController", () => {
       const error = new Error("Serialization error");
       reportingFrameworksService.addDto.mockRejectedValue(error);
 
-      await expect(controller.get("terrafund")).rejects.toThrow("Serialization error");
-      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund");
+      await expect(controller.get("terrafund-non-profits")).rejects.toThrow("Serialization error");
+      expect(reportingFrameworksService.findBySlug).toHaveBeenCalledWith("terrafund-non-profits");
       expect(policyService.authorize).toHaveBeenCalledWith("read", framework);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
     });
@@ -418,14 +418,14 @@ describe("ReportingFrameworksController", () => {
 
   describe("create", () => {
     it("should create framework and return JSON:API response", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);
       const payload = {
         data: {
           type: "reportingFrameworks",
           attributes: {
             name: "TerraFund",
-            slug: "terrafund",
+            slug: "terrafund-non-profits",
             projectFormUuid: null,
             projectReportFormUuid: null,
             siteFormUuid: null,
@@ -440,7 +440,7 @@ describe("ReportingFrameworksController", () => {
       reportingFrameworksService.create.mockResolvedValue(framework);
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
-        data: { id: "terrafund", attributes: { name: "TerraFund", slug: "terrafund" } }
+        data: { id: "terrafund-non-profits", attributes: { name: "TerraFund", slug: "terrafund-non-profits" } }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
@@ -448,20 +448,20 @@ describe("ReportingFrameworksController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith(
         "create",
-        expect.objectContaining({ slug: "terrafund", name: "TerraFund" })
+        expect.objectContaining({ slug: "terrafund-non-profits", name: "TerraFund" })
       );
       expect(reportingFrameworksService.create).toHaveBeenCalledWith(payload.data.attributes);
       expect(reportingFrameworksService.addDto).toHaveBeenCalled();
       expect(result).toBe(mockDocument);
     });
 
-    it("should authorize with slug derived from name (e.g. TerraFund 3 → terrafund-3)", async () => {
+    it("should authorize with slug derived from name (e.g. TerraFund Non-Profits → terrafund-non-profits)", async () => {
       const payload = {
         data: {
           type: "reportingFrameworks",
           attributes: {
-            name: "TerraFund 3",
-            slug: "terrafund-3",
+            name: "TerraFund Non-Profits",
+            slug: "terrafund-non-profits",
             projectFormUuid: null,
             projectReportFormUuid: null,
             siteFormUuid: null,
@@ -471,13 +471,16 @@ describe("ReportingFrameworksController", () => {
           }
         }
       };
-      const mockFramework = { slug: "terrafund-3", name: "TerraFund 3", uuid: "mock-uuid" };
+      const mockFramework = { slug: "terrafund-non-profits", name: "TerraFund Non-Profits", uuid: "mock-uuid" };
 
       policyService.authorize.mockResolvedValue(undefined);
       reportingFrameworksService.create.mockResolvedValue(mockFramework as unknown as Framework);
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
-        data: { id: "terrafund-3", attributes: { name: "TerraFund 3", slug: "terrafund-3" } }
+        data: {
+          id: "terrafund-non-profits",
+          attributes: { name: "TerraFund Non-Profits", slug: "terrafund-non-profits" }
+        }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
@@ -485,7 +488,7 @@ describe("ReportingFrameworksController", () => {
 
       expect(policyService.authorize).toHaveBeenCalledWith(
         "create",
-        expect.objectContaining({ slug: "terrafund-3", name: "TerraFund 3" })
+        expect.objectContaining({ slug: "terrafund-non-profits", name: "TerraFund Non-Profits" })
       );
       expect(reportingFrameworksService.create).toHaveBeenCalledWith(payload.data.attributes);
     });
@@ -506,9 +509,9 @@ describe("ReportingFrameworksController", () => {
 
   describe("update", () => {
     it("should update framework by frameworkKey and return JSON:API response", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);
-      const frameworkKey = "terrafund";
+      const frameworkKey = "terrafund-non-profits";
       const payload = {
         data: {
           type: "reportingFrameworks",
@@ -522,7 +525,7 @@ describe("ReportingFrameworksController", () => {
       reportingFrameworksService.update.mockResolvedValue(framework);
       const mockDocument = createMock<DocumentBuilder>();
       mockDocument.serialize.mockReturnValue({
-        data: { id: "terrafund", attributes: { name: "TerraFund Updated" } }
+        data: { id: "terrafund-non-profits", attributes: { name: "TerraFund Updated" } }
       } as never);
       reportingFrameworksService.addDto.mockResolvedValue(mockDocument);
 
@@ -563,28 +566,28 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should throw UnauthorizedException when update not allowed", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
       const payload = {
         data: {
           type: "reportingFrameworks",
-          id: "terrafund",
+          id: "terrafund-non-profits",
           attributes: { name: "Updated" }
         }
       };
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
 
-      await expect(controller.update("terrafund", payload)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.update("terrafund-non-profits", payload)).rejects.toThrow(UnauthorizedException);
       expect(reportingFrameworksService.update).not.toHaveBeenCalled();
     });
   });
 
   describe("delete", () => {
     it("should delete framework by frameworkKey and return deleted response", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
-      const frameworkKey = "terrafund";
+      const frameworkKey = "terrafund-non-profits";
 
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockResolvedValue(undefined);
@@ -607,12 +610,12 @@ describe("ReportingFrameworksController", () => {
     });
 
     it("should throw UnauthorizedException when delete not allowed", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
       reportingFrameworksService.findBySlug.mockResolvedValue(framework);
       policyService.authorize.mockRejectedValue(new UnauthorizedException("Not authorized"));
 
-      await expect(controller.delete("terrafund")).rejects.toThrow(UnauthorizedException);
+      await expect(controller.delete("terrafund-non-profits")).rejects.toThrow(UnauthorizedException);
       expect(reportingFrameworksService.delete).not.toHaveBeenCalled();
     });
   });

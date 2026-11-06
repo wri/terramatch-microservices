@@ -103,7 +103,7 @@ describe("TreeRestorationGoalController", () => {
     it("should return service result when cache is empty", async () => {
       const query: DashboardQueryDto = {
         country: "BEN",
-        programmes: ["terrafund"]
+        programmes: ["terrafund-non-profits"]
       };
 
       const mockTimestamp = "2024-01-01T00:00:00.000Z";
@@ -191,7 +191,7 @@ describe("TreeRestorationGoalController", () => {
       const query: DashboardQueryDto = {
         organisationType: ["for-profit-organization", "non-profit-organization"],
         country: "CMR",
-        programmes: ["terrafund", "terrafund-landscapes"],
+        programmes: ["terrafund-non-profits", "terrafund-enterprises"],
         projectUuid: "uuid-123",
         landscapes: ["gcb", "grv"],
         cohort: ["cohort-2024"]

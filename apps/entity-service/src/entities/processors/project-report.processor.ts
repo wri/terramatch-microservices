@@ -456,7 +456,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       );
     }
 
-    if (projectReport.frameworkKey == "terrafund" && projectReport.taskId != null) {
+    if (projectReport.frameworkKey == "terrafund-non-profits" && projectReport.taskId != null) {
       return (await NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees")) ?? 0;
     }
 

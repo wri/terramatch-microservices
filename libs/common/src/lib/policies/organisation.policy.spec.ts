@@ -212,7 +212,7 @@ describe("OrganisationPolicy", () => {
     it("allows approveReject for verified admin users (admin role + email verified)", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create({});
-      mockContextForUser(user, "framework-terrafund");
+      mockContextForUser(user, "framework-terrafund-non-profits");
       await expectCan(service, "approveReject", org);
     });
 
@@ -253,7 +253,7 @@ describe("OrganisationPolicy", () => {
     it("allows approveReject for admin-terrafund role with email verified", async () => {
       const org = await OrganisationFactory.create();
       const user = await UserFactory.create();
-      mockContextForUser(user, "framework-terrafund");
+      mockContextForUser(user, "framework-terrafund-non-profits");
       await expectCan(service, "approveReject", org);
     });
 

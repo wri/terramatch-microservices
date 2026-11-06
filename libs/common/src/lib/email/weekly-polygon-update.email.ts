@@ -84,9 +84,9 @@ export class WeeklyPolygonUpdateEmail extends EmailSender<WeeklyPolygonUpdateEma
     }
 
     const project = polygon.site?.project;
-    if (project == null || project.frameworkKey !== "terrafund") {
+    if (project == null || project.frameworkKey !== "terrafund-non-profits") {
       this.logger.debug(
-        `Polygon update email skipped: missing site/project or not terrafund [uuid=${sitePolygonUuid}]`
+        `Polygon update email skipped: missing site/project or not terrafund-non-profits [uuid=${sitePolygonUuid}]`
       );
       return;
     }

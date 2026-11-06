@@ -28,7 +28,7 @@ describe("FormQuestionOptionPolicy", () => {
 
   it("should disallow uploading files for question options if you cannot forms manage", async () => {
     const user = await UserFactory.create();
-    mockContextForUser(user, "framework-terrafund");
+    mockContextForUser(user, "framework-terrafund-non-profits");
     const option = await FormQuestionOptionFactory.forQuestion().create();
     await expectCannot(service, ["uploadFiles"], option);
   });

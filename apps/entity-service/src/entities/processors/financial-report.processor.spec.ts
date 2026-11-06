@@ -199,7 +199,7 @@ describe("FinancialReportProcessor", () => {
     it("should filter by frameworkKey", async () => {
       const organisation = await OrganisationFactory.create();
       const ppc = await FinancialReportFactory.org(organisation).createMany(2, { frameworkKey: "ppc" });
-      await FinancialReportFactory.org(organisation).create({ frameworkKey: "terrafund" });
+      await FinancialReportFactory.org(organisation).create({ frameworkKey: "terrafund-non-profits" });
 
       await expectFinancialReports(ppc, { frameworkKey: ["ppc"] });
     });

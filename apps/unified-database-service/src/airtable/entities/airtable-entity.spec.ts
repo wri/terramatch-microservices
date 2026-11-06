@@ -774,7 +774,7 @@ describe("AirtableEntity", () => {
 
       const terrafundReport = await ProjectReportFactory.create({
         projectId: faker.helpers.arrayElement(projectIds),
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         taskId: tasks[0].id
       });
       allReports.push(terrafundReport);

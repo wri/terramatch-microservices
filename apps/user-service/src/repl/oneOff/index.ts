@@ -9,3 +9,4 @@
 //   which means it will be runnable in the REPL at > await oneOff.fooScript()
 
 export { resolveApprovedOrganisationJoinRequests } from "./2026-10-28-resolveApprovedOrganisationJoinRequests";
+export { removeNonDeveloperUserAssociations } from "./2026-11-06-removeNonDeveloperUserAssociations";

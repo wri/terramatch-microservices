@@ -330,6 +330,39 @@ describe("ReportingFrameworksService", () => {
       );
     });
 
+    it("should throw when some report forms are set but required report forms are missing", async () => {
+      const checkSpy = jest.spyOn(Form, "findAll");
+      const createSpy = jest.spyOn(Framework, "create");
+      await expect(
+        service.create({ name: "Partial", slug: "partial", nurseryReportFormUuid: "nursery-report-uuid" })
+      ).rejects.toThrow(
+        new BadRequestException(
+          "Reporting frameworks with any report forms must also have the following forms: Project Report, Site Report."
+        )
+      );
+      expect(checkSpy).not.toHaveBeenCalled();
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should allow a framework with no report forms", async () => {
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue({ id: 1 } as Framework);
+      await service.create({ name: "No Reports", slug: "no-reports", projectFormUuid: "project-uuid" });
+      expect(createSpy).toHaveBeenCalled();
+    });
+
+    it("should allow a framework with the required report forms", async () => {
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue({ id: 1 } as Framework);
+      await service.create({
+        name: "Reports",
+        slug: "reports",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      expect(createSpy).toHaveBeenCalled();
+    });
+
     it("should create framework with slug from access code and call syncForms", async () => {
       const attributes = {
         name: "My New Framework",
@@ -382,6 +415,54 @@ describe("ReportingFrameworksService", () => {
       await expect(service.update(framework, { projectFormUuid: projectForm.uuid })).rejects.toThrow(
         new BadRequestException("The following forms are already in use in another framework: Project.")
       );
+    });
+
+    it("should throw when the update would leave required report forms missing", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid",
+        nurseryReportFormUuid: "nursery-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update");
+
+      await expect(service.update(framework, { siteReportFormUuid: null })).rejects.toThrow(
+        new BadRequestException(
+          "Reporting frameworks with any report forms must also have the following forms: Site Report."
+        )
+      );
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should allow removing all report forms", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, { projectReportFormUuid: null, siteReportFormUuid: null });
+
+      expect(updateSpy).toHaveBeenCalledWith({ projectReportFormUuid: null, siteReportFormUuid: null });
+    });
+
+    it("should allow adding a report form when the required report forms are already set", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, { nurseryReportFormUuid: "nursery-report-uuid" });
+
+      expect(updateSpy).toHaveBeenCalledWith({ nurseryReportFormUuid: "nursery-report-uuid" });
     });
 
     it("should update framework when payload has attributes", async () => {

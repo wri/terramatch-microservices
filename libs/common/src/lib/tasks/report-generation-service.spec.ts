@@ -2,6 +2,7 @@
 import {
   FinancialIndicatorFactory,
   FinancialReportFactory,
+  FrameworkFactory,
   FundingTypeFactory,
   MediaFactory,
   NurseryFactory,
@@ -17,15 +18,35 @@ import {
   Action,
   FinancialIndicator,
   FinancialReport,
+  Framework,
+  FrameworkUser,
   FundingType,
   Project,
+  SiteReport,
   Task
 } from "@terramatch-microservices/database/entities";
+import { FRAMEWORK_KEYS, FrameworkKey } from "@terramatch-microservices/database/constants";
+import { faker } from "@faker-js/faker";
 import { NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { uniq } from "lodash";
 import { MediaService } from "../media/media.service";
 import { ProductEventService } from "../product-events/product-event.service";
+
+// Frameworks can't be truncated because of the framework_users foreign key.
+const resetFrameworks = async () => {
+  await FrameworkUser.destroy({ where: {} });
+  await Framework.destroy({ where: {} });
+};
+
+const createFrameworks = (slugs: readonly FrameworkKey[], formUuids: Partial<Framework> = {}) =>
+  Promise.all(slugs.map(slug => FrameworkFactory.create({ slug, ...formUuids })));
+
+const ALL_TASK_REPORT_FORMS = {
+  projectReportFormUuid: faker.string.uuid(),
+  siteReportFormUuid: faker.string.uuid(),
+  nurseryReportFormUuid: faker.string.uuid()
+};
 
 describe("ReportGenerationService", () => {
   let module: TestingModule;
@@ -51,6 +72,11 @@ describe("ReportGenerationService", () => {
   });
 
   describe("createTask", () => {
+    beforeEach(async () => {
+      await resetFrameworks();
+      await createFrameworks(FRAMEWORK_KEYS, ALL_TASK_REPORT_FORMS);
+    });
+
     it("should return early if the described task already exists", async () => {
       const { projectId, dueAt } = await TaskFactory.create();
       const createSpy = jest.spyOn(Task, "create");
@@ -186,6 +212,67 @@ describe("ReportGenerationService", () => {
       });
     });
 
+    it("should not create a task if the framework has no report forms", async () => {
+      await resetFrameworks();
+      await createFrameworks(["hbf"]);
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "hbf" });
+      await SiteFactory.create({ projectId, status: "approved" });
+      await NurseryFactory.create({ projectId, status: "approved" });
+      await service.createTask(projectId, new Date());
+      expect(await Task.count({ where: { projectId } })).toBe(0);
+      expect(productEventService().taskCreated).not.toHaveBeenCalled();
+    });
+
+    it("should not create a task if the framework does not exist", async () => {
+      await resetFrameworks();
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "hbf" });
+      await service.createTask(projectId, new Date());
+      expect(await Task.count({ where: { projectId } })).toBe(0);
+    });
+
+    it("should skip report types that do not have a form on the framework", async () => {
+      await resetFrameworks();
+      await createFrameworks(["hbf"], { projectReportFormUuid: faker.string.uuid() });
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "hbf" });
+      await SiteFactory.create({ projectId, status: "approved" });
+      await NurseryFactory.create({ projectId, status: "approved" });
+      await service.createTask(projectId, new Date());
+      const task = await Task.findOne({ where: { projectId } });
+      expect((await task!.$get("projectReport"))?.projectId).toBe(projectId);
+      expect(await task!.$get("siteReports")).toHaveLength(0);
+      expect(await task!.$get("nurseryReports")).toHaveLength(0);
+    });
+
+    it("should target the action at a site report if there is no project report form", async () => {
+      await resetFrameworks();
+      await createFrameworks(["hbf"], { siteReportFormUuid: faker.string.uuid() });
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "hbf" });
+      await SiteFactory.create({ projectId, status: "approved" });
+      await service.createTask(projectId, new Date());
+      const task = await Task.findOne({ where: { projectId } });
+      expect(await task!.$get("projectReport")).toBeNull();
+      const siteReports = await task!.$get("siteReports");
+      expect(siteReports).toHaveLength(1);
+      const action = await Action.for(siteReports[0]).findOne();
+      expect(action).toMatchObject({
+        targetableType: SiteReport.LARAVEL_TYPE,
+        title: "Site report",
+        text: "Site report available"
+      });
+    });
+
+    it("should use the framework passed in instead of loading it", async () => {
+      await resetFrameworks();
+      const { id: projectId } = await ProjectFactory.create({ frameworkKey: "hbf" });
+      await service.createTask(
+        projectId,
+        new Date(),
+        await FrameworkFactory.build({ slug: "hbf", ...ALL_TASK_REPORT_FORMS })
+      );
+      const task = await Task.findOne({ where: { projectId } });
+      expect((await task!.$get("projectReport"))?.projectId).toBe(projectId);
+    });
+
     it("should not create an SRP report for non-January PPC dues", async () => {
       const { id: projectId } = await ProjectFactory.create({ frameworkKey: "ppc" });
       await service.createTask(projectId, DateTime.utc(2027, 4, 3).toJSDate());
@@ -292,6 +379,22 @@ describe("ReportGenerationService", () => {
     beforeEach(async () => {
       await FinancialReport.truncate();
       await Project.truncate({ cascade: true });
+      await resetFrameworks();
+      await createFrameworks(FRAMEWORK_KEYS, { financialReportFormUuid: faker.string.uuid() });
+    });
+
+    it("should noop for frameworks without a financial report form", async () => {
+      await resetFrameworks();
+      await createFrameworks(["terrafund-enterprises"]);
+      const org = await OrganisationFactory.create();
+      await ProjectFactory.create({
+        organisationId: org.id,
+        frameworkKey: "terrafund-enterprises",
+        status: "approved"
+      });
+      const createSpy = jest.spyOn(FinancialReport, "create");
+      await service.createFinancialReports("terrafund-enterprises", DateTime.utc(2027, 1, 31).toJSDate());
+      expect(createSpy).not.toHaveBeenCalled();
     });
 
     it("should noop for frameworks without financial reports", async () => {

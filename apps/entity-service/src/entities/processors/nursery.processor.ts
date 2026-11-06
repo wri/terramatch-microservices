@@ -1,4 +1,5 @@
 import {
+  Framework,
   Media,
   Nursery,
   NurseryReport,
@@ -268,7 +269,10 @@ export class NurseryProcessor extends EntityProcessor<
       frameworkKey: project.frameworkKey
     });
 
-    const task = await Task.forProject(project.id).dueAtDesc().findOne();
+    // Frameworks without a nursery report form do not generate nursery reports.
+    const task = (await Framework.hasForm(project.frameworkKey, "nurseryReportFormUuid"))
+      ? await Task.forProject(project.id).dueAtDesc().findOne()
+      : null;
     if (task?.dueAt != null) {
       // If we have a task due in the future, create a report
       let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);

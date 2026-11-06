@@ -1,10 +1,13 @@
 import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Job, Queue } from "bullmq";
-import { Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
+import { Framework, Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
-import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
+import {
+  ReportGenerationService,
+  TASK_REPORT_FORM_ATTRIBUTES
+} from "@terramatch-microservices/common/tasks/report-generation-service";
 import { DateTime } from "luxon";
 import {
   ScheduledJobDefinition,
@@ -69,15 +72,19 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
 
+    const framework = await Framework.findOne({
+      where: { slug: frameworkKey },
+      attributes: [...TASK_REPORT_FORM_ATTRIBUTES]
+    });
     const failed: PromiseSettledResult<void>[] = [];
     const builder = new PaginatedQueryBuilder(Project, 100)
       .attributes(["id"])
       .where({ frameworkKey, status: { [Op.ne]: "draft" }, isArchived: false });
     for await (const page of batchFindAll(builder)) {
       failed.push(
-        ...(await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))).filter(
-          ({ status }) => status === "rejected"
-        )
+        ...(
+          await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt, framework)))
+        ).filter(({ status }) => status === "rejected")
       );
     }
 

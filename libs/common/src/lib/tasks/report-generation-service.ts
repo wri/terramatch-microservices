@@ -4,6 +4,7 @@ import {
   Action,
   FinancialIndicator,
   FinancialReport,
+  Framework,
   FundingType,
   Media,
   Nursery,
@@ -17,12 +18,21 @@ import {
   Task
 } from "@terramatch-microservices/database/entities";
 import { FINANCIAL_REPORT_FRAMEWORKS, FrameworkKey } from "@terramatch-microservices/database/constants";
+import { ReportModel } from "@terramatch-microservices/database/constants/entities";
+import { FrameworkFormUuidAttribute } from "@terramatch-microservices/database/entities/framework.entity";
+import { laravelType } from "@terramatch-microservices/database/types/util";
 import { DUE, PENDING } from "@terramatch-microservices/database/constants/status";
 import { DateTime } from "luxon";
 import { Op } from "sequelize";
-import { uniq } from "lodash";
+import { uniq, upperFirst } from "lodash";
 import { MediaService } from "../media/media.service";
 import { ProductEventService } from "../product-events/product-event.service";
+
+export const TASK_REPORT_FORM_ATTRIBUTES = [
+  "projectReportFormUuid",
+  "siteReportFormUuid",
+  "nurseryReportFormUuid"
+] as const satisfies FrameworkFormUuidAttribute[];
 
 @Injectable()
 export class ReportGenerationService {
@@ -35,9 +45,13 @@ export class ReportGenerationService {
 
   /**
    * Creates a task for the given project with the given due date, including all required
-   * project, site and nursery reports.
+   * project, site and nursery reports. Report types that do not have a form set on the project's
+   * framework are skipped, and if no reports would be created, the task is not created.
+   *
+   * The framework may be passed in (including null for no framework) if it has already been loaded,
+   * and must include TASK_REPORT_FORM_ATTRIBUTES; otherwise it is loaded from the project's framework key.
    */
-  async createTask(projectId: number, dueAt: Date) {
+  async createTask(projectId: number, dueAt: Date, framework?: Framework | null) {
     if ((await Task.count({ where: { projectId, dueAt } })) > 0) {
       this.logger.warn(`Task already exists for project ${projectId} due at ${dueAt}`);
       return;
@@ -51,6 +65,39 @@ export class ReportGenerationService {
       throw new NotFoundException(`Project not found [${projectId}]`);
     }
 
+    if (framework === undefined) {
+      framework =
+        project.frameworkKey == null
+          ? null
+          : await Framework.findOne({
+              where: { slug: project.frameworkKey },
+              attributes: [...TASK_REPORT_FORM_ATTRIBUTES]
+            });
+    }
+
+    const dueDateTime = DateTime.fromJSDate(dueAt);
+    // Annual SRP reports sit on the same task as project/site/nursery for the January PPC due date
+    const createSrpReport = project.frameworkKey === "ppc" && dueDateTime.month === 1;
+
+    const sites =
+      framework?.siteReportFormUuid == null
+        ? []
+        : await Site.nonDraft()
+            .project(projectId)
+            .findAll({ attributes: ["id"], where: { isArchived: false } });
+    const nurseries =
+      framework?.nurseryReportFormUuid == null
+        ? []
+        : await Nursery.nonDraft()
+            .project(projectId)
+            .findAll({ attributes: ["id"], where: { isArchived: false } });
+
+    const createProjectReport = framework?.projectReportFormUuid != null;
+    if (!createProjectReport && sites.length === 0 && nurseries.length === 0 && !createSrpReport) {
+      this.logger.log(`No reports to generate for project ${projectId} due at ${dueAt}; skipping task creation`);
+      return;
+    }
+
     const task = await Task.create({
       category: "project-reporting",
       organisationId: project.organisationId,
@@ -59,50 +106,52 @@ export class ReportGenerationService {
       dueAt
     });
 
-    const labels = ["Project"];
-    const projectReport = await ProjectReport.create({
-      taskId: task.id,
-      frameworkKey: project.frameworkKey,
-      projectId: project.id,
-      status: DUE,
-      dueAt
-    });
+    const labels: string[] = [];
+    const reports: ReportModel[] = [];
+    if (createProjectReport) {
+      labels.push("project");
+      reports.push(
+        await ProjectReport.create({
+          taskId: task.id,
+          frameworkKey: project.frameworkKey,
+          projectId: project.id,
+          status: DUE,
+          dueAt
+        })
+      );
+    }
 
-    const sites = await Site.nonDraft()
-      .project(projectId)
-      .findAll({ attributes: ["id"], where: { isArchived: false } });
     if (sites.length > 0) {
       labels.push("site");
-      await SiteReport.bulkCreate(
-        sites.map(({ id }) => ({
-          taskId: task.id,
-          frameworkKey: project.frameworkKey,
-          siteId: id,
-          status: DUE,
-          dueAt
-        }))
+      reports.push(
+        ...(await SiteReport.bulkCreate(
+          sites.map(({ id }) => ({
+            taskId: task.id,
+            frameworkKey: project.frameworkKey,
+            siteId: id,
+            status: DUE,
+            dueAt
+          }))
+        ))
       );
     }
 
-    const nurseries = await Nursery.nonDraft()
-      .project(projectId)
-      .findAll({ attributes: ["id"], where: { isArchived: false } });
     if (nurseries.length > 0) {
       labels.push("nursery");
-      await NurseryReport.bulkCreate(
-        nurseries.map(({ id }) => ({
-          taskId: task.id,
-          frameworkKey: project.frameworkKey,
-          nurseryId: id,
-          status: DUE,
-          dueAt
-        }))
+      reports.push(
+        ...(await NurseryReport.bulkCreate(
+          nurseries.map(({ id }) => ({
+            taskId: task.id,
+            frameworkKey: project.frameworkKey,
+            nurseryId: id,
+            status: DUE,
+            dueAt
+          }))
+        ))
       );
     }
 
-    // Annual SRP reports sit on the same task as project/site/nursery for the January PPC due date
-    const dueDateTime = DateTime.fromJSDate(dueAt);
-    if (project.frameworkKey === "ppc" && dueDateTime.month === 1) {
+    if (createSrpReport) {
       const srpReport = await SrpReport.create({
         taskId: task.id,
         frameworkKey: project.frameworkKey,
@@ -125,17 +174,21 @@ export class ReportGenerationService {
       });
     }
 
-    await Action.create({
-      status: PENDING,
-      targetableType: ProjectReport.LARAVEL_TYPE,
-      targetableId: projectReport.id,
-      type: "notification",
-      title: "Project report",
-      subTitle: "",
-      text: `${labels.join(", ")} ${labels.length > 1 ? "reports" : "report"} available`,
-      projectId: project.id,
-      organisationId: project.organisationId
-    });
+    // The notification for the task targets the first report generated (the project report, if present)
+    const [primaryReport] = reports;
+    if (primaryReport != null) {
+      await Action.create({
+        status: PENDING,
+        targetableType: laravelType(primaryReport),
+        targetableId: primaryReport.id,
+        type: "notification",
+        title: `${upperFirst(labels[0])} report`,
+        subTitle: "",
+        text: `${upperFirst(labels.join(", "))} ${labels.length > 1 ? "reports" : "report"} available`,
+        projectId: project.id,
+        organisationId: project.organisationId
+      });
+    }
 
     await this.productEventService.taskCreated(task);
   }
@@ -233,6 +286,11 @@ export class ReportGenerationService {
    */
   async createFinancialReports(frameworkKey: FrameworkKey, taskDueAt: Date) {
     if (!(FINANCIAL_REPORT_FRAMEWORKS as readonly FrameworkKey[]).includes(frameworkKey)) {
+      return;
+    }
+
+    if (!(await Framework.hasForm(frameworkKey, "financialReportFormUuid"))) {
+      this.logger.log(`No financial report form for framework ${frameworkKey}; skipping financial reports`);
       return;
     }
 

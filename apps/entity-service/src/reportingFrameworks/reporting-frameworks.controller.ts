@@ -64,7 +64,9 @@ export class ReportingFrameworksController {
   })
   @JsonApiResponse(ReportingFrameworkDto)
   @ExceptionResponse(UnauthorizedException, { description: "Reporting framework creation not allowed." })
-  @ExceptionResponse(BadRequestException, { description: "Reporting framework payload malformed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Reporting framework payload malformed, forms are in use, or required report forms are missing."
+  })
   async create(@Body() payload: CreateReportingFrameworkBody) {
     const attributes = payload.data.attributes;
     const built = Framework.build({
@@ -85,7 +87,9 @@ export class ReportingFrameworksController {
   @JsonApiResponse(ReportingFrameworkDto)
   @ExceptionResponse(NotFoundException, { description: "Reporting framework not found" })
   @ExceptionResponse(UnauthorizedException, { description: "Reporting framework update not allowed." })
-  @ExceptionResponse(BadRequestException, { description: "Payload id must match path frameworkKey." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Payload id does not match path frameworkKey, forms are in use, or required report forms are missing."
+  })
   async update(@Param("frameworkKey") frameworkKey: string, @Body() payload: UpdateReportingFrameworkBody) {
     if (payload.data.id != null && payload.data.id !== frameworkKey) {
       throw new BadRequestException("Reporting framework id in path and payload do not match");

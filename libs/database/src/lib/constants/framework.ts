@@ -6,6 +6,7 @@ export const EPA = "epa-ghana-pilot" as const;
 export const FUNDO_FLORA = "fundo-flora" as const;
 export const WCB = "wcb" as const;
 export const BARKA_FUND = "barka-fund" as const;
+export const POLYGON_MONITORING = "polygon-monitoring" as const;
 
 export const FRAMEWORK_KEYS_TF = [TERRAFUND_NON_PROFITS, ENTERPRISES, EPA] as const;
 export type FrameworkKeyTF = (typeof FRAMEWORK_KEYS_TF)[number];
@@ -13,7 +14,15 @@ export type FrameworkKeyTF = (typeof FRAMEWORK_KEYS_TF)[number];
 export const FINANCIAL_REPORT_FRAMEWORKS = [TERRAFUND_NON_PROFITS, ENTERPRISES] as const;
 export type FinancialReportFramework = (typeof FINANCIAL_REPORT_FRAMEWORKS)[number];
 
-export const FRAMEWORK_KEYS = [...FRAMEWORK_KEYS_TF, PPC, HBF, FUNDO_FLORA, WCB, BARKA_FUND] as const;
+export const FRAMEWORK_KEYS = [
+  ...FRAMEWORK_KEYS_TF,
+  PPC,
+  HBF,
+  FUNDO_FLORA,
+  WCB,
+  BARKA_FUND,
+  POLYGON_MONITORING
+] as const;
 export type FrameworkKey = (typeof FRAMEWORK_KEYS)[number];
 
 /** User-facing display names for each framework. */
@@ -22,6 +31,7 @@ export const FRAMEWORK_NAMES: Record<FrameworkKey, string> = {
   "epa-ghana-pilot": "EPA-Ghana Pilot",
   "fundo-flora": "Fundo Flora",
   hbf: "Harit Bharat Fund",
+  "polygon-monitoring": "Polygon Monitoring",
   ppc: "PPC",
   "terrafund-enterprises": "TerraFund Enterprises",
   "terrafund-non-profits": "TerraFund Non-Profits",

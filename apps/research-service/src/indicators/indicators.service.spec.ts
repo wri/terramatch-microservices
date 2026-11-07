@@ -247,7 +247,7 @@ describe("IndicatorsService", () => {
     });
 
     it("should include empty ppc_external_id column for non-PPC site exports", async () => {
-      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "terrafund-3" } as Site;
+      const mockSite = { uuid: "site-uuid", id: 1, frameworkKey: "terrafund-non-profits" } as Site;
       const mockPolygon = {
         id: 1,
         polyName: "Polygon 1",

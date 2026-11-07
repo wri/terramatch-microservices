@@ -13,7 +13,7 @@ import {
   Query,
   UnauthorizedException
 } from "@nestjs/common";
-import { User } from "@terramatch-microservices/database/entities";
+import { OrganisationJoinRequest, User } from "@terramatch-microservices/database/entities";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ApiExtraModels, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { Roles } from "./dto/roles.dto";
@@ -45,7 +45,11 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { UserTaskDto } from "@terramatch-microservices/common/dto/user-task.dto";
 import { NotificationDto } from "@terramatch-microservices/common/dto/notification.dto";
-import { ORGANISATION_USER_STATUSES } from "@terramatch-microservices/database/constants/status";
+import {
+  APPROVED,
+  ORGANISATION_MEMBERSHIP_STATUSES,
+  PENDING
+} from "@terramatch-microservices/database/constants/status";
 
 export const USER_ORG_RELATIONSHIP = {
   name: "org",
@@ -53,7 +57,7 @@ export const USER_ORG_RELATIONSHIP = {
   meta: {
     userStatus: {
       type: "string",
-      enum: [...ORGANISATION_USER_STATUSES, "na"]
+      enum: [...ORGANISATION_MEMBERSHIP_STATUSES, "na"]
     }
   }
 };
@@ -209,12 +213,24 @@ export class UsersController {
       new UserDto(user, user.frameworks ?? [], await user.myFrameworks(), monitoringPartnerProjects)
     );
 
-    const org = await user.primaryOrganisation();
-    if (org != null) {
-      const orgResource = document.addData(org.uuid, new OrganisationLightDto(org));
-      const isOwner = user.organisationId === org.id;
-      const userStatus = isOwner ? "approved" : (org.OrganisationUser?.status ?? "na");
-      userResource.relateTo("org", orgResource, { meta: { userStatus } });
+    const organisation = await user.loadOrganisation();
+    if (organisation != null) {
+      const orgResource = document.addData(organisation.uuid, new OrganisationLightDto(organisation));
+      userResource.relateTo("org", orgResource, { meta: { userStatus: APPROVED } });
+    } else {
+      // Users without an organisation are shown the status of their latest request to join one.
+      const joinRequest = await OrganisationJoinRequest.findOne({
+        where: { userId: user.id, status: PENDING },
+        order: [["id", "DESC"]],
+        include: [{ association: "organisation" }]
+      });
+      if (joinRequest?.organisation != null) {
+        const orgResource = document.addData(
+          joinRequest.organisation.uuid,
+          new OrganisationLightDto(joinRequest.organisation)
+        );
+        userResource.relateTo("org", orgResource, { meta: { userStatus: PENDING } });
+      }
     }
 
     return document;

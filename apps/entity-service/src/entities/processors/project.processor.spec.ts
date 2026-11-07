@@ -139,11 +139,11 @@ describe("ProjectProcessor", () => {
     it("returns framework projects", async () => {
       const projects = await ProjectFactory.createMany(3, { frameworkKey: "hbf" });
       await ProjectFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await ProjectFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await ProjectFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         projects.push(p);
       }
 
-      await expectProjects(projects, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectProjects(projects, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("filters", async () => {
@@ -404,10 +404,10 @@ describe("ProjectProcessor", () => {
       });
 
       it("includes sideloaded sites and nurseries", async () => {
-        const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund" });
-        await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund" });
-        await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund" });
-        setMockedPermissions("framework-terrafund");
+        const { id: projectId } = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
+        await SiteFactory.createMany(12, { projectId, frameworkKey: "terrafund-non-profits" });
+        await NurseryFactory.createMany(3, { projectId, frameworkKey: "terrafund-non-profits" });
+        setMockedPermissions("framework-terrafund-non-profits");
         const document = buildJsonApi(ProjectLightDto);
         await processor.addIndex(document, {
           sideloads: [
@@ -547,27 +547,26 @@ describe("ProjectProcessor", () => {
       expect((await getIndex({ projectUuid: coastal.uuid })).data.map(({ id }) => id)).toEqual([coastal.uuid]);
     });
 
-    it("matches the status of a submitted change request instead of the report's own status", async () => {
-      const { alpha, river } = await createData();
+    it("matches the report's own status and update request status together", async () => {
+      await createData();
       const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
       const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
       await NurseryReportFactory.create({
         nurseryId: foxtrotNursery.id,
         frameworkKey,
-        status: "information-required",
+        status: "approved",
         updateRequestStatus: "pending-approval"
       });
       await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
 
-      expect((await getIndex({ statuses: ["information-required"] })).attributes).toEqual([
-        row(alpha, 0, meta(river, 1))
-      ]);
-      expect((await getIndex({ reportTypes: ["nurseryReports"], statuses: ["pending-approval"] })).attributes).toEqual([
+      const query = { reportTypes: ["nurseryReports" as const], updateRequestStatuses: ["pending-approval" as const] };
+      expect((await getIndex({ ...query, statuses: ["approved"] })).attributes).toEqual([
         row(foxtrot, 0, {}, meta(foxtrotNursery, 1))
       ]);
+      expect((await getIndex({ ...query, statuses: ["pending-approval"] })).data).toEqual([]);
     });
 
-    it("counts reports that are due, draft or information-required on the report or its change request", async () => {
+    it("counts reports by effective status, ignoring draft change requests", async () => {
       await createData();
       const foxtrot = await ProjectFactory.create({ frameworkKey, organisationId: organisation.id, name: "Foxtrot" });
       const foxtrotNursery = await NurseryFactory.create({ projectId: foxtrot.id, frameworkKey, name: "Fox Nursery" });
@@ -579,12 +578,13 @@ describe("ProjectProcessor", () => {
       await create("approved", "information-required");
       await create("approved", "draft");
       await create("pending-approval");
+      await create("pending-approval", "draft");
       await create("approved", "pending-approval");
       await create("approved");
       await ProjectUserFactory.create({ userId: user.id, projectId: foxtrot.id, isManaging: true });
 
       expect((await getIndex({ projectUuid: foxtrot.uuid })).attributes).toEqual([
-        row(foxtrot, 0, {}, meta(foxtrotNursery, 3))
+        row(foxtrot, 0, {}, meta(foxtrotNursery, 2))
       ]);
     });
 
@@ -770,7 +770,7 @@ describe("ProjectProcessor", () => {
       });
     });
 
-    it("counts the matching nurseries with a draft or information-required status or change request", async () => {
+    it("counts the matching nurseries by effective status, ignoring draft change requests", async () => {
       const { alpha } = await createData();
       await NurseryFactory.create({
         projectId: alpha.id,
@@ -786,9 +786,23 @@ describe("ProjectProcessor", () => {
         status: "approved",
         updateRequestStatus: "pending-approval"
       });
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Submitted Nursery",
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
+      await NurseryFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Editing Nursery",
+        status: "approved",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 4, nurseriesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ nurseriesMatching: 6, nurseriesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ nurseriesMatching: 1, nurseriesRequiringAttention: 1 });
@@ -911,7 +925,7 @@ describe("ProjectProcessor", () => {
       });
     });
 
-    it("counts the matching sites with a draft or information-required status or change request", async () => {
+    it("counts the matching sites by effective status, ignoring draft change requests", async () => {
       const { alpha } = await createData();
       await SiteFactory.create({
         projectId: alpha.id,
@@ -927,9 +941,23 @@ describe("ProjectProcessor", () => {
         status: "approved",
         updateRequestStatus: "pending-approval"
       });
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Submitted Site",
+        status: "pending-approval",
+        updateRequestStatus: "draft"
+      });
+      await SiteFactory.create({
+        projectId: alpha.id,
+        frameworkKey,
+        name: "Editing Site",
+        status: "approved",
+        updateRequestStatus: "draft"
+      });
 
       const all = await getIndex({ projectUuid: alpha.uuid });
-      expect(all.attributes[0]).toMatchObject({ sitesMatching: 4, sitesRequiringAttention: 2 });
+      expect(all.attributes[0]).toMatchObject({ sitesMatching: 6, sitesRequiringAttention: 2 });
 
       const filtered = await getIndex({ projectUuid: alpha.uuid, search: "Info" });
       expect(filtered.attributes[0]).toMatchObject({ sitesMatching: 1, sitesRequiringAttention: 1 });
@@ -1447,7 +1475,7 @@ describe("ProjectProcessor", () => {
         "Invalid form for project creation: fake-uuid"
       );
 
-      let form = await EntityFormFactory.site().create({ frameworkKey: "terrafund" });
+      let form = await EntityFormFactory.site().create({ frameworkKey: "terrafund-non-profits" });
       await expect(processor.create({ formUuid: form.uuid })).rejects.toThrow(
         `Invalid form for project creation: ${form.uuid}`
       );
@@ -1542,7 +1570,8 @@ describe("ProjectProcessor", () => {
         projectName: "Test Pitch",
         descriptionOfProjectTimeline: faker.lorem.paragraph(),
         indirectEntities: faker.lorem.paragraph(),
-        gliComponents: ["restoration-of-degraded-landscapes", "knowledge-management-and-monitoring-system"]
+        gliComponents: ["restoration-of-degraded-landscapes", "knowledge-management-and-monitoring-system"],
+        incomeGeneratingActivities: ["cookstoves", "beekeeping"]
       });
       await FormSubmissionFactory.create({ applicationId: application.id, projectPitchUuid: pitch.uuid });
 
@@ -1554,6 +1583,7 @@ describe("ProjectProcessor", () => {
       expect(project.descriptionOfProjectTimeline).toBe(pitch.descriptionOfProjectTimeline);
       expect(project.indirectEntities).toBe(pitch.indirectEntities);
       expect(project.gliComponents).toEqual(pitch.gliComponents);
+      expect(project.incomeGeneratingActivities).toEqual(pitch.incomeGeneratingActivities);
     });
 
     it("copies trees, demographics and media from the pitch when creating the project", async () => {
@@ -1679,7 +1709,7 @@ describe("ProjectProcessor", () => {
         await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "ppc" })
       ];
       // non-framework project should be ignored
-      await ProjectFactory.create({ frameworkKey: "terrafund" });
+      await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.project(projects[0]).create();
 
       const addRow = jest.fn();

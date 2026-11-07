@@ -128,7 +128,7 @@ describe("FormsService", () => {
 
     it("filters by framework", async () => {
       await FormFactory.create({ frameworkKey: "ppc" });
-      await FormFactory.create({ frameworkKey: "terrafund" });
+      await FormFactory.create({ frameworkKey: "terrafund-non-profits" });
       const result = await service.findMany({ attachedTo: "framework-ppc" });
       expect(result.forms.length).toBe(1);
       expect(result.forms[0].frameworkKey).toBe("ppc");

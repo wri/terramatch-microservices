@@ -151,11 +151,11 @@ describe("SrpReportProcessor", () => {
     it("should returns framework disturbance reports", async () => {
       const srpReports = await SrpReportFactory.createMany(3, { frameworkKey: "hbf" });
       await SrpReportFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await SrpReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await SrpReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         srpReports.push(p);
       }
 
-      await expectSrpReports(srpReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectSrpReports(srpReports, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("should returns own project disturbance reports", async () => {
@@ -169,7 +169,7 @@ describe("SrpReportProcessor", () => {
 
     it("should filter by framework key when user has framework permissions", async () => {
       const ppcReports = await SrpReportFactory.createMany(2, { frameworkKey: "ppc" });
-      await SrpReportFactory.createMany(3, { frameworkKey: "terrafund" });
+      await SrpReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" });
 
       await expectSrpReports(ppcReports, {}, { permissions: ["framework-ppc"] });
     });

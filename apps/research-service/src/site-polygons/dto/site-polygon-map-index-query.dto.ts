@@ -209,7 +209,7 @@ export class SitePolygonMapIndexQueryDto extends SitePolygonProjectFiltersDto {
     required: false,
     default: false,
     type: "boolean",
-    description: "Soft-deleted polygons for one site. Requires exactly one siteId[] value."
+    description: "Soft-deleted polygons for the siteId[] and / or projectId[] scope. Requires siteId[] or projectId[]."
   })
   @IsOptional()
   @IsBoolean()

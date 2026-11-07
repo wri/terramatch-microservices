@@ -7,7 +7,12 @@ import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
 import { PolicyService } from "@terramatch-microservices/common";
 import { BadRequestException, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { getStableRequestQuery, Resource } from "@terramatch-microservices/common/util";
+import {
+  buildDelayedJobResponse,
+  buildJsonApi,
+  getStableRequestQuery,
+  Resource
+} from "@terramatch-microservices/common/util";
 import { SitePolygon, User } from "@terramatch-microservices/database/entities";
 import { SitePolygonFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { SitePolygonBulkUpdateBodyDto } from "./dto/site-polygon-update.dto";
@@ -31,12 +36,16 @@ import { VersionUpdateBody } from "./dto/version-update.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
+import { GeoJsonExportBodyDto } from "../geojson-export/dto/geojson-export-request.dto";
+import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "../geojson-export/geojson-export.processor";
 import { SitePolygonMapIndexService } from "./site-polygon-map-index.service";
 import { SitePolygonMapIndexDto } from "./dto/site-polygon-map-index.dto";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
 import { SitePolygonSummaryService } from "./site-polygon-summary.service";
 import { SitePolygonSummaryDto } from "./dto/site-polygon-summary.dto";
 import { SitePolygonSummaryQueryDto } from "./dto/site-polygon-summary-query.dto";
+import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
+import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
 
 function getSharedSequelize(): Sequelize {
   const connection = User.sequelize;
@@ -54,6 +63,9 @@ function restoreSitePolygonSequelize(): void {
   });
 }
 
+const buildSelection = (count: number) =>
+  Promise.all(Array.from({ length: count }, (_, index) => SitePolygonFactory.build({ uuid: `polygon-${index}` })));
+
 describe("SitePolygonsController", () => {
   let controller: SitePolygonsController;
   let sitePolygonService: DeepMocked<SitePolygonsService>;
@@ -66,6 +78,8 @@ describe("SitePolygonsController", () => {
   let duplicateGeometryValidator: DeepMocked<DuplicateGeometryValidator>;
   let geometryFileProcessingService: DeepMocked<GeometryFileProcessingService>;
   let geometryUploadQueue: DeepMocked<Queue>;
+  let geoJsonExportQueue: DeepMocked<Queue>;
+  let sitePolygonBulkQueue: DeepMocked<Queue>;
   let geometryUploadComparisonService: DeepMocked<GeometryUploadComparisonService>;
   let geoJsonExportService: DeepMocked<GeoJsonExportService>;
   let sitePolygonMapIndexService: DeepMocked<SitePolygonMapIndexService>;
@@ -181,6 +195,14 @@ describe("SitePolygonsController", () => {
           useValue: (geometryUploadQueue = createMock<Queue>())
         },
         {
+          provide: getQueueToken(GEOJSON_EXPORT_QUEUE),
+          useValue: (geoJsonExportQueue = createMock<Queue>())
+        },
+        {
+          provide: getQueueToken(SITE_POLYGON_BULK_QUEUE),
+          useValue: (sitePolygonBulkQueue = createMock<Queue>())
+        },
+        {
           provide: GeoJsonExportService,
           useValue: (geoJsonExportService = createMock<GeoJsonExportService>())
         },
@@ -191,7 +213,8 @@ describe("SitePolygonsController", () => {
         {
           provide: SitePolygonSummaryService,
           useValue: (sitePolygonSummaryService = createMock<SitePolygonSummaryService>())
-        }
+        },
+        SitePolygonBulkUpdateService
       ]
     }).compile();
 
@@ -580,6 +603,7 @@ describe("SitePolygonsController", () => {
   describe("findMany with deletedOnly", () => {
     interface MockDeletedQueryBuilder {
       filterSiteUuids: jest.Mock;
+      filterProjectUuids: jest.Mock;
       addSearch: jest.Mock;
       execute: jest.Mock;
       paginationTotal: jest.Mock;
@@ -588,11 +612,13 @@ describe("SitePolygonsController", () => {
     const mockDeletedQueryBuilder = (executeResult: SitePolygon[] = [], totalResult = 0): MockDeletedQueryBuilder => {
       const builder: MockDeletedQueryBuilder = {
         filterSiteUuids: jest.fn(),
+        filterProjectUuids: jest.fn(),
         addSearch: jest.fn(),
         execute: jest.fn().mockResolvedValue(executeResult),
         paginationTotal: jest.fn().mockResolvedValue(totalResult)
       };
       builder.filterSiteUuids.mockResolvedValue(builder);
+      builder.filterProjectUuids.mockResolvedValue(builder);
       builder.addSearch.mockResolvedValue(builder);
 
       sitePolygonService.buildDeletedQuery.mockReturnValue(
@@ -602,7 +628,7 @@ describe("SitePolygonsController", () => {
       return builder;
     };
 
-    it("should throw when siteId is missing", async () => {
+    it("should throw when neither siteId nor projectId is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       mockDeletedQueryBuilder();
 
@@ -611,13 +637,23 @@ describe("SitePolygonsController", () => {
       );
     });
 
-    it("should throw when more than one siteId is provided", async () => {
+    it("should filter by every requested site when more than one siteId is provided", async () => {
       policyService.authorize.mockResolvedValue(undefined);
-      mockDeletedQueryBuilder();
+      const builder = mockDeletedQueryBuilder();
 
-      await expect(
-        controller.findMany({ deletedOnly: true, siteId: ["site-1", "site-2"], page: { number: 1 } })
-      ).rejects.toThrow(BadRequestException);
+      await controller.findMany({ deletedOnly: true, siteId: ["site-1", "site-2"], page: { number: 1 } });
+
+      expect(builder.filterSiteUuids).toHaveBeenCalledWith(["site-1", "site-2"]);
+    });
+
+    it("should filter by the requested project when only projectId is provided", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const builder = mockDeletedQueryBuilder();
+
+      await controller.findMany({ deletedOnly: true, projectId: ["project-1"], page: { number: 1 } });
+
+      expect(builder.filterProjectUuids).toHaveBeenCalledWith(["project-1"]);
+      expect(builder.filterSiteUuids).not.toHaveBeenCalled();
     });
 
     it("should throw when number pagination is not used", async () => {
@@ -999,7 +1035,7 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow("Site polygons not found for UUIDs: missing-uuid");
     });
 
-    it("should authorize update for each polygon and call bulkUpdateSitePolygonAttributes", async () => {
+    it("should authorize every polygon and call bulkUpdateSitePolygonAttributes", async () => {
       const sitePolygon1 = await SitePolygonFactory.build();
       const sitePolygon2 = await SitePolygonFactory.build();
       const newVersion1 = await SitePolygonFactory.build({ uuid: "new-version-1" });
@@ -1015,8 +1051,8 @@ describe("SitePolygonsController", () => {
         fullName: "Test User"
       } as User);
       sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion1, newVersion2]);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockImplementation(async polygon => new SitePolygonLightDto(polygon, []));
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonService.buildLightDocument.mockResolvedValue(document);
 
       const attributeChanges = { plantStart: "2024-01-01T00:00:00Z", numTrees: 200 };
       const data = [
@@ -1024,10 +1060,11 @@ describe("SitePolygonsController", () => {
         { type: "sitePolygons", id: sitePolygon2.uuid }
       ];
 
-      await controller.bulkUpdateAttributes({ data, attributeChanges });
+      const result = await controller.bulkUpdateAttributes({ data, attributeChanges });
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("update", sitePolygon2);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", [sitePolygon1, sitePolygon2]);
+      expect(sitePolygonService.buildLightDocument).toHaveBeenCalledWith([newVersion1, newVersion2]);
+      expect(result).toBe(document);
       expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).toHaveBeenCalledWith(
         [sitePolygon1.uuid, sitePolygon2.uuid],
         attributeChanges,
@@ -1058,8 +1095,6 @@ describe("SitePolygonsController", () => {
         fullName: "Green House"
       } as User);
       sitePolygonCreationService.bulkUpdateSitePolygonAttributes.mockResolvedValue([newVersion]);
-      sitePolygonService.loadAssociationDtos.mockResolvedValue({});
-      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
 
       await controller.bulkUpdateAttributes({
         data: [{ type: "sitePolygons", id: sitePolygon.uuid }],
@@ -1070,6 +1105,50 @@ describe("SitePolygonsController", () => {
         siteUuid: "site-greenhouse",
         triggerType: "gh_push"
       });
+    });
+
+    it("should validate and queue a delayed job for a selection over the threshold", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      const uuids = sitePolygons.map(({ uuid }) => uuid);
+      const attributeChanges = { numTrees: 100 };
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkAttributeUpdate = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkAttributeUpdate")
+        .mockResolvedValue(delayedJobResponse);
+
+      const result = await controller.bulkUpdateAttributes({
+        data: uuids.map(id => ({ type: "sitePolygons", id })),
+        attributeChanges
+      });
+
+      expect(sitePolygonCreationService.validateBulkAttributeUpdate).toHaveBeenCalledWith(uuids, attributeChanges);
+      expect(queueBulkAttributeUpdate).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons, {
+        userId: 1,
+        sitePolygonUuids: uuids,
+        attributeChanges
+      });
+      expect(sitePolygonCreationService.bulkUpdateSitePolygonAttributes).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
+    });
+
+    it("should reject an invalid update over the threshold without queueing it", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonCreationService.validateBulkAttributeUpdate.mockRejectedValue(
+        new BadRequestException("numTrees must be a non-negative integer")
+      );
+      const queueBulkAttributeUpdate = jest.spyOn(SitePolygonBulkProcessor, "queueBulkAttributeUpdate");
+
+      await expect(
+        controller.bulkUpdateAttributes({
+          data: sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid })),
+          attributeChanges: { numTrees: -1 }
+        })
+      ).rejects.toThrow(BadRequestException);
+      expect(queueBulkAttributeUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -1102,6 +1181,64 @@ describe("SitePolygonsController", () => {
       Object.defineProperty(policyService, "userId", { value: userParams.id });
       await controller.updateBulkStatus("pending-approval", { comment: "comment", data });
       expect(sitePolygonService.updateBulkStatus).toHaveBeenCalledWith("pending-approval", data, "comment", userParams);
+    });
+
+    it("should return the shared light DTO document for the updated polygons", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(User, "findByPk").mockResolvedValue(null);
+      const sitePolygon = await SitePolygonFactory.build();
+      sitePolygonService.updateBulkStatus.mockResolvedValue([sitePolygon]);
+      const document = buildJsonApi(SitePolygonLightDto);
+      sitePolygonService.buildLightDocument.mockResolvedValue(document);
+
+      const result = await controller.updateBulkStatus("approved", {
+        comment: "",
+        data: [{ type: "sitePolygons", id: sitePolygon.uuid }]
+      });
+
+      expect(sitePolygonService.buildLightDocument).toHaveBeenCalledWith([sitePolygon]);
+      expect(result).toBe(document);
+    });
+
+    it("should validate and queue a delayed job for a selection over the threshold", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      Object.defineProperty(policyService, "userId", { value: 1 });
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkStatusUpdate = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkStatusUpdate")
+        .mockResolvedValue(delayedJobResponse);
+      const data = sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid }));
+
+      const result = await controller.updateBulkStatus("pending-approval", { comment: "Ready for review", data });
+
+      expect(sitePolygonService.assertStatusUpdateAllowed).toHaveBeenCalledWith(
+        "pending-approval",
+        sitePolygons.map(({ uuid }) => uuid)
+      );
+      expect(queueBulkStatusUpdate).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons, {
+        userId: 1,
+        status: "pending-approval",
+        data,
+        comment: "Ready for review"
+      });
+      expect(sitePolygonService.updateBulkStatus).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
+    });
+
+    it("should reject an ineligible submission over the threshold without queueing it", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      sitePolygonService.assertStatusUpdateAllowed.mockRejectedValue(new BadRequestException("Ineligible UUIDs"));
+      const queueBulkStatusUpdate = jest.spyOn(SitePolygonBulkProcessor, "queueBulkStatusUpdate");
+
+      await expect(
+        controller.updateBulkStatus("pending-approval", {
+          data: sitePolygons.map(({ uuid }) => ({ type: "sitePolygons", id: uuid }))
+        })
+      ).rejects.toThrow(BadRequestException);
+      expect(queueBulkStatusUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -1229,11 +1366,11 @@ describe("SitePolygonsController", () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.bulkDelete(bulkDeletePayload(["delete-me"]))).rejects.toThrow(UnauthorizedException);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", [sitePolygon]);
       expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
     });
 
-    it("should authorize each polygon and return a deleted response", async () => {
+    it("should authorize every polygon and return a deleted response", async () => {
       const sitePolygon1 = await SitePolygonFactory.build({ uuid: "delete-me-1" });
       const sitePolygon2 = await SitePolygonFactory.build({ uuid: "delete-me-2" });
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon1, sitePolygon2]);
@@ -1242,10 +1379,39 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.bulkDelete(bulkDeletePayload(["delete-me-1", "delete-me-2"]));
 
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon1);
-      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygon2);
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", [sitePolygon1, sitePolygon2]);
       expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith([sitePolygon1, sitePolygon2]);
-      expect(result.meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
+      expect(sitePolygonBulkQueue.add).not.toHaveBeenCalled();
+      expect(serialize(result).meta).toHaveProperty("resourceIds", ["delete-me-1", "delete-me-2"]);
+    });
+
+    it("should delete a selection at the threshold in the request", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      sitePolygonService.bulkDeleteSitePolygons.mockResolvedValue(sitePolygons.map(({ uuid }) => uuid));
+
+      await controller.bulkDelete(bulkDeletePayload(sitePolygons.map(({ uuid }) => uuid)));
+
+      expect(sitePolygonService.bulkDeleteSitePolygons).toHaveBeenCalledWith(sitePolygons);
+      expect(sitePolygonBulkQueue.add).not.toHaveBeenCalled();
+    });
+
+    it("should queue a delayed job for a selection over the threshold", async () => {
+      const sitePolygons = await buildSelection(BULK_ASYNC_THRESHOLD + 1);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue(sitePolygons);
+      policyService.authorize.mockResolvedValue(undefined);
+      const delayedJobResponse = buildDelayedJobResponse(new DelayedJob());
+      const queueBulkDelete = jest
+        .spyOn(SitePolygonBulkProcessor, "queueBulkDelete")
+        .mockResolvedValue(delayedJobResponse);
+
+      const result = await controller.bulkDelete(bulkDeletePayload(sitePolygons.map(({ uuid }) => uuid)));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("delete", sitePolygons);
+      expect(queueBulkDelete).toHaveBeenCalledWith(sitePolygonBulkQueue, sitePolygons);
+      expect(sitePolygonService.bulkDeleteSitePolygons).not.toHaveBeenCalled();
+      expect(result).toBe(delayedJobResponse);
     });
   });
 
@@ -1694,9 +1860,14 @@ describe("SitePolygonsController", () => {
   });
 
   describe("getVersions", () => {
-    it("should throw UnauthorizedException when user is not authorized", async () => {
+    it("should throw UnauthorizedException when the user cannot read the loaded versions", async () => {
+      const versions = [await SitePolygonFactory.build({ primaryUuid: "test-primary-uuid" })];
+      versioningService.getVersionHistory.mockResolvedValue(versions);
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
+
       await expect(controller.getVersions("test-primary-uuid")).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", versions);
+      expect(sitePolygonService.loadAssociationDtos).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when polygon is not found", async () => {
@@ -1704,7 +1875,7 @@ describe("SitePolygonsController", () => {
       versioningService.getVersionHistory.mockResolvedValue([]);
 
       await expect(controller.getVersions("non-existent-primary-uuid")).rejects.toThrow(NotFoundException);
-      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(policyService.authorize).not.toHaveBeenCalled();
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith("non-existent-primary-uuid");
     });
 
@@ -1736,7 +1907,7 @@ describe("SitePolygonsController", () => {
 
       const result = serialize(await controller.getVersions(primaryUuid));
 
-      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("read", versions);
       expect(versioningService.getVersionHistory).toHaveBeenCalledWith(primaryUuid);
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith(versions, true);
       expect(result.data).toBeDefined();
@@ -1751,9 +1922,12 @@ describe("SitePolygonsController", () => {
 
   describe("updateVersion", () => {
     let originalSequelize: typeof SitePolygon.sequelize;
+    let targetVersion: SitePolygon;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       originalSequelize = SitePolygon.sequelize;
+      targetVersion = await SitePolygonFactory.build({ uuid: "test-uuid" });
+      jest.spyOn(SitePolygon, "findOne").mockResolvedValue(targetVersion);
       Object.defineProperty(policyService, "userId", {
         value: 1,
         writable: true,
@@ -1784,6 +1958,19 @@ describe("SitePolygonsController", () => {
       };
 
       await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(UnauthorizedException);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
+      expect(versioningService.activateVersion).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when the version does not exist", async () => {
+      jest.mocked(SitePolygon.findOne).mockResolvedValue(null);
+      const request: VersionUpdateBody = {
+        data: { type: "sitePolygons", id: "test-uuid", attributes: { isActive: true } }
+      };
+
+      await expect(controller.updateVersion("test-uuid", request)).rejects.toThrow(NotFoundException);
+      expect(policyService.authorize).not.toHaveBeenCalled();
+      expect(versioningService.activateVersion).not.toHaveBeenCalled();
     });
 
     it("should throw UnauthorizedException when userId is null", async () => {
@@ -1894,7 +2081,7 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.updateVersion("version-uuid", request);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
       expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
       expect(versioningService.trackChange).not.toHaveBeenCalled();
       expect(result.data).toBeDefined();
@@ -1940,7 +2127,7 @@ describe("SitePolygonsController", () => {
 
       const result = await controller.updateVersion("version-uuid", request);
 
-      expect(policyService.authorize).toHaveBeenCalledWith("update", SitePolygon);
+      expect(policyService.authorize).toHaveBeenCalledWith("update", targetVersion);
       expect(versioningService.activateVersion).toHaveBeenCalledWith("version-uuid", 1, mockTransaction);
       expect(versioningService.trackChange).toHaveBeenCalledWith(
         activatedVersion.primaryUuid,
@@ -2071,6 +2258,51 @@ describe("SitePolygonsController", () => {
       expect(result).toHaveProperty("meta");
       expect(result.meta).toHaveProperty("resourceType", "sitePolygons");
       expect(result.meta).toHaveProperty("resourceIds", [sitePolygon.uuid]);
+    });
+  });
+
+  describe("createGeoJsonExport", () => {
+    const payload = {
+      data: { type: "geojsonExports", attributes: { projectUuids: ["project-uuid"] } }
+    } as GeoJsonExportBodyDto;
+
+    it("authorizes, validates the scope and queues the export", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getExportTarget.mockResolvedValue({ entityName: "Project", entityType: "project" });
+      const delayedJob = await DelayedJob.create({ name: "Polygon GeoJSON Export" });
+      const queueExport = jest
+        .spyOn(GeoJsonExportProcessor, "queueExport")
+        .mockResolvedValue(buildDelayedJobResponse(delayedJob));
+
+      const result = serialize(await controller.createGeoJsonExport(payload));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getExportTarget).toHaveBeenCalledWith({ projectUuids: ["project-uuid"] });
+      expect(queueExport).toHaveBeenCalledWith(
+        geoJsonExportQueue,
+        { projectUuids: ["project-uuid"] },
+        "Project",
+        "project"
+      );
+      expect((result.data as Resource).id).toBe(delayedJob.uuid);
+    });
+
+    it("does not queue an export when authorization fails", async () => {
+      policyService.authorize.mockRejectedValue(new UnauthorizedException());
+      const queueExport = jest.spyOn(GeoJsonExportProcessor, "queueExport");
+
+      await expect(controller.createGeoJsonExport(payload)).rejects.toThrow(UnauthorizedException);
+      expect(geoJsonExportService.getExportTarget).not.toHaveBeenCalled();
+      expect(queueExport).not.toHaveBeenCalled();
+    });
+
+    it("does not queue an export for an invalid scope", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getExportTarget.mockRejectedValue(new BadRequestException());
+      const queueExport = jest.spyOn(GeoJsonExportProcessor, "queueExport");
+
+      await expect(controller.createGeoJsonExport(payload)).rejects.toThrow(BadRequestException);
+      expect(queueExport).not.toHaveBeenCalled();
     });
   });
 

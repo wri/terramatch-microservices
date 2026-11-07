@@ -262,14 +262,14 @@ describe("GeoJsonExportService", () => {
           site: {
             uuid: siteUuid,
             name: "Test Site",
-            frameworkKey: "terrafund"
+            frameworkKey: "terrafund-non-profits"
           }
         } as unknown as SitePolygon;
 
         mockPolygonGeometry.getGeoJSON.mockResolvedValue(mockGeoJsonString);
         mockSitePolygon.findOne.mockResolvedValue(sitePolygonWithFramework);
         mockPolygonAttributeValuesService.getActiveKeysByFrameworkKeys.mockResolvedValue(
-          new Map([["terrafund", ["anrSubcategory", "strata"]]])
+          new Map([["terrafund-non-profits", ["anrSubcategory", "strata"]]])
         );
         mockPolygonAttributeValuesService.getMapsByPolygonUuids.mockResolvedValue(
           new Map([[sitePolygonUuid, { anrSubcategory: "assisted" }]])
@@ -294,7 +294,7 @@ describe("GeoJsonExportService", () => {
           site: {
             uuid: siteUuid,
             name: "Test Site",
-            frameworkKey: "terrafund"
+            frameworkKey: "terrafund-non-profits"
           }
         } as unknown as SitePolygon;
 
@@ -305,7 +305,7 @@ describe("GeoJsonExportService", () => {
           data: { anrSubcategory: "stale-extended", leftover: "keep" }
         } as unknown as SitePolygonData);
         mockPolygonAttributeValuesService.getActiveKeysByFrameworkKeys.mockResolvedValue(
-          new Map([["terrafund", ["anrSubcategory"]]])
+          new Map([["terrafund-non-profits", ["anrSubcategory"]]])
         );
         mockPolygonAttributeValuesService.getMapsByPolygonUuids.mockResolvedValue(
           new Map([[sitePolygonUuid, { anrSubcategory: "farmer-managed" }]])
@@ -357,7 +357,7 @@ describe("GeoJsonExportService", () => {
           site: {
             uuid: siteUuid,
             name: "Test Site",
-            frameworkKey: "terrafund-3",
+            frameworkKey: "terrafund-non-profits",
             ppcExternalId: 99_999
           }
         } as unknown as SitePolygon;
@@ -568,7 +568,8 @@ describe("GeoJsonExportService", () => {
         expect(result.features[0].properties).toMatchObject(extendedData1);
         expect(result.features[1].properties).toMatchObject(extendedData2);
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
-          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2] }
+          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2] },
+          attributes: ["sitePolygonUuid", "data"]
         });
       });
 
@@ -901,7 +902,8 @@ describe("GeoJsonExportService", () => {
         expect(result.features[0].properties).toMatchObject(extendedData1);
         expect(result.features[1].properties).toMatchObject(extendedData2);
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
-          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2, sitePolygonUuid3] }
+          where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2, sitePolygonUuid3] },
+          attributes: ["sitePolygonUuid", "data"]
         });
       });
 

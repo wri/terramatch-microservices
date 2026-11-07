@@ -147,7 +147,9 @@ const COLUMNS: ColumnMapping<Project, ProjectAssociations>[] = [
   "projectSummary",
   "incomeGeneratingActivities",
   "lat",
-  { airtableColumn: "lng", dbColumn: "long", valueMap: async ({ long }) => long }
+  { airtableColumn: "lng", dbColumn: "long", valueMap: async ({ long }) => long },
+  "indirectEntities",
+  "gliComponents"
 ];
 
 export class ProjectEntity extends AirtableEntity<Project, ProjectAssociations> {

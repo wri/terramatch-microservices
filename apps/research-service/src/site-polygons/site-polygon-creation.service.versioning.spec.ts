@@ -566,7 +566,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         submissionCycle: null,
         status: "approved",
         validationStatus: "passed",
-        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund-non-profits" })
       } as unknown as SitePolygon;
 
       const unchangedForm: AttributeChangesDto = {
@@ -681,7 +681,7 @@ describe("SitePolygonCreationService - Versioning", () => {
         uuid: baseSitePolygonUuid,
         primaryUuid: "primary-uuid",
         polyName: "Original Name",
-        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund" })
+        loadSite: jest.fn().mockResolvedValue({ frameworkKey: "terrafund-non-profits" })
       } as unknown as SitePolygon;
 
       const newVersion = { uuid: "new-version-uuid" } as SitePolygon;
@@ -701,7 +701,7 @@ describe("SitePolygonCreationService - Versioning", () => {
 
       expect(polygonAttributeValuesService.upsert).toHaveBeenCalledWith(
         "new-version-uuid",
-        "terrafund",
+        "terrafund-non-profits",
         { anrSubcategory: "farmer-managed" },
         mockTransaction
       );
@@ -733,6 +733,26 @@ describe("SitePolygonCreationService - Versioning", () => {
 
       expect(polygonAttributeValuesService.upsert).not.toHaveBeenCalled();
       expect(basePolygon.loadSite).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("validateBulkAttributeUpdate", () => {
+    it("should check versioning eligibility and the attribute changes without writing anything", async () => {
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(new Map());
+      const createVersions = jest.spyOn(versioningService, "createVersions");
+
+      await service.validateBulkAttributeUpdate(["uuid-1", "uuid-2"], { numTrees: 10 });
+
+      expect(versioningService.validateBulkVersioningEligibility).toHaveBeenCalledWith(["uuid-1", "uuid-2"]);
+      expect(createVersions).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid attribute changes", async () => {
+      jest.spyOn(versioningService, "validateBulkVersioningEligibility").mockResolvedValue(new Map());
+
+      await expect(service.validateBulkAttributeUpdate(["uuid-1"], { numTrees: -1 })).rejects.toThrow(
+        "numTrees must be a non-negative integer"
+      );
     });
   });
 

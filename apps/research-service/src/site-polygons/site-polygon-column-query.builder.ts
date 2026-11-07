@@ -7,6 +7,7 @@ import {
   IndicatorOutputTreeCount,
   IndicatorOutputTreeCover,
   IndicatorOutputTreeCoverLoss,
+  Project,
   Site,
   SitePolygon
 } from "@terramatch-microservices/database/entities";
@@ -63,6 +64,14 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
   }
 
   async filterSiteUuids(siteUuids: string[]) {
+    return this.where({ siteUuid: { [Op.in]: siteUuids } });
+  }
+
+  async filterProjectUuids(projectUuids: string[]) {
+    const siteUuids = Subquery.select(Site, "uuid").in(
+      "projectId",
+      Subquery.select(Project, "id").in("uuid", projectUuids).literal
+    ).literal;
     return this.where({ siteUuid: { [Op.in]: siteUuids } });
   }
 

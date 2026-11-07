@@ -66,7 +66,7 @@ describe("ProjectPolygonPolicy", () => {
 
     it("should not allow access to project polygons outside their framework", async () => {
       const user = await UserFactory.create();
-      const fundingProgramme = await FundingProgrammeFactory.create({ frameworkKey: "terrafund" });
+      const fundingProgramme = await FundingProgrammeFactory.create({ frameworkKey: "terrafund-non-profits" });
       const pitch = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme.uuid });
       const projectPolygon = await ProjectPolygonFactory.forPitch(pitch).build();
 
@@ -79,14 +79,14 @@ describe("ProjectPolygonPolicy", () => {
     it("should handle multiple frameworks", async () => {
       const user = await UserFactory.create();
       const fundingProgramme1 = await FundingProgrammeFactory.create({ frameworkKey: "ppc" });
-      const fundingProgramme2 = await FundingProgrammeFactory.create({ frameworkKey: "terrafund" });
+      const fundingProgramme2 = await FundingProgrammeFactory.create({ frameworkKey: "terrafund-non-profits" });
       const pitch1 = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme1.uuid });
       const pitch2 = await ProjectPitchFactory.create({ fundingProgrammeId: fundingProgramme2.uuid });
 
       const projectPolygon1 = await ProjectPolygonFactory.forPitch(pitch1).build();
       const projectPolygon2 = await ProjectPolygonFactory.forPitch(pitch2).build();
 
-      mockContextForUser(user, "framework-ppc", "framework-terrafund");
+      mockContextForUser(user, "framework-ppc", "framework-terrafund-non-profits");
 
       await expectCan(service, "read", projectPolygon1);
       await expectCan(service, "read", projectPolygon2);

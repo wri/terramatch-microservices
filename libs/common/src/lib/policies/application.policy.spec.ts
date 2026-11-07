@@ -6,7 +6,7 @@ import { Application } from "@terramatch-microservices/database/entities";
 import {
   ApplicationFactory,
   OrganisationFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
 
@@ -26,7 +26,7 @@ describe("ApplicationPolicy", () => {
   });
 
   it("allows reading applications for all admins", async () => {
-    mockUserContext({ userId: 123, permissions: ["framework-terrafund"] });
+    mockUserContext({ userId: 123, permissions: ["framework-terrafund-non-profits"] });
     await expectCan(service, "read", new Application());
   });
 
@@ -40,13 +40,12 @@ describe("ApplicationPolicy", () => {
     await expectCannot(service, "read", application);
   });
 
-  it("allows reading associated org applications", async () => {
+  it("does not allow reading applications of an org the user has requested to join", async () => {
     const associatedOrg = await OrganisationFactory.create();
     const pendingOrg = await OrganisationFactory.create();
-    const user = await UserFactory.create();
+    const user = await UserFactory.create({ organisationId: associatedOrg.id });
     mockContextForUser(user, "manage-own");
-    await OrganisationUserFactory.create({ organisationId: associatedOrg.id, userId: user.id, status: "approved" });
-    await OrganisationUserFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "pending" });
+    await OrganisationJoinRequestFactory.create({ organisationId: pendingOrg.id, userId: user.id, status: "pending" });
     const associatedSubmission = await ApplicationFactory.create({ organisationUuid: associatedOrg.uuid });
     const pendingSubmission = await ApplicationFactory.create({ organisationUuid: pendingOrg.uuid });
     await expectCan(service, "read", associatedSubmission);

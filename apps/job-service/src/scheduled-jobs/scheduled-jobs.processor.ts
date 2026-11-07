@@ -1,30 +1,26 @@
 import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Job, Queue } from "bullmq";
-import { Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
+import { Framework, Nursery, Project, ScheduledJob, Site } from "@terramatch-microservices/database/entities";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { Op } from "sequelize";
-import { ReportGenerationService } from "@terramatch-microservices/common/tasks/report-generation-service";
+import {
+  ReportGenerationService,
+  TASK_REPORT_FORM_ATTRIBUTES
+} from "@terramatch-microservices/common/tasks/report-generation-service";
 import { DateTime } from "luxon";
 import {
-  ReportReminder,
   ScheduledJobDefinition,
   SiteAndNurseryReminder,
   TaskDue
 } from "@terramatch-microservices/database/constants/scheduled-jobs";
-import { TerrafundReportReminderEmail } from "@terramatch-microservices/common/email/terrafund-report-reminder.email";
 import { TerrafundSiteAndNurseryReminderEmail } from "@terramatch-microservices/common/email/terrafund-site-and-nursery-reminder.email";
 import * as Sentry from "@sentry/nestjs";
-import {
-  FRAMEWORK_KEYS_TF_REPORT_REMINDER,
-  FrameworkKey,
-  TERRAFUND
-} from "@terramatch-microservices/database/constants/framework";
+import { FrameworkKey, TERRAFUND_NON_PROFITS } from "@terramatch-microservices/database/constants/framework";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 
 export const TASK_DUE_EVENT = "taskDue" as const;
-export const REPORT_REMINDER_EVENT = "reportReminder" as const;
 export const SITE_AND_NURSERY_REMINDER_EVENT = "siteAndNurseryReminder" as const;
 
 const IS_DEV = process.env["NODE_ENV"] === "development";
@@ -55,10 +51,6 @@ export class ScheduledJobsProcessor extends WorkerHost {
           await this.processTaskDue(taskDefinition as TaskDue);
           break;
 
-        case REPORT_REMINDER_EVENT:
-          await this.processReportReminder(taskDefinition as ReportReminder);
-          break;
-
         case SITE_AND_NURSERY_REMINDER_EVENT:
           await this.processSiteAndNurseryReminder(taskDefinition as SiteAndNurseryReminder);
           break;
@@ -80,15 +72,19 @@ export class ScheduledJobsProcessor extends WorkerHost {
     const dueAt = DateTime.fromISO(dueAtString).toJSDate();
     await this.reportGenerationService.createFinancialReports(frameworkKey as FrameworkKey, dueAt);
 
+    const framework = await Framework.findOne({
+      where: { slug: frameworkKey },
+      attributes: [...TASK_REPORT_FORM_ATTRIBUTES]
+    });
     const failed: PromiseSettledResult<void>[] = [];
     const builder = new PaginatedQueryBuilder(Project, 100)
       .attributes(["id"])
       .where({ frameworkKey, status: { [Op.ne]: "draft" }, isArchived: false });
     for await (const page of batchFindAll(builder)) {
       failed.push(
-        ...(await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt)))).filter(
-          ({ status }) => status === "rejected"
-        )
+        ...(
+          await Promise.allSettled(page.map(({ id }) => this.reportGenerationService.createTask(id, dueAt, framework)))
+        ).filter(({ status }) => status === "rejected")
       );
     }
 
@@ -97,44 +93,13 @@ export class ScheduledJobsProcessor extends WorkerHost {
     }
   }
 
-  private async processReportReminder(reportReminder: ReportReminder) {
-    if (IS_DEV) return;
-
-    this.logger.log(`processReportReminder ${JSON.stringify(reportReminder)}`);
-    const { frameworkKey } = reportReminder;
-    if ((FRAMEWORK_KEYS_TF_REPORT_REMINDER as readonly string[]).includes(frameworkKey)) {
-      this.logger.debug(`Report reminder for ${frameworkKey} is sent from TaskDue job processing; skipping duplicate`);
-      return;
-    }
-
-    if (frameworkKey !== TERRAFUND) {
-      this.logger.warn(`Report reminder for unsupported framework: ${frameworkKey}, ignoring`);
-      return;
-    }
-
-    const projectIds = (
-      await Project.findAll({
-        where: {
-          frameworkKey,
-          [Op.or]: [
-            { id: { [Op.in]: Subquery.select(Site, "projectId").literal } },
-            { id: { [Op.in]: Subquery.select(Nursery, "projectId").literal } }
-          ]
-        },
-        attributes: ["id"]
-      })
-    ).map(({ id }) => id);
-
-    await new TerrafundReportReminderEmail({ projectIds }).sendLater(this.emailQueue);
-  }
-
   private async processSiteAndNurseryReminder(siteAndNurseryReminder: SiteAndNurseryReminder) {
     if (IS_DEV) return;
 
     this.logger.log(`processSiteAndNurseryReminder ${JSON.stringify(siteAndNurseryReminder)}`);
     const { frameworkKey } = siteAndNurseryReminder;
-    if (frameworkKey !== "terrafund") {
-      this.logger.warn(`Site and Nursery reminder for framework other than terrafund: ${frameworkKey}, ignoring`);
+    if (frameworkKey !== TERRAFUND_NON_PROFITS) {
+      this.logger.warn(`Site and Nursery reminder for unsupported framework: ${frameworkKey}, ignoring`);
       return;
     }
 
@@ -142,6 +107,7 @@ export class ScheduledJobsProcessor extends WorkerHost {
       await Project.findAll({
         where: {
           frameworkKey,
+          isArchived: false,
           [Op.and]: [
             { id: { [Op.notIn]: Subquery.select(Site, "projectId").literal } },
             { id: { [Op.notIn]: Subquery.select(Nursery, "projectId").literal } }

@@ -35,7 +35,7 @@ describe("DisturbanceReportPolicy", () => {
   it("allows managing disturbance reports in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await DisturbanceReportFactory.create({ frameworkKey: "ppc" });
-    const tf = await DisturbanceReportFactory.create({ frameworkKey: "terrafund" });
+    const tf = await DisturbanceReportFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "create", "deleteFiles", "export"], ppc]],
       cannot: [[["read", "delete", "update", "approve", "create", "deleteFiles", "export"], tf]]

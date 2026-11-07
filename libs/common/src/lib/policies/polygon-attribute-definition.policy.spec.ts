@@ -28,7 +28,7 @@ describe("PolygonAttributeDefinitionPolicy", () => {
   it("allows CRUD for the user's frameworks and denies others", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "ppc" });
-    const terrafund = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "terrafund" });
+    const terrafund = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "terrafund-non-profits" });
 
     await expectCan(service, ["read", "create", "update", "delete"], ppc);
     await expectCannot(service, ["read", "create", "update", "delete"], terrafund);
@@ -47,7 +47,9 @@ describe("PolygonAttributeDefinitionPolicy", () => {
     await ProjectUserFactory.create({ userId: user.id, projectId: project.id });
     await SiteFactory.create({ projectId: project.id, frameworkKey: "ppc" });
     const definition = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "ppc" });
-    const otherFrameworkDefinition = await PolygonAttributeDefinitionFactory.create({ frameworkKey: "terrafund" });
+    const otherFrameworkDefinition = await PolygonAttributeDefinitionFactory.create({
+      frameworkKey: "terrafund-non-profits"
+    });
 
     mockContextForUser(user, "manage-own");
 

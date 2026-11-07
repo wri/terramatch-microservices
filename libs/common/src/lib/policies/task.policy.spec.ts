@@ -30,7 +30,7 @@ describe("TaskPolicy", () => {
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
     const ppcTask = await TaskFactory.create({ projectId: ppc.id });
     ppcTask.project = ppc;
-    const tf = await ProjectFactory.create({ frameworkKey: "terrafund" });
+    const tf = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
     const tfTask = await TaskFactory.create({ projectId: tf.id });
     tfTask.project = tf;
 

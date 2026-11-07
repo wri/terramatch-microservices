@@ -12,7 +12,7 @@ import {
   FormSubmissionFactory,
   FundingProgrammeFactory,
   OrganisationFactory,
-  OrganisationUserFactory,
+  OrganisationJoinRequestFactory,
   ProjectFactory,
   StageFactory,
   UserFactory
@@ -66,18 +66,18 @@ describe("ApplicationsController", () => {
       );
     });
 
-    it("returns applications related to the user's orgs for PDs", async () => {
-      const orgs = await OrganisationFactory.createMany(3);
+    it("returns applications related to the user's org for PDs", async () => {
+      const orgs = await OrganisationFactory.createMany(2);
       const user = await UserFactory.create({ organisationId: orgs[0].id });
-      await OrganisationUserFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "approved" });
-      await OrganisationUserFactory.create({ organisationId: orgs[2].id, userId: user.id, status: "pending" });
+      // A pending request to join an organisation does not grant access to its applications.
+      await OrganisationJoinRequestFactory.create({ organisationId: orgs[1].id, userId: user.id, status: "pending" });
       mockContextForUser(user, "manage-own");
       const apps = await Promise.all(orgs.map(({ uuid }) => ApplicationFactory.create({ organisationUuid: uuid })));
-      const userApps = apps.slice(0, 2); // the third is not a confirmed org association
+      const userApps = apps.slice(0, 1);
       await ApplicationFactory.create();
       const result = serialize(await controller.index({}));
       const dtos = (result.data as Resource[]).map(({ attributes }) => attributes);
-      expect(dtos.length).toBe(2);
+      expect(dtos.length).toBe(1);
       expect(dtos).toMatchObject(
         sortBy(userApps, "id").map(({ uuid, organisationUuid, fundingProgrammeUuid }) =>
           expect.objectContaining({ uuid, organisationUuid, fundingProgrammeUuid })

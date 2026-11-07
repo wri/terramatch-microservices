@@ -40,7 +40,7 @@ describe("NurseryPolicy", () => {
   it("allows managing nurseries in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await NurseryFactory.create({ frameworkKey: "ppc" });
-    const tf = await NurseryFactory.create({ frameworkKey: "terrafund" });
+    const tf = await NurseryFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
       cannot: [[["read", "delete", "update", "approve", "deleteFiles"], tf]]

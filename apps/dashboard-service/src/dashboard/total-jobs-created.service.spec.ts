@@ -367,7 +367,7 @@ describe("TotalJobsCreatedService - filters", () => {
     it("should apply filters correctly", async () => {
       const filters: DashboardQueryDto = {
         country: "Kenya",
-        programmes: ["terrafund"],
+        programmes: ["terrafund-non-profits"],
         cohort: ["2023"]
       };
       const mockBuilder = baseMocks();

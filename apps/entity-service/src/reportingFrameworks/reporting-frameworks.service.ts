@@ -46,6 +46,24 @@ const FRAMEWORK_FORM_MAP: ReadonlyArray<{
   { key: "disturbanceReportFormUuid", model: DisturbanceReport.LARAVEL_TYPE }
 ];
 
+const REPORT_FORM_KEYS = [
+  "projectReportFormUuid",
+  "siteReportFormUuid",
+  "nurseryReportFormUuid",
+  "financialReportFormUuid",
+  "disturbanceReportFormUuid"
+] as const satisfies ReadonlyArray<keyof FrameworkFormUuids>;
+type ReportFormKey = (typeof REPORT_FORM_KEYS)[number];
+
+// A framework may have no report forms (it will not generate reports), but if it has any report
+// forms, it must have all of these.
+const REQUIRED_REPORT_FORMS: ReadonlyArray<[ReportFormKey, string]> = [
+  ["projectReportFormUuid", "Project Report"],
+  ["siteReportFormUuid", "Site Report"]
+];
+
+const hasFormUuid = (uuid: string | null | undefined) => uuid != null && uuid !== "";
+
 @Injectable()
 export class ReportingFrameworksService {
   private readonly logger = new Logger(ReportingFrameworksService.name);
@@ -75,6 +93,7 @@ export class ReportingFrameworksService {
    * Caller must have added the permission to permissions.ts and run sync first for it to survive sync.
    */
   async create(attributes: CreateReportingFrameworkAttributes): Promise<Framework> {
+    this.checkReportForms(attributes);
     await this.checkFormUuids(attributes);
     const slug = attributes.slug as FrameworkKey;
     const framework = await Framework.create({
@@ -95,6 +114,12 @@ export class ReportingFrameworksService {
   }
 
   async update(framework: Framework, attributes: UpdateReportingFrameworkAttributes): Promise<Framework> {
+    // Check the report forms the framework will have after this update is applied.
+    this.checkReportForms(
+      Object.fromEntries(
+        REPORT_FORM_KEYS.map(key => [key, attributes[key] === undefined ? framework[key] : attributes[key]])
+      )
+    );
     await this.checkFormUuids(attributes, framework.slug as FrameworkKey);
     const payload: Partial<Attributes<Framework>> = {};
     if (attributes.name != null && attributes.name !== "") payload.name = attributes.name;
@@ -175,6 +200,17 @@ export class ReportingFrameworksService {
 
     const uuidsClause = currentUuids.length > 0 ? { uuid: { [Op.notIn]: currentUuids } } : {};
     await Form.update({ frameworkKey: null, model: null }, { where: { frameworkKey: slug, ...uuidsClause } });
+  }
+
+  private checkReportForms(formUuids: FrameworkFormUuids) {
+    if (!REPORT_FORM_KEYS.some(key => hasFormUuid(formUuids[key]))) return;
+
+    const missing = REQUIRED_REPORT_FORMS.filter(([key]) => !hasFormUuid(formUuids[key])).map(([, name]) => name);
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Reporting frameworks with any report forms must also have the following forms: ${missing.join(", ")}.`
+      );
+    }
   }
 
   private async checkFormUuids(

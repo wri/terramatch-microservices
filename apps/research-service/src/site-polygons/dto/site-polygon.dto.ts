@@ -17,7 +17,7 @@ import {
   PolygonValidationStatus,
   SITE_POLYGON_SUBMISSION_CYCLES
 } from "@terramatch-microservices/database/constants";
-import { SitePolygon } from "@terramatch-microservices/database/entities";
+import { Site, SitePolygon } from "@terramatch-microservices/database/entities";
 import { Polygon } from "geojson";
 
 export type IndicatorDto =
@@ -55,20 +55,26 @@ export type CustomAttributesDto = Record<string, string | string[] | null>;
 
 @JsonApiDto({ type: "sitePolygons" })
 export class SitePolygonLightDto extends HybridSupportDto {
-  constructor(sitePolygon?: SitePolygon, indicators?: IndicatorDto[], customAttributes?: CustomAttributesDto) {
+  constructor(
+    sitePolygon?: SitePolygon,
+    indicators?: IndicatorDto[],
+    customAttributes?: CustomAttributesDto,
+    site?: Site | null
+  ) {
     super();
     if (sitePolygon != null) {
+      const polygonSite = site ?? sitePolygon.site;
       populateDto<SitePolygonLightDto, SitePolygon>(this, sitePolygon, {
         name: sitePolygon.polyName,
         siteId: sitePolygon.siteUuid,
-        projectId: sitePolygon.site?.project?.uuid,
-        projectShortName: sitePolygon.site?.project?.shortName,
-        projectName: sitePolygon.site?.project?.name ?? null,
-        projectCountry: sitePolygon.site?.project?.level0Project ?? null,
-        ppcExternalId: sitePolygon.site?.ppcExternalId ?? null,
+        projectId: polygonSite?.project?.uuid,
+        projectShortName: polygonSite?.project?.shortName,
+        projectName: polygonSite?.project?.name ?? null,
+        projectCountry: polygonSite?.project?.level0Project ?? null,
+        ppcExternalId: polygonSite?.ppcExternalId ?? null,
         indicators: indicators ?? [],
         customAttributes: customAttributes ?? {},
-        siteName: sitePolygon.site?.name ?? undefined,
+        siteName: polygonSite?.name ?? undefined,
         disturbanceableId: sitePolygon?.disturbance?.disturbanceableId ?? null,
         disturbanceReportUuid: sitePolygon?.disturbance?.getDisturbanceReportUuid() ?? null,
         lightResource: true
@@ -247,21 +253,23 @@ export class SitePolygonFullDto extends SitePolygonLightDto {
     indicators?: IndicatorDto[],
     establishmentTreeSpecies?: TreeSpeciesDto[],
     reportingPeriods?: ReportingPeriodDto[],
-    customAttributes?: CustomAttributesDto
+    customAttributes?: CustomAttributesDto,
+    site?: Site | null
   ) {
     super();
 
+    const polygonSite = site ?? sitePolygon.site;
     populateDto<SitePolygonFullDto, SitePolygon>(this, sitePolygon, {
       name: sitePolygon.polyName,
       siteId: sitePolygon.siteUuid,
-      projectId: sitePolygon.site?.project?.uuid,
-      projectShortName: sitePolygon.site?.project?.shortName,
-      projectName: sitePolygon.site?.project?.name ?? null,
-      projectCountry: sitePolygon.site?.project?.level0Project ?? null,
-      ppcExternalId: sitePolygon.site?.ppcExternalId ?? null,
+      projectId: polygonSite?.project?.uuid,
+      projectShortName: polygonSite?.project?.shortName,
+      projectName: polygonSite?.project?.name ?? null,
+      projectCountry: polygonSite?.project?.level0Project ?? null,
+      ppcExternalId: polygonSite?.ppcExternalId ?? null,
       indicators: indicators ?? [],
       customAttributes: customAttributes ?? {},
-      siteName: sitePolygon.site?.name ?? undefined,
+      siteName: polygonSite?.name ?? undefined,
       geometry: sitePolygon.polygon?.polygon,
       establishmentTreeSpecies: establishmentTreeSpecies ?? [],
       reportingPeriods: reportingPeriods ?? [],

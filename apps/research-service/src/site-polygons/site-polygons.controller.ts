@@ -56,6 +56,8 @@ import { Op } from "sequelize";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { DelayedJobDto } from "@terramatch-microservices/common/dto/delayed-job.dto";
+import { BULK_ASYNC_THRESHOLD, SITE_POLYGON_BULK_QUEUE, SitePolygonBulkProcessor } from "./site-polygon-bulk.processor";
+import { SitePolygonBulkUpdateService } from "./site-polygon-bulk-update.service";
 import { GeometryUploadJobData } from "./geometry-upload.processor";
 import { isNumberPage } from "@terramatch-microservices/common/dto/page.dto";
 import {
@@ -69,6 +71,8 @@ import { SitePolygonVersioningService } from "./site-polygon-versioning.service"
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
+import { GeoJsonExportBodyDto } from "../geojson-export/dto/geojson-export-request.dto";
+import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "../geojson-export/geojson-export.processor";
 import { GeometryUploadComparisonSummaryDto } from "./dto/geometry-upload-comparison-summary.dto";
 import { GeometryUploadComparisonService } from "./geometry-upload-comparison.service";
 import { SitePolygonStatusBulkUpdateBodyDto } from "./dto/site-polygon-status-update.dto";
@@ -103,7 +107,10 @@ export class SitePolygonsController {
     private readonly geometryUploadComparisonService: GeometryUploadComparisonService,
     private readonly sitePolygonMapIndexService: SitePolygonMapIndexService,
     private readonly sitePolygonSummaryService: SitePolygonSummaryService,
-    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue
+    private readonly sitePolygonBulkUpdateService: SitePolygonBulkUpdateService,
+    @InjectQueue("geometry-upload") private readonly geometryUploadQueue: Queue,
+    @InjectQueue(GEOJSON_EXPORT_QUEUE) private readonly geoJsonExportQueue: Queue,
+    @InjectQueue(SITE_POLYGON_BULK_QUEUE) private readonly sitePolygonBulkQueue: Queue
   ) {}
 
   private readonly logger = new Logger(SitePolygonsController.name);
@@ -250,6 +257,27 @@ export class SitePolygonsController {
     const resourceId = (query.uuid ?? query.siteUuid ?? query.projectUuid) as string;
 
     return document.addData(resourceId, new GeoJsonExportDto(featureCollection));
+  }
+
+  @Post("exports")
+  @ApiOperation({
+    operationId: "createSitePolygonsGeoJsonExport",
+    summary: "Export active site polygons as a GeoJSON file in a delayed job",
+    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids. The file is written to S3
+    in the background; the completed delayed job payload holds a fileDownloads resource with a signed URL.`
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Exactly one of projectUuids, siteUuids or polygonUuids must be provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "A requested project or site was not found." })
+  async createGeoJsonExport(@Body() payload: GeoJsonExportBodyDto) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const scope = payload.data.attributes;
+    const { entityName, entityType } = await this.geoJsonExportService.getExportTarget(scope);
+    return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType);
   }
 
   @Get("mapIndex")
@@ -457,9 +485,9 @@ export class SitePolygonsController {
   }
 
   private async findDeletedSitePolygons(query: SitePolygonQueryDto) {
-    const { siteId, search, searchFields } = query;
-    if (siteId == null || siteId.length !== 1) {
-      throw new BadRequestException("deletedOnly requires exactly one siteId[] value.");
+    const { siteId, projectId, search, searchFields } = query;
+    if (siteId == null && projectId == null) {
+      throw new BadRequestException("deletedOnly requires at least one siteId[] or projectId[] value.");
     }
 
     const page = query.page ?? {};
@@ -475,7 +503,8 @@ export class SitePolygonsController {
     }
 
     let queryBuilder = this.sitePolygonService.buildDeletedQuery(page);
-    queryBuilder = await queryBuilder.filterSiteUuids(siteId);
+    if (siteId != null) queryBuilder = await queryBuilder.filterSiteUuids(siteId);
+    if (projectId != null) queryBuilder = await queryBuilder.filterProjectUuids(projectId);
     if (search != null) {
       queryBuilder = await queryBuilder.addSearch(search, searchFields);
     }
@@ -504,9 +533,11 @@ export class SitePolygonsController {
     description: `Creates a new version for each site polygon with the same attribute changes applied.
     Supported fields: plantStart, practice, targetSys, distr, numTrees, submissionCycle.
     At least one attribute field must be provided. Empty string or empty array explicitly clears a field.
-    Omitted fields inherit values from each polygon's active version.`
+    Omitted fields inherit values from each polygon's active version.
+
+    Up to ${BULK_ASYNC_THRESHOLD} polygons are updated in the request. Larger selections return a delayed job.`
   })
-  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @JsonApiResponse([{ data: SitePolygonLightDto, hasMany: true }, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data or empty attributeChanges." })
   @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
@@ -530,70 +561,31 @@ export class SitePolygonsController {
       throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
-    for (const sitePolygon of sitePolygons) {
-      await this.policyService.authorize("update", sitePolygon);
-    }
-
+    await this.policyService.authorize("update", sitePolygons);
     const userId = this.policyService.userId as number;
 
-    const user = await User.findByPk(userId, {
-      attributes: ["firstName", "lastName", "roles"]
-    });
-    const source = user?.getSourceFromRoles() ?? "terramatch";
-    const userFullName = user?.fullName ?? null;
-    const isAdminSession = isAdminSessionFromRoles(user?.roles);
-
-    const newVersions = await SitePolygon.sql.transaction(async transaction =>
-      this.sitePolygonCreationService.bulkUpdateSitePolygonAttributes(
-        uuids,
-        attributeChanges,
+    if (sitePolygons.length > BULK_ASYNC_THRESHOLD) {
+      await this.sitePolygonCreationService.validateBulkAttributeUpdate(uuids, attributeChanges);
+      return await SitePolygonBulkProcessor.queueBulkAttributeUpdate(this.sitePolygonBulkQueue, sitePolygons, {
         userId,
-        userFullName,
-        source,
-        transaction,
-        isAdminSession,
-        user?.canReviewPolygons ?? false
-      )
-    );
-
-    if (source === "greenhouse") {
-      const polygonUuids = newVersions
-        .map(sp => sp.polygonUuid)
-        .filter((uuid): uuid is string => uuid != null && uuid !== "");
-      if (polygonUuids.length > 0) {
-        this.sitePolygonService
-          .enqueuePolygonValidation(polygonUuids, userId, {
-            siteUuid: newVersions[0]?.siteUuid ?? undefined,
-            triggerType: "gh_push"
-          })
-          .catch(err =>
-            this.logger.error("Failed to enqueue automated polygon validation after bulk attribute update", err)
-          );
-      }
+        sitePolygonUuids: uuids,
+        attributeChanges
+      });
     }
 
-    const document = buildJsonApi(SitePolygonLightDto);
-    const associations = await this.sitePolygonService.loadAssociationDtos(newVersions, true);
-
-    for (const sitePolygon of newVersions) {
-      document.addData(
-        sitePolygon.uuid,
-        await this.sitePolygonService.buildLightDto(sitePolygon, associations[sitePolygon.id] ?? {})
-      );
-    }
-
-    this.logger.log(`Bulk attribute update created ${newVersions.length} version(s) by user ${userId}`);
-
-    return document;
+    const newVersions = await this.sitePolygonBulkUpdateService.updateAttributes(uuids, attributeChanges, userId);
+    return await this.sitePolygonService.buildLightDocument(newVersions);
   }
 
   @Patch("status/:status")
   @ApiOperation({
     operationId: "updateSitePolygonStatus",
     summary: "Update the status of the list of site polygons",
-    description: "Update the status of the list of site polygons"
+    description: `Update the status of the list of site polygons.
+
+    Up to ${BULK_ASYNC_THRESHOLD} polygons are updated in the request. Larger selections return a delayed job.`
   })
-  @JsonApiResponse({ data: SitePolygonLightDto, hasMany: true })
+  @JsonApiResponse([{ data: SitePolygonLightDto, hasMany: true }, DelayedJobDto])
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request data." })
   @ExceptionResponse(NotFoundException, { description: "At least one of the site polygons was not found." })
@@ -604,16 +596,25 @@ export class SitePolygonsController {
 
     await this.policyService.authorize("update", SitePolygon);
     const userId = this.policyService.userId as number;
-    const user = await User.findByPk(userId, {
-      attributes: ["id", "firstName", "lastName", "emailAddress"]
-    });
     const { data, comment } = request;
-    const updatedUuids = await this.sitePolygonService.updateBulkStatus(status, data, comment, user);
-    const document = buildJsonApi(SitePolygonLightDto);
-    for (const sitePolygon of updatedUuids) {
-      document.addData(sitePolygon.uuid, await this.sitePolygonService.buildLightDto(sitePolygon, {}));
+
+    if (data.length > BULK_ASYNC_THRESHOLD) {
+      const uuids = data.map(({ id }) => id);
+      await this.sitePolygonService.assertStatusUpdateAllowed(status, uuids);
+      const sitePolygons = await SitePolygon.findAll({
+        where: { uuid: { [Op.in]: uuids } },
+        attributes: ["siteUuid"]
+      });
+      return await SitePolygonBulkProcessor.queueBulkStatusUpdate(this.sitePolygonBulkQueue, sitePolygons, {
+        userId,
+        status,
+        data,
+        comment
+      });
     }
-    return document;
+
+    const updatedSitePolygons = await this.sitePolygonBulkUpdateService.updateStatus(status, data, comment, userId);
+    return await this.sitePolygonService.buildLightDocument(updatedSitePolygons);
   }
 
   @Patch()
@@ -651,11 +652,15 @@ export class SitePolygonsController {
        criteria site records, audit statuses, and geometry data. This operation soft deletes
        ALL related site polygons by primaryUuid (version management) and deletes polygon
        geometry for all related site polygons. The request body follows JSON:API format with
-       an array of resource identifiers (type and id).`
+       an array of resource identifiers (type and id).
+
+       Up to ${BULK_ASYNC_THRESHOLD} polygons are deleted in the request. Larger selections return a delayed job.`
   })
-  @JsonApiDeletedResponse([getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)], {
-    description: "Site polygons and all associated records were deleted"
-  })
+  @JsonApiDeletedResponse(
+    [getDtoType(SitePolygonFullDto), getDtoType(SitePolygonLightDto)],
+    { description: "Site polygons and all associated records were deleted, or a delayed job is deleting them" },
+    [DelayedJobDto]
+  )
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(BadRequestException, { description: "Invalid request body or empty UUID list." })
   @ExceptionResponse(NotFoundException, { description: "One or more site polygons not found." })
@@ -677,8 +682,10 @@ export class SitePolygonsController {
       throw new NotFoundException(`Site polygons not found for UUIDs: ${missingUuids.join(", ")}`);
     }
 
-    for (const sitePolygon of sitePolygons) {
-      await this.policyService.authorize("delete", sitePolygon);
+    await this.policyService.authorize("delete", sitePolygons);
+
+    if (sitePolygons.length > BULK_ASYNC_THRESHOLD) {
+      return await SitePolygonBulkProcessor.queueBulkDelete(this.sitePolygonBulkQueue, sitePolygons);
     }
 
     const deletedUuids = await this.sitePolygonService.bulkDeleteSitePolygons(sitePolygons);
@@ -696,12 +703,12 @@ export class SitePolygonsController {
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
   @ExceptionResponse(NotFoundException, { description: "Site polygon not found." })
   async getVersions(@Param("primaryUuid") primaryUuid: string) {
-    await this.policyService.authorize("read", SitePolygon);
-
     const versions = await this.versioningService.getVersionHistory(primaryUuid);
     if (versions.length === 0) {
       throw new NotFoundException(`Site polygon not found: ${primaryUuid}`);
     }
+
+    await this.policyService.authorize("read", versions);
 
     const document = buildJsonApi(SitePolygonLightDto, { forceDataArray: true });
     const associations = await this.sitePolygonService.loadAssociationDtos(versions, true);
@@ -743,7 +750,12 @@ export class SitePolygonsController {
       throw new BadRequestException("Entity id in path and payload do not match");
     }
 
-    await this.policyService.authorize("update", SitePolygon);
+    const version = await SitePolygon.findOne({ where: { uuid }, attributes: ["id", "siteUuid", "createdBy"] });
+    if (version == null) {
+      throw new NotFoundException(`Site polygon version not found: ${uuid}`);
+    }
+
+    await this.policyService.authorize("update", version);
 
     const userId = this.policyService.userId;
     if (userId == null) {

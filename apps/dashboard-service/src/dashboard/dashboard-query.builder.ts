@@ -3,7 +3,11 @@ import { Model, ModelCtor } from "sequelize-typescript";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { isObject, flatten, isEmpty } from "lodash";
 import { Project } from "@terramatch-microservices/database/entities";
-import { mapLandscapeCodesToNames } from "@terramatch-microservices/database/constants";
+import {
+  ENTERPRISES,
+  mapLandscapeCodesToNames,
+  TERRAFUND_NON_PROFITS
+} from "@terramatch-microservices/database/constants";
 import { InternalServerErrorException } from "@nestjs/common";
 
 export class DashboardProjectsQueryBuilder<T extends Model = Project> {
@@ -45,7 +49,7 @@ export class DashboardProjectsQueryBuilder<T extends Model = Project> {
 
   queryFilters(filters: DashboardQueryDto) {
     const where: WhereOptions = {
-      frameworkKey: { [Op.in]: ["terrafund", "terrafund-landscapes", "enterprises", "terrafund-3"] },
+      frameworkKey: { [Op.in]: [TERRAFUND_NON_PROFITS, ENTERPRISES] },
       isTest: false
     };
     const organisationWhere: WhereOptions = {

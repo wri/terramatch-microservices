@@ -1,21 +1,13 @@
 import { Test } from "@nestjs/testing";
 import { ProjectPitchService } from "./project-pitch.service";
-import { Organisation, ProjectPitch, User } from "@terramatch-microservices/database/entities";
+import { ProjectPitch, User } from "@terramatch-microservices/database/entities";
 import { OrganisationFactory, UserFactory } from "@terramatch-microservices/database/factories";
 import { NumberPage } from "@terramatch-microservices/common/dto/page.dto";
-import { OrganisationUserFactory } from "@terramatch-microservices/database/factories/organisation-user.factory";
 import { ProjectPitchQueryDto } from "./dto/project-pitch-query.dto";
 
 async function getUserWithOrganisation() {
-  const user = await UserFactory.create();
   const org = await OrganisationFactory.create();
-  const orgUser = await OrganisationUserFactory.create({
-    organisationId: org.id,
-    userId: user.id,
-    status: "approved"
-  });
-  user.organisations = [{ ...orgUser, ...org } as unknown as Organisation & { OrganisationUser: typeof orgUser }];
-  return user;
+  return await UserFactory.create({ organisationId: org.id });
 }
 
 function getDefaultPagination() {

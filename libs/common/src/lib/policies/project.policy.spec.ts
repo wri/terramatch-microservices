@@ -40,7 +40,7 @@ describe("ProjectPolicy", () => {
   it("allows managing projects in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectFactory.create({ frameworkKey: "ppc" });
-    const tf = await ProjectFactory.create({ frameworkKey: "terrafund" });
+    const tf = await ProjectFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve"], ppc]],
       cannot: [[["read", "delete", "update", "approve"], tf]]
@@ -71,6 +71,24 @@ describe("ProjectPolicy", () => {
         // This project is not in the "draft" state
         ["delete", p4]
       ]
+    });
+  });
+
+  it("allows updating answers directly on draft and information-required own projects only", async () => {
+    const org = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: org.id });
+    mockContextForUser(user, "manage-own");
+
+    const draft = await ProjectFactory.create({ status: "draft", organisationId: org.id });
+    const informationRequired = await ProjectFactory.create({ status: "information-required", organisationId: org.id });
+    const approved = await ProjectFactory.create({ status: "approved", organisationId: org.id });
+    await expectAuthority(service, {
+      can: [
+        ["updateAnswers", draft],
+        ["updateAnswers", informationRequired]
+      ],
+      // Approved entities go through a change request instead of editing answers directly.
+      cannot: [["updateAnswers", approved]]
     });
   });
 

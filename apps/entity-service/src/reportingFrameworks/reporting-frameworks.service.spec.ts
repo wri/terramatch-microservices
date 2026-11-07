@@ -35,14 +35,14 @@ describe("ReportingFrameworksService", () => {
 
   describe("findByUuid", () => {
     it("should return a framework by uuid", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
 
       const result = await service.findByUuid(framework.uuid as string);
 
       expect(result).toBeInstanceOf(Framework);
       expect(result.uuid).toBe(framework.uuid);
-      expect(result.slug).toBe("terrafund");
+      expect(result.slug).toBe("terrafund-non-profits");
     });
 
     it("should throw NotFoundException for invalid uuid", async () => {
@@ -55,14 +55,14 @@ describe("ReportingFrameworksService", () => {
 
   describe("findBySlug", () => {
     it("should return a framework by slug", async () => {
-      await Framework.destroy({ where: { slug: "terrafund" }, force: true });
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      await Framework.destroy({ where: { slug: "terrafund-non-profits" }, force: true });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
 
-      const result = await service.findBySlug("terrafund");
+      const result = await service.findBySlug("terrafund-non-profits");
 
       expect(result).toBeInstanceOf(Framework);
-      expect(result.slug).toBe("terrafund");
+      expect(result.slug).toBe("terrafund-non-profits");
       expect(result.id).toBe(framework.id);
     });
 
@@ -99,12 +99,12 @@ describe("ReportingFrameworksService", () => {
 
   describe("calculateProjectsCount", () => {
     it("should return count of projects with matching frameworkKey", async () => {
-      const framework1 = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework1 = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework1.id);
-      await ProjectFactory.createMany(7, { frameworkKey: "terrafund" });
+      await ProjectFactory.createMany(7, { frameworkKey: "terrafund-non-profits" });
       await ProjectFactory.createMany(3, { frameworkKey: "ppc" });
 
-      const result = await service.calculateProjectsCount("terrafund");
+      const result = await service.calculateProjectsCount("terrafund-non-profits");
 
       expect(result).toBe(7);
     });
@@ -151,7 +151,7 @@ describe("ReportingFrameworksService", () => {
 
     it("should handle null form UUIDs", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "enterprises",
+        slug: "terrafund-enterprises",
         projectFormUuid: null,
         siteFormUuid: null,
         nurseryFormUuid: null
@@ -188,7 +188,7 @@ describe("ReportingFrameworksService", () => {
 
     it("should add framework dto with all form UUIDs populated", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "terrafund",
+        slug: "terrafund-non-profits",
         projectFormUuid: "project-form-uuid",
         projectReportFormUuid: "project-report-form-uuid",
         siteFormUuid: "site-form-uuid",
@@ -226,7 +226,7 @@ describe("ReportingFrameworksService", () => {
   describe("addDtos", () => {
     it("should add multiple framework dtos to document", async () => {
       const frameworks = await Promise.all([
-        FrameworkFactory.create({ slug: "terrafund" }),
+        FrameworkFactory.create({ slug: "terrafund-non-profits" }),
         FrameworkFactory.create({ slug: "ppc" }),
         FrameworkFactory.create({ slug: "hbf" })
       ]);
@@ -258,7 +258,7 @@ describe("ReportingFrameworksService", () => {
     it("should use uuid as id when slug is null", async () => {
       const frameworks = await Promise.all([
         FrameworkFactory.create({ slug: null }),
-        FrameworkFactory.create({ slug: "terrafund" })
+        FrameworkFactory.create({ slug: "terrafund-non-profits" })
       ]);
       createdFrameworkIds.push(...frameworks.map(f => f.id));
       const document = buildJsonApi(ReportingFrameworkDto, { forceDataArray: true });
@@ -272,7 +272,7 @@ describe("ReportingFrameworksService", () => {
     it("should handle frameworks with mixed form UUIDs", async () => {
       const frameworks = await Promise.all([
         FrameworkFactory.create({
-          slug: "terrafund",
+          slug: "terrafund-non-profits",
           projectFormUuid: "project-form-1",
           projectReportFormUuid: null,
           siteFormUuid: null,
@@ -319,7 +319,7 @@ describe("ReportingFrameworksService", () => {
       const siteForm = await EntityFormFactory.site().create({ frameworkKey: "ppc" });
       const attributes = {
         name: "Terra Fund",
-        slug: "terrafund",
+        slug: "terrafund-non-profits",
         projectFormUuid: projectForm.uuid,
         siteFormUuid: siteForm.uuid,
         nurseryFormUuid: "nursery-form-uuid"
@@ -328,6 +328,39 @@ describe("ReportingFrameworksService", () => {
       await expect(service.create(attributes)).rejects.toThrow(
         new BadRequestException("The following forms are already in use in another framework: Project, Site.")
       );
+    });
+
+    it("should throw when some report forms are set but required report forms are missing", async () => {
+      const checkSpy = jest.spyOn(Form, "findAll");
+      const createSpy = jest.spyOn(Framework, "create");
+      await expect(
+        service.create({ name: "Partial", slug: "partial", nurseryReportFormUuid: "nursery-report-uuid" })
+      ).rejects.toThrow(
+        new BadRequestException(
+          "Reporting frameworks with any report forms must also have the following forms: Project Report, Site Report."
+        )
+      );
+      expect(checkSpy).not.toHaveBeenCalled();
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should allow a framework with no report forms", async () => {
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue({ id: 1 } as Framework);
+      await service.create({ name: "No Reports", slug: "no-reports", projectFormUuid: "project-uuid" });
+      expect(createSpy).toHaveBeenCalled();
+    });
+
+    it("should allow a framework with the required report forms", async () => {
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+      const createSpy = jest.spyOn(Framework, "create").mockResolvedValue({ id: 1 } as Framework);
+      await service.create({
+        name: "Reports",
+        slug: "reports",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      expect(createSpy).toHaveBeenCalled();
     });
 
     it("should create framework with slug from access code and call syncForms", async () => {
@@ -376,7 +409,7 @@ describe("ReportingFrameworksService", () => {
   describe("update", () => {
     it("should throw when one of the forms is already in use", async () => {
       const projectForm = await EntityFormFactory.project().create({ frameworkKey: "ppc" });
-      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);
 
       await expect(service.update(framework, { projectFormUuid: projectForm.uuid })).rejects.toThrow(
@@ -384,8 +417,56 @@ describe("ReportingFrameworksService", () => {
       );
     });
 
+    it("should throw when the update would leave required report forms missing", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid",
+        nurseryReportFormUuid: "nursery-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update");
+
+      await expect(service.update(framework, { siteReportFormUuid: null })).rejects.toThrow(
+        new BadRequestException(
+          "Reporting frameworks with any report forms must also have the following forms: Site Report."
+        )
+      );
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it("should allow removing all report forms", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, { projectReportFormUuid: null, siteReportFormUuid: null });
+
+      expect(updateSpy).toHaveBeenCalledWith({ projectReportFormUuid: null, siteReportFormUuid: null });
+    });
+
+    it("should allow adding a report form when the required report forms are already set", async () => {
+      const framework = await FrameworkFactory.create({
+        slug: "terrafund-non-profits",
+        projectReportFormUuid: "project-report-uuid",
+        siteReportFormUuid: "site-report-uuid"
+      });
+      createdFrameworkIds.push(framework.id);
+      const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
+      jest.spyOn(Form, "update").mockResolvedValue([1]);
+
+      await service.update(framework, { nurseryReportFormUuid: "nursery-report-uuid" });
+
+      expect(updateSpy).toHaveBeenCalledWith({ nurseryReportFormUuid: "nursery-report-uuid" });
+    });
+
     it("should update framework when payload has attributes", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund", name: "TerraFund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits", name: "TerraFund" });
       createdFrameworkIds.push(framework.id);
       const updateSpy = jest.spyOn(framework, "update").mockResolvedValue(framework);
       jest.spyOn(Form, "update").mockResolvedValue([1]);
@@ -409,7 +490,7 @@ describe("ReportingFrameworksService", () => {
     });
 
     it("should not call framework.update when payload is empty", async () => {
-      const framework = await FrameworkFactory.create({ slug: "terrafund" });
+      const framework = await FrameworkFactory.create({ slug: "terrafund-non-profits" });
       createdFrameworkIds.push(framework.id);
       const updateSpy = jest.spyOn(framework, "update");
       jest.spyOn(Form, "update").mockResolvedValue([1]);
@@ -448,7 +529,7 @@ describe("ReportingFrameworksService", () => {
   describe("delete", () => {
     it("should detach forms and destroy framework (permissions left to permissions.ts + sync)", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "terrafund",
+        slug: "terrafund-non-profits",
         name: "TerraFund",
         projectFormUuid: "form-uuid-1",
         siteFormUuid: null
@@ -468,7 +549,7 @@ describe("ReportingFrameworksService", () => {
 
     it("should skip Form.update when framework has no form UUIDs", async () => {
       const framework = await FrameworkFactory.create({
-        slug: "terrafund",
+        slug: "terrafund-non-profits",
         projectFormUuid: null,
         projectReportFormUuid: null,
         siteFormUuid: null,
@@ -490,7 +571,7 @@ describe("ReportingFrameworksService", () => {
     it("should attach forms by UUID and detach others for the slug", async () => {
       const formUpdateSpy = jest.spyOn(Form, "update").mockResolvedValue([1]);
 
-      await service.syncFormsForFramework("terrafund", {
+      await service.syncFormsForFramework("terrafund-non-profits", {
         projectFormUuid: "project-form-uuid",
         projectReportFormUuid: null,
         siteFormUuid: "site-form-uuid",
@@ -500,11 +581,11 @@ describe("ReportingFrameworksService", () => {
       });
 
       expect(formUpdateSpy).toHaveBeenCalledWith(
-        { frameworkKey: "terrafund", model: expect.any(String) },
+        { frameworkKey: "terrafund-non-profits", model: expect.any(String) },
         { where: { uuid: "project-form-uuid" } }
       );
       expect(formUpdateSpy).toHaveBeenCalledWith(
-        { frameworkKey: "terrafund", model: expect.any(String) },
+        { frameworkKey: "terrafund-non-profits", model: expect.any(String) },
         { where: { uuid: "site-form-uuid" } }
       );
       const detachCall = formUpdateSpy.mock.calls.find(
@@ -515,7 +596,7 @@ describe("ReportingFrameworksService", () => {
       );
       expect(detachCall).toBeDefined();
       expect(detachCall?.[1].where).toMatchObject({
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         uuid: expect.anything()
       });
     });

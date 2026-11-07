@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import crypto from "crypto";
-import { SitePolygonsService } from "./site-polygons.service";
+import { getPrimaryUuids, SitePolygonsService } from "./site-polygons.service";
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   IndicatorOutputFieldMonitoringFactory,
@@ -43,6 +43,7 @@ import { DelayedJob } from "@terramatch-microservices/database/entities";
 import { BoundingBoxService } from "../bounding-boxes/bounding-box.service";
 import { GwcTileInvalidationService } from "@terramatch-microservices/common/gwc/gwc-tile-invalidation.service";
 import { PolygonAttributeValuesService } from "./polygon-attribute-values.service";
+import { serialize } from "@terramatch-microservices/common/util/testing";
 
 describe("SitePolygonsService", () => {
   let service: SitePolygonsService;
@@ -709,6 +710,65 @@ describe("SitePolygonsService", () => {
     expect(fullDto.name).toBe(sitePolygon.polyName);
   });
 
+  it("should give light and full DTOs the site and project of polygons loaded without their site", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const created = await SitePolygonFactory.create({ siteUuid: site.uuid });
+    const sitePolygon = (await SitePolygon.findByPk(created.id)) as SitePolygon;
+    expect(sitePolygon.site).toBeUndefined();
+
+    const lightAssociations = await service.loadAssociationDtos([sitePolygon], true);
+    const lightDto = await service.buildLightDto(sitePolygon, lightAssociations[sitePolygon.id]);
+    const fullAssociations = await service.loadAssociationDtos([sitePolygon], false);
+    const fullDto = await service.buildFullDto(sitePolygon, fullAssociations[sitePolygon.id]);
+
+    for (const dto of [lightDto, fullDto]) {
+      expect(dto.siteName).toBe(site.name);
+      expect(dto.projectName).toBe(project.name);
+      expect(dto.projectId).toBe(project.uuid);
+      expect(dto.ppcExternalId).toBe(site.ppcExternalId);
+    }
+  });
+
+  it("should build a light DTO document whose data is an array, even for one polygon", async () => {
+    const project = await ProjectFactory.create();
+    const site = await SiteFactory.create({ projectId: project.id });
+    const sitePolygon = await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+    const { data } = serialize(await service.buildLightDocument([sitePolygon]));
+
+    expect(data).toEqual([
+      expect.objectContaining({
+        type: "sitePolygons",
+        id: sitePolygon.uuid,
+        attributes: expect.objectContaining({ siteName: site.name, projectName: project.name })
+      })
+    ]);
+  });
+
+  it("should load the sites of many polygons in one query and reuse sites that are already loaded", async () => {
+    const project = await ProjectFactory.create();
+    const [siteA, siteB, joinedSite] = await SiteFactory.createMany(3, { projectId: project.id });
+    const polygons = await Promise.all([
+      SitePolygonFactory.create({ siteUuid: siteA.uuid }),
+      SitePolygonFactory.create({ siteUuid: siteA.uuid }),
+      SitePolygonFactory.create({ siteUuid: siteB.uuid })
+    ]);
+    const joinedPolygon = (await SitePolygon.findOne({
+      where: { id: (await SitePolygonFactory.create({ siteUuid: joinedSite.uuid })).id },
+      include: [{ association: "site", include: [{ association: "project" }] }]
+    })) as SitePolygon;
+    const siteFindAll = jest.spyOn(Site, "findAll");
+
+    const associations = await service.loadAssociationDtos([...polygons, joinedPolygon], true);
+
+    expect(siteFindAll).toHaveBeenCalledTimes(1);
+    expect(siteFindAll.mock.calls[0][0]?.where).toEqual({ uuid: { [Op.in]: [siteA.uuid, siteB.uuid] } });
+    expect(associations[polygons[0].id].site?.name).toBe(siteA.name);
+    expect(associations[polygons[2].id].site?.name).toBe(siteB.name);
+    expect(associations[joinedPolygon.id].site?.name).toBe(joinedSite.name);
+  });
+
   it("should add search filters for site name and polygon name when search is provided in query parameters", async () => {
     await SitePolygon.truncate();
     await PolygonGeometry.truncate();
@@ -1091,6 +1151,77 @@ describe("SitePolygonsService", () => {
     });
   });
 
+  describe("bulkDeleteSitePolygonsInBatches", () => {
+    it("should delete every version in batches and refresh centroids and tiles once", async () => {
+      const site = await SiteFactory.create();
+      const user = await UserFactory.create();
+      const polygonGeometry = await PolygonGeometryFactory.create();
+      const sitePolygon = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id
+      });
+      const oldVersion = await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        primaryUuid: sitePolygon.primaryUuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id,
+        isActive: false
+      });
+      const others = await SitePolygonFactory.createMany(100, {
+        siteUuid: site.uuid,
+        polygonUuid: polygonGeometry.uuid,
+        createdBy: user.id
+      });
+      const onProgress = jest.fn().mockResolvedValue(undefined);
+
+      const deletedUuids = await service.bulkDeleteSitePolygonsInBatches(
+        getPrimaryUuids([sitePolygon, ...others]),
+        onProgress
+      );
+
+      expect(deletedUuids.sort()).toEqual([sitePolygon, oldVersion, ...others].map(({ uuid }) => uuid).sort());
+      expect(onProgress.mock.calls).toEqual([[100], [101]]);
+      expect(await SitePolygon.count({ where: { siteUuid: site.uuid } })).toBe(0);
+      await oldVersion.reload({ paranoid: false });
+      expect(oldVersion.deletedAt).not.toBeNull();
+      const deletedGeometry = await PolygonGeometry.findByPk(polygonGeometry.id, { paranoid: false });
+      expect(deletedGeometry?.deletedAt).not.toBeNull();
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledTimes(1);
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith(
+        expect.arrayContaining([polygonGeometry.uuid])
+      );
+      expect(boundingBoxService.getPolygonsBoundingBox).toHaveBeenCalledTimes(1);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still refresh centroids and tiles for committed batches when the job fails", async () => {
+      const sitePolygon = await SitePolygonFactory.create();
+      const onProgress = jest.fn().mockRejectedValue(new Error("Redis unavailable"));
+
+      await expect(service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress)).rejects.toThrow(
+        "Redis unavailable"
+      );
+
+      await sitePolygon.reload({ paranoid: false });
+      expect(sitePolygon.deletedAt).not.toBeNull();
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).toHaveBeenCalledWith([sitePolygon.polygonUuid]);
+      expect(gwcTileInvalidationService.truncate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should skip polygons that are already deleted", async () => {
+      const sitePolygon = await SitePolygonFactory.create();
+      await sitePolygon.destroy();
+      const onProgress = jest.fn().mockResolvedValue(undefined);
+
+      await service.bulkDeleteSitePolygonsInBatches([sitePolygon.primaryUuid], onProgress);
+
+      expect(onProgress).toHaveBeenCalledWith(1);
+      expect(polygonGeometryService.bulkUpdateProjectCentroids).not.toHaveBeenCalled();
+      expect(gwcTileInvalidationService.truncate).not.toHaveBeenCalled();
+    });
+  });
+
   describe("deleteSingleVersion", () => {
     it("should throw NotFoundException when polygon is not found", async () => {
       await expect(service.deleteSingleVersion("non-existent-uuid")).rejects.toThrow(NotFoundException);
@@ -1387,6 +1518,24 @@ describe("SitePolygonsService", () => {
     });
   });
 
+  describe("assertStatusUpdateAllowed", () => {
+    it("should only check eligibility for submissions", async () => {
+      const findAll = jest.spyOn(SitePolygon, "findAll");
+
+      await service.assertStatusUpdateAllowed("approved", ["uuid-1"]);
+
+      expect(findAll).not.toHaveBeenCalled();
+    });
+
+    it("should reject a submission for an ineligible polygon", async () => {
+      const sitePolygon = await SitePolygonFactory.create({ status: "approved" });
+
+      await expect(service.assertStatusUpdateAllowed("pending-approval", [sitePolygon.uuid])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
   describe("updateBulkStatus", () => {
     it("should create audit status records with null user fields", async () => {
       const data = [{ type: "sitePolygons", id: "polygon-a" }];
@@ -1399,18 +1548,33 @@ describe("SitePolygonsService", () => {
 
       await service.updateBulkStatus(status, data, null, null);
 
-      expect(bulkCreateSpy).toHaveBeenCalledWith([
-        expect.objectContaining({
-          auditableType: SitePolygon.LARAVEL_TYPE,
-          auditableId: 10,
-          createdBy: null,
-          firstName: null,
-          lastName: null,
-          comment: null,
-          status,
-          type: "status"
-        })
-      ]);
+      expect(bulkCreateSpy).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            auditableType: SitePolygon.LARAVEL_TYPE,
+            auditableId: 10,
+            createdBy: null,
+            firstName: null,
+            lastName: null,
+            comment: null,
+            status,
+            type: "status"
+          })
+        ],
+        { transaction: expect.anything() }
+      );
+    });
+
+    it("should roll back the status change when the audit records cannot be written", async () => {
+      const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval" });
+      jest.spyOn(AuditStatus, "bulkCreate").mockRejectedValue(new Error("Audit insert failed"));
+
+      await expect(
+        service.updateBulkStatus("approved", [{ type: "sitePolygons", id: sitePolygon.uuid }], null, null)
+      ).rejects.toThrow("Audit insert failed");
+
+      await sitePolygon.reload();
+      expect(sitePolygon.status).toBe("pending-approval");
     });
 
     it("should skip audit status bulkCreate when no polygons were returned", async () => {
@@ -1444,7 +1608,7 @@ describe("SitePolygonsService", () => {
       await service.updateBulkStatus(status, data, comment, user);
       expect(SitePolygon.update).toHaveBeenCalledWith(
         { status },
-        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
       );
       expect(validationQueue.add).not.toHaveBeenCalled();
     });
@@ -1542,7 +1706,10 @@ describe("SitePolygonsService", () => {
 
         await service.updateBulkStatus(status, data, null, user);
 
-        expect(updateSpy).toHaveBeenCalledWith({ status }, { where: { uuid: { [Op.in]: data.map(d => d.id) } } });
+        expect(updateSpy).toHaveBeenCalledWith(
+          { status },
+          { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
+        );
         expect(validationQueue.add).not.toHaveBeenCalled();
       }
     );
@@ -1617,7 +1784,7 @@ describe("SitePolygonsService", () => {
 
       expect(SitePolygon.update).toHaveBeenCalledWith(
         { status },
-        { where: { uuid: { [Op.in]: data.map(d => d.id) } } }
+        { where: { uuid: { [Op.in]: data.map(d => d.id) } }, transaction: expect.anything() }
       );
       expect(validationQueue.add).not.toHaveBeenCalled();
       expect(findOneSpy).not.toHaveBeenCalled();

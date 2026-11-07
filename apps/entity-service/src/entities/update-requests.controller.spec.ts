@@ -162,7 +162,7 @@ describe("UpdateRequestsController", () => {
           { entity: "projects", uuid: project.uuid },
           createPayload(`projects|${project.uuid}`, "information-required", "feedback", ["feedback"])
         )
-      ).rejects.toThrow("Change requests can only be reviewed when the entity is approved or information-required");
+      ).rejects.toThrow("Change requests can only be reviewed when the entity is approved");
     });
 
     it("stores the update request answers if the status is approved", async () => {

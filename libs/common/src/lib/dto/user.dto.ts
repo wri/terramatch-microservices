@@ -6,10 +6,10 @@ import { Framework, Project, User } from "@terramatch-microservices/database/ent
 import { HybridSupportDto } from "./hybrid-support.dto";
 
 class UserFramework {
-  @ApiProperty({ example: "TerraFund Landscapes" })
+  @ApiProperty({ example: "TerraFund Non-Profits" })
   name: string;
 
-  @ApiProperty({ example: "terrafund-landscapes" })
+  @ApiProperty({ example: "terrafund-non-profits" })
   slug: string;
 }
 

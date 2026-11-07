@@ -8,7 +8,7 @@ import {
   Leadership,
   Media,
   Organisation,
-  OrganisationUser,
+  OrganisationJoinRequest,
   OwnershipStake,
   TreeSpecies,
   User
@@ -71,7 +71,7 @@ export class OrganisationsService {
       if (userId == null) {
         throw new BadRequestException("User ID is required");
       }
-      const orgUuids = await User.orgUuids(userId);
+      const orgUuid = await User.orgUuid(userId);
       const user = await User.findOne({
         where: { id: userId },
         attributes: ["id"]
@@ -82,10 +82,10 @@ export class OrganisationsService {
           .map(({ organisationId }) => organisationId)
           .filter((id): id is number => id != null);
 
-        if (orgUuids.length > 0 || projectOrgIds.length > 0) {
-          const conditions: Array<{ uuid?: { [Op.in]: string[] }; id?: { [Op.in]: number[] } }> = [];
-          if (orgUuids.length > 0) {
-            conditions.push({ uuid: { [Op.in]: orgUuids } });
+        if (orgUuid != null || projectOrgIds.length > 0) {
+          const conditions: Array<{ uuid?: string; id?: { [Op.in]: number[] } }> = [];
+          if (orgUuid != null) {
+            conditions.push({ uuid: orgUuid });
           }
           if (projectOrgIds.length > 0) {
             conditions.push({ id: { [Op.in]: projectOrgIds } });
@@ -175,7 +175,7 @@ export class OrganisationsService {
 
   async delete(organisation: Organisation): Promise<void> {
     await User.update({ organisationId: null }, { where: { organisationId: organisation.id } });
-    await OrganisationUser.destroy({ where: { organisationId: organisation.id } });
+    await OrganisationJoinRequest.destroy({ where: { organisationId: organisation.id } });
 
     await organisation.destroy();
   }

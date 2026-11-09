@@ -576,6 +576,29 @@ describe("ValidationService", () => {
       expect(CriteriaSite.bulkCreate).toHaveBeenCalled();
     });
 
+    it("should replace every existing record for a polygon and criteria, leaving other criteria untouched", async () => {
+      (CriteriaSite.findAll as jest.Mock).mockResolvedValue([
+        { id: 1, polygonId: "uuid-1", criteriaId: 3, valid: false, extraInfo: [{ percentage: 0 }] },
+        { id: 2, polygonId: "uuid-1", criteriaId: 3, valid: true, extraInfo: null },
+        { id: 3, polygonId: "uuid-1", criteriaId: 4, valid: false, extraInfo: null },
+        { id: 4, polygonId: "uuid-2", criteriaId: 3, valid: false, extraInfo: null }
+      ]);
+
+      await service.saveValidationResultsBatch([
+        { polygonUuid: "uuid-1", criteriaId: 3, valid: true, extraInfo: null },
+        { polygonUuid: "uuid-2", criteriaId: 4, valid: true, extraInfo: null }
+      ]);
+
+      expect(CriteriaSiteHistoric.bulkCreate).toHaveBeenCalledWith(
+        [
+          { polygonId: "uuid-1", criteriaId: 3, valid: false, extraInfo: [{ percentage: 0 }] },
+          { polygonId: "uuid-1", criteriaId: 3, valid: true, extraInfo: null }
+        ],
+        { validate: true }
+      );
+      expect(CriteriaSite.destroy).toHaveBeenCalledWith({ where: { id: [1, 2] } });
+    });
+
     it("should deduplicate results with same polygon and criteria", async () => {
       (CriteriaSite.findAll as jest.Mock).mockResolvedValue([]);
 

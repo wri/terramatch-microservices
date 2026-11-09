@@ -135,9 +135,11 @@ export class TreeRestorationGoalService {
     const siteReportsByDate = new Map<string, SiteReport[]>();
 
     allSiteReports.forEach(report => {
+      // due_at is a DATE column, which the driver returns as a "YYYY-MM-DD" string rather than a Date.
       if (report.dueAt != null) {
-        const year = report.dueAt.getFullYear();
-        const month = report.dueAt.getMonth() + 1;
+        const dueAt = new Date(report.dueAt);
+        const year = dueAt.getUTCFullYear();
+        const month = dueAt.getUTCMonth() + 1;
         const key = `${year}-${month}`;
 
         if (!siteReportsByDate.has(key)) {

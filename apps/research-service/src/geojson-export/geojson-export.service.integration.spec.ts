@@ -77,8 +77,12 @@ describe("GeoJsonExportService (database)", () => {
         polyName: polygon.polyName,
         siteId: site.uuid,
         numTrees: polygon.numTrees,
-        landUse: "cropland"
+        extraAttributes: JSON.stringify({ landUse: "cropland" })
       });
+      // Raw upload attributes stay inside extraAttributes instead of becoming columns of their own.
+      expect(feature?.properties).not.toHaveProperty("landUse");
+      const otherFeature = collection.features.find(({ properties }) => properties?.uuid === otherSitePolygon.uuid);
+      expect(otherFeature?.properties?.extraAttributes).toBeNull();
       expect(progress).toEqual([
         [0, 2],
         [2, 2]

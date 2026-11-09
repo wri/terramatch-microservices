@@ -31,7 +31,8 @@ export class GeoJsonQueryDto {
   projectUuid?: string;
 
   @ApiProperty({
-    description: "Include extended data from site_polygon_data table",
+    description:
+      "Include the uploaded file's extra attributes (site_polygon_data table) as a JSON string in `extraAttributes`",
     required: false,
     default: true
   })

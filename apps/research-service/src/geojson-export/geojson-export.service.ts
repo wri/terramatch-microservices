@@ -413,20 +413,6 @@ export class GeoJsonExportService {
       properties.ppcExternalId = site.ppcExternalId ?? null;
     }
 
-    if (includeExtendedData) {
-      let dataToMerge: Record<string, unknown> | null = null;
-
-      if (extendedData != null) {
-        dataToMerge = extendedData;
-      } else if (extendedDataMap != null) {
-        dataToMerge = extendedDataMap.get(sitePolygon.uuid) ?? null;
-      }
-
-      if (dataToMerge != null) {
-        Object.assign(properties, dataToMerge);
-      }
-    }
-
     const frameworkKey = site?.frameworkKey;
     if (frameworkKey != null && keysByFramework != null) {
       const configuredKeys = keysByFramework.get(frameworkKey) ?? [];
@@ -434,6 +420,11 @@ export class GeoJsonExportService {
       for (const key of configuredKeys) {
         properties[key] = stored[key] ?? null;
       }
+    }
+
+    if (includeExtendedData) {
+      const extraAttributes = extendedData ?? extendedDataMap?.get(sitePolygon.uuid) ?? null;
+      properties.extraAttributes = extraAttributes == null ? null : JSON.stringify(extraAttributes);
     }
 
     return properties;

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { intersection } from "lodash";
 import { col, fn, Op } from "sequelize";
 import { AuditStatus, Project, SitePolygon } from "@terramatch-microservices/database/entities";
 import {
@@ -7,6 +8,7 @@ import {
   ProjectQaStatus
 } from "@terramatch-microservices/database/constants";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
+import type { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { projectContextIdsSubquery } from "../site-polygons/project-context-filters";
 import { ProjectMapIndexQueryDto } from "./dto/project-map-index-query.dto";
 import { ProjectMapIndexDto } from "./dto/project-map-index.dto";
@@ -86,8 +88,16 @@ const findLatestQaStatusByProject = async (projectIds: ProjectIdsSubquery) => {
 
 @Injectable()
 export class ProjectMapIndexService {
-  async getMapIndex(query: ProjectMapIndexQueryDto) {
-    const projectIds = projectContextIdsSubquery(query, true);
+  async getMapIndex(query: ProjectMapIndexQueryDto, frameworkScope: FrameworkKey[] | null = null) {
+    let scopedQuery = query;
+    if (frameworkScope != null) {
+      const requested = query.frameworkKey ?? [];
+      const frameworkKey = requested.length > 0 ? intersection(requested, frameworkScope) : frameworkScope;
+      if (frameworkKey.length === 0) return new ProjectMapIndexDto([]);
+      scopedQuery = { ...query, frameworkKey };
+    }
+
+    const projectIds = projectContextIdsSubquery(scopedQuery, true);
     const [projects, polygonAggregates, latestQaStatuses] = await Promise.all([
       Project.findAll({
         attributes: ["id", "uuid", "name", "lat", "long", "frameworkKey", "level0Project", "cohort"],

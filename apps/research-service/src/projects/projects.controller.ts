@@ -3,6 +3,7 @@ import { ApiOperation } from "@nestjs/swagger";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ExceptionResponse, JsonApiResponse } from "@terramatch-microservices/common/decorators";
 import { buildJsonApi, getStableRequestQuery } from "@terramatch-microservices/common/util";
+import type { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { ProjectMapIndexQueryDto } from "./dto/project-map-index-query.dto";
 import { ProjectMapIndexDto } from "./dto/project-map-index.dto";
@@ -34,7 +35,13 @@ export class ProjectsController {
   async mapIndex(@Query() query: ProjectMapIndexQueryDto) {
     await this.policyService.authorize("read", SitePolygon);
 
-    const mapIndex = await this.projectMapIndexService.getMapIndex(query);
+    const frameworkScope = this.policyService.permissions
+      .filter(name => name.startsWith("framework-"))
+      .map(name => name.substring("framework-".length) as FrameworkKey);
+    const mapIndex = await this.projectMapIndexService.getMapIndex(
+      query,
+      frameworkScope.length > 0 ? frameworkScope : null
+    );
 
     return buildJsonApi(ProjectMapIndexDto).addData(getStableRequestQuery(query), mapIndex);
   }

@@ -14,7 +14,9 @@ export const SITE_POLYGON_SORT_FIELDS = [
   "source",
   "practice",
   "distr",
-  "disturbance"
+  "disturbance",
+  "siteName",
+  "projectName"
 ] as const;
 
 export type SitePolygonSortField = (typeof SITE_POLYGON_SORT_FIELDS)[number];
@@ -74,6 +76,14 @@ export const buildSitePolygonSortOrder = (field: string, direction: "ASC" | "DES
 
   if (field === "disturbance") {
     return [[literal("IF(SitePolygon.disturbance_id IS NULL, 0, 1)"), direction]];
+  }
+
+  if (field === "siteName") {
+    return [[literal("`site`.`name`"), direction]];
+  }
+
+  if (field === "projectName") {
+    return [[literal("`site->project`.`name`"), direction]];
   }
 
   throw new BadRequestException(`Invalid sort field: ${field}`);

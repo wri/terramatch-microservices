@@ -66,7 +66,7 @@ describe("BoundingBoxController", () => {
 
   const mockPolygon = { uuid: "polygon-123" };
   const mockSite = { id: "site-db-id-123", uuid: "site-123", project: { uuid: "project-123", frameworkKey: "ppc" } };
-  const mockProject = { uuid: "project-123", frameworkKey: "ppc", organisationId: 1 };
+  const mockProject = { id: 42 };
   const mockProjectPitch = { id: "pitch-db-id-123", uuid: "pitch-123", organisationId: 1 };
   const mockSitePolygon = {
     id: "sp-db-id-123",
@@ -102,7 +102,7 @@ describe("BoundingBoxController", () => {
   });
 
   describe("getBoundingBox", () => {
-    type BoundingBoxServiceArgs = [string] | [string[]] | [string, string[]];
+    type BoundingBoxServiceArgs = [string] | [number] | [string[]] | [string, string[]];
 
     const testQueryParameters = async (
       queryParams: BoundingBoxQueryDto,
@@ -148,14 +148,11 @@ describe("BoundingBoxController", () => {
       await testQueryParameters(
         { projectUuid: "project-123" },
         "getProjectBoundingBox",
-        ["project-123"],
+        [mockProject.id],
         "?projectUuid=project-123"
       );
 
-      expect(Project.findOne).toHaveBeenCalledWith({
-        where: { uuid: "project-123" },
-        attributes: ["id", "uuid", "frameworkKey", "organisationId"]
-      });
+      expect(Project.findOne).toHaveBeenCalledWith({ where: { uuid: "project-123" }, attributes: ["id"] });
     });
 
     it("should call getProjectPitchBoundingBox when projectPitchUuid is provided", async () => {

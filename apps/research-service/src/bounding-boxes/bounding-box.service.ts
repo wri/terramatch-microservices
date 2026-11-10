@@ -3,7 +3,6 @@ import { BoundingBoxDto } from "./dto/bounding-box.dto";
 import {
   LandscapeGeometry,
   PolygonGeometry,
-  Project,
   ProjectPitch,
   ProjectPolygon,
   Site,
@@ -18,7 +17,6 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 enum EntityType {
   POLYGON = "Polygon",
   SITE = "Site",
-  PROJECT = "Project",
   PROJECT_PITCH = "ProjectPitch",
   LANDSCAPE = "Landscape",
   COUNTRY = "Country"
@@ -166,44 +164,10 @@ export class BoundingBoxService {
     );
   }
 
-  async getProjectBoundingBox(projectUuid: string): Promise<BoundingBoxDto> {
-    const project = await Project.findOne({
-      where: { uuid: projectUuid },
-      attributes: ["id", "uuid", "frameworkKey", "organisationId", "status"]
-    });
-
-    if (project === null) {
-      throw new NotFoundException(`${EntityType.PROJECT} with UUID ${projectUuid} not found`);
-    }
-
-    const sites = await Site.findAll({
-      where: { projectId: project.id },
-      attributes: ["uuid"]
-    });
-
-    if (sites.length === 0) {
-      throw new NotFoundException(`No sites found for project with UUID ${projectUuid}`);
-    }
-
-    const siteUuids = sites.map(site => site.uuid);
-
-    const sitePolygons = await SitePolygon.findAll({
-      where: {
-        siteUuid: { [Op.in]: siteUuids },
-        polygonUuid: { [Op.ne]: "" }
-      },
-      attributes: ["polygonUuid"]
-    });
-
-    if (sitePolygons.length === 0) {
-      throw new NotFoundException(`No polygons found for project with UUID ${projectUuid}`);
-    }
-
-    const polygonUuids = sitePolygons.map(sp => sp.polygonUuid);
-
+  async getProjectBoundingBox(projectId: number): Promise<BoundingBoxDto> {
     return this.getBoundingBoxFromGeometries(
       PolygonGeometry,
-      { uuid: { [Op.in]: polygonUuids } },
+      { uuid: { [Op.in]: SitePolygon.activePolygonUuidsForSites(Site.uuidsSubquery(projectId)) } },
       "geom",
       EntityType.POLYGON
     );

@@ -273,7 +273,7 @@ export class SitePolygon extends Model<SitePolygon> {
       .eq("status", polygonStatus).literal;
   }
 
-  static activePolygonUuidsForSites(siteUuids: string[]) {
+  static activePolygonUuidsForSites(siteUuids: string[] | Literal) {
     return Subquery.select(SitePolygon, "polygonUuid").in("siteUuid", siteUuids).eq("isActive", true).literal;
   }
 

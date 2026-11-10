@@ -1063,10 +1063,6 @@ export class SitePolygonCreationService {
 
       newPolygonGeometryUuid = uuids[0];
       sitePolygonAttributes.calcArea = areas[0];
-
-      await this.polygonGeometryService.bulkUpdateSitePolygonCentroids([newPolygonGeometryUuid], transaction);
-      await this.polygonGeometryService.bulkUpdateSitePolygonAreas([newPolygonGeometryUuid], transaction);
-      await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
     }
 
     if (!this.keepsReviewState(basePolygon, sitePolygonAttributes, newPolygonGeometryUuid != null, canReviewPolygons)) {
@@ -1095,6 +1091,11 @@ export class SitePolygonCreationService {
       ],
       transaction
     );
+
+    if (newPolygonGeometryUuid != null) {
+      await this.polygonGeometryService.bulkUpdateSitePolygonCentroids([newPolygonGeometryUuid], transaction);
+      await this.polygonGeometryService.bulkUpdateProjectCentroids([newPolygonGeometryUuid], transaction);
+    }
 
     if (persistCustomAttributes && attributeChanges?.customAttributes != null) {
       const site = await basePolygon.loadSite();

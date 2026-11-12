@@ -1,9 +1,8 @@
 import { AutoIncrement, Column, Model, PrimaryKey, Scopes, Table } from "sequelize-typescript";
-import { BIGINT, DATE, STRING } from "sequelize";
+import { BIGINT, DATE, Op, STRING } from "sequelize";
+import { isArray } from "lodash";
 import { JsonColumn } from "../decorators/json-column.decorator";
 import {
-  REPORT_REMINDER,
-  ReportReminder,
   ScheduledJobDefinition,
   ScheduledJobType,
   SITE_AND_NURSERY_REMINDER,
@@ -18,7 +17,8 @@ import { InternalServerErrorException } from "@nestjs/common";
 @Scopes(() => ({
   taskDue: (frameworks: FrameworkKey | readonly FrameworkKey[]) => ({
     where: {
-      "taskDefinition.frameworkKey": frameworks,
+      // A JSON path where clause does not expand an array into IN (...) on its own.
+      "taskDefinition.frameworkKey": isArray(frameworks) ? { [Op.in]: frameworks } : frameworks,
       type: TASK_DUE
     },
     order: [["executionTime", "ASC"]]
@@ -40,11 +40,6 @@ export class ScheduledJob extends Model<ScheduledJob> {
   static async scheduleTaskDue(executionTime: Date, frameworkKey: FrameworkKey, dueAt: Date) {
     const taskDefinition: TaskDue = { frameworkKey, dueAt: dueAt.toISOString() };
     await ScheduledJob.create({ type: TASK_DUE, executionTime, taskDefinition } as ScheduledJob);
-  }
-
-  static async scheduleReportReminder(executionTime: Date, frameworkKey: FrameworkKey) {
-    const taskDefinition: ReportReminder = { frameworkKey };
-    await ScheduledJob.create({ type: REPORT_REMINDER, executionTime, taskDefinition } as ScheduledJob);
   }
 
   static async scheduleSiteAndNurseryReminder(executionTime: Date, frameworkKey: FrameworkKey) {

@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import { withoutSqlLogs } from "@terramatch-microservices/common/util/repl/without-sql-logs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { CreationAttributes } from "sequelize";
@@ -75,9 +76,8 @@ export const bulkOrganisationImport = withoutSqlLogs(async (csvPath: string, dry
       return;
     }
 
-    const parts = csvPath.split(".");
-    parts.pop();
-    await persistRows(rows, timestampFileName(`${parts.join(".")} - result`));
+    const { dir, name } = posix.parse(csvPath);
+    await persistRows(rows, posix.join(dir, timestampFileName(`${name} - result`)));
 
     LOGGER.log(`Processed ${rowCount} rows from ${csvPath}`);
   } catch (err) {

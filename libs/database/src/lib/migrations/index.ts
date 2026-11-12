@@ -58,6 +58,10 @@ import { updateNotifications } from "./202610201200-update-notifications";
 import { addNotificationsUuid } from "./202610221200-add-notifications-uuid";
 import { extendSitePolygonSiteScopedQueryIndex } from "./202610221200-extend-site-polygon-site-scoped-query-index";
 import { createApiKeys } from "./202610231200-create-api-keys";
+import { removeUserApiKeyColumn } from "./202610281200-remove-user-api-key-column";
+import { addPitchIncomeGeneratingActivities } from "./202611031200-add-pitch-income-generating-activities";
+import { renameOrganisationUserToJoinRequests } from "./202610281200-rename-organisation-user-to-join-requests";
+import { widenFrameworkKeyColumns } from "./202611041200-widen-framework-key-columns";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -117,5 +121,9 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   updateNotifications,
   addNotificationsUuid,
   extendSitePolygonSiteScopedQueryIndex,
-  createApiKeys
+  createApiKeys,
+  removeUserApiKeyColumn,
+  addPitchIncomeGeneratingActivities,
+  renameOrganisationUserToJoinRequests,
+  widenFrameworkKeyColumns
 ];

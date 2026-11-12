@@ -175,6 +175,9 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (query.country != null) {
       builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
     }
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ projectId: { [Op.in]: Project.forCohort(query.cohort) } });
+    }
 
     if (query.taskIds != null && query.taskIds.length > 0) {
       builder.where({ taskId: query.taskIds });
@@ -295,7 +298,7 @@ export class ProjectReportProcessor extends ReportProcessor<
     if (report.frameworkKey == null) throw new InternalServerErrorException("Cannot export without a framework key");
 
     const reportLabel = await this.entitiesService.localizeText("Project Report");
-    const fileName = timestampFileName(`${report.projectName?.replace(/\/\\/g, "-")} - ${reportLabel}`);
+    const fileName = timestampFileName(`${report.projectName} - ${reportLabel}`);
     await this.exportReports(report.frameworkKey, target, [report], fileName);
   }
 
@@ -453,7 +456,7 @@ export class ProjectReportProcessor extends ReportProcessor<
       );
     }
 
-    if (projectReport.frameworkKey == "terrafund" && projectReport.taskId != null) {
+    if (projectReport.frameworkKey == "terrafund-non-profits" && projectReport.taskId != null) {
       return (await NurseryReport.task(projectReport.taskId).sum("seedlingsYoungTrees")) ?? 0;
     }
 

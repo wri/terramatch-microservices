@@ -6,6 +6,7 @@ import { Project, User } from "@terramatch-microservices/database/entities";
 import { groupBy } from "lodash";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 import { ProjectEmailData } from "./email.processor";
+import { TERRAFUND_NON_PROFITS } from "@terramatch-microservices/database/constants";
 
 export class TerrafundSiteAndNurseryReminderEmail extends ProjectEmailSender {
   static readonly NAME = "terrafundSiteAndNurseryReminder";
@@ -18,9 +19,9 @@ export class TerrafundSiteAndNurseryReminderEmail extends ProjectEmailSender {
 
   async sendForProject(projectId: number, users: User[], emailService: EmailService) {
     const project = await Project.findOne({ where: { id: projectId }, attributes: ["frameworkKey"] });
-    if (project?.frameworkKey !== "terrafund") {
+    if (project?.frameworkKey !== TERRAFUND_NON_PROFITS) {
       this.logger.error(
-        `Asked to send terrafund site and nursery reminder email for non-terrafund project [${projectId}, ${project?.frameworkKey}]`
+        `Asked to send terrafund site and nursery reminder email for unsupported project [${projectId}, ${project?.frameworkKey}]`
       );
       return;
     }

@@ -154,7 +154,9 @@ describe("SitePolygonCreationService", () => {
     });
 
     jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
-    jest.spyOn(Site, "findOne").mockResolvedValue({ uuid: "site-uuid-1", frameworkKey: "terrafund" } as Site);
+    jest
+      .spyOn(Site, "findOne")
+      .mockResolvedValue({ uuid: "site-uuid-1", frameworkKey: "terrafund-non-profits" } as Site);
   });
 
   afterEach(() => {

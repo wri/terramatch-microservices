@@ -19,7 +19,7 @@ describe("ProjectsController", () => {
       controllers: [ProjectsController],
       providers: [
         { provide: ProjectMapIndexService, useValue: (service = createMock()) },
-        { provide: PolicyService, useValue: (policyService = createMock()) }
+        { provide: PolicyService, useValue: (policyService = createMock<PolicyService>({ permissions: [] })) }
       ]
     }).compile();
 
@@ -31,6 +31,24 @@ describe("ProjectsController", () => {
   });
 
   describe("mapIndex", () => {
+    it("passes the user's framework scope to the service", async () => {
+      const scopedPolicyService = createMock<PolicyService>({ permissions: ["framework-ppc", "projects-manage"] });
+      scopedPolicyService.authorize.mockResolvedValue(undefined);
+      const scopedService = createMock<ProjectMapIndexService>();
+      scopedService.getMapIndex.mockResolvedValue(new ProjectMapIndexDto([]));
+      const module = await Test.createTestingModule({
+        controllers: [ProjectsController],
+        providers: [
+          { provide: ProjectMapIndexService, useValue: scopedService },
+          { provide: PolicyService, useValue: scopedPolicyService }
+        ]
+      }).compile();
+
+      await module.get(ProjectsController).mapIndex({});
+
+      expect(scopedService.getMapIndex).toHaveBeenCalledWith({}, ["ppc"]);
+    });
+
     it("authorizes before querying", async () => {
       policyService.authorize.mockRejectedValue(new UnauthorizedException());
 
@@ -60,7 +78,7 @@ describe("ProjectsController", () => {
 
       const result = serialize(await controller.mapIndex(query));
 
-      expect(service.getMapIndex).toHaveBeenCalledWith(query);
+      expect(service.getMapIndex).toHaveBeenCalledWith(query, null);
       expect(result.data).toMatchObject({
         id: getStableRequestQuery(query),
         type: "projectMapIndexes",

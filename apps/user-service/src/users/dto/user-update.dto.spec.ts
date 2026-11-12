@@ -42,7 +42,9 @@ describe("UserUpdateAttributes", () => {
   });
 
   it("accepts a list of valid direct frameworks", async () => {
-    const errors = await validate(plainToInstance(UserUpdateAttributes, { directFrameworks: ["ppc", "terrafund-3"] }));
+    const errors = await validate(
+      plainToInstance(UserUpdateAttributes, { directFrameworks: ["ppc", "terrafund-non-profits"] })
+    );
     expect(errors).toHaveLength(0);
   });
 

@@ -123,8 +123,11 @@ describe("EntitiesQueueProcessor", () => {
   describe("generateFrameworkEntityExport", () => {
     it("throws if the framework key or entity type is missing", async () => {
       await expect(
-        processor.process({ name: GENERATE_FRAMEWORK_ENTITY_EXPORT, data: { frameworkKey: "terrafund" } } as Job)
-      ).rejects.toThrow('Invalid frameworkKey or entityType: {"frameworkKey":"terrafund"}');
+        processor.process({
+          name: GENERATE_FRAMEWORK_ENTITY_EXPORT,
+          data: { frameworkKey: "terrafund-non-profits" }
+        } as Job)
+      ).rejects.toThrow('Invalid frameworkKey or entityType: {"frameworkKey":"terrafund-non-profits"}');
 
       await expect(
         processor.process({ name: GENERATE_FRAMEWORK_ENTITY_EXPORT, data: { entityType: "projects" } } as Job)
@@ -136,7 +139,7 @@ describe("EntitiesQueueProcessor", () => {
       entitiesService.createEntityProcessor.mockReturnValue({ exportAll } as unknown as ProjectProcessor);
       await processor.process({
         name: GENERATE_FRAMEWORK_ENTITY_EXPORT,
-        data: { frameworkKey: "terrafund", entityType: "projects" }
+        data: { frameworkKey: "terrafund-non-profits", entityType: "projects" }
       } as Job);
       expect(exportAll).toHaveBeenCalled();
     });

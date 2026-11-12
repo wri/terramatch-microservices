@@ -48,3 +48,7 @@ export { resyncDisturbancePolygonLinks } from "./2026-09-28-resyncDisturbancePol
 export { clearStaleDraftUpdateRequestStatuses } from "./2026-09-30-clearStaleDraftUpdateRequestStatuses";
 export { createGliComponentsOptionList } from "./2026-10-05-createGliComponentsOptionList";
 export { deleteAllNotifications } from "./2026-10-20-deleteAllNotifications";
+export { backfillInviteNamesFromUsers } from "./2026-10-29-backfillInviteNamesFromUsers";
+export { migrateNonApprovedUpdateStatuses } from "./2026-11-04-migrateNonApprovedUpdateStatuses";
+export { migrateTerrafundNonProfits } from "./2026-11-04-migrateTerrafundNonProfits";
+export { renameFrameworks } from "./2026-11-05-renameFrameworks";

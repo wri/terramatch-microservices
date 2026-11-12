@@ -28,7 +28,7 @@ describe("FormPolicy", () => {
 
   it("should disallow uploading files for forms if you cannot forms manage", async () => {
     const user = await UserFactory.create();
-    mockContextForUser(user, "framework-terrafund");
+    mockContextForUser(user, "framework-terrafund-non-profits");
     const form = await FormFactory.create();
     await expectCannot(service, ["uploadFiles"], form);
   });

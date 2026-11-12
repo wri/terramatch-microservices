@@ -353,12 +353,6 @@ export class ValidationService {
       attributes: ["id", "polygonId", "criteriaId", "valid", "extraInfo"]
     });
 
-    const existingMap = new Map<string, CriteriaSite>();
-    for (const criteria of existingCriteria) {
-      const key = `${criteria.polygonId}_${criteria.criteriaId}`;
-      existingMap.set(key, criteria);
-    }
-
     const deduplicatedResults = new Map<string, (typeof results)[0]>();
     for (const result of results) {
       const key = `${result.polygonUuid}_${result.criteriaId}`;
@@ -366,29 +360,28 @@ export class ValidationService {
     }
 
     const historicRecords: CriteriaRecord[] = [];
-    const recordsToCreate: CriteriaRecord[] = [];
     const recordsToDelete: number[] = [];
 
-    for (const [key, result] of deduplicatedResults.entries()) {
-      const existing = existingMap.get(key);
+    // A polygon can hold several rows for one criteria (legacy duplicates); all of them are replaced so a stale
+    // failing row can't outlive the new result.
+    for (const existing of existingCriteria) {
+      if (!deduplicatedResults.has(`${existing.polygonId}_${existing.criteriaId}`)) continue;
 
-      if (existing != null) {
-        historicRecords.push({
-          polygonId: existing.polygonId,
-          criteriaId: existing.criteriaId,
-          valid: existing.valid,
-          extraInfo: existing.extraInfo
-        });
-        recordsToDelete.push(existing.id);
-      }
-
-      recordsToCreate.push({
-        polygonId: result.polygonUuid,
-        criteriaId: result.criteriaId,
-        valid: result.valid,
-        extraInfo: result.extraInfo
+      historicRecords.push({
+        polygonId: existing.polygonId,
+        criteriaId: existing.criteriaId,
+        valid: existing.valid,
+        extraInfo: existing.extraInfo
       });
+      recordsToDelete.push(existing.id);
     }
+
+    const recordsToCreate: CriteriaRecord[] = [...deduplicatedResults.values()].map(result => ({
+      polygonId: result.polygonUuid,
+      criteriaId: result.criteriaId,
+      valid: result.valid,
+      extraInfo: result.extraInfo
+    }));
 
     if (historicRecords.length > 0) {
       await CriteriaSiteHistoric.bulkCreate(historicRecords as never, {
@@ -414,7 +407,7 @@ export class ValidationService {
     }
   }
 
-  private async updateSitePolygonValidityBatch(polygonUuids: string[]): Promise<void> {
+  async updateSitePolygonValidityBatch(polygonUuids: string[]): Promise<void> {
     if (polygonUuids.length === 0) {
       return;
     }

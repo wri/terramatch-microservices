@@ -12,10 +12,10 @@ import {
 } from "@terramatch-microservices/database/entities";
 import { ReportClass, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import {
+  APPROVED,
   DRAFT,
   DUE,
   INFORMATION_REQUIRED,
-  PENDING_APPROVAL,
   ReportStatus,
   UpdateRequestStatus
 } from "@terramatch-microservices/database/constants/status";
@@ -30,9 +30,9 @@ export type ReportFilter = {
   frameworkKeys: string[];
   // If set, reports are limited to these projects
   projectIds?: number[] | Literal;
-  // Matched against the status shown for the report (see SUBMITTED_UPDATE_REQUEST_STATUSES)
+  // Matched against the report's own status
   statuses?: readonly ReportStatus[];
-  // Matched against the report's update request status. Reports without one never match.
+  // Matched against the report's update request status. Reports without one, or marked as nothing to report, never match.
   updateRequestStatuses?: readonly UpdateRequestStatus[];
   // If true, reports are limited to those that are due, draft or need information, on the report or on its update request
   requiresAttention?: boolean;
@@ -90,10 +90,6 @@ export const REPORT_FILTER_MODELS: Record<ReportCountType, ReportFilterModel> = 
   srpReports: { model: SrpReport, ...PROJECT_REPORT_FILTER }
 };
 
-// A report with a submitted change request is shown with the change request's status instead of
-// its own, so the status filter matches on that (the FE resolves the status the same way).
-const SUBMITTED_UPDATE_REQUEST_STATUSES = [PENDING_APPROVAL, INFORMATION_REQUIRED];
-
 // The progress reports are listed through their tasks (see TasksService.getTasks), which leaves out deleted tasks and the
 // tasks of deleted projects or organisations. The counts have to leave out the same reports, or they won't match the list.
 const TASK_REPORT_TYPES: readonly ReportCountType[] = ["nurseryReports", "projectReports", "siteReports"];
@@ -116,18 +112,20 @@ export const filteredReportsSubquery = (type: ReportCountType, select: "id" | "p
 
   if (filter.frameworkKeys.length > 0) builder.in("frameworkKey", filter.frameworkKeys);
   if (TASK_REPORT_TYPES.includes(type)) builder.in("taskId" as keyof Attributes<ReportModel>, listedTasksSubquery());
-  if (filter.statuses != null && filter.statuses.length > 0) {
-    const isSubmitted = clauses.in("updateRequestStatus", SUBMITTED_UPDATE_REQUEST_STATUSES);
-    const shownStatus = `IF(${isSubmitted}, ${clauses.field("updateRequestStatus")}, ${clauses.field("status")})`;
-    const statuses = filter.statuses.map(status => clauses.escape(status)).join(",");
-    builder.andLiteral(`${shownStatus} IN (${statuses})`);
-  }
+  if (filter.statuses != null && filter.statuses.length > 0) builder.in("status", [...filter.statuses]);
   if (filter.updateRequestStatuses != null && filter.updateRequestStatuses.length > 0) {
     builder.in("updateRequestStatus", [...filter.updateRequestStatuses]);
+    // A "Nothing to report" report never shows an update status.
+    if ("nothingToReport" in model.getAttributes()) {
+      builder.andLiteral(`COALESCE(${clauses.field("nothingToReport" as keyof Attributes<ReportModel>)}, 0) = 0`);
+    }
   }
   if (filter.requiresAttention === true) {
     const needsAttention = clauses.in("status", [DUE, DRAFT, INFORMATION_REQUIRED]);
-    const updateNeedsAttention = clauses.in("updateRequestStatus", [DRAFT, INFORMATION_REQUIRED]);
+    // The effective status is the change request's only while the report itself is approved.
+    const updateNeedsAttention = `(${clauses.in("status", [APPROVED])} AND ${clauses.in("updateRequestStatus", [
+      INFORMATION_REQUIRED
+    ])})`;
     builder.andLiteral(`(${needsAttention} OR ${updateNeedsAttention})`);
   }
   if (filter.dueDateFrom != null) builder.gte("dueAt", filter.dueDateFrom);

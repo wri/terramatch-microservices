@@ -12,16 +12,12 @@ import {
 import { FRAMEWORK_KEYS_TF } from "@terramatch-microservices/database/constants";
 import { Op, Transaction } from "sequelize";
 import type { TaskDue } from "@terramatch-microservices/database/constants/scheduled-jobs";
-import {
-  REPORT_REMINDER,
-  SITE_AND_NURSERY_REMINDER,
-  TASK_DUE
-} from "@terramatch-microservices/database/constants/scheduled-jobs";
+import { SITE_AND_NURSERY_REMINDER, TASK_DUE } from "@terramatch-microservices/database/constants/scheduled-jobs";
 import { TMLogger } from "@terramatch-microservices/common/util/tm-logger";
 import { Queue } from "bullmq";
 import { InjectQueue } from "@nestjs/bullmq";
 import { DateTime } from "luxon";
-import { REPORT_REMINDER_EVENT, SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
+import { SITE_AND_NURSERY_REMINDER_EVENT, TASK_DUE_EVENT } from "./scheduled-jobs.processor";
 import { CACHED_EXPORT_ENTITY_TYPES } from "@terramatch-microservices/database/constants/entities";
 import { isNotNull } from "@terramatch-microservices/database/types/array";
 
@@ -77,10 +73,6 @@ export class ScheduledJobsService {
     switch (job.type) {
       case TASK_DUE:
         await this.scheduledJobsQueue.add(TASK_DUE_EVENT, { id, taskDefinition });
-        break;
-
-      case REPORT_REMINDER:
-        await this.scheduledJobsQueue.add(REPORT_REMINDER_EVENT, { id, taskDefinition });
         break;
 
       case SITE_AND_NURSERY_REMINDER:

@@ -35,7 +35,7 @@ describe("ProjectReportPolicy", () => {
   it("allows managing project reports in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await ProjectReportFactory.create({ frameworkKey: "ppc" });
-    const tf = await ProjectReportFactory.create({ frameworkKey: "terrafund" });
+    const tf = await ProjectReportFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
       cannot: [[["read", "delete", "update", "approve", "deleteFiles"], tf]]

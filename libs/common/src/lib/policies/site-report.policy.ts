@@ -1,7 +1,12 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { Project, Site, SiteReport, User } from "@terramatch-microservices/database/entities";
 import { Op, WhereAttributeHash } from "sequelize";
-import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
+import {
+  PENDING_APPROVAL,
+  DUE,
+  DRAFT,
+  INFORMATION_REQUIRED
+} from "@terramatch-microservices/database/constants/status";
 
 export class SiteReportPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -47,7 +52,10 @@ export class SiteReportPolicy extends UserPermissionsPolicy {
           this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], SiteReport, {
             siteId: { $in: siteIds }
           });
-          this.builder.can("updateAnswers", SiteReport, { siteId: { $in: siteIds }, status: { $in: [DRAFT, DUE] } });
+          this.builder.can("updateAnswers", SiteReport, {
+            siteId: { $in: siteIds },
+            status: { $in: [DRAFT, DUE, INFORMATION_REQUIRED] }
+          });
           this.builder.can("updateAnswers", SiteReport, {
             siteId: { $in: siteIds },
             status: PENDING_APPROVAL,

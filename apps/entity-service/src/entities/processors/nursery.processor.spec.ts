@@ -6,6 +6,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   EntityFormFactory,
+  FrameworkFactory,
   NurseryFactory,
   NurseryReportFactory,
   OrganisationFactory,
@@ -16,6 +17,7 @@ import {
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { NurseryProcessor } from "./nursery.processor";
 import { DateTime } from "luxon";
+import { faker } from "@faker-js/faker";
 import { PolicyService } from "@terramatch-microservices/common";
 import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
@@ -23,6 +25,7 @@ import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntitySer
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockUserContext, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
 import archiver, { Archiver } from "archiver";
@@ -90,11 +93,11 @@ describe("NurseryProcessor", () => {
     it("should return nurseries associated with specific frameworks", async () => {
       const nurseries = await NurseryFactory.createMany(3, { frameworkKey: "hbf" });
       await NurseryFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await NurseryFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await NurseryFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         nurseries.push(p);
       }
 
-      await expectNurseries(nurseries, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectNurseries(nurseries, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("should return nurseries that match the search term", async () => {
@@ -416,6 +419,7 @@ describe("NurseryProcessor", () => {
 
     it("creates a report with a future due task", async () => {
       const project = await ProjectFactory.create();
+      await FrameworkFactory.create({ slug: project.frameworkKey, nurseryReportFormUuid: faker.string.uuid() });
       const task = await TaskFactory.create({
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
@@ -429,6 +433,7 @@ describe("NurseryProcessor", () => {
 
     it("creates a report with a recently due task", async () => {
       const project = await ProjectFactory.create();
+      await FrameworkFactory.create({ slug: project.frameworkKey, nurseryReportFormUuid: faker.string.uuid() });
       const task = await TaskFactory.create({
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
@@ -446,6 +451,17 @@ describe("NurseryProcessor", () => {
       const report = await NurseryReport.findOne({ where: { nurseryId: nursery.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+    it("does not create a report if the framework has no nursery report form", async () => {
+      const project = await ProjectFactory.create({ frameworkKey: "no-nursery-reports" as FrameworkKey });
+      await FrameworkFactory.create({ slug: project.frameworkKey, projectReportFormUuid: faker.string.uuid() });
+      await TaskFactory.create({
+        projectId: project.id,
+        dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
+      });
+      mockUserContext({ userId: 123, permissions: [`framework-${project.frameworkKey}`] });
+      const nursery = await processor.create({ parentUuid: project.uuid });
+      expect(await NurseryReport.findOne({ where: { nurseryId: nursery.id } })).toBeNull();
     });
   });
 
@@ -515,7 +531,7 @@ describe("NurseryProcessor", () => {
         await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
       // non-framework nursery should be ignored
-      await NurseryFactory.create({ frameworkKey: "terrafund" });
+      await NurseryFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.nursery(nurseries[0]).create();
 
       const addRow = jest.fn();

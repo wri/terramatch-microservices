@@ -103,10 +103,7 @@ export class BoundingBoxController {
       case "projectUuid": {
         const projectUuid = query.projectUuid ?? "";
 
-        const project = await Project.findOne({
-          where: { uuid: projectUuid },
-          attributes: ["id", "uuid", "frameworkKey", "organisationId"]
-        });
+        const project = await Project.findOne({ where: { uuid: projectUuid }, attributes: ["id"] });
 
         if (project === null) {
           throw new NotFoundException(`Project with UUID ${projectUuid} not found`);
@@ -114,7 +111,7 @@ export class BoundingBoxController {
 
         return buildJsonApi(BoundingBoxDto).addData(
           id,
-          await this.boundingBoxService.getProjectBoundingBox(projectUuid)
+          await this.boundingBoxService.getProjectBoundingBox(project.id)
         );
       }
 

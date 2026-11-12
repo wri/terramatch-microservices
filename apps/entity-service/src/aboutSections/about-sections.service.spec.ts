@@ -29,21 +29,24 @@ describe("AboutSectionsService", () => {
   describe("findOne", () => {
     it("should return the specific section if there is one", async () => {
       await AboutSectionFactory.create({ type: "project" });
-      const specificSection = await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund"] });
+      const specificSection = await AboutSectionFactory.create({
+        type: "project",
+        frameworks: ["ppc", "terrafund-non-profits"]
+      });
       const result = await service.findOne("project", "ppc");
       expect(result?.id).toEqual(specificSection.id);
     });
 
     it("should return the default if there is no specific section", async () => {
       const defaultSection = await AboutSectionFactory.create({ type: "project" });
-      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund"] });
+      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund-non-profits"] });
       const result = await service.findOne("project", "hbf");
       expect(result?.id).toEqual(defaultSection.id);
     });
 
     it("should return null if there is no default", async () => {
       await AboutSectionFactory.create({ type: "project" });
-      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund"] });
+      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund-non-profits"] });
       expect(await service.findOne("site", "ppc")).toBeNull();
     });
   });
@@ -63,7 +66,7 @@ describe("AboutSectionsService", () => {
 
     it("should return 0 results when there is no default", async () => {
       await AboutSectionFactory.create({ type: "project" });
-      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund"] });
+      await AboutSectionFactory.create({ type: "project", frameworks: ["ppc", "terrafund-non-profits"] });
       const result = serialize(
         await service.addIndex(buildJsonApi(AboutSectionDto), { type: "site", framework: "hbf" })
       );
@@ -129,9 +132,9 @@ describe("AboutSectionsService", () => {
       await expect(service.store(castAttr({ type: "project", frameworks: ["hbf"] }))).rejects.toThrow(
         'The About Section for type "project" and framework "hbf" is already set'
       );
-      await expect(service.store(castAttr({ type: "project", frameworks: ["terrafund", "ppc"] }))).rejects.toThrow(
-        'The About Section for type "project" and framework "ppc" is already set'
-      );
+      await expect(
+        service.store(castAttr({ type: "project", frameworks: ["terrafund-non-profits", "ppc"] }))
+      ).rejects.toThrow('The About Section for type "project" and framework "ppc" is already set');
       await expect(
         service.store(castAttr({ type: "project", frameworks: ["hbf", "epa-ghana-pilot"] }), section)
       ).rejects.toThrow('The About Section for type "project" and framework "epa-ghana-pilot" is already set');
@@ -160,7 +163,7 @@ describe("AboutSectionsService", () => {
     });
 
     it("updates an existing section", async () => {
-      const section = await AboutSectionFactory.create({ frameworks: ["ppc", "terrafund"] });
+      const section = await AboutSectionFactory.create({ frameworks: ["ppc", "terrafund-non-profits"] });
       const links = [
         await LinkFactory.section(section).create({ order: 0 }),
         await LinkFactory.section(section).create({ order: 1 })
@@ -168,7 +171,7 @@ describe("AboutSectionsService", () => {
 
       const attributes: StoreAboutSectionAttributes = {
         type: section.type,
-        frameworks: ["terrafund", "ppc"],
+        frameworks: ["terrafund-non-profits", "ppc"],
         header: faker.lorem.sentence(),
         title: faker.lorem.sentence(),
         description: faker.lorem.paragraph(),

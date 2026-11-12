@@ -18,7 +18,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -140,6 +140,9 @@ export class SrpReportProcessor extends ReportProcessor<
     if (query.country != null) {
       builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
     }
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ projectId: { [Op.in]: Project.forCohort(query.cohort) } });
+    }
 
     if (query.taskIds != null && query.taskIds.length > 0) {
       builder.where({ taskId: query.taskIds });
@@ -200,9 +203,9 @@ export class SrpReportProcessor extends ReportProcessor<
     if (report == null) throw new NotFoundException();
 
     const reportLabel = await this.entitiesService.localizeText("SRP Report");
-    const fileName = `${report.projectName?.replace(/\/\\/g, "-")} - ${reportLabel} - ${DateTime.now().toFormat(
-      "yyyy-MM-dd HH:mm:ss"
-    )}.csv`;
+    const fileName = normalizedFileName(
+      `${report.projectName} - ${reportLabel} - ${DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss")}`
+    );
     await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, [report], {
       target,
       fileName,
@@ -219,7 +222,7 @@ export class SrpReportProcessor extends ReportProcessor<
       await this.entitiesService.entityExport("srpReports", PD_CSV_COLUMNS, reports, {
         target,
         frameworkKey: reports.find(report => report.frameworkKey != null)?.frameworkKey ?? undefined,
-        fileName: fileNamePrefix == null ? undefined : `${fileNamePrefix} - ${reportsLabel}.csv`,
+        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`),
         ability: "read"
       });
       return;

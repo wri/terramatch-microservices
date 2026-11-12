@@ -39,7 +39,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("returns only framework-allowed keys for terrafund (no seedingRecords)", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const reportInstance = createMock<SiteReport>({
         id: 1,
         dueAt: new Date("2024-06-30"),
@@ -100,38 +100,8 @@ describe("AggregateReportsService", () => {
       }
     });
 
-    it("returns only treePlanted and treesRegenerating for terrafund-landscapes", async () => {
-      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-landscapes" });
-      const mockFindAll = jest.fn().mockResolvedValue([]);
-      const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
-      jest.spyOn(SiteReport, "approved").mockReturnValue({
-        sites: mockSites
-      } as unknown as ReturnType<typeof SiteReport.approved>);
-
-      const result = await service.getAggregateReports("projects", project);
-
-      expect(result.treePlanted).toEqual([]);
-      expect(result.treesRegenerating).toEqual([]);
-      expect(result.seedingRecords).toBeUndefined();
-    });
-
-    it("returns only treePlanted and treesRegenerating for enterprises", async () => {
-      const project = createMock<Project>({ id: 1, frameworkKey: "enterprises" });
-      const mockFindAll = jest.fn().mockResolvedValue([]);
-      const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
-      jest.spyOn(SiteReport, "approved").mockReturnValue({
-        sites: mockSites
-      } as unknown as ReturnType<typeof SiteReport.approved>);
-
-      const result = await service.getAggregateReports("projects", project);
-
-      expect(result.treePlanted).toEqual([]);
-      expect(result.treesRegenerating).toEqual([]);
-      expect(result.seedingRecords).toBeUndefined();
-    });
-
-    it("returns only treePlanted and treesRegenerating for terrafund-3", async () => {
-      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-3" });
+    it("returns only treePlanted and treesRegenerating for terrafund-enterprises", async () => {
+      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-enterprises" });
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
       jest.spyOn(SiteReport, "approved").mockReturnValue({
@@ -146,7 +116,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("returns empty arrays when entity has no approved site reports", async () => {
-      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund" });
+      const project = createMock<Project>({ id: 1, frameworkKey: "terrafund-non-profits" });
 
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
@@ -161,7 +131,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("includes reports with null dueAt in series as single item with dueDate null", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const reportWithDue = createMock<SiteReport>({
         id: 1,
         dueAt: new Date("2024-06-30"),
@@ -228,7 +198,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("includes tree-planted amounts from reports with null dueAt in null-dueDate bucket", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const reportWithDue = createMock<SiteReport>({
         id: 1,
         dueAt: new Date("2024-06-30"),
@@ -274,7 +244,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("treats invalid dueAt as null instead of throwing", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const reportInvalidDue = createMock<SiteReport>({
         id: 1,
         dueAt: new Date("invalid"),
@@ -425,7 +395,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("sums amounts for multiple reports with the same due_at (one point per period)", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const sameDue = new Date("2024-06-30");
       const report1 = createMock<SiteReport>({ id: 1, dueAt: sameDue, numTreesRegenerating: 5 });
       const report2 = createMock<SiteReport>({ id: 2, dueAt: sameDue, numTreesRegenerating: 10 });
@@ -476,7 +446,7 @@ describe("AggregateReportsService", () => {
     });
 
     it("returns empty series when entityType is not projects or sites (e.g. unsupported)", async () => {
-      const project = Project.build({ id: 1, frameworkKey: "terrafund" });
+      const project = Project.build({ id: 1, frameworkKey: "terrafund-non-profits" });
       const mockFindAll = jest.fn().mockResolvedValue([]);
       const mockSites = jest.fn().mockReturnValue({ findAll: mockFindAll });
       jest.spyOn(SiteReport, "approved").mockReturnValue({

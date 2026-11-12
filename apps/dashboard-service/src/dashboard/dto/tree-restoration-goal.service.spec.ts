@@ -84,7 +84,7 @@ describe("TreeRestorationGoalService", () => {
     it("should return complete tree restoration goal data", async () => {
       const query: DashboardQueryDto = {
         country: "BEN",
-        programmes: ["terrafund"],
+        programmes: ["terrafund-non-profits"],
         landscapes: ["gcb"]
       };
 
@@ -176,7 +176,7 @@ describe("TreeRestorationGoalService", () => {
       const query: DashboardQueryDto = {
         organisationType: ["for-profit-organization", "non-profit-organization"],
         country: "CMR",
-        programmes: ["terrafund", "terrafund-landscapes"],
+        programmes: ["terrafund-non-profits", "terrafund-enterprises"],
         projectUuid: "uuid-123",
         landscapes: ["gcb"],
         cohort: ["cohort-2024"]
@@ -365,6 +365,33 @@ describe("TreeRestorationGoalService", () => {
 
       // Should only process reports with valid dueAt dates
       expect(result).toHaveLength(3);
+    });
+
+    it("should bucket site reports whose dueAt is a DATE string", async () => {
+      const mockApprovedSitesQuery = literal("approved-sites");
+
+      const siteReportsWithDateStrings = [
+        {
+          id: 1,
+          dueAt: "2023-01-15",
+          treesPlanted: [{ amount: 2000 }]
+        }
+      ];
+
+      (SiteReport.findAll as jest.Mock).mockResolvedValue(siteReportsWithDateStrings);
+
+      const result = await (
+        service as unknown as {
+          calculateTreesUnderRestoration: (
+            query: unknown,
+            dates: { year: number; month: number }[],
+            goal: number
+          ) => Promise<{ treeSpeciesAmount: number }[]>;
+        }
+      ).calculateTreesUnderRestoration(mockApprovedSitesQuery, [{ year: 2023, month: 1 }], 50000);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].treeSpeciesAmount).toBe(2000);
     });
 
     it("should include goal correctly with zero goal", async () => {

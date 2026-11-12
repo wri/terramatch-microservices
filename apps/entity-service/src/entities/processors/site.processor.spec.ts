@@ -8,6 +8,7 @@ import { reverse, sortBy } from "lodash";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import {
   EntityFormFactory,
+  FrameworkFactory,
   OrganisationFactory,
   ProjectFactory,
   ProjectUserFactory,
@@ -25,11 +26,13 @@ import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories
 import { SeedingFactory } from "@terramatch-microservices/database/factories/seeding.factory";
 import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
+import { faker } from "@faker-js/faker";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
 import { Op } from "sequelize";
+import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { TestingModule } from "@nestjs/testing";
 import { SiteReportProcessor } from "./site-report.processor";
 import archiver, { Archiver } from "archiver";
@@ -100,11 +103,11 @@ describe("SiteProcessor", () => {
     it("should returns framework sites", async () => {
       const sites = await SiteFactory.createMany(3, { frameworkKey: "hbf" });
       await SiteFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await SiteFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         sites.push(p);
       }
 
-      await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectSites(sites, {}, { permissions: ["framework-hbf", "framework-terrafund-non-profits"] });
     });
 
     it("filters", async () => {
@@ -250,8 +253,8 @@ describe("SiteProcessor", () => {
 
     describe("processSideloads", () => {
       it("should throw", async () => {
-        setMockedPermissions("framework-terrafund");
-        await SiteFactory.create({ frameworkKey: "terrafund" });
+        setMockedPermissions("framework-terrafund-non-profits");
+        await SiteFactory.create({ frameworkKey: "terrafund-non-profits" });
         await expect(
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
         ).rejects.toThrow(BadRequestException);
@@ -489,6 +492,7 @@ describe("SiteProcessor", () => {
 
     it("creates a report with a future due task", async () => {
       const project = await ProjectFactory.create();
+      await FrameworkFactory.create({ slug: project.frameworkKey, siteReportFormUuid: faker.string.uuid() });
       const task = await TaskFactory.create({
         projectId: project.id,
         dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
@@ -502,6 +506,7 @@ describe("SiteProcessor", () => {
 
     it("creates a report with a recently due task", async () => {
       const project = await ProjectFactory.create();
+      await FrameworkFactory.create({ slug: project.frameworkKey, siteReportFormUuid: faker.string.uuid() });
       const task = await TaskFactory.create({
         projectId: project.id,
         dueAt: DateTime.now().minus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
@@ -519,6 +524,17 @@ describe("SiteProcessor", () => {
       const report = await SiteReport.findOne({ where: { siteId: site.id } });
       expect(report?.taskId).toBe(task.id);
       expect(report?.dueAt).toEqual(task.dueAt);
+    });
+    it("does not create a report if the framework has no site report form", async () => {
+      const project = await ProjectFactory.create({ frameworkKey: "no-site-reports" as FrameworkKey });
+      await FrameworkFactory.create({ slug: project.frameworkKey, projectReportFormUuid: faker.string.uuid() });
+      await TaskFactory.create({
+        projectId: project.id,
+        dueAt: DateTime.now().plus({ days: 5 }).set({ millisecond: 0 }).toJSDate()
+      });
+      setMockedPermissions(`framework-${project.frameworkKey}`);
+      const site = await processor.create({ parentUuid: project.uuid });
+      expect(await SiteReport.findOne({ where: { siteId: site.id } })).toBeNull();
     });
   });
 
@@ -588,7 +604,7 @@ describe("SiteProcessor", () => {
         await SiteFactory.create({ projectId: projects[1].id, frameworkKey: "ppc" })
       ];
       // non-framework site should be ignored
-      await SiteFactory.create({ frameworkKey: "terrafund" });
+      await SiteFactory.create({ frameworkKey: "terrafund-non-profits" });
       await EntityFormFactory.site(sites[0]).create();
 
       const addRow = jest.fn();

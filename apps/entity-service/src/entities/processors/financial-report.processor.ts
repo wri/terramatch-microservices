@@ -17,7 +17,7 @@ import { Dictionary } from "lodash";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { Archiver } from "archiver";
 import { Response } from "express";
-import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
+import { normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { monitoredOrganisationIds } from "@terramatch-microservices/common/policies/financial-report.policy";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = ["status", "organisationUuid", "updateRequestStatus", "frameworkKey"];
@@ -197,7 +197,7 @@ export class FinancialReportProcessor extends ReportProcessor<
       const reportsLabel = await this.entitiesService.localizeText("financial reports");
       await this.entitiesService.entityExport("financialReports", PD_CSV_COLUMNS, reports, {
         frameworkKey,
-        fileName: fileNamePrefix == null ? undefined : `${fileNamePrefix} - ${reportsLabel}.csv`,
+        fileName: fileNamePrefix == null ? undefined : normalizedFileName(`${fileNamePrefix} - ${reportsLabel}`),
         target,
         ability: "read"
       });

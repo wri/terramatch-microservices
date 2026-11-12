@@ -50,9 +50,7 @@ export class FormDataService {
       await updateRequest.update({ content: answers });
     } else if (!(await this.policyService.hasAccess("updateAnswers", model))) {
       if (!allowsChangeRequest) {
-        throw new BadRequestException(
-          "Change requests can only be created when the entity is approved or information-required"
-        );
+        throw new BadRequestException("Change requests can only be created when the entity is approved");
       }
       const newUpdateRequest = await UpdateRequest.create({
         updateRequestableType: laravelType(model),

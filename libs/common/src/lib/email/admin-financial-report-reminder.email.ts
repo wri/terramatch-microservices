@@ -2,9 +2,8 @@
 import { EmailSender } from "./email-sender";
 import { EmailService } from "./email.service";
 import { AdminReminderEmailData } from "./email.processor";
-import { FinancialReport, OrganisationUser, User } from "@terramatch-microservices/database/entities";
-import { Dictionary, groupBy, isEmpty, uniqBy } from "lodash";
-import { Op } from "sequelize";
+import { FinancialReport, User } from "@terramatch-microservices/database/entities";
+import { Dictionary, groupBy, isEmpty } from "lodash";
 import { TMLogger } from "../util/tm-logger";
 import { ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
@@ -39,8 +38,10 @@ export class AdminFinancialReportReminderEmail extends EmailSender<AdminReminder
       return;
     }
 
-    const organisationId = report.organisationId;
-    const users = await this.getOrganisationUsers(organisationId);
+    const users = await User.findAll({
+      where: { organisationId: report.organisationId },
+      attributes: ["id", "emailAddress", "locale"]
+    });
     const recipients = emailService.filterEntityEmailRecipients(users);
 
     if (isEmpty(recipients)) {
@@ -77,30 +78,6 @@ export class AdminFinancialReportReminderEmail extends EmailSender<AdminReminder
         )
       )
     );
-  }
-
-  private async getOrganisationUsers(organisationId: number): Promise<User[]> {
-    const partnerUserIds = (
-      await OrganisationUser.findAll({
-        where: { organisationId },
-        attributes: ["userId"]
-      })
-    ).map(({ userId }) => userId);
-
-    const [owners, partners] = await Promise.all([
-      User.findAll({
-        where: { organisationId },
-        attributes: ["id", "emailAddress", "locale"]
-      }),
-      partnerUserIds.length > 0
-        ? User.findAll({
-            where: { id: { [Op.in]: partnerUserIds } },
-            attributes: ["id", "emailAddress", "locale"]
-          })
-        : Promise.resolve([])
-    ]);
-
-    return uniqBy([...owners, ...partners], "id");
   }
 
   private formatDate(date: Date): string {

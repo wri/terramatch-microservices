@@ -94,11 +94,15 @@ describe("NurseryReportProcessor", () => {
     it("should returns framework nursery reports", async () => {
       const nurseryReports = await NurseryReportFactory.createMany(3, { frameworkKey: "hbf" });
       await NurseryReportFactory.createMany(3, { frameworkKey: "ppc" });
-      for (const p of await NurseryReportFactory.createMany(3, { frameworkKey: "terrafund" })) {
+      for (const p of await NurseryReportFactory.createMany(3, { frameworkKey: "terrafund-non-profits" })) {
         nurseryReports.push(p);
       }
 
-      await expectNurseryReports(nurseryReports, {}, { permissions: ["framework-hbf", "framework-terrafund"] });
+      await expectNurseryReports(
+        nurseryReports,
+        {},
+        { permissions: ["framework-hbf", "framework-terrafund-non-profits"] }
+      );
     });
 
     it("should return nursery reports that match the search term", async () => {
@@ -157,7 +161,7 @@ describe("NurseryReportProcessor", () => {
         title: "fourth project report",
         status: "approved",
         updateRequestStatus: "approved",
-        frameworkKey: "terrafund",
+        frameworkKey: "terrafund-non-profits",
         nurseryId: n2.id
       });
 
@@ -557,23 +561,23 @@ describe("NurseryReportProcessor", () => {
     });
 
     it("writes all nursery reports to the CSV", async () => {
-      setMockedPermissions("framework-terrafund");
+      setMockedPermissions("framework-terrafund-non-profits");
       await NurseryReport.truncate();
       const orgs = [
         await OrganisationFactory.create({ type: "non-profit-organization" }),
         await OrganisationFactory.create({ type: "for-profit-organization" })
       ];
       const projects = [
-        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "terrafund" }),
-        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "terrafund" })
+        await ProjectFactory.create({ organisationId: orgs[0].id, frameworkKey: "terrafund-non-profits" }),
+        await ProjectFactory.create({ organisationId: orgs[1].id, frameworkKey: "terrafund-non-profits" })
       ];
       const nurseries = [
-        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund" }),
-        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund" })
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund-non-profits" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund-non-profits" })
       ];
       const reports = [
-        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund" }),
-        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund" })
+        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund-non-profits" }),
+        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund-non-profits" })
       ];
       // non framework reports should be ignored
       await NurseryReportFactory.create({ frameworkKey: "hbf" });
@@ -583,7 +587,7 @@ describe("NurseryReportProcessor", () => {
       csvExportService().writeCsv.mockImplementation(async (fileName, response, columns, writeRows) => {
         await writeRows(addRow);
       });
-      await processor.exportAll({ frameworkKey: "terrafund" });
+      await processor.exportAll({ frameworkKey: "terrafund-non-profits" });
 
       expect(addRow).toHaveBeenCalledTimes(2);
       const [result1, additional1] = addRow.mock.calls[0] as [NurseryReport, { linkToTerramatch: string }];
@@ -608,16 +612,16 @@ describe("NurseryReportProcessor", () => {
       await NurseryReport.truncate();
       const org = await OrganisationFactory.create({ type: "non-profit-organization" });
       const projects = [
-        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" }),
-        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" })
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-non-profits" }),
+        await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-non-profits" })
       ];
       const nurseries = [
-        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund" }),
-        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund" })
+        await NurseryFactory.create({ projectId: projects[0].id, frameworkKey: "terrafund-non-profits" }),
+        await NurseryFactory.create({ projectId: projects[1].id, frameworkKey: "terrafund-non-profits" })
       ];
       const reports = [
-        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund" }),
-        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund" })
+        await NurseryReportFactory.create({ nurseryId: nurseries[0].id, frameworkKey: "terrafund-non-profits" }),
+        await NurseryReportFactory.create({ nurseryId: nurseries[1].id, frameworkKey: "terrafund-non-profits" })
       ];
       await EntityFormFactory.nurseryReport(reports[0]).create();
 
@@ -638,9 +642,12 @@ describe("NurseryReportProcessor", () => {
     it("writes only the selected nursery reports to the CSV", async () => {
       await NurseryReport.truncate();
       const org = await OrganisationFactory.create({ type: "non-profit-organization" });
-      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund" });
-      const nursery = await NurseryFactory.create({ projectId: project.id, frameworkKey: "terrafund" });
-      const reports = await NurseryReportFactory.createMany(3, { nurseryId: nursery.id, frameworkKey: "terrafund" });
+      const project = await ProjectFactory.create({ organisationId: org.id, frameworkKey: "terrafund-non-profits" });
+      const nursery = await NurseryFactory.create({ projectId: project.id, frameworkKey: "terrafund-non-profits" });
+      const reports = await NurseryReportFactory.createMany(3, {
+        nurseryId: nursery.id,
+        frameworkKey: "terrafund-non-profits"
+      });
       await EntityFormFactory.nurseryReport(reports[0]).create();
       jest.spyOn(entitiesService(), "authorize").mockResolvedValue();
 

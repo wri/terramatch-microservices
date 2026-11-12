@@ -86,6 +86,21 @@ describe("SitePolygonPolicy", () => {
     await expectCan(service, "manage", sitePolygon);
   });
 
+  it("denies manage-own users another organisation's polygons even though a class-level check passes", async () => {
+    const user = await UserFactory.create();
+    const ownProject = await ProjectFactory.create();
+    await ProjectUserFactory.create({ userId: user.id, projectId: ownProject.id });
+    await SiteFactory.create({ projectId: ownProject.id });
+    const otherSite = await SiteFactory.create({ projectId: (await ProjectFactory.create()).id });
+
+    mockContextForUser(user, "manage-own");
+    const otherPolygon = new SitePolygon();
+    otherPolygon.siteUuid = otherSite.uuid;
+
+    await expectCan(service, "read", SitePolygon);
+    await expectCannot(service, ["read", "update"], otherPolygon);
+  });
+
   it("allows managing polygons for managed projects with projects-manage", async () => {
     const user = await UserFactory.create();
     const project = await ProjectFactory.create();

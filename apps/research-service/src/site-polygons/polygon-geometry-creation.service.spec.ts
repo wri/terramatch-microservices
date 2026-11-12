@@ -890,22 +890,35 @@ describe("PolygonGeometryCreationService", () => {
       await expect(service.bulkUpdateProjectCentroids(["uuid-1"])).rejects.toThrow(InternalServerErrorException);
     });
 
-    it("should update project centroids using ALL active polygons", async () => {
+    it("should not update anything when no project owns the polygons", async () => {
       mockSequelize.query.mockResolvedValue([]);
 
       await service.bulkUpdateProjectCentroids(["polygon-uuid-1"]);
 
+      expect(mockSequelize.query).toHaveBeenCalledTimes(1);
+    });
+
+    it("should update project centroids using ALL active polygons", async () => {
+      mockSequelize.query.mockResolvedValueOnce([{ projectId: 7 }, { projectId: 9 }]).mockResolvedValueOnce([]);
+
+      await service.bulkUpdateProjectCentroids(["polygon-uuid-1"]);
+
+      expect(mockSequelize.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT DISTINCT s.project_id"),
+        expect.objectContaining({
+          type: QueryTypes.SELECT,
+          replacements: { uuid0: "polygon-uuid-1" }
+        })
+      );
       expect(mockSequelize.query).toHaveBeenCalledWith(
         expect.stringContaining("UPDATE v2_projects"),
         expect.objectContaining({
           type: QueryTypes.UPDATE,
-          replacements: expect.objectContaining({
-            uuid0: "polygon-uuid-1"
-          })
+          replacements: { projectIds: [7, 9] }
         })
       );
       expect(mockSequelize.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT DISTINCT s2.project_id"),
+        expect.stringContaining("sp.deleted_at IS NULL"),
         expect.anything()
       );
       expect(mockSequelize.query).toHaveBeenCalledWith(expect.stringContaining("sp.is_active = 1"), expect.anything());

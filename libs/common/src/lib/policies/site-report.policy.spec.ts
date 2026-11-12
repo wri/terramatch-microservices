@@ -42,7 +42,7 @@ describe("SiteReportPolicy", () => {
   it("allows managing site reports in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await SiteReportFactory.create({ frameworkKey: "ppc" });
-    const tf = await SiteReportFactory.create({ frameworkKey: "terrafund" });
+    const tf = await SiteReportFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "deleteFiles"], ppc]],
       cannot: [[["read", "delete", "update", "approve"], tf]]

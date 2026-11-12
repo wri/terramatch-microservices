@@ -1,5 +1,6 @@
 import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
 import {
+  Framework,
   Media,
   Project,
   ProjectUser,
@@ -158,6 +159,9 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
 
     if (query.country != null) {
       builder.where({ projectId: { [Op.in]: Project.forCountry(query.country) } });
+    }
+    if (query.cohort != null && query.cohort.length > 0) {
+      builder.where({ projectId: { [Op.in]: Project.forCohort(query.cohort) } });
     }
 
     if (query.search != null || query.searchFilter != null) {
@@ -636,7 +640,10 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       frameworkKey: project.frameworkKey
     });
 
-    const task = await Task.forProject(project.id).dueAtDesc().findOne();
+    // Frameworks without a site report form do not generate site reports.
+    const task = (await Framework.hasForm(project.frameworkKey, "siteReportFormUuid"))
+      ? await Task.forProject(project.id).dueAtDesc().findOne()
+      : null;
     if (task?.dueAt != null) {
       // If we have a task due in the future, create a report
       let createReport = DateTime.now() <= DateTime.fromJSDate(task.dueAt);

@@ -46,7 +46,7 @@ export * from "./nursery.entity";
 export * from "./nursery-report.entity";
 export * from "./organisation.entity";
 export * from "./organisation-invite.entity";
-export * from "./organisation-user.entity";
+export * from "./organisation-join-request.entity";
 export * from "./password-reset.entity";
 export * from "./ownership-stake.entity";
 export * from "./point-geometry.entity";

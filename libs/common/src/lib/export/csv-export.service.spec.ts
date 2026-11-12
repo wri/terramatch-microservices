@@ -171,7 +171,7 @@ describe("CsvExportService", () => {
       mediaService().getUrl.mockReturnValue("url-for-media");
 
       const mappings = await getFormQuestionsForExport(form);
-      const result = await service.collectFormCells(mappings, { sites: site }, "terrafund");
+      const result = await service.collectFormCells(mappings, { sites: site }, "terrafund-non-profits");
       expect(result).toEqual({
         history: site.history,
         media: ["url-for-media", "url-for-media"]

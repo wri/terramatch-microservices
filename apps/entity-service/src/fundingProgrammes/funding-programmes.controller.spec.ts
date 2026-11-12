@@ -8,7 +8,6 @@ import {
   FormFactory,
   FundingProgrammeFactory,
   OrganisationFactory,
-  OrganisationUserFactory,
   SavedExportFactory,
   StageFactory,
   UserFactory
@@ -55,7 +54,7 @@ describe("FundingProgrammesController", () => {
   describe("indexFundingProgrammes", () => {
     it("returns all funding programmes", async () => {
       await FundingProgramme.truncate();
-      setMockedPermissions("framework-terrafund");
+      setMockedPermissions("framework-terrafund-non-profits");
       const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
       const programmes = await FundingProgrammeFactory.createMany(3);
       await controller.index();
@@ -81,18 +80,16 @@ describe("FundingProgrammesController", () => {
 
     it("returns the funding programmes related to the user's org", async () => {
       const org = await OrganisationFactory.create({ type: "non-profit" });
-      const org2 = await OrganisationFactory.create({ type: "gov" });
       const user = await UserFactory.create({ organisationId: org.id });
-      await OrganisationUserFactory.create({ organisationId: org2.id, userId: user.id, status: "approved" });
       mockContextForUser(user, "manage-own");
       await FundingProgramme.truncate();
       const programmes = [
         await FundingProgrammeFactory.create({
           organisationTypes: ["for-profit", "non-profit"] as unknown as OrganisationType[]
         }),
-        await FundingProgrammeFactory.create({ organisationTypes: ["non-profit"] as unknown as OrganisationType[] }),
-        await FundingProgrammeFactory.create({ organisationTypes: ["gov"] as unknown as OrganisationType[] })
+        await FundingProgrammeFactory.create({ organisationTypes: ["non-profit"] as unknown as OrganisationType[] })
       ];
+      await FundingProgrammeFactory.create({ organisationTypes: ["gov"] as unknown as OrganisationType[] });
       await FundingProgrammeFactory.create({
         organisationTypes: ["non-profit-other"] as unknown as OrganisationType[]
       });

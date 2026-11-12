@@ -559,4 +559,8 @@ export class ProjectPitch extends Model<InferAttributes<ProjectPitch>, InferCrea
   @AllowNull
   @JsonColumn()
   declare gliComponents: string[] | null;
+
+  @AllowNull
+  @JsonColumn()
+  declare incomeGeneratingActivities: string[] | null;
 }

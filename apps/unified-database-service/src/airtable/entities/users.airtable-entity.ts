@@ -14,7 +14,6 @@ type UserWithUuid = User & UuidModel;
 
 type UserAssociations = {
   primaryOrganisationUuid?: string;
-  monitoringOrganisationUuids?: string[];
   frameworks?: string[];
   projectUuids?: string[];
 };
@@ -29,7 +28,6 @@ const COLUMNS: ColumnMapping<UserWithUuid, UserAssociations>[] = [
   "emailAddress",
   "phoneNumber",
   associatedValueColumn("primaryOrganisationUuid", "organisationId"),
-  associatedValueColumn("monitoringOrganisationUuids"),
   associatedValueColumn("frameworks"),
   associatedValueColumn("projectUuids")
 ];
@@ -46,12 +44,8 @@ export class UserEntity extends AirtableEntity<UserWithUuid, UserAssociations> {
     const associations: Record<number, UserAssociations> = {};
     await Promise.all(
       users.map(async user => {
-        const orgs = await user.$get("organisations", { attributes: ["uuid"] });
         associations[user.id] = {
-          primaryOrganisationUuid: (await user.primaryOrganisation())?.uuid,
-          monitoringOrganisationUuids: orgs
-            .filter(({ OrganisationUser }) => OrganisationUser.status === "approved")
-            .map(({ uuid }) => uuid),
+          primaryOrganisationUuid: (await user.loadOrganisation())?.uuid,
           frameworks: (await user.myFrameworks()).map(({ slug }) => slug).filter(isNotNull),
           projectUuids: (await user.$get("projects", { attributes: ["uuid"] })).map(({ uuid }) => uuid)
         };

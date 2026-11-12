@@ -62,6 +62,11 @@ describe("site-polygon-sort", () => {
       ]);
     });
 
+    it("builds site and project name order from the joined site and project aliases", () => {
+      expect(buildSitePolygonSortOrder("siteName", "DESC")).toEqual([[literal("`site`.`name`"), "DESC"]]);
+      expect(buildSitePolygonSortOrder("projectName", "ASC")).toEqual([[literal("`site->project`.`name`"), "ASC"]]);
+    });
+
     it("throws for an unrecognized sort field", () => {
       expect(() => buildSitePolygonSortOrder("invalid")).toThrow(BadRequestException);
       expect(() => buildSitePolygonSortOrder("invalid")).toThrow("Invalid sort field: invalid");
@@ -82,7 +87,9 @@ describe("site-polygon-sort", () => {
           "source",
           "practice",
           "distr",
-          "disturbance"
+          "disturbance",
+          "siteName",
+          "projectName"
         ])
       );
     });

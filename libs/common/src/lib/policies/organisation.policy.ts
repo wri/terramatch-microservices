@@ -15,32 +15,21 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
       this.builder.can(["uploadFiles", "deleteFiles", "updateFiles", "delete"], Organisation);
     }
 
-    const userForApproveReject = await this.getUser();
-    const primaryOrgForApproveReject = await this.getPrimaryOrganisation();
-    if (
-      primaryOrgForApproveReject != null &&
-      userForApproveReject != null &&
-      userForApproveReject.organisationId === primaryOrgForApproveReject.id
-    ) {
-      this.builder.can("approveReject", Organisation, { id: primaryOrgForApproveReject.id });
-    }
-
-    if (userForApproveReject != null && userForApproveReject.organisationsConfirmed != null) {
-      const confirmedOrgIds = userForApproveReject.organisationsConfirmed.map(({ id }) => id);
-      if (confirmedOrgIds.length > 0) {
-        this.builder.can("approveReject", Organisation, { id: { $in: confirmedOrgIds } });
-      }
-    }
-
     this.builder.can("listing", Organisation, {
       status: APPROVED,
       private: false,
       isTest: false
     });
 
-    const orgUuids = await this.getOrgUuids();
-    if (orgUuids.length > 0) {
-      this.builder.can("read", Organisation, { uuid: { $in: orgUuids } });
+    const user = await this.getUser();
+    const organisationId = user?.organisationId;
+    if (organisationId != null) {
+      this.builder.can(["read", "approveReject"], Organisation, { id: organisationId });
+      this.builder.can("delete", Organisation, { id: organisationId, status: DRAFT });
+
+      if (this.permissions.includes("manage-own")) {
+        this.builder.can(["update", "uploadFiles", "deleteFiles", "updateFiles"], Organisation, { id: organisationId });
+      }
     }
 
     const projectOrgIds = await this.getProjectOrganisationIds();
@@ -49,51 +38,9 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     }
 
     this.builder.can("joinRequest", Organisation);
-    const primaryOrg = await this.getPrimaryOrganisation();
-    if (primaryOrg != null) {
-      this.builder.can("delete", Organisation, {
-        id: primaryOrg.id,
-        status: DRAFT
-      });
+    if (user?.roles.includes("greenhouse-service-account")) {
+      this.builder.cannot("joinRequest", Organisation);
     }
-
-    if (this.permissions.includes("manage-own")) {
-      const primaryOrg = await this.getPrimaryOrganisation();
-      if (primaryOrg != null) {
-        this.builder.can(["update", "uploadFiles", "deleteFiles", "updateFiles"], Organisation, {
-          id: primaryOrg.id
-        });
-      }
-
-      const user = await this.getUser();
-      if (user != null && user.organisationsConfirmed != null) {
-        const confirmedOrgIds = user.organisationsConfirmed.map(({ id }) => id);
-        if (confirmedOrgIds.length > 0) {
-          this.builder.can("update", Organisation, { id: { $in: confirmedOrgIds } });
-        }
-      }
-    }
-
-    const user = await User.findOne({
-      where: { id: this.userId },
-      attributes: ["roles"]
-    });
-    if (user != null) {
-      if (user.roles.includes("greenhouse-service-account")) {
-        this.builder.cannot("joinRequest", Organisation);
-      }
-    }
-  }
-
-  protected _primaryOrg?: Organisation | null;
-  protected async getPrimaryOrganisation() {
-    if (this._primaryOrg != null) return this._primaryOrg;
-
-    const user = await User.findOne({
-      where: { id: this.userId },
-      attributes: ["organisationId", "id"]
-    });
-    return (this._primaryOrg = await user?.primaryOrganisation());
   }
 
   protected _user?: User | null;
@@ -102,11 +49,8 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
 
     return (this._user = await User.findOne({
       where: { id: this.userId },
-      attributes: ["organisationId", "id"],
-      include: [
-        { association: "projects", attributes: ["id", "organisationId"] },
-        { association: "organisationsConfirmed", attributes: ["id"] }
-      ]
+      attributes: ["organisationId", "id", "roles"],
+      include: [{ association: "projects", attributes: ["id", "organisationId"] }]
     }));
   }
 
@@ -115,7 +59,7 @@ export class OrganisationPolicy extends UserPermissionsPolicy {
     if (this._projectOrgIds != null) return this._projectOrgIds;
 
     const user = await this.getUser();
-    if (user == null || user.projects == null) return (this._projectOrgIds = []);
+    if (user?.projects == null) return (this._projectOrgIds = []);
 
     const orgIds = user.projects.map(({ organisationId }) => organisationId).filter((id): id is number => id != null);
     return (this._projectOrgIds = [...new Set(orgIds)]);

@@ -35,7 +35,7 @@ describe("SrpReportPolicy", () => {
   it("allows managing disturbance reports in your framework", async () => {
     mockUserContext({ userId: 123, permissions: ["framework-ppc"] });
     const ppc = await SrpReportFactory.create({ frameworkKey: "ppc" });
-    const tf = await SrpReportFactory.create({ frameworkKey: "terrafund" });
+    const tf = await SrpReportFactory.create({ frameworkKey: "terrafund-non-profits" });
     await expectAuthority(service, {
       can: [[["read", "delete", "update", "approve", "create"], ppc]],
       cannot: [[["read", "delete", "update", "approve", "create"], tf]]

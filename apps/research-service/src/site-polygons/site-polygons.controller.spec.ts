@@ -103,6 +103,7 @@ describe("SitePolygonsController", () => {
     filterPolygonUuids: jest.Mock;
     addSearch: jest.Mock;
     filterPlantStartRange: jest.Mock;
+    filterCalcAreaRange: jest.Mock;
     filterPractice: jest.Mock;
     filterDistr: jest.Mock;
     filterSubmissionCycle: jest.Mock;
@@ -132,6 +133,7 @@ describe("SitePolygonsController", () => {
       filterPolygonUuids: jest.fn().mockResolvedValue(undefined),
       addSearch: jest.fn().mockResolvedValue(undefined),
       filterPlantStartRange: jest.fn().mockReturnThis(),
+      filterCalcAreaRange: jest.fn().mockReturnThis(),
       filterPractice: jest.fn().mockReturnThis(),
       filterDistr: jest.fn().mockReturnThis(),
       filterSubmissionCycle: jest.fn().mockReturnThis(),
@@ -550,6 +552,8 @@ describe("SitePolygonsController", () => {
       await controller.findMany({
         plantStartFrom: from,
         plantStartTo: to,
+        calcAreaMin: 5,
+        calcAreaMax: 20,
         practice: ["tree-planting"],
         distr: ["partial", "full"],
         targetSys: ["mangrove", "urban-forest"],
@@ -560,6 +564,7 @@ describe("SitePolygonsController", () => {
       });
 
       expect(builder.filterPlantStartRange).toHaveBeenCalledWith(from, to);
+      expect(builder.filterCalcAreaRange).toHaveBeenCalledWith(5, 20);
       expect(builder.filterPractice).toHaveBeenCalledWith(["tree-planting"]);
       expect(builder.filterDistr).toHaveBeenCalledWith(["partial", "full"]);
       expect(builder.filterTargetSys).toHaveBeenCalledWith(["mangrove", "urban-forest"]);
@@ -579,6 +584,13 @@ describe("SitePolygonsController", () => {
           plantStartTo: new Date("2024-01-01")
         })
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw when calcAreaMin is greater than calcAreaMax", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      mockQueryBuilder();
+
+      await expect(controller.findMany({ calcAreaMin: 20, calcAreaMax: 5 })).rejects.toThrow(BadRequestException);
     });
 
     it("should throw when sorting without number pagination", async () => {
@@ -2733,6 +2745,8 @@ describe("SitePolygonsController", () => {
     const summaryDto = new SitePolygonSummaryDto({
       sumNumTrees: 15,
       sumCalcArea: 3.5,
+      minCalcArea: 1.25,
+      maxCalcArea: 2.25,
       totalPolygons: 2,
       countByStatus: {
         draft: 1,
@@ -2770,6 +2784,8 @@ describe("SitePolygonsController", () => {
         expect(result.data.attributes).toEqual({
           sumNumTrees: 15,
           sumCalcArea: 3.5,
+          minCalcArea: 1.25,
+          maxCalcArea: 2.25,
           totalPolygons: 2,
           countByStatus: {
             draft: 1,

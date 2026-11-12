@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsOptional } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsNumber, IsOptional, Min } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -122,6 +122,28 @@ export class SitePolygonMapIndexQueryDto extends SitePolygonProjectFiltersDto {
   @IsOptional()
   @IsDate()
   plantStartTo?: Date;
+
+  @ApiProperty({
+    required: false,
+    minimum: 0,
+    description:
+      "Inclusive lower bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  calcAreaMin?: number;
+
+  @ApiProperty({
+    required: false,
+    minimum: 0,
+    description:
+      "Inclusive upper bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  calcAreaMax?: number;
 
   @ApiProperty({
     name: "practice[]",

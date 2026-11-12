@@ -43,6 +43,9 @@ export async function applySitePolygonScopeFilters(
   ) {
     throw new BadRequestException("plantStartFrom must be on or before plantStartTo");
   }
+  if (query.calcAreaMin != null && query.calcAreaMax != null && query.calcAreaMin > query.calcAreaMax) {
+    throw new BadRequestException("calcAreaMin must be less than or equal to calcAreaMax");
+  }
   if (query.missingIndicator != null && query.presentIndicator != null) {
     throw new BadRequestException(
       "Only one of missingIndicator[] or presentIndicator[] may be used in a single request."
@@ -75,6 +78,7 @@ export async function applySitePolygonScopeFilters(
 
   builder
     .filterPlantStartRange(query.plantStartFrom, query.plantStartTo)
+    .filterCalcAreaRange(query.calcAreaMin, query.calcAreaMax)
     .filterPractice(nonEmpty(query.practice))
     .filterDistr(nonEmpty(query.distr))
     .filterTargetSys(nonEmpty(query.targetSys))

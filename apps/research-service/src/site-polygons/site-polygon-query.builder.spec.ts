@@ -227,6 +227,56 @@ describe("SitePolygonQueryBuilder", () => {
     });
   });
 
+  describe("filterCalcAreaRange", () => {
+    it("should include bounds inclusively and exclude null calcArea", async () => {
+      const site = await SiteFactory.create();
+      const onMin = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 5 });
+      const onMax = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 20 });
+      const inside = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 12.5 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 4.99 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 20.01 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: null });
+
+      builder.filterCalcAreaRange(5, 20);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([onMin.id, onMax.id, inside.id].sort());
+    });
+
+    it("should apply only the lower bound when max is undefined", async () => {
+      const site = await SiteFactory.create();
+      const included = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 30 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 1 });
+
+      builder.filterCalcAreaRange(10, undefined);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id)).toEqual([included.id]);
+    });
+
+    it("should apply only the upper bound when min is undefined", async () => {
+      const site = await SiteFactory.create();
+      const included = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 0 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 30 });
+
+      builder.filterCalcAreaRange(undefined, 10);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id)).toEqual([included.id]);
+    });
+
+    it("should not filter when both bounds are undefined", async () => {
+      const site = await SiteFactory.create();
+      const withArea = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 3 });
+      const withoutArea = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: null });
+
+      builder.filterCalcAreaRange(undefined, undefined);
+      const result = await builder.execute();
+
+      expect(result.map(p => p.id).sort()).toEqual([withArea.id, withoutArea.id].sort());
+    });
+  });
+
   describe("addSearch", () => {
     it("should search only site names when fields include only siteName", async () => {
       const project = await ProjectFactory.create();

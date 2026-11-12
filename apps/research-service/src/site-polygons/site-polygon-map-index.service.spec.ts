@@ -59,6 +59,12 @@ describe("SitePolygonMapIndexService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it("rejects an inverted calcArea range", async () => {
+      await expect(getMapIndex({ siteId: ["site-uuid"], calcAreaMin: 20, calcAreaMax: 5 })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
     it("rejects using missingIndicator[] and presentIndicator[] together", async () => {
       await expect(
         getMapIndex({ siteId: ["site-uuid"], missingIndicator: ["treeCover"], presentIndicator: ["treeCover"] })
@@ -309,6 +315,17 @@ describe("SitePolygonMapIndexService", () => {
         plantStartFrom: new Date("2024-01-01"),
         plantStartTo: new Date("2024-12-31")
       });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([inRange.uuid]);
+    });
+
+    it("filters by calcArea range", async () => {
+      const site = await SiteFactory.create();
+      const inRange = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 10 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 25 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: null });
+
+      const result = await getMapIndex({ siteId: [site.uuid], calcAreaMin: 5, calcAreaMax: 20 });
 
       expect(result.polygons.map(({ uuid }) => uuid)).toEqual([inRange.uuid]);
     });

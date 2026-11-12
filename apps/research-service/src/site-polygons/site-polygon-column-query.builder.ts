@@ -123,6 +123,15 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
     return this;
   }
 
+  filterCalcAreaRange(min?: number, max?: number) {
+    if (min == null && max == null) return this;
+    const parts: WhereOptions[] = [{ calcArea: { [Op.ne]: null } }];
+    if (min != null) parts.push({ calcArea: { [Op.gte]: min } });
+    if (max != null) parts.push({ calcArea: { [Op.lte]: max } });
+    this.where({ [Op.and]: parts });
+    return this;
+  }
+
   filterPractice(practices?: string[]) {
     if (practices == null || practices.length === 0) return this;
     this.where(this.buildJsonArrayOverlapWhere("practice", practices));

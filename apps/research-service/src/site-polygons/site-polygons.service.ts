@@ -37,6 +37,7 @@ import { CursorPage, isCursorPage, isNumberPage, NumberPage } from "@terramatch-
 import {
   INDICATOR_SLUGS,
   PolygonStatus,
+  POLYGON_APPROVED,
   POLYGON_DRAFT,
   POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
@@ -685,13 +686,32 @@ export class SitePolygonsService {
   }
 
   async assertStatusUpdateAllowed(status: PolygonStatus, uuids: string[]) {
-    if (status !== POLYGON_PENDING_APPROVAL) return;
+    if (status !== POLYGON_PENDING_APPROVAL && status !== POLYGON_APPROVED) return;
 
     const requestedSitePolygons = await SitePolygon.findAll({
       where: { uuid: { [Op.in]: uuids } },
       attributes: ["uuid", "status", "validationStatus"]
     });
-    this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
+    if (status === POLYGON_APPROVED) {
+      this.assertSitePolygonsEligibleForApproval(uuids, requestedSitePolygons);
+    } else {
+      this.assertSitePolygonsEligibleForSubmission(uuids, requestedSitePolygons);
+    }
+  }
+
+  private assertSitePolygonsEligibleForApproval(uuids: string[], sitePolygons: SitePolygon[]): void {
+    const sitePolygonsByUuid = new Map(sitePolygons.map(sitePolygon => [sitePolygon.uuid, sitePolygon]));
+
+    const ineligibleUuids = uuids.filter(
+      uuid => !isPassingPolygonValidationStatus(sitePolygonsByUuid.get(uuid)?.validationStatus)
+    );
+
+    if (ineligibleUuids.length > 0) {
+      throw new BadRequestException(
+        "Site polygons must have a Passed or Partially Passed validation result before they can be approved. " +
+          `Ineligible UUIDs: ${ineligibleUuids.join(", ")}`
+      );
+    }
   }
 
   private assertSitePolygonsEligibleForSubmission(uuids: string[], sitePolygons: SitePolygon[]): void {

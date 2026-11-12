@@ -1519,13 +1519,39 @@ describe("SitePolygonsService", () => {
   });
 
   describe("assertStatusUpdateAllowed", () => {
-    it("should only check eligibility for submissions", async () => {
+    it("should not check eligibility for other statuses", async () => {
       const findAll = jest.spyOn(SitePolygon, "findAll");
 
-      await service.assertStatusUpdateAllowed("approved", ["uuid-1"]);
+      await service.assertStatusUpdateAllowed("draft", ["uuid-1"]);
 
       expect(findAll).not.toHaveBeenCalled();
     });
+
+    it.each([null, "failed"] as const)(
+      "should reject approving a polygon with %s validation",
+      async validationStatus => {
+        const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval", validationStatus });
+
+        await expect(service.assertStatusUpdateAllowed("approved", [sitePolygon.uuid])).rejects.toThrow(
+          BadRequestException
+        );
+      }
+    );
+
+    it("should reject approving a missing polygon", async () => {
+      await expect(service.assertStatusUpdateAllowed("approved", ["missing-uuid"])).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it.each(["passed", "partial"] as const)(
+      "should allow approving a polygon with %s validation",
+      async validationStatus => {
+        const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval", validationStatus });
+
+        await expect(service.assertStatusUpdateAllowed("approved", [sitePolygon.uuid])).resolves.toBeUndefined();
+      }
+    );
 
     it("should reject a submission for an ineligible polygon", async () => {
       const sitePolygon = await SitePolygonFactory.create({ status: "approved" });
@@ -1566,7 +1592,7 @@ describe("SitePolygonsService", () => {
     });
 
     it("should roll back the status change when the audit records cannot be written", async () => {
-      const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval" });
+      const sitePolygon = await SitePolygonFactory.create({ status: "pending-approval", validationStatus: "passed" });
       jest.spyOn(AuditStatus, "bulkCreate").mockRejectedValue(new Error("Audit insert failed"));
 
       await expect(
@@ -1579,7 +1605,7 @@ describe("SitePolygonsService", () => {
 
     it("should skip audit status bulkCreate when no polygons were returned", async () => {
       const data = [{ type: "sitePolygons", id: "missing-polygon" }];
-      const status = "approved";
+      const status = "draft";
       const user = { id: 1 } as User;
       const bulkCreateSpy = jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
 
@@ -1721,7 +1747,7 @@ describe("SitePolygonsService", () => {
       const user = { id: 1 } as User;
       const project = { id: 100, name: "Test Project" } as Project;
       const site = { id: 10, uuid: "site-1", projectId: 100, name: "Test Site" } as Site;
-      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1", validationStatus: "passed" } as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
@@ -1797,7 +1823,7 @@ describe("SitePolygonsService", () => {
       const comment = "comment";
       const user = { id: 1 } as User;
       const site = { id: 10, uuid: "site-1", projectId: 999, name: "Test Site" } as Site;
-      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon;
+      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: "site-1", validationStatus: "passed" } as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
@@ -1817,7 +1843,12 @@ describe("SitePolygonsService", () => {
       const status = "approved";
       const comment = "comment";
       const user = { id: 1 } as User;
-      const sitePolygon = { id: 1, uuid: "polygon-1", siteUuid: undefined } as unknown as SitePolygon;
+      const sitePolygon = {
+        id: 1,
+        uuid: "polygon-1",
+        siteUuid: undefined,
+        validationStatus: "passed"
+      } as unknown as SitePolygon;
 
       jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
       jest.spyOn(SitePolygon, "findAll").mockResolvedValue([sitePolygon]);
@@ -1845,8 +1876,8 @@ describe("SitePolygonsService", () => {
       jest
         .spyOn(SitePolygon, "findAll")
         .mockResolvedValue([
-          { id: 1, uuid: "polygon-1", siteUuid: "site-1" } as SitePolygon,
-          { id: 2, uuid: "polygon-2", siteUuid: "site-2" } as SitePolygon
+          { id: 1, uuid: "polygon-1", siteUuid: "site-1", validationStatus: "passed" } as SitePolygon,
+          { id: 2, uuid: "polygon-2", siteUuid: "site-2", validationStatus: "passed" } as SitePolygon
         ]);
       jest.spyOn(AuditStatus, "bulkCreate").mockResolvedValue([]);
       jest.spyOn(Site, "findAll").mockResolvedValue([firstSite, secondSite]);

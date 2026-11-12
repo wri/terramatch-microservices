@@ -201,7 +201,8 @@ describe("GeoJsonExportService", () => {
           targetSys: "agroforestry",
           distr: ["single-line"],
           numTrees: 1500,
-          siteId: siteUuid
+          siteId: siteUuid,
+          extraAttributes: null
         });
         expect(mockPolygonGeometry.getGeoJSON).toHaveBeenCalledWith(polygonUuid);
         expect(mockSitePolygon.findOne).toHaveBeenCalledWith({
@@ -230,7 +231,8 @@ describe("GeoJsonExportService", () => {
 
         const result = await service.getGeoJson(query);
 
-        expect(result.features[0].properties).toMatchObject(extendedData);
+        expect(result.features[0].properties).not.toHaveProperty("customField1");
+        expect(result.features[0].properties?.extraAttributes).toBe(JSON.stringify(extendedData));
         expect(mockSitePolygonData.findOne).toHaveBeenCalledWith({
           where: { sitePolygonUuid }
         });
@@ -283,7 +285,7 @@ describe("GeoJsonExportService", () => {
         });
       });
 
-      it("should prefer stored custom attributes over colliding extended data keys", async () => {
+      it("should keep stored custom attributes separate from colliding extended data keys", async () => {
         const query: GeoJsonQueryDto = {
           uuid: polygonUuid,
           includeExtendedData: true
@@ -314,9 +316,10 @@ describe("GeoJsonExportService", () => {
         const result = await service.getGeoJson(query);
 
         expect(result.features[0].properties).toMatchObject({
-          leftover: "keep",
-          anrSubcategory: "farmer-managed"
+          anrSubcategory: "farmer-managed",
+          extraAttributes: JSON.stringify({ anrSubcategory: "stale-extended", leftover: "keep" })
         });
+        expect(result.features[0].properties).not.toHaveProperty("leftover");
       });
 
       it("should include ppcExternalId for PPC framework sites", async () => {
@@ -441,7 +444,8 @@ describe("GeoJsonExportService", () => {
           targetSys: null,
           distr: null,
           numTrees: null,
-          siteId: siteUuid
+          siteId: siteUuid,
+          extraAttributes: null
         });
       });
     });
@@ -565,8 +569,8 @@ describe("GeoJsonExportService", () => {
 
         const result = await service.getGeoJson(query);
 
-        expect(result.features[0].properties).toMatchObject(extendedData1);
-        expect(result.features[1].properties).toMatchObject(extendedData2);
+        expect(result.features[0].properties?.extraAttributes).toBe(JSON.stringify(extendedData1));
+        expect(result.features[1].properties?.extraAttributes).toBe(JSON.stringify(extendedData2));
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
           where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2] },
           attributes: ["sitePolygonUuid", "data"]
@@ -899,8 +903,8 @@ describe("GeoJsonExportService", () => {
 
         const result = await service.getGeoJson(query);
 
-        expect(result.features[0].properties).toMatchObject(extendedData1);
-        expect(result.features[1].properties).toMatchObject(extendedData2);
+        expect(result.features[0].properties?.extraAttributes).toBe(JSON.stringify(extendedData1));
+        expect(result.features[1].properties?.extraAttributes).toBe(JSON.stringify(extendedData2));
         expect(mockSitePolygonData.findAll).toHaveBeenCalledWith({
           where: { sitePolygonUuid: [sitePolygonUuid1, sitePolygonUuid2, sitePolygonUuid3] },
           attributes: ["sitePolygonUuid", "data"]

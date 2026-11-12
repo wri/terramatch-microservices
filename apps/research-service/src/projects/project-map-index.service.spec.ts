@@ -11,12 +11,13 @@ import {
 } from "@terramatch-microservices/database/factories";
 import { ProjectMapIndexService } from "./project-map-index.service";
 import { ProjectMapIndexQueryDto } from "./dto/project-map-index-query.dto";
+import type { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 
 describe("ProjectMapIndexService", () => {
   let service: ProjectMapIndexService;
 
-  const getUuids = async (query: ProjectMapIndexQueryDto = {}) =>
-    (await service.getMapIndex(query)).projects.map(({ uuid }) => uuid);
+  const getUuids = async (query: ProjectMapIndexQueryDto = {}, frameworkScope: FrameworkKey[] | null = null) =>
+    (await service.getMapIndex(query, frameworkScope)).projects.map(({ uuid }) => uuid);
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -226,5 +227,39 @@ describe("ProjectMapIndexService", () => {
     const uuids = await getUuids({ organisationUuid: [organisation.uuid], plantingStatus: "in-progress" });
 
     expect(uuids).toEqual([planting.uuid]);
+  });
+
+  describe("framework scope", () => {
+    it("returns only projects in the user's frameworks when no framework is requested", async () => {
+      const ppc = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "ppc" });
+      const terrafund = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "terrafund-non-profits" });
+
+      const uuids = await getUuids({}, ["ppc"]);
+
+      expect(uuids).toContain(ppc.uuid);
+      expect(uuids).not.toContain(terrafund.uuid);
+    });
+
+    it("drops requested frameworks outside the user's scope", async () => {
+      const ppc = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "ppc" });
+      const terrafund = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "terrafund-non-profits" });
+
+      const uuids = await getUuids({ frameworkKey: ["ppc", "terrafund-non-profits"] }, ["ppc"]);
+
+      expect(uuids).toContain(ppc.uuid);
+      expect(uuids).not.toContain(terrafund.uuid);
+    });
+
+    it("returns nothing when the requested frameworks are all outside the user's scope", async () => {
+      await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "terrafund-non-profits" });
+
+      expect(await getUuids({ frameworkKey: ["terrafund-non-profits"] }, ["ppc"])).toEqual([]);
+    });
+
+    it("does not restrict projects when the scope is null", async () => {
+      const terrafund = await ProjectFactory.create({ lat: 1, long: 1, frameworkKey: "terrafund-non-profits" });
+
+      expect(await getUuids({}, null)).toContain(terrafund.uuid);
+    });
   });
 });

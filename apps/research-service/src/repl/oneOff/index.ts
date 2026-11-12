@@ -9,7 +9,6 @@
 //   which means it will be runnable in the REPL at > await oneOff.fooScript()
 
 export { backfillCriteriaSiteExtraInfoCamelCase } from "./2026-07-20-backfillCriteriaSiteExtraInfoCamelCase";
-export {
-  BATCH_PPC_PROJECT_NAMES,
-  rerunTreeCoverLossForProjects
-} from "./2026-08-12-rerunTreeCoverLossForProjects";
+export { backfillSitePolygonCentroids } from "./2026-11-11-backfillSitePolygonCentroids";
+export { BATCH_PPC_PROJECT_NAMES, rerunTreeCoverLossForProjects } from "./2026-08-12-rerunTreeCoverLossForProjects";
+export { removeDuplicateCriteriaSite } from "./2026-11-09-removeDuplicateCriteriaSite";

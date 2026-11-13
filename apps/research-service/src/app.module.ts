@@ -47,6 +47,7 @@ import { PolygonAttributeDefinitionsService } from "./polygon-attribute-definiti
 import { ResearchTreeCountsController } from "./research-tree-counts/research-tree-counts.controller";
 import { ResearchTreeCountsService } from "./research-tree-counts/research-tree-counts.service";
 import { ProjectsController } from "./projects/projects.controller";
+import { ProjectFilterOptionsService } from "./projects/project-filter-options.service";
 import { ProjectMapIndexService } from "./projects/project-map-index.service";
 
 const IS_REPL = process.env["REPL"] === "true";
@@ -115,6 +116,7 @@ const IS_REPL = process.env["REPL"] === "true";
     AnrPlotGeometryService,
     PolygonAttributeDefinitionsService,
     ResearchTreeCountsService,
+    ProjectFilterOptionsService,
     ProjectMapIndexService,
 
     ...(IS_REPL

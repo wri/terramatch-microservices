@@ -11,11 +11,14 @@ export const hasProjectContextFilters = ({
 }: SitePolygonProjectFiltersDto) =>
   !isEmpty(frameworkKey) || !isEmpty(country) || !isEmpty(organisationUuid) || plantingStatus != null;
 
+export type ProjectContextIdsFilters = SitePolygonProjectFiltersDto & { projectUuid?: string[] };
+
 export const projectContextIdsSubquery = (
-  { frameworkKey, country, organisationUuid, plantingStatus }: SitePolygonProjectFiltersDto,
+  { frameworkKey, country, organisationUuid, plantingStatus, projectUuid }: ProjectContextIdsFilters,
   excludeTestProjects: boolean
 ) => {
   const projectIds = Subquery.select(Project, "id");
+  if (projectUuid != null && projectUuid.length > 0) projectIds.in("uuid", projectUuid);
   if (frameworkKey != null && frameworkKey.length > 0) projectIds.in("frameworkKey", frameworkKey);
   if (country != null && country.length > 0) {
     // Projects are single-country for now: match only the first level0Project entry, which is the one displayed.

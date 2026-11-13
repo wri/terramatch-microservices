@@ -75,6 +75,7 @@ export async function applySitePolygonScopeFilters(
 
   builder
     .filterPlantStartRange(query.plantStartFrom, query.plantStartTo)
+    .filterCalcAreaRange(query.calcAreaMin, query.calcAreaMax)
     .filterPractice(nonEmpty(query.practice))
     .filterDistr(nonEmpty(query.distr))
     .filterTargetSys(nonEmpty(query.targetSys))

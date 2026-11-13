@@ -18,6 +18,7 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { SITE_POLYGON_SORT_FIELDS } from "../site-polygon-sort";
 import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
+import { SitePolygonCalcAreaRangeDto } from "./site-polygon-calc-area-range.dto";
 
 export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
 export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
@@ -45,7 +46,12 @@ const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
-export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage, SitePolygonProjectFiltersDto) {
+export class SitePolygonQueryDto extends IntersectionType(
+  CursorPage,
+  NumberPage,
+  SitePolygonProjectFiltersDto,
+  SitePolygonCalcAreaRangeDto
+) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",

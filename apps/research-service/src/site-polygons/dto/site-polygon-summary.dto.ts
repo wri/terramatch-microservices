@@ -46,12 +46,16 @@ export class SitePolygonSummaryDto {
   constructor(attrs: {
     sumNumTrees: number;
     sumCalcArea: number;
+    minCalcArea: number | null;
+    maxCalcArea: number | null;
     totalPolygons: number;
     countByStatus: Partial<Record<PolygonStatus, number>>;
     indicators?: Partial<Record<SummaryIndicatorSlug, IndicatorSummaryDto>>;
   }) {
     this.sumNumTrees = attrs.sumNumTrees;
     this.sumCalcArea = attrs.sumCalcArea;
+    this.minCalcArea = attrs.minCalcArea;
+    this.maxCalcArea = attrs.maxCalcArea;
     this.totalPolygons = attrs.totalPolygons;
     this.countByStatus = attrs.countByStatus;
     this.indicators = attrs.indicators;
@@ -62,6 +66,24 @@ export class SitePolygonSummaryDto {
 
   @ApiProperty({ description: "Sum of calcArea (ha) across polygons in scope." })
   sumCalcArea: number;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      "Smallest calcArea (ha) across polygons in scope; null when none have calcArea. " +
+      "Request without calcAreaMin / calcAreaMax to get the full range for a range filter."
+  })
+  minCalcArea: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      "Largest calcArea (ha) across polygons in scope; null when none have calcArea. " +
+      "Request without calcAreaMin / calcAreaMax to get the full range for a range filter."
+  })
+  maxCalcArea: number | null;
 
   @ApiProperty({ description: "Count of polygons in scope." })
   totalPolygons: number;

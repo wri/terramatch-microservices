@@ -123,6 +123,12 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
     return this;
   }
 
+  filterCalcAreaRange(min?: number, max?: number) {
+    if (min != null) this.where({ calcArea: { [Op.gte]: min } });
+    if (max != null) this.where({ calcArea: { [Op.lte]: max } });
+    return this;
+  }
+
   filterPractice(practices?: string[]) {
     if (practices == null || practices.length === 0) return this;
     this.where(this.buildJsonArrayOverlapWhere("practice", practices));

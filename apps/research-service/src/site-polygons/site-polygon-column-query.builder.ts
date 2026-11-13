@@ -124,11 +124,8 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
   }
 
   filterCalcAreaRange(min?: number, max?: number) {
-    if (min == null && max == null) return this;
-    const parts: WhereOptions[] = [{ calcArea: { [Op.ne]: null } }];
-    if (min != null) parts.push({ calcArea: { [Op.gte]: min } });
-    if (max != null) parts.push({ calcArea: { [Op.lte]: max } });
-    this.where({ [Op.and]: parts });
+    if (min != null) this.where({ calcArea: { [Op.gte]: min } });
+    if (max != null) this.where({ calcArea: { [Op.lte]: max } });
     return this;
   }
 

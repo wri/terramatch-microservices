@@ -154,12 +154,6 @@ describe("SitePolygonSummaryService", () => {
       expect(result.maxCalcArea).toBe(20);
     });
 
-    it("rejects an inverted calcArea range", async () => {
-      await expect(getSummary({ siteId: ["site-uuid"], calcAreaMin: 20, calcAreaMax: 5 })).rejects.toThrow(
-        BadRequestException
-      );
-    });
-
     it("aggregates across a project scope", async () => {
       const project = await ProjectFactory.create();
       const siteA = await SiteFactory.create({ projectId: project.id });

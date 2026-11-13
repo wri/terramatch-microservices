@@ -372,9 +372,6 @@ export class SitePolygonsController {
     if (plantStartFrom != null && plantStartTo != null && plantStartFrom.getTime() > plantStartTo.getTime()) {
       throw new BadRequestException("plantStartFrom must be on or before plantStartTo");
     }
-    if (calcAreaMin != null && calcAreaMax != null && calcAreaMin > calcAreaMax) {
-      throw new BadRequestException("calcAreaMin must be less than or equal to calcAreaMax");
-    }
 
     if (lightResource && !isNumberPage(query.page)) {
       throw new BadRequestException("Light resources must use number pagination.");

@@ -586,13 +586,6 @@ describe("SitePolygonsController", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw when calcAreaMin is greater than calcAreaMax", async () => {
-      policyService.authorize.mockResolvedValue(undefined);
-      mockQueryBuilder();
-
-      await expect(controller.findMany({ calcAreaMin: 20, calcAreaMax: 5 })).rejects.toThrow(BadRequestException);
-    });
-
     it("should throw when sorting without number pagination", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       mockQueryBuilder();

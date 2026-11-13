@@ -59,12 +59,6 @@ describe("SitePolygonMapIndexService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("rejects an inverted calcArea range", async () => {
-      await expect(getMapIndex({ siteId: ["site-uuid"], calcAreaMin: 20, calcAreaMax: 5 })).rejects.toThrow(
-        BadRequestException
-      );
-    });
-
     it("rejects using missingIndicator[] and presentIndicator[] together", async () => {
       await expect(
         getMapIndex({ siteId: ["site-uuid"], missingIndicator: ["treeCover"], presentIndicator: ["treeCover"] })

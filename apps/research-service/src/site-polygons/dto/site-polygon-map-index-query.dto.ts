@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsNumber, IsOptional, Min } from "class-validator";
+import { ApiProperty, IntersectionType } from "@nestjs/swagger";
+import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsOptional } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -14,6 +14,7 @@ import {
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./site-polygon-query.dto";
 import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
+import { SitePolygonCalcAreaRangeDto } from "./site-polygon-calc-area-range.dto";
 
 const SITE_POLYGON_PRACTICE_FILTER_VALUES = [...SITE_POLYGON_PRACTICES];
 const SITE_POLYGON_TARGET_SYS_FILTER_VALUES = [...SITE_POLYGON_TARGET_SYSTEMS];
@@ -21,7 +22,10 @@ const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
-export class SitePolygonMapIndexQueryDto extends SitePolygonProjectFiltersDto {
+export class SitePolygonMapIndexQueryDto extends IntersectionType(
+  SitePolygonProjectFiltersDto,
+  SitePolygonCalcAreaRangeDto
+) {
   @ApiProperty({
     name: "siteId[]",
     isArray: true,
@@ -122,28 +126,6 @@ export class SitePolygonMapIndexQueryDto extends SitePolygonProjectFiltersDto {
   @IsOptional()
   @IsDate()
   plantStartTo?: Date;
-
-  @ApiProperty({
-    required: false,
-    minimum: 0,
-    description:
-      "Inclusive lower bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  calcAreaMin?: number;
-
-  @ApiProperty({
-    required: false,
-    minimum: 0,
-    description:
-      "Inclusive upper bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  calcAreaMax?: number;
 
   @ApiProperty({
     name: "practice[]",

@@ -1,5 +1,5 @@
 import { ApiProperty, IntersectionType } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsNumber, IsOptional, Min, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsEnum, IsIn, IsOptional, ValidateNested } from "class-validator";
 import {
   INDICATOR_SLUGS,
   IndicatorSlug,
@@ -18,6 +18,7 @@ import { LandscapeSlug } from "@terramatch-microservices/database/types/landscap
 import { TransformBooleanString } from "@terramatch-microservices/common/decorators/transform-boolean-string.decorator";
 import { SITE_POLYGON_SORT_FIELDS } from "../site-polygon-sort";
 import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
+import { SitePolygonCalcAreaRangeDto } from "./site-polygon-calc-area-range.dto";
 
 export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
 export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
@@ -45,7 +46,12 @@ const SITE_POLYGON_DISTR_FILTER_VALUES = [...SITE_POLYGON_DISTRIBUTIONS];
 const SITE_POLYGON_SOURCE_FILTER_VALUES = [...SITE_POLYGON_SOURCES];
 const SITE_POLYGON_SUBMISSION_CYCLE_FILTER_VALUES = [...SITE_POLYGON_SUBMISSION_CYCLES];
 
-export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage, SitePolygonProjectFiltersDto) {
+export class SitePolygonQueryDto extends IntersectionType(
+  CursorPage,
+  NumberPage,
+  SitePolygonProjectFiltersDto,
+  SitePolygonCalcAreaRangeDto
+) {
   @ApiProperty({
     enum: POLYGON_STATUSES,
     name: "polygonStatus[]",
@@ -175,28 +181,6 @@ export class SitePolygonQueryDto extends IntersectionType(CursorPage, NumberPage
   @IsOptional()
   @IsDate()
   plantStartTo?: Date;
-
-  @ApiProperty({
-    required: false,
-    minimum: 0,
-    description:
-      "Inclusive lower bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  calcAreaMin?: number;
-
-  @ApiProperty({
-    required: false,
-    minimum: 0,
-    description:
-      "Inclusive upper bound for calculated area in hectares (calcArea). Polygons without calcArea are excluded."
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  calcAreaMax?: number;
 
   @ApiProperty({
     name: "practice[]",

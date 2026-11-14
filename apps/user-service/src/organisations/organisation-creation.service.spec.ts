@@ -9,28 +9,12 @@ import { faker } from "@faker-js/faker";
 import {
   FormFactory,
   FundingProgrammeFactory,
-  OrganisationFactory,
   StageFactory,
   UserFactory
 } from "@terramatch-microservices/database/factories";
-import {
-  Application,
-  FormSubmission,
-  Organisation,
-  ProjectPitch,
-  User
-} from "@terramatch-microservices/database/entities";
-import { pick } from "lodash";
+import { Application, FormSubmission, ProjectPitch, User } from "@terramatch-microservices/database/entities";
 
 const createAttributes = (fundingProgrammeUuid = faker.string.uuid()): OrganisationCreateAttributes => ({
-  name: faker.company.name(),
-  type: "non-profit-organization",
-  hqStreet1: faker.location.streetAddress(),
-  hqCity: faker.location.city(),
-  hqState: faker.location.state(),
-  hqCountry: faker.location.country(),
-  phone: faker.phone.number(),
-  countries: [faker.location.countryCode("alpha-3")],
   fundingProgrammeUuid: fundingProgrammeUuid,
   userFirstName: faker.person.firstName(),
   userLastName: faker.person.lastName(),
@@ -82,13 +66,6 @@ describe("OrganisationCreationService", () => {
       ).rejects.toThrow("Only draft and pending-approval statuses are allowed during organisation creation");
     });
 
-    it("should throw an error if the org name is already taken", async () => {
-      const attributes = createAttributes();
-      await OrganisationFactory.create({ name: attributes.name });
-      await expect(service.createOrganisation(attributes)).rejects.toThrow("Organisation already exists");
-      await Organisation.truncate();
-    });
-
     it("should throw an error if the funding programme does not exist", async () => {
       const attributes = createAttributes();
       await expect(service.createOrganisation(attributes)).rejects.toThrow("Funding programme not found");
@@ -125,13 +102,8 @@ describe("OrganisationCreationService", () => {
       const { fundingProgramme, stage, form } = await validFundingProgramme();
       const attributes = createAttributes(fundingProgramme.uuid);
       // fill in all the optional attributes
-      attributes.hqStreet2 = faker.location.streetAddress();
-      attributes.hqZipcode = faker.location.zipCode();
-      attributes.currency = "EUR";
       attributes.level0Proposed = [faker.location.countryCode("alpha-3"), faker.location.countryCode("alpha-3")];
       attributes.level1Proposed = [faker.location.countryCode("alpha-3")];
-      attributes.level0PastRestoration = [faker.location.countryCode("alpha-3")];
-      attributes.level1PastRestoration = [faker.location.countryCode("alpha-3"), faker.location.countryCode("alpha-3")];
 
       // org creation
       const { user, organisation } = await service.createOrganisation(attributes);
@@ -141,21 +113,7 @@ describe("OrganisationCreationService", () => {
         status: "pending-approval",
         private: false,
         isTest: false,
-        ...pick(attributes, [
-          "name",
-          "type",
-          "hqStreet1",
-          "hqStreet2",
-          "hqCity",
-          "hqZipcode",
-          "hqState",
-          "hqCountry",
-          "phone",
-          "countries",
-          "currency",
-          "level0PastRestoration",
-          "level1PastRestoration"
-        ])
+        currency: "USD"
       });
 
       // user creation
@@ -199,18 +157,11 @@ describe("OrganisationCreationService", () => {
     });
 
     it("should create only a draft organisation when draft status is provided", async () => {
-      const draftName = `draft-org-${faker.string.uuid()}`;
-      const attributes: OrganisationCreateAttributes = {
-        status: "draft",
-        name: draftName
-      };
-
-      const { user, organisation } = await service.createOrganisation(attributes);
+      const { user, organisation } = await service.createOrganisation({ status: "draft" });
 
       expect(user).toBeNull();
       expect(organisation).toMatchObject({
         status: "draft",
-        name: attributes.name,
         private: false,
         isTest: false
       });

@@ -2,6 +2,7 @@ export const FORM_TYPES = [
   "application",
   "disturbance-report",
   "financial-report",
+  "organisation",
   "project",
   "project-report",
   "site",

@@ -190,14 +190,6 @@ describe("OrganisationsController", () => {
 
     it("should call the organisation creation service and return the organisation and user", async () => {
       const attrs = new OrganisationCreateAttributes();
-      attrs.name = "Test Organisation";
-      attrs.type = "non-profit-organization";
-      attrs.hqStreet1 = "123 Main St";
-      attrs.hqCity = "City";
-      attrs.hqState = "State";
-      attrs.hqCountry = "USA";
-      attrs.phone = "1234567890";
-      attrs.countries = ["USA"];
       attrs.fundingProgrammeUuid = "test-uuid";
       attrs.userFirstName = "John";
       attrs.userLastName = "Doe";
@@ -205,7 +197,7 @@ describe("OrganisationsController", () => {
       attrs.userRole = "project-developer";
       attrs.userLocale = "en-US";
 
-      const org = await OrganisationFactory.create({ name: attrs.name });
+      const org = await OrganisationFactory.create();
       const user = await UserFactory.create({ organisationId: org.id });
       user.myFrameworks = jest.fn().mockResolvedValue([]);
       organisationCreationService.createOrganisation.mockResolvedValue({ user, organisation: org });
@@ -226,9 +218,8 @@ describe("OrganisationsController", () => {
     it("should return only organisation data when draft creation has no user", async () => {
       const attrs = new OrganisationCreateAttributes();
       attrs.status = "draft";
-      attrs.name = "Draft Org";
 
-      const org = await OrganisationFactory.create({ name: attrs.name, status: "draft" });
+      const org = await OrganisationFactory.create({ status: "draft" });
       organisationCreationService.createOrganisation.mockResolvedValue({ user: null, organisation: org });
       policyService.authorize.mockResolvedValue(undefined);
 
@@ -1053,11 +1044,8 @@ describe("OrganisationsController", () => {
   describe("update", () => {
     it("should update organisation and return updated organisation", async () => {
       const org = await OrganisationFactory.create();
-      const updateAttrs: OrganisationUpdateAttributes = {
-        name: "Updated Name",
-        status: "pending-approval"
-      };
-      const updatedOrg = { ...org, name: "Updated Name", status: "pending-approval" };
+      const updateAttrs: OrganisationUpdateAttributes = { status: "pending-approval" };
+      const updatedOrg = { ...org, status: "pending-approval" };
 
       organisationsService.findOne.mockResolvedValue(org);
       organisationsService.update.mockResolvedValue(updatedOrg as Organisation);
@@ -1082,7 +1070,7 @@ describe("OrganisationsController", () => {
 
     it("should throw BadRequestException if UUID in path does not match payload", async () => {
       const org = await OrganisationFactory.create();
-      const updateAttrs: OrganisationUpdateAttributes = { name: "Updated Name" };
+      const updateAttrs: OrganisationUpdateAttributes = { isTest: true };
       const updatePayload = {
         data: {
           type: "organisations",
@@ -1102,7 +1090,7 @@ describe("OrganisationsController", () => {
         data: {
           type: "organisations",
           id: nonExistentUuid,
-          attributes: { name: "Updated Name" }
+          attributes: { isTest: true }
         }
       };
 
@@ -1118,7 +1106,7 @@ describe("OrganisationsController", () => {
         data: {
           type: "organisations",
           id: org.uuid,
-          attributes: { name: "Updated Name" }
+          attributes: { isTest: true }
         }
       };
 

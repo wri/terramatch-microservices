@@ -3,11 +3,13 @@ import { IsArray, IsEmail, IsIn, IsOptional, Length } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { VALID_LOCALES, ValidLocale } from "@terramatch-microservices/database/constants/locale";
 
-const ORGANISATION_TYPES = ["non-profit-organization", "for-profit-organization"] as const;
-type OrganisationType = (typeof ORGANISATION_TYPES)[number];
 const CREATE_ORGANISATION_STATUSES = ["draft", "pending-approval"] as const;
 export type CreateOrganisationStatus = (typeof CREATE_ORGANISATION_STATUSES)[number];
 
+/**
+ * Organisation profile fields are set through the organisation wizard form
+ * (PUT /entities/v3/organisations/:uuid/formData) after the organisation has been created.
+ */
 export class OrganisationCreateAttributes {
   @IsOptional()
   @IsIn(CREATE_ORGANISATION_STATUSES)
@@ -16,55 +18,7 @@ export class OrganisationCreateAttributes {
 
   @IsOptional()
   @ApiProperty({ required: false })
-  name?: string;
-
-  @IsOptional()
-  @IsIn(ORGANISATION_TYPES)
-  @ApiProperty({ enum: ORGANISATION_TYPES, required: false })
-  type?: OrganisationType;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  hqStreet1?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  hqStreet2?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  hqCity?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  hqState?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  hqZipcode?: string;
-
-  @IsOptional()
-  @Length(3, 3)
-  @ApiProperty({ required: false })
-  hqCountry?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false })
-  phone?: string;
-
-  @IsOptional()
-  @ApiProperty({ isArray: true, required: false, type: String })
-  @IsArray()
-  @Length(3, 3, { each: true })
-  countries?: string[];
-
-  @IsOptional()
-  @ApiProperty({ required: false })
   fundingProgrammeUuid?: string;
-
-  @IsOptional()
-  @ApiProperty({ required: false, default: "USD" })
-  currency?: string;
 
   @ApiProperty({ isArray: true, required: false, type: String })
   @IsOptional()
@@ -77,18 +31,6 @@ export class OrganisationCreateAttributes {
   @IsArray()
   @Length(3, undefined, { each: true })
   level1Proposed?: string[];
-
-  @ApiProperty({ isArray: true, required: false, type: String })
-  @IsOptional()
-  @IsArray()
-  @Length(3, 3, { each: true })
-  level0PastRestoration?: string[];
-
-  @ApiProperty({ isArray: true, required: false, type: String })
-  @IsOptional()
-  @IsArray()
-  @Length(3, undefined, { each: true })
-  level1PastRestoration?: string[];
 
   @IsOptional()
   @ApiProperty({ required: false })

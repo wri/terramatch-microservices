@@ -52,3 +52,4 @@ export { backfillInviteNamesFromUsers } from "./2026-10-29-backfillInviteNamesFr
 export { migrateNonApprovedUpdateStatuses } from "./2026-11-04-migrateNonApprovedUpdateStatuses";
 export { migrateTerrafundNonProfits } from "./2026-11-04-migrateTerrafundNonProfits";
 export { renameFrameworks } from "./2026-11-05-renameFrameworks";
+export { createOrganisationForm } from "./2026-11-12-createOrganisationForm";

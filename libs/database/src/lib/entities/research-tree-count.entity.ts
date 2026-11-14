@@ -38,16 +38,19 @@ export class ResearchTreeCount extends Model<
   @Column(STRING)
   declare verificationMethod: VerificationMethod;
 
+  @AllowNull
   @Column(INTEGER)
-  declare reportedCount: number;
+  declare reportedCount: number | null;
 
   @AllowNull
   @Column(INTEGER)
   declare treeCountAdj: number | null;
 
+  @AllowNull
   @Column(INTEGER)
-  declare upperBounds: number;
+  declare upperBounds: number | null;
 
+  @AllowNull
   @Column(INTEGER)
-  declare lowerBounds: number;
+  declare lowerBounds: number | null;
 }

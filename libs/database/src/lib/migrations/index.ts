@@ -62,6 +62,7 @@ import { removeUserApiKeyColumn } from "./202610281200-remove-user-api-key-colum
 import { addPitchIncomeGeneratingActivities } from "./202611031200-add-pitch-income-generating-activities";
 import { renameOrganisationUserToJoinRequests } from "./202610281200-rename-organisation-user-to-join-requests";
 import { widenFrameworkKeyColumns } from "./202611041200-widen-framework-key-columns";
+import { makeRsTreeCountCountsNullable } from "./202611131200-make-rs-tree-count-counts-nullable";
 
 export const migrations: RunnableMigration<QueryInterface>[] = [
   removeOrgConsortium,
@@ -125,5 +126,6 @@ export const migrations: RunnableMigration<QueryInterface>[] = [
   removeUserApiKeyColumn,
   addPitchIncomeGeneratingActivities,
   renameOrganisationUserToJoinRequests,
-  widenFrameworkKeyColumns
+  widenFrameworkKeyColumns,
+  makeRsTreeCountCountsNullable
 ];

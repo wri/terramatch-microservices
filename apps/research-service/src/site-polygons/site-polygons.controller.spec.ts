@@ -2282,7 +2282,8 @@ describe("SitePolygonsController", () => {
         geoJsonExportQueue,
         { projectUuids: ["project-uuid"] },
         "Project",
-        "project"
+        "project",
+        "geojson"
       );
       expect((result.data as Resource).id).toBe(delayedJob.uuid);
     });
@@ -2306,15 +2307,12 @@ describe("SitePolygonsController", () => {
     });
   });
 
-  describe("createSitePolygonsCsvExport and createSitePolygonsZipExport", () => {
+  describe("createGeoJsonExport with format", () => {
     const payload = {
-      data: { type: "geojsonExports", attributes: { siteUuids: ["site-uuid"] } }
+      data: { type: "geojsonExports", attributes: { siteUuids: ["site-uuid"], format: "csv" } }
     } as GeoJsonExportBodyDto;
 
-    it.each([
-      ["csv", (c: SitePolygonsController) => c.createSitePolygonsCsvExport(payload)],
-      ["zip", (c: SitePolygonsController) => c.createSitePolygonsZipExport(payload)]
-    ] as const)("queues a %s export for the scope", async (format, run) => {
+    it("queues a csv export for the scope when the format is csv", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       geoJsonExportService.getExportTarget.mockResolvedValue({ entityName: "Site", entityType: "site" });
       const delayedJob = await DelayedJob.create({ name: "Polygon Export" });
@@ -2322,26 +2320,12 @@ describe("SitePolygonsController", () => {
         .spyOn(GeoJsonExportProcessor, "queueExport")
         .mockResolvedValue(buildDelayedJobResponse(delayedJob));
 
-      const result = serialize(await run(controller));
+      const result = serialize(await controller.createGeoJsonExport(payload));
 
       expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
-      expect(queueExport).toHaveBeenCalledWith(
-        geoJsonExportQueue,
-        { siteUuids: ["site-uuid"] },
-        "Site",
-        "site",
-        format
-      );
+      expect(geoJsonExportService.getExportTarget).toHaveBeenCalledWith({ siteUuids: ["site-uuid"] });
+      expect(queueExport).toHaveBeenCalledWith(geoJsonExportQueue, { siteUuids: ["site-uuid"] }, "Site", "site", "csv");
       expect((result.data as Resource).id).toBe(delayedJob.uuid);
-    });
-
-    it("does not queue an export when authorization fails", async () => {
-      policyService.authorize.mockRejectedValue(new UnauthorizedException());
-      const queueExport = jest.spyOn(GeoJsonExportProcessor, "queueExport");
-
-      await expect(controller.createSitePolygonsCsvExport(payload)).rejects.toThrow(UnauthorizedException);
-      await expect(controller.createSitePolygonsZipExport(payload)).rejects.toThrow(UnauthorizedException);
-      expect(queueExport).not.toHaveBeenCalled();
     });
   });
 

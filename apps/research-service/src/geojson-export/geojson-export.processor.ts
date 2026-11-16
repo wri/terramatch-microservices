@@ -13,8 +13,8 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { GeoJsonExportAttributes } from "./dto/geojson-export-request.dto";
-import { SitePolygonCsvExportService, SitePolygonExportFormat } from "./site-polygon-csv-export.service";
+import { GeoJsonExportAttributes, SitePolygonExportFormat } from "./dto/geojson-export-request.dto";
+import { SitePolygonCsvExportService } from "./site-polygon-csv-export.service";
 
 export const GEOJSON_EXPORT_QUEUE = "geojson-export";
 
@@ -22,7 +22,7 @@ export type GeoJsonExportJobData = {
   delayedJobId: number;
   scope: GeoJsonExportAttributes;
   fileName: string;
-  // Missing on jobs queued before CSV and zip exports existed; those are GeoJSON.
+  // Missing on jobs queued before CSV exports existed; those are GeoJSON.
   format?: SitePolygonExportFormat;
 };
 
@@ -30,8 +30,7 @@ const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (ins
 
 const EXPORT_FORMATS: Record<SitePolygonExportFormat, { label: string; extension: string; contentType: string }> = {
   geojson: { label: "GeoJSON", extension: ".geojson", contentType: "application/geo+json" },
-  csv: { label: "CSV", extension: ".csv", contentType: "text/csv" },
-  zip: { label: "Zip", extension: ".zip", contentType: "application/zip" }
+  csv: { label: "CSV", extension: ".csv", contentType: "text/csv" }
 };
 
 // Exports are memory and IO bound, and run in the same task as the API, so keep concurrency low.

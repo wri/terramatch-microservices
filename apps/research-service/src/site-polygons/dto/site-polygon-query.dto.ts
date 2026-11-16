@@ -19,8 +19,10 @@ import { TransformBooleanString } from "@terramatch-microservices/common/decorat
 import { SITE_POLYGON_SORT_FIELDS } from "../site-polygon-sort";
 import { SitePolygonProjectFiltersDto } from "./site-polygon-project-filters.dto";
 
-export const SITE_POLYGON_SEARCH_FIELDS = ["siteName", "polyName", "polygonUuid"] as const;
-export type SitePolygonSearchField = (typeof SITE_POLYGON_SEARCH_FIELDS)[number];
+import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./site-polygon-search-fields";
+
+export { SITE_POLYGON_SEARCH_FIELDS };
+export type { SitePolygonSearchField };
 
 class QuerySort {
   @ApiProperty({

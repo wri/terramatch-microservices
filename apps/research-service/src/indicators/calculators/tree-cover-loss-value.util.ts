@@ -8,12 +8,13 @@ export function getTreeCoverLossYearRange(plantStart: Date): { startYear: number
   return { startYear: endYear - TREE_COVER_LOSS_YEARS_BEFORE_PLANT_START, endYear };
 }
 
-export function assertValidPlantStart(plantStart: Date | null, polygonUuid: string): Date {
-  if (plantStart == null || isNaN(plantStart.getTime())) {
+export function assertValidPlantStart(plantStart: Date | string | null, polygonUuid: string): Date {
+  const date = plantStart == null ? null : new Date(plantStart);
+  if (date == null || isNaN(date.getTime())) {
     throw new BadRequestException(`Site polygon ${polygonUuid} has no valid plantStart`);
   }
 
-  return plantStart;
+  return date;
 }
 
 export function buildZeroTreeCoverLossValueForRange(startYear: number, endYear: number): TreeCoverLossData {

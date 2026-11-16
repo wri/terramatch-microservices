@@ -28,6 +28,16 @@ describe("FuzzySearchQueryBuilder", () => {
     expect(result.scientificName).toBeUndefined();
   });
 
+  it("applies additional where conditions", async () => {
+    await TreeSpeciesResearchFactory.create({ scientificName: "Lorem asdfium", family: "Fabaceae" });
+    await TreeSpeciesResearchFactory.create({ scientificName: "Lorem qasdium", family: "Myrtaceae" });
+
+    const result = await new FuzzySearchQueryBuilder(TreeSpeciesResearch, "scientificName")
+      .where({ family: "Fabaceae" })
+      .execute("lore");
+    expect(result.map(({ scientificName }) => scientificName)).toEqual(["Lorem asdfium"]);
+  });
+
   it("limits the number of results", async () => {
     for (let ii = 0; ii < FUZZY_SEARCH_LIMIT + 2; ii++) {
       await TreeSpeciesResearchFactory.create({ scientificName: `Tree species ${ii}` });

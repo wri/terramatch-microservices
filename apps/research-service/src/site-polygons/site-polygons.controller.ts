@@ -69,6 +69,7 @@ import { populateDto } from "@terramatch-microservices/common/dto/json-api-attri
 import { VersionUpdateBody } from "./dto/version-update.dto";
 import { SitePolygonVersioningService } from "./site-polygon-versioning.service";
 import { GeoJsonExportService } from "../geojson-export/geojson-export.service";
+import { SitePolygonExportFormat } from "../geojson-export/site-polygon-csv-export.service";
 import { GeoJsonQueryDto } from "../geojson-export/dto/geojson-query.dto";
 import { GeoJsonExportDto } from "../geojson-export/dto/geojson-export.dto";
 import { GeoJsonExportBodyDto } from "../geojson-export/dto/geojson-export-request.dto";
@@ -278,6 +279,50 @@ export class SitePolygonsController {
     const scope = payload.data.attributes;
     const { entityName, entityType } = await this.geoJsonExportService.getExportTarget(scope);
     return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType);
+  }
+
+  @Post("exports/csv")
+  @ApiOperation({
+    operationId: "createSitePolygonsCsvExport",
+    summary: "Export active site polygons as a CSV file in a delayed job",
+    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids. One row per polygon; each key stored in
+    the polygon's extra attributes (site_polygon_data) becomes its own column. The file is written to S3 in the background;
+    the completed delayed job payload holds a fileDownloads resource with a signed URL.`
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Exactly one of projectUuids, siteUuids or polygonUuids must be provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "A requested project or site was not found." })
+  async createSitePolygonsCsvExport(@Body() payload: GeoJsonExportBodyDto) {
+    return await this.queueFormatExport(payload, "csv");
+  }
+
+  @Post("exports/zip")
+  @ApiOperation({
+    operationId: "createSitePolygonsZipExport",
+    summary: "Export active site polygons as a zip of GeoJSON and CSV in a delayed job",
+    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids. The zip contains site-polygons.geojson
+    and site-polygons.csv for the same scope. The file is written to S3 in the background; the completed delayed job
+    payload holds a fileDownloads resource with a signed URL.`
+  })
+  @JsonApiResponse(DelayedJobDto)
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
+  @ExceptionResponse(BadRequestException, {
+    description: "Exactly one of projectUuids, siteUuids or polygonUuids must be provided."
+  })
+  @ExceptionResponse(NotFoundException, { description: "A requested project or site was not found." })
+  async createSitePolygonsZipExport(@Body() payload: GeoJsonExportBodyDto) {
+    return await this.queueFormatExport(payload, "zip");
+  }
+
+  private async queueFormatExport(payload: GeoJsonExportBodyDto, format: SitePolygonExportFormat) {
+    await this.policyService.authorize("read", SitePolygon);
+
+    const scope = payload.data.attributes;
+    const { entityName, entityType } = await this.geoJsonExportService.getExportTarget(scope);
+    return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType, format);
   }
 
   @Get("mapIndex")

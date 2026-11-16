@@ -377,7 +377,7 @@ export class GeoJsonExportService {
     return extendedDataMap;
   }
 
-  private async loadCustomAttributeExportContext(sitePolygons: SitePolygon[]): Promise<{
+  async loadCustomAttributeExportContext(sitePolygons: SitePolygon[]): Promise<{
     keysByFramework: Map<FrameworkKey, string[]>;
     valuesByUuid: Map<string, CustomAttributeMap>;
   }> {
@@ -389,7 +389,7 @@ export class GeoJsonExportService {
     return { keysByFramework, valuesByUuid };
   }
 
-  private buildProperties(
+  buildProperties(
     sitePolygon: SitePolygon,
     includeExtendedData: boolean,
     extendedData?: Record<string, unknown> | null,

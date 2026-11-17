@@ -591,4 +591,8 @@ export class Organisation extends Model<InferAttributes<Organisation>, InferCrea
   @AllowNull
   @Column(TEXT)
   declare bioeconomyDescription: string | null;
+
+  @AllowNull
+  @JsonColumn({ type: TEXT("long") })
+  declare answers: Dictionary<unknown> | null;
 }

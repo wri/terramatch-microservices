@@ -1,7 +1,6 @@
 import { OrganisationsService } from "./organisations.service";
 import { Test } from "@nestjs/testing";
 import { getQueueToken } from "@nestjs/bullmq";
-import { OrganisationUpdateAttributes } from "./dto/organisation-update.dto";
 import { OrganisationShowQueryDto } from "./dto/organisation-show-query.dto";
 import { faker } from "@faker-js/faker";
 import {
@@ -220,42 +219,19 @@ describe("OrganisationsService", () => {
 
   describe("update", () => {
     it("should update organisation attributes", async () => {
-      const org = await OrganisationFactory.create();
-      const updateAttrs: OrganisationUpdateAttributes = {
-        name: "Updated Name",
-        status: "pending-approval",
-        phone: "1234567890"
-      };
+      const org = await OrganisationFactory.create({ isTest: false });
+      const updated = await service.update(org, { status: "pending-approval", isTest: true });
 
-      const updated = await service.update(org, updateAttrs);
-
-      expect(updated.name).toBe("Updated Name");
       expect(updated.status).toBe("pending-approval");
-      expect(updated.phone).toBe("1234567890");
-    });
-
-    it("should only update provided attributes", async () => {
-      const org = await OrganisationFactory.create({ name: "Original Name", type: "non-profit-organization" });
-      const updateAttrs: OrganisationUpdateAttributes = {
-        name: "Updated Name"
-      };
-
-      const updated = await service.update(org, updateAttrs);
-
-      expect(updated.name).toBe("Updated Name");
-      expect(updated.type).toBe("non-profit-organization");
+      expect(updated.isTest).toBe(true);
     });
 
     it("should ignore undefined values", async () => {
-      const org = await OrganisationFactory.create({ name: "Original Name" });
-      const updateAttrs: OrganisationUpdateAttributes = {
-        name: "Updated Name",
-        phone: undefined
-      };
+      const org = await OrganisationFactory.create({ status: "draft", isTest: true });
+      const updated = await service.update(org, { status: "pending-approval", isTest: undefined });
 
-      const updated = await service.update(org, updateAttrs);
-
-      expect(updated.name).toBe("Updated Name");
+      expect(updated.status).toBe("pending-approval");
+      expect(updated.isTest).toBe(true);
     });
   });
 

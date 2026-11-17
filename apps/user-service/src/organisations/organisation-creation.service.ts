@@ -34,18 +34,14 @@ export class OrganisationCreationService {
     }
 
     if (status === DRAFT) {
-      return this.createDraft(attributes);
+      return this.createDraft();
     }
 
     return this.createWithUser(attributes);
   }
 
-  private async createDraft(attributes: OrganisationCreateAttributes) {
-    if (attributes.name != null && (await Organisation.count({ where: { name: attributes.name } })) !== 0) {
-      throw new BadRequestException("Organisation already exists");
-    }
-
-    const organisation = await Organisation.create(this.buildOrganisationData(attributes, DRAFT) as Organisation);
+  private async createDraft() {
+    const organisation = await this.createOrganisationRecord(DRAFT);
 
     const userId = UserContext.authenticatedUserId;
     if (userId != null) {
@@ -56,13 +52,7 @@ export class OrganisationCreationService {
   }
 
   private async createWithUser(attributes: OrganisationCreateAttributes) {
-    if (attributes.name != null && (await Organisation.count({ where: { name: attributes.name } })) !== 0) {
-      throw new BadRequestException("Organisation already exists");
-    }
-
-    const organisation = await Organisation.create(
-      this.buildOrganisationData(attributes, PENDING_APPROVAL) as Organisation
-    );
+    const organisation = await this.createOrganisationRecord(PENDING_APPROVAL);
 
     const hasAllUserFields =
       attributes.userFirstName != null &&
@@ -120,28 +110,13 @@ export class OrganisationCreationService {
     return { user, organisation };
   }
 
-  private buildOrganisationData(
-    attributes: OrganisationCreateAttributes,
-    status: CreateOrganisationStatus
-  ): Partial<Organisation> {
-    return {
+  private async createOrganisationRecord(status: CreateOrganisationStatus) {
+    return await Organisation.create({
       status,
       private: false, // required by DB schema, but not in use
       isTest: false, // This endpoint does not create test orgs
-      name: attributes.name ?? null,
-      type: attributes.type ?? null,
-      hqStreet1: attributes.hqStreet1 ?? null,
-      hqStreet2: attributes.hqStreet2 ?? null,
-      hqCity: attributes.hqCity ?? null,
-      hqZipcode: attributes.hqZipcode ?? null,
-      hqState: attributes.hqState ?? null,
-      hqCountry: attributes.hqCountry ?? null,
-      phone: attributes.phone ?? null,
-      countries: attributes.countries ?? null,
-      currency: attributes.currency ?? "USD",
-      level0PastRestoration: attributes.level0PastRestoration ?? null,
-      level1PastRestoration: attributes.level1PastRestoration ?? null
-    };
+      currency: "USD"
+    });
   }
 
   private async validatePendingAssociations(attributes: OrganisationCreateAttributes) {

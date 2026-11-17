@@ -23,8 +23,8 @@ import {
 } from "@terramatch-microservices/database/factories";
 import {
   Form,
-  Organisation,
   Project,
+  ProjectPitch,
   ProjectReport,
   Site,
   UpdateRequest
@@ -306,6 +306,58 @@ describe("FormDataService", () => {
     });
   });
 
+  describe("storeOrganisationAnswers", () => {
+    it("updates the organisation and its answers", async () => {
+      const org = await OrganisationFactory.create({ name: "Old Name" });
+      const form = await FormFactory.create({ type: "organisation" });
+      const section = await FormSectionFactory.form(form).create();
+      const conditional = await FormQuestionFactory.section(section).create({ inputType: "conditional" });
+      const name = await FormQuestionFactory.section(section).create({
+        inputType: "text",
+        linkedFieldKey: "org-name"
+      });
+      const leadership = await FormQuestionFactory.section(section).create({
+        inputType: "leaderships",
+        linkedFieldKey: "org-leadership-team"
+      });
+
+      await service.storeOrganisationAnswers(org, form, {
+        [conditional.uuid]: true,
+        [name.uuid]: "New Name",
+        [leadership.uuid]: [{}]
+      });
+
+      await org.reload();
+      expect(org.name).toBe("New Name");
+      expect(org.answers).toStrictEqual({ [conditional.uuid]: true });
+      expect(collector.leaderships.syncRelation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("getDtoForOrganisation", () => {
+    it("collects answers from the organisation", async () => {
+      const org = await OrganisationFactory.create({ name: "Org Name" });
+      const form = await FormFactory.create({ type: "organisation", title: "Organization Profile" });
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create({
+        inputType: "text",
+        linkedFieldKey: "org-name"
+      });
+
+      const dto = await service.getDtoForOrganisation(org, form);
+      expect(dto).toMatchObject({
+        entityType: "organisations",
+        entityUuid: org.uuid,
+        formUuid: form.uuid,
+        formTitle: "Organization Profile",
+        frameworkKey: null,
+        feedback: null,
+        feedbackFields: null,
+        answers: { [question.uuid]: "Org Name" }
+      });
+    });
+  });
+
   describe("getDtoForEntity", () => {
     it("uses update request content and feedback when one exists", async () => {
       const site = await SiteFactory.create();
@@ -351,8 +403,8 @@ describe("FormDataService", () => {
         "Expected exactly one model if no answers model is provided"
       );
 
-      await expect(service.getAnswers(new Form(), { organisations: new Organisation() })).rejects.toThrow(
-        "Expected entity model if no answers model is provided"
+      await expect(service.getAnswers(new Form(), { projectPitches: new ProjectPitch() })).rejects.toThrow(
+        "Expected entity or organisation if no answers model is provided"
       );
     });
 

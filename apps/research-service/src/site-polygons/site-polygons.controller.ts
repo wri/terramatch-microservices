@@ -262,9 +262,10 @@ export class SitePolygonsController {
   @Post("exports")
   @ApiOperation({
     operationId: "createSitePolygonsGeoJsonExport",
-    summary: "Export active site polygons as a GeoJSON file in a delayed job",
-    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids. The file is written to S3
-    in the background; the completed delayed job payload holds a fileDownloads resource with a signed URL.`
+    summary: "Export active site polygons as a GeoJSON or CSV file in a delayed job",
+    description: `Provide exactly one of projectUuids, siteUuids or polygonUuids and an optional format (geojson by
+    default, or csv). The file is written to S3 in the background; the completed delayed job payload holds a
+    fileDownloads resource with a signed URL.`
   })
   @JsonApiResponse(DelayedJobDto)
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed." })
@@ -275,9 +276,9 @@ export class SitePolygonsController {
   async createGeoJsonExport(@Body() payload: GeoJsonExportBodyDto) {
     await this.policyService.authorize("read", SitePolygon);
 
-    const scope = payload.data.attributes;
+    const { format = "geojson", ...scope } = payload.data.attributes;
     const { entityName, entityType } = await this.geoJsonExportService.getExportTarget(scope);
-    return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType);
+    return await GeoJsonExportProcessor.queueExport(this.geoJsonExportQueue, scope, entityName, entityType, format);
   }
 
   @Get("mapIndex")

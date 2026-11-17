@@ -23,6 +23,7 @@ import { ModelCtor, ModelStatic } from "sequelize-typescript";
 import { omit, uniq } from "lodash";
 import { Subquery } from "@terramatch-microservices/database/util/subquery.builder";
 import { SitePolygonProjectFiltersDto } from "./dto/site-polygon-project-filters.dto";
+import { SITE_POLYGON_SEARCH_FIELDS, SitePolygonSearchField } from "./dto/site-polygon-search-fields";
 import { hasProjectContextFilters, projectContextIdsSubquery } from "./project-context-filters";
 
 type IndicatorModel =
@@ -85,6 +86,32 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
 
   async filterPolygonUuids(polygonUuids: string[]) {
     return this.where({ polygonUuid: { [Op.in]: polygonUuids } });
+  }
+
+  async addSearch(searchTerm: string, fields?: SitePolygonSearchField[]) {
+    const selectedFields =
+      fields != null && fields.length > 0 ? fields : ([...SITE_POLYGON_SEARCH_FIELDS] as SitePolygonSearchField[]);
+    const conditions: WhereOptions[] = [];
+    const contains = SitePolygon.sql.escape(`%${searchTerm}%`);
+
+    if (selectedFields.includes("siteName")) {
+      const siteUuids = Subquery.select(Site, "uuid").andLiteral(
+        `${Subquery.clauseBuilder(Site).field("name")} LIKE ${contains}`
+      ).literal;
+      conditions.push({ siteUuid: { [Op.in]: siteUuids } });
+    }
+
+    if (selectedFields.includes("polyName")) {
+      conditions.push({ polyName: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (selectedFields.includes("polygonUuid")) {
+      conditions.push({ polygonUuid: { [Op.like]: `%${searchTerm}%` } });
+    }
+
+    if (conditions.length === 0) return this;
+
+    return this.where({ [Op.or]: conditions });
   }
 
   async filterValidationStatus(validationStatuses: string[]) {

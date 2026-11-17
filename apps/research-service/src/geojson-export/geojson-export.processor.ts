@@ -13,8 +13,8 @@ import { FileDownloadDto } from "@terramatch-microservices/common/dto/file-downl
 import { timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { UserContext } from "@terramatch-microservices/common/contexts/user.context";
 import { DelayedJob } from "@terramatch-microservices/database/entities";
-import { GeoJsonExportService } from "./geojson-export.service";
-import { GeoJsonExportAttributes } from "./dto/geojson-export-request.dto";
+import { GeoJsonExportAttributes, SitePolygonExportFormat } from "./dto/geojson-export-request.dto";
+import { SitePolygonCsvExportService } from "./site-polygon-csv-export.service";
 
 export const GEOJSON_EXPORT_QUEUE = "geojson-export";
 
@@ -22,9 +22,16 @@ export type GeoJsonExportJobData = {
   delayedJobId: number;
   scope: GeoJsonExportAttributes;
   fileName: string;
+  // Missing on jobs queued before CSV exports existed; those are GeoJSON.
+  format?: SitePolygonExportFormat;
 };
 
 const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (instead of default of forever)
+
+const EXPORT_FORMATS: Record<SitePolygonExportFormat, { label: string; extension: string; contentType: string }> = {
+  geojson: { label: "GeoJSON", extension: ".geojson", contentType: "application/geo+json" },
+  csv: { label: "CSV", extension: ".csv", contentType: "text/csv" }
+};
 
 // Exports are memory and IO bound, and run in the same task as the API, so keep concurrency low.
 @Processor(GEOJSON_EXPORT_QUEUE, {
@@ -35,9 +42,16 @@ const KEEP_JOBS_TIMEOUT = 60 * 60; // keep jobs for 1 hour after completion (ins
 export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobData> {
   protected readonly logger = new TMLogger(GeoJsonExportProcessor.name);
 
-  static async queueExport(queue: Queue, scope: GeoJsonExportAttributes, entityName: string, entityType?: string) {
+  static async queueExport(
+    queue: Queue,
+    scope: GeoJsonExportAttributes,
+    entityName: string,
+    entityType?: string,
+    format: SitePolygonExportFormat = "geojson"
+  ) {
+    const { label, extension } = EXPORT_FORMATS[format];
     const delayedJob = await DelayedJob.create({
-      name: "Polygon GeoJSON Export",
+      name: `Polygon ${label} Export`,
       createdBy: UserContext.authenticatedUserId,
       isAcknowledged: false,
       processedContent: 0,
@@ -46,15 +60,15 @@ export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobDat
     // The job uuid keeps the S3 key unique when two exports share a name and timestamp.
     const fileName = `exports/polygon-exports/${delayedJob.uuid}/${timestampFileName(
       `${entityName} polygons`,
-      ".geojson"
+      extension
     )}`;
-    const data: GeoJsonExportJobData = { delayedJobId: delayedJob.id, scope, fileName };
+    const data: GeoJsonExportJobData = { delayedJobId: delayedJob.id, scope, fileName, format };
     await queue.add("geojsonExport", data);
     return buildDelayedJobResponse(delayedJob);
   }
 
   constructor(
-    private readonly geoJsonExportService: GeoJsonExportService,
+    private readonly sitePolygonCsvExportService: SitePolygonCsvExportService,
     private readonly fileService: FileService,
     private readonly configService: ConfigService
   ) {
@@ -70,11 +84,12 @@ export class GeoJsonExportProcessor extends DelayedJobWorker<GeoJsonExportJobDat
 
   async processDelayedJob(job: Job<GeoJsonExportJobData>) {
     const { scope, fileName } = job.data;
+    const format = job.data.format ?? "geojson";
 
     try {
-      await this.fileService.uploadStream(this.bucket, fileName, "application/geo+json", async stream => {
+      await this.fileService.uploadStream(this.bucket, fileName, EXPORT_FORMATS[format].contentType, async stream => {
         try {
-          await this.geoJsonExportService.writeFeatureCollection(stream, scope, async (processed, total) => {
+          await this.sitePolygonCsvExportService.writeExport(format, scope, stream, async (processed, total) => {
             await this.updateJobProgress(job, { processedContent: processed, totalContent: total });
           });
         } finally {

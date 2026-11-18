@@ -29,17 +29,17 @@ export class ResearchTreeCountDto {
   @ApiProperty({ enum: VERIFICATION_METHODS })
   verificationMethod: VerificationMethod;
 
-  @ApiProperty()
-  reportedCount: number;
+  @ApiProperty({ nullable: true, type: Number })
+  reportedCount: number | null;
 
   @ApiProperty({ nullable: true, type: Number })
   treeCountAdj: number | null;
 
-  @ApiProperty()
-  upperBounds: number;
+  @ApiProperty({ nullable: true, type: Number })
+  upperBounds: number | null;
 
-  @ApiProperty()
-  lowerBounds: number;
+  @ApiProperty({ nullable: true, type: Number })
+  lowerBounds: number | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -57,26 +57,26 @@ export class UpdateResearchTreeCountAttributes {
   @ApiProperty({ enum: VERIFICATION_METHODS, required: false })
   verificationMethod?: VerificationMethod;
 
-  @ValidateIf(isProvided)
+  // @IsOptional() also lets null through on the fields below, which clears the value.
+  @IsOptional()
   @IsInt()
-  @ApiProperty({ required: false })
-  reportedCount?: number;
+  @ApiProperty({ required: false, nullable: true, type: Number, description: "Send null to clear the value" })
+  reportedCount?: number | null;
 
-  // @IsOptional() also lets null through, which clears the value.
   @IsOptional()
   @IsInt()
   @ApiProperty({ required: false, nullable: true, type: Number, description: "Send null to clear the value" })
   treeCountAdj?: number | null;
 
-  @ValidateIf(isProvided)
+  @IsOptional()
   @IsInt()
-  @ApiProperty({ required: false })
-  upperBounds?: number;
+  @ApiProperty({ required: false, nullable: true, type: Number, description: "Send null to clear the value" })
+  upperBounds?: number | null;
 
-  @ValidateIf(isProvided)
+  @IsOptional()
   @IsInt()
-  @ApiProperty({ required: false })
-  lowerBounds?: number;
+  @ApiProperty({ required: false, nullable: true, type: Number, description: "Send null to clear the value" })
+  lowerBounds?: number | null;
 }
 
 export class CreateResearchTreeCountAttributes {
@@ -88,22 +88,25 @@ export class CreateResearchTreeCountAttributes {
   @ApiProperty({ enum: VERIFICATION_METHODS })
   verificationMethod: VerificationMethod;
 
+  @IsOptional()
   @IsInt()
-  @ApiProperty()
-  reportedCount: number;
+  @ApiProperty({ required: false })
+  reportedCount?: number;
 
   @IsOptional()
   @IsInt()
   @ApiProperty({ required: false })
   treeCountAdj?: number;
 
+  @IsOptional()
   @IsInt()
-  @ApiProperty()
-  upperBounds: number;
+  @ApiProperty({ required: false })
+  upperBounds?: number;
 
+  @IsOptional()
   @IsInt()
-  @ApiProperty()
-  lowerBounds: number;
+  @ApiProperty({ required: false })
+  lowerBounds?: number;
 }
 
 export class CreateResearchTreeCountBody extends JsonApiBodyDto(

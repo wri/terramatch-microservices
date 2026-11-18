@@ -198,14 +198,18 @@ describe("ResearchTreeCountsService", () => {
       expect(stored).toMatchObject({ ...omit(attributes(project.uuid), "projectUuid"), projectId: project.id });
     });
 
-    it("creates the tree count without an adjusted tree count", async () => {
+    it("creates the tree count without any counts", async () => {
       const project = await ProjectFactory.create();
+      const counts = ["reportedCount", "treeCountAdj", "upperBounds", "lowerBounds"] as const;
 
-      await service.create(omit(attributes(project.uuid), "treeCountAdj"));
+      await service.create(omit(attributes(project.uuid), counts));
 
       const stored = await service.findByProjectUuid(project.uuid);
-      expect(stored.treeCountAdj).toBeNull();
-      expect(new ResearchTreeCountDto(stored).treeCountAdj).toBeNull();
+      const dto = new ResearchTreeCountDto(stored);
+      for (const count of counts) {
+        expect(stored[count]).toBeNull();
+        expect(dto[count]).toBeNull();
+      }
     });
 
     it("throws if the project does not exist", async () => {
@@ -245,14 +249,19 @@ describe("ResearchTreeCountsService", () => {
       expect(original.projectId).toBe(project.id);
     });
 
-    it("clears the adjusted tree count when null is provided", async () => {
+    it("clears the counts when null is provided", async () => {
       const project = await ProjectFactory.create();
       const original = await ResearchTreeCountFactory.create({ projectId: project.id });
 
-      await service.update(await service.findByProjectUuid(project.uuid), { treeCountAdj: null });
+      await service.update(await service.findByProjectUuid(project.uuid), {
+        reportedCount: null,
+        treeCountAdj: null,
+        upperBounds: null,
+        lowerBounds: null
+      });
 
       await original.reload();
-      expect(original.treeCountAdj).toBeNull();
+      expect(original).toMatchObject({ reportedCount: null, treeCountAdj: null, upperBounds: null, lowerBounds: null });
     });
   });
 

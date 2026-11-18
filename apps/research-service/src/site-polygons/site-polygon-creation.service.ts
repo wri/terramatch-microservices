@@ -39,6 +39,9 @@ import {
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
   POLYGON_DRAFT,
+  POLYGON_INFORMATION_REQUIRED,
+  POLYGON_PENDING_APPROVAL,
+  PolygonStatus,
   ValidationType
 } from "@terramatch-microservices/database/constants";
 import { isEqual, uniq } from "lodash";
@@ -57,10 +60,18 @@ interface DuplicateCheckResult {
 
 const REVIEW_NEUTRAL_ATTRIBUTES: ReadonlySet<string> = new Set(["submissionCycle"]);
 
-const DRAFT_REVIEW_STATE: Pick<SitePolygon, "status" | "validationStatus"> = {
+type ReviewState = Pick<SitePolygon, "status" | "validationStatus">;
+
+const DRAFT_REVIEW_STATE: ReviewState = {
   status: POLYGON_DRAFT,
   validationStatus: null
 };
+
+const REVIEWER_EDIT_KEPT_STATUSES: ReadonlySet<PolygonStatus> = new Set([
+  POLYGON_DRAFT,
+  POLYGON_INFORMATION_REQUIRED,
+  POLYGON_PENDING_APPROVAL
+]);
 
 const normalizeComparableValue = (key: string, value: unknown): unknown => {
   if (key === "numTrees") return value ?? 0;
@@ -79,6 +90,21 @@ const hasOnlyReviewNeutralChanges = (basePolygon: SitePolygon, changes: Partial<
         normalizeComparableValue(key, newValue)
       )
   );
+
+const getReviewStateReset = (
+  basePolygon: SitePolygon,
+  changes: Partial<SitePolygon>,
+  geometryChanged: boolean,
+  canReviewPolygons: boolean
+): ReviewState | undefined => {
+  if (!canReviewPolygons) return DRAFT_REVIEW_STATE;
+  if (!geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes)) return undefined;
+
+  const { status } = basePolygon;
+  return status != null && REVIEWER_EDIT_KEPT_STATUSES.has(status)
+    ? { status, validationStatus: null }
+    : DRAFT_REVIEW_STATE;
+};
 
 const validateAndSortStrictStringArray = (
   value: unknown,
@@ -940,20 +966,16 @@ export class SitePolygonCreationService {
       return basePolygon;
     });
 
-    const resettingBasePolygons = new Set(
-      basePolygons.filter(
-        basePolygon => !this.keepsReviewState(basePolygon, parsedAttributeChanges, false, canReviewPolygons)
-      )
+    const reviewStateResets = basePolygons.map(basePolygon =>
+      getReviewStateReset(basePolygon, parsedAttributeChanges, false, canReviewPolygons)
     );
     await this.clearValidationResults(
-      [...resettingBasePolygons].map(({ polygonUuid }) => polygonUuid),
+      basePolygons.filter((_, index) => reviewStateResets[index] != null).map(({ polygonUuid }) => polygonUuid),
       transaction
     );
 
-    const versionEntries = basePolygons.map(basePolygon => {
-      const versionAttributes = resettingBasePolygons.has(basePolygon)
-        ? { ...parsedAttributeChanges, ...DRAFT_REVIEW_STATE }
-        : parsedAttributeChanges;
+    const versionEntries = basePolygons.map((basePolygon, index) => {
+      const versionAttributes = { ...parsedAttributeChanges, ...reviewStateResets[index] };
       const changeDescription = this.buildDetailedChangeDescription(basePolygon, versionAttributes, false);
 
       return {
@@ -1065,8 +1087,14 @@ export class SitePolygonCreationService {
       sitePolygonAttributes.calcArea = areas[0];
     }
 
-    if (!this.keepsReviewState(basePolygon, sitePolygonAttributes, newPolygonGeometryUuid != null, canReviewPolygons)) {
-      Object.assign(sitePolygonAttributes, DRAFT_REVIEW_STATE);
+    const reviewStateReset = getReviewStateReset(
+      basePolygon,
+      sitePolygonAttributes,
+      newPolygonGeometryUuid != null,
+      canReviewPolygons
+    );
+    if (reviewStateReset != null) {
+      Object.assign(sitePolygonAttributes, reviewStateReset);
       await this.clearValidationResults([newPolygonGeometryUuid ?? basePolygon.polygonUuid], transaction);
     }
 
@@ -1158,15 +1186,6 @@ export class SitePolygonCreationService {
     }
 
     return sitePolygonAttributes;
-  }
-
-  private keepsReviewState(
-    basePolygon: SitePolygon,
-    changes: Partial<SitePolygon>,
-    geometryChanged: boolean,
-    canReviewPolygons: boolean
-  ) {
-    return canReviewPolygons && !geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes);
   }
 
   private async clearValidationResults(polygonUuids: Array<string | null>, transaction: Transaction) {

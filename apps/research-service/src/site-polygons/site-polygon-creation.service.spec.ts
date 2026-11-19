@@ -1045,6 +1045,8 @@ describe("SitePolygonCreationService", () => {
         userFullName,
         source,
         mockTransaction,
+        false,
+        true,
         false
       );
     });
@@ -1098,6 +1100,8 @@ describe("SitePolygonCreationService", () => {
         userFullName,
         source,
         mockTransaction,
+        false,
+        true,
         false
       );
     });

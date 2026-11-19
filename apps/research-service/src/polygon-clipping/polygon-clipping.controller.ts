@@ -65,6 +65,7 @@ export class PolygonClippingController {
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
     const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const canReviewPolygons = user?.canReviewPolygons ?? false;
 
     let fixablePolygons: string[];
     let entityId: number;
@@ -126,6 +127,7 @@ export class PolygonClippingController {
       userFullName,
       source,
       isAdminSession,
+      canReviewPolygons,
       delayedJobId: delayedJob.id,
       siteUuid
     });
@@ -154,6 +156,7 @@ export class PolygonClippingController {
     const source = user?.getSourceFromRoles() ?? "terramatch";
     const userFullName = user?.fullName ?? null;
     const isAdminSession = isAdminSessionFromRoles(user?.roles);
+    const canReviewPolygons = user?.canReviewPolygons ?? false;
 
     const polygonUuids = payload.data.attributes.polygonUuids;
 
@@ -173,7 +176,8 @@ export class PolygonClippingController {
         UserContext.authenticatedUserId as number,
         userFullName,
         source,
-        isAdminSession
+        isAdminSession,
+        canReviewPolygons
       );
 
       if (createdVersions.length === 0) {
@@ -273,6 +277,7 @@ export class PolygonClippingController {
       userFullName,
       source,
       isAdminSession,
+      canReviewPolygons,
       delayedJobId: delayedJob.id,
       siteUuid: siteUuidForEmail
     });

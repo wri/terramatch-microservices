@@ -1235,7 +1235,8 @@ export class SitePolygonCreationService {
     userId: number,
     userFullName: string | null,
     source: string,
-    isAdminSession = false
+    isAdminSession = false,
+    canReviewPolygons = false
   ): Promise<SitePolygon> {
     const site = await Site.findOne({
       where: { uuid: siteId },
@@ -1325,7 +1326,9 @@ export class SitePolygonCreationService {
         userFullName,
         source,
         transaction,
-        isAdminSession
+        isAdminSession,
+        true,
+        canReviewPolygons
       );
     });
 

@@ -3,6 +3,7 @@ import { CsvExportService } from "@terramatch-microservices/common/export/csv-ex
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import { Dictionary } from "lodash";
+import { DateTime } from "luxon";
 import { col, fn } from "sequelize";
 import { GeoJsonExportAttributes, SitePolygonExportFormat } from "./dto/geojson-export-request.dto";
 import { GeoJsonExportService } from "./geojson-export.service";
@@ -28,6 +29,11 @@ export const SITE_POLYGON_CSV_COLUMNS: Dictionary<string> = {
 
 // "id" is needed for the paginated batching. siteName is read from the site include, not a polygon column.
 const CSV_ATTRIBUTES = ["id", ...Object.keys(SITE_POLYGON_CSV_COLUMNS).filter(key => key !== "siteName")];
+
+// plantStart is a DATE column read as UTC midnight; format it in UTC so the YYYY-MM-DD value doesn't shift a day
+// on machines west of UTC.
+const formatPlantStart = (plantStart: Date | null): string | undefined =>
+  plantStart == null ? undefined : (DateTime.fromJSDate(plantStart, { zone: "utc" }).toISODate() ?? undefined);
 
 @Injectable()
 export class SitePolygonCsvExportService {
@@ -69,7 +75,10 @@ export class SitePolygonCsvExportService {
     await this.csvExportService.writeToStream(destination, SITE_POLYGON_CSV_COLUMNS, async addRow => {
       for await (const sitePolygons of batchFindAll(query)) {
         for (const sitePolygon of sitePolygons) {
-          addRow(sitePolygon, { siteName: sitePolygon.site?.name });
+          addRow(sitePolygon, {
+            siteName: sitePolygon.site?.name,
+            plantStart: formatPlantStart(sitePolygon.plantStart)
+          });
         }
         processed += sitePolygons.length;
         await onProgress(processed, total);

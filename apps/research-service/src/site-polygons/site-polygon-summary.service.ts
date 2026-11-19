@@ -24,6 +24,8 @@ const TREE_COVER_LOSS_SLUGS = new Set<SummaryIndicatorSlug>(["treeCoverLoss", "t
 type AggregateTotalsRow = {
   sumNumTrees: string | number | null;
   sumCalcArea: string | number | null;
+  minCalcArea: string | number | null;
+  maxCalcArea: string | number | null;
   totalPolygons: string | number | null;
 };
 
@@ -65,6 +67,8 @@ export class SitePolygonSummaryService {
         ...builder.findOptionsForAggregation([
           [fn("COALESCE", fn("SUM", col("num_trees")), 0), "sumNumTrees"],
           [fn("COALESCE", fn("SUM", col("calc_area")), 0), "sumCalcArea"],
+          [fn("MIN", col("calc_area")), "minCalcArea"],
+          [fn("MAX", col("calc_area")), "maxCalcArea"],
           [fn("COUNT", col("SitePolygon.id")), "totalPolygons"]
         ]),
         raw: true
@@ -90,6 +94,8 @@ export class SitePolygonSummaryService {
     return {
       sumNumTrees: Number(totalsRow?.sumNumTrees ?? 0),
       sumCalcArea: Number(totalsRow?.sumCalcArea ?? 0),
+      minCalcArea: totalsRow?.minCalcArea == null ? null : Number(totalsRow.minCalcArea),
+      maxCalcArea: totalsRow?.maxCalcArea == null ? null : Number(totalsRow.maxCalcArea),
       totalPolygons: Number(totalsRow?.totalPolygons ?? 0),
       countByStatus
     };

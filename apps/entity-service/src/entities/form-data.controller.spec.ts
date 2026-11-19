@@ -1,12 +1,18 @@
 import { createMock, DeepMocked } from "@golevelup/ts-jest";
 import { Test } from "@nestjs/testing";
+import { UnauthorizedException } from "@nestjs/common";
 import { PolicyService } from "@terramatch-microservices/common";
 import { EntitiesService } from "./entities.service";
 import { FormDataController } from "./form-data.controller";
 import { FormDataService } from "./form-data.service";
 import { StubProcessor } from "./entities.controller.spec";
-import { Form, Project } from "@terramatch-microservices/database/entities";
-import { FormFactory, ProjectFactory } from "@terramatch-microservices/database/factories";
+import { Form, Organisation, Project } from "@terramatch-microservices/database/entities";
+import {
+  FormFactory,
+  OrganisationFactory,
+  ProjectFactory,
+  UserFactory
+} from "@terramatch-microservices/database/factories";
 import { FormDataDto, UpdateFormDataBody } from "./dto/form-data.dto";
 import { mockUserContext, serialize } from "@terramatch-microservices/common/util/testing";
 import { Resource } from "@terramatch-microservices/common/util/json-api-builder";
@@ -80,6 +86,26 @@ describe("FormDataController", () => {
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
     });
+
+    it("returns the form data for an organisation", async () => {
+      const org = await OrganisationFactory.create();
+      const form = await FormFactory.create({ type: "organisation" });
+      await form.reload();
+      service.getDtoForOrganisation.mockResolvedValue(new FormDataDto());
+      const authSpy = jest.spyOn(policyService, "authorize").mockResolvedValue();
+
+      const result = serialize(await controller.get({ entity: "organisations", uuid: org.uuid }));
+      expect(authSpy).toHaveBeenCalledWith("read", expect.objectContaining({ id: org.id }));
+      expect(service.getDtoForOrganisation).toHaveBeenCalledWith(expect.any(Organisation), form);
+      expect(entitiesService.createEntityProcessor).not.toHaveBeenCalled();
+      expect((result.data as Resource).id).toBe(`organisations|${org.uuid}`);
+    });
+
+    it("throws if the organisation is not found", async () => {
+      await expect(controller.get({ entity: "organisations", uuid: "fake-uuid" })).rejects.toThrow(
+        "Entity not found for uuid: fake-uuid"
+      );
+    });
   });
 
   describe("formDataUpdate", () => {
@@ -129,6 +155,41 @@ describe("FormDataController", () => {
       expect(authSpy).toHaveBeenCalledWith("update", project);
       expect((result.data as Resource).id).toBe(`projects|${project.uuid}`);
       expect((result.data as Resource).type).toBe("formData");
+    });
+
+    it("stores organisation answers for a user who manages the organisation", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: org.id });
+      mockUserContext({ userId: user.id, permissions: ["manage-own"] });
+      const form = await FormFactory.create({ type: "organisation" });
+      await form.reload();
+      service.getDtoForOrganisation.mockResolvedValue(new FormDataDto());
+
+      const answers = { jedi: "Obi-Wan Kenobi" };
+      const result = serialize(
+        await controller.update(
+          { entity: "organisations", uuid: org.uuid },
+          createPayload(`organisations|${org.uuid}`, answers)
+        )
+      );
+      expect(service.storeOrganisationAnswers).toHaveBeenCalledWith(expect.any(Organisation), form, answers);
+      expect(service.storeEntityAnswers).not.toHaveBeenCalled();
+      expect((result.data as Resource).id).toBe(`organisations|${org.uuid}`);
+    });
+
+    it("does not allow a user from another organisation to update organisation answers", async () => {
+      const org = await OrganisationFactory.create();
+      const user = await UserFactory.create({ organisationId: (await OrganisationFactory.create()).id });
+      mockUserContext({ userId: user.id, permissions: ["manage-own"] });
+      await FormFactory.create({ type: "organisation" });
+
+      await expect(
+        controller.update(
+          { entity: "organisations", uuid: org.uuid },
+          createPayload(`organisations|${org.uuid}`, { jedi: "Obi-Wan Kenobi" })
+        )
+      ).rejects.toThrow(UnauthorizedException);
+      expect(service.storeOrganisationAnswers).not.toHaveBeenCalled();
     });
   });
 });

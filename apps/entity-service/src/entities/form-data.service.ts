@@ -5,6 +5,7 @@ import {
   FormSubmission,
   FundingProgramme,
   Media,
+  Organisation,
   Stage,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
@@ -68,6 +69,10 @@ export class FormDataService {
     }
   }
 
+  async storeOrganisationAnswers(organisation: Organisation, form: Form, answers: Dictionary<unknown>) {
+    await this.updateModelFromForm(organisation, form, answers);
+  }
+
   async storeSubmissionAnswers(submission: FormSubmission, form: Form, answers: Dictionary<unknown>) {
     const models: FormModels = {
       organisations:
@@ -104,6 +109,19 @@ export class FormDataService {
       feedback,
       feedbackFields,
       answers
+    });
+  }
+
+  async getDtoForOrganisation(organisation: Organisation, form: Form) {
+    return populateDto(new FormDataDto(), {
+      entityType: "organisations",
+      entityUuid: organisation.uuid,
+      formUuid: form.uuid,
+      formTitle: await this.getFormTitle(form),
+      frameworkKey: null,
+      feedback: null,
+      feedbackFields: null,
+      answers: await this.getAnswers(form, { organisations: organisation })
     });
   }
 
@@ -207,8 +225,8 @@ export class FormDataService {
       if (modelValues.length !== 1) {
         throw new InternalServerErrorException("Expected exactly one model if no answers model is provided");
       }
-      if (!isEntity(modelValues[0])) {
-        throw new InternalServerErrorException("Expected entity model if no answers model is provided");
+      if (!isEntity(modelValues[0]) && !(modelValues[0] instanceof Organisation)) {
+        throw new InternalServerErrorException("Expected entity or organisation if no answers model is provided");
       }
       answersModel = modelValues[0];
     }

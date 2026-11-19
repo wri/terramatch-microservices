@@ -92,6 +92,8 @@ describe("SitePolygonSummaryService", () => {
 
       expect(result.sumNumTrees).toBe(15);
       expect(result.sumCalcArea).toBe(3.75);
+      expect(result.minCalcArea).toBe(1.5);
+      expect(result.maxCalcArea).toBe(2.25);
       expect(result.totalPolygons).toBe(3);
       expect(result.countByStatus).toEqual({
         draft: 1,
@@ -124,6 +126,32 @@ describe("SitePolygonSummaryService", () => {
       expect(result.totalPolygons).toBe(1);
       expect(result.countByStatus.approved).toBe(1);
       expect(result.countByStatus.draft).toBe(0);
+    });
+
+    it("returns null min / max calcArea when no polygon in scope has one", async () => {
+      const site = await SiteFactory.create();
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: null });
+
+      const result = await getSummary({ siteId: [site.uuid] });
+
+      expect(result.minCalcArea).toBeNull();
+      expect(result.maxCalcArea).toBeNull();
+    });
+
+    it("applies calcArea range filter to aggregates", async () => {
+      const site = await SiteFactory.create();
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 1, calcArea: 0.3 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 10, calcArea: 5 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 20, calcArea: 20 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, numTrees: 100, calcArea: 38 });
+
+      const result = await getSummary({ siteId: [site.uuid], calcAreaMin: 5, calcAreaMax: 20 });
+
+      expect(result.totalPolygons).toBe(2);
+      expect(result.sumNumTrees).toBe(30);
+      expect(result.sumCalcArea).toBe(25);
+      expect(result.minCalcArea).toBe(5);
+      expect(result.maxCalcArea).toBe(20);
     });
 
     it("aggregates across a project scope", async () => {

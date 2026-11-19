@@ -103,6 +103,7 @@ describe("SitePolygonsController", () => {
     filterPolygonUuids: jest.Mock;
     addSearch: jest.Mock;
     filterPlantStartRange: jest.Mock;
+    filterCalcAreaRange: jest.Mock;
     filterPractice: jest.Mock;
     filterDistr: jest.Mock;
     filterSubmissionCycle: jest.Mock;
@@ -132,6 +133,7 @@ describe("SitePolygonsController", () => {
       filterPolygonUuids: jest.fn().mockResolvedValue(undefined),
       addSearch: jest.fn().mockResolvedValue(undefined),
       filterPlantStartRange: jest.fn().mockReturnThis(),
+      filterCalcAreaRange: jest.fn().mockReturnThis(),
       filterPractice: jest.fn().mockReturnThis(),
       filterDistr: jest.fn().mockReturnThis(),
       filterSubmissionCycle: jest.fn().mockReturnThis(),
@@ -550,6 +552,8 @@ describe("SitePolygonsController", () => {
       await controller.findMany({
         plantStartFrom: from,
         plantStartTo: to,
+        calcAreaMin: 5,
+        calcAreaMax: 20,
         practice: ["tree-planting"],
         distr: ["partial", "full"],
         targetSys: ["mangrove", "urban-forest"],
@@ -560,6 +564,7 @@ describe("SitePolygonsController", () => {
       });
 
       expect(builder.filterPlantStartRange).toHaveBeenCalledWith(from, to);
+      expect(builder.filterCalcAreaRange).toHaveBeenCalledWith(5, 20);
       expect(builder.filterPractice).toHaveBeenCalledWith(["tree-planting"]);
       expect(builder.filterDistr).toHaveBeenCalledWith(["partial", "full"]);
       expect(builder.filterTargetSys).toHaveBeenCalledWith(["mangrove", "urban-forest"]);
@@ -2282,7 +2287,8 @@ describe("SitePolygonsController", () => {
         geoJsonExportQueue,
         { projectUuids: ["project-uuid"] },
         "Project",
-        "project"
+        "project",
+        "geojson"
       );
       expect((result.data as Resource).id).toBe(delayedJob.uuid);
     });
@@ -2303,6 +2309,28 @@ describe("SitePolygonsController", () => {
 
       await expect(controller.createGeoJsonExport(payload)).rejects.toThrow(BadRequestException);
       expect(queueExport).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("createGeoJsonExport with format", () => {
+    const payload = {
+      data: { type: "geojsonExports", attributes: { siteUuids: ["site-uuid"], format: "csv" } }
+    } as GeoJsonExportBodyDto;
+
+    it("queues a csv export for the scope when the format is csv", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      geoJsonExportService.getExportTarget.mockResolvedValue({ entityName: "Site", entityType: "site" });
+      const delayedJob = await DelayedJob.create({ name: "Polygon Export" });
+      const queueExport = jest
+        .spyOn(GeoJsonExportProcessor, "queueExport")
+        .mockResolvedValue(buildDelayedJobResponse(delayedJob));
+
+      const result = serialize(await controller.createGeoJsonExport(payload));
+
+      expect(policyService.authorize).toHaveBeenCalledWith("read", SitePolygon);
+      expect(geoJsonExportService.getExportTarget).toHaveBeenCalledWith({ siteUuids: ["site-uuid"] });
+      expect(queueExport).toHaveBeenCalledWith(geoJsonExportQueue, { siteUuids: ["site-uuid"] }, "Site", "site", "csv");
+      expect((result.data as Resource).id).toBe(delayedJob.uuid);
     });
   });
 
@@ -2733,6 +2761,8 @@ describe("SitePolygonsController", () => {
     const summaryDto = new SitePolygonSummaryDto({
       sumNumTrees: 15,
       sumCalcArea: 3.5,
+      minCalcArea: 1.25,
+      maxCalcArea: 2.25,
       totalPolygons: 2,
       countByStatus: {
         draft: 1,
@@ -2770,6 +2800,8 @@ describe("SitePolygonsController", () => {
         expect(result.data.attributes).toEqual({
           sumNumTrees: 15,
           sumCalcArea: 3.5,
+          minCalcArea: 1.25,
+          maxCalcArea: 2.25,
           totalPolygons: 2,
           countByStatus: {
             draft: 1,

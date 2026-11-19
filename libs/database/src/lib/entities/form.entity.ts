@@ -27,6 +27,7 @@ import { Subquery } from "../util/subquery.builder";
 import { removeMedia } from "../hooks/remove-media";
 import { removeQuestionDependencies } from "../hooks/remove-question-dependencies";
 import { Framework } from "./framework.entity";
+import { Organisation } from "./organisation.entity";
 
 type FormMedia = "banner";
 
@@ -37,7 +38,8 @@ type FormAttachment = {
 };
 
 @Scopes(() => ({
-  entity: (entity: EntityModel) => {
+  entity: (entity: EntityModel | Organisation) => {
+    if (entity instanceof Organisation) return { where: { type: "organisation" } };
     if (entity instanceof FinancialReport) {
       if (entity?.frameworkKey == null) {
         if (entity.organisation?.type == null) {
@@ -85,7 +87,7 @@ export class Form extends Model<Form> {
     banner: { dbCollection: "banner", multiple: false, validation: "cover-image-with-svg" }
   };
 
-  static for(entity: EntityModel) {
+  static for(entity: EntityModel | Organisation) {
     return chainScope(this, "entity", entity) as typeof Form;
   }
 
@@ -206,6 +208,9 @@ export class Form extends Model<Form> {
 
     if (this.type === "srp-report") {
       return { name: "SRP Report", type: "entity" };
+    }
+    if (this.type === "organisation") {
+      return { name: "Organisation", type: "entity" };
     }
     if (this.model != null && this.framework != null) {
       return { name: this.framework.name, type: "framework", adminId: this.frameworkKey };

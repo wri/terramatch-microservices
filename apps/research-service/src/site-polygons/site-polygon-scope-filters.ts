@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { SitePolygonMapIndexQueryDto } from "./dto/site-polygon-map-index-query.dto";
+import { SitePolygonColumnQueryBuilder } from "./site-polygon-column-query.builder";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
 import { hasProjectContextFilters } from "./project-context-filters";
 
@@ -9,6 +10,29 @@ const nonEmpty = <T>(value: T[] | null | undefined): T[] | undefined =>
 export type SitePolygonScopeOptions = {
   requireSiteOrProject: boolean;
 };
+
+/** The table filters shared by the polygon index endpoints and the polygon exports. */
+export type SitePolygonFilterQuery = Partial<
+  Pick<
+    SitePolygonMapIndexQueryDto,
+    | "polygonStatus"
+    | "validationStatus"
+    | "practice"
+    | "targetSys"
+    | "distr"
+    | "submissionCycle"
+    | "source"
+    | "plantStartFrom"
+    | "plantStartTo"
+    | "calcAreaMin"
+    | "calcAreaMax"
+    | "hasOverlap"
+    | "hasDisturbance"
+    | "deletedOnly"
+    | "search"
+    | "searchFields"
+  >
+>;
 
 export async function applySitePolygonScopeFilters(
   builder: SitePolygonMapIndexQueryBuilder,
@@ -49,18 +73,11 @@ export async function applySitePolygonScopeFilters(
     );
   }
 
-  if (deletedOnly === true) {
-    builder.includeSoftDeleted().filterSoftDeletedOnly();
-  }
-
   if (siteId != null) await builder.filterSiteUuids(siteId);
   if (projectId != null) await builder.filterProjectUuids(projectId);
   builder.filterProjectContext(query, !hasSiteOrProject);
 
-  builder.hasStatuses(nonEmpty(query.polygonStatus)).modifiedSince(query.lastModifiedDate);
-
-  const validationStatus = nonEmpty(query.validationStatus);
-  if (validationStatus != null) await builder.filterValidationStatus(validationStatus);
+  builder.modifiedSince(query.lastModifiedDate);
 
   const polygonUuid = nonEmpty(query.polygonUuid);
   if (polygonUuid != null) await builder.filterPolygonUuids(polygonUuid);
@@ -73,8 +90,30 @@ export async function applySitePolygonScopeFilters(
     builder.hasPresentIndicators(presentIndicator);
   }
 
+  await applySitePolygonFilters(builder, query);
+}
+
+/**
+ * Applies the table filters (status, validation, practice, dates, search, etc.) to a polygon query. Scope
+ * (site, project, polygon UUIDs) is applied by the caller, so exports can reuse this without the index's
+ * requirement that a site or project is given.
+ */
+export async function applySitePolygonFilters(
+  builder: SitePolygonColumnQueryBuilder,
+  query: SitePolygonFilterQuery
+): Promise<void> {
+  if (query.deletedOnly === true) {
+    builder.includeSoftDeleted().filterSoftDeletedOnly();
+  }
+
+  builder.hasStatuses(nonEmpty(query.polygonStatus));
+
+  const validationStatus = nonEmpty(query.validationStatus);
+  if (validationStatus != null) await builder.filterValidationStatus(validationStatus);
+
   builder
     .filterPlantStartRange(query.plantStartFrom, query.plantStartTo)
+    .filterCalcAreaRange(query.calcAreaMin, query.calcAreaMax)
     .filterPractice(nonEmpty(query.practice))
     .filterDistr(nonEmpty(query.distr))
     .filterTargetSys(nonEmpty(query.targetSys))

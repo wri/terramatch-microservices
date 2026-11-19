@@ -35,6 +35,7 @@ import { IndicatorsProcessor } from "./indicators/indicators.processor";
 import { ClippingProcessor } from "./polygon-clipping/polygon-clipping.processor";
 import { GEOJSON_EXPORT_QUEUE, GeoJsonExportProcessor } from "./geojson-export/geojson-export.processor";
 import { GeoJsonExportService } from "./geojson-export/geojson-export.service";
+import { SitePolygonCsvExportService } from "./geojson-export/site-polygon-csv-export.service";
 import { TMGlobalFilter } from "@terramatch-microservices/common/util/tm-global-filter";
 import { ProjectPolygonsController } from "./project-polygons/project-polygons.controller";
 import { ProjectPolygonsService } from "./project-polygons/project-polygons.service";
@@ -110,6 +111,7 @@ const IS_REPL = process.env["REPL"] === "true";
     VoronoiService,
     PolygonClippingService,
     GeoJsonExportService,
+    SitePolygonCsvExportService,
     ProjectPolygonsService,
     ProjectPolygonCreationService,
     ProjectPolygonGeometryService,

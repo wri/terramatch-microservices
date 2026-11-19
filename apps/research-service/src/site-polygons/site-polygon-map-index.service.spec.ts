@@ -313,6 +313,17 @@ describe("SitePolygonMapIndexService", () => {
       expect(result.polygons.map(({ uuid }) => uuid)).toEqual([inRange.uuid]);
     });
 
+    it("filters by calcArea range", async () => {
+      const site = await SiteFactory.create();
+      const inRange = await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 10 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: 25 });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, calcArea: null });
+
+      const result = await getMapIndex({ siteId: [site.uuid], calcAreaMin: 5, calcAreaMax: 20 });
+
+      expect(result.polygons.map(({ uuid }) => uuid)).toEqual([inRange.uuid]);
+    });
+
     it("filters by target system", async () => {
       const site = await SiteFactory.create();
       const mangrove = await SitePolygonFactory.create({ siteUuid: site.uuid, targetSys: "mangrove" });

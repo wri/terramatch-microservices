@@ -19,12 +19,10 @@ import { isNotNull } from "@terramatch-microservices/database/types/array";
 import { Includeable, Op } from "sequelize";
 import { CustomAttributeMap, PolygonAttributeValuesService } from "../site-polygons/polygon-attribute-values.service";
 import { GeoJsonExportAttributes } from "./dto/geojson-export-request.dto";
-import { GEOJSON_EXPORT_SITE_ATTRIBUTES, GeoJsonExportQueryBuilder } from "./geojson-export-query.builder";
+import { buildExportQuery, GEOJSON_EXPORT_SITE_ATTRIBUTES } from "./geojson-export-query.builder";
 import { batchFindAll } from "@terramatch-microservices/common/util/batch-find-all";
 import { once } from "events";
 import { uniq } from "lodash";
-
-const EXPORT_BATCH_SIZE = 500;
 
 const writeChunk = async (destination: NodeJS.WritableStream, chunk: string) => {
   if (!destination.write(chunk)) await once(destination, "drain");
@@ -320,13 +318,10 @@ export class GeoJsonExportService {
    */
   async writeFeatureCollection(
     destination: NodeJS.WritableStream,
-    { projectUuids, siteUuids, polygonUuids }: GeoJsonExportAttributes,
+    scope: GeoJsonExportAttributes,
     onProgress: (processed: number, total: number) => Promise<void>
   ) {
-    const builder = new GeoJsonExportQueryBuilder(EXPORT_BATCH_SIZE);
-    if (projectUuids != null) await builder.filterProjectUuids(projectUuids);
-    if (siteUuids != null) await builder.filterSiteUuids(siteUuids);
-    if (polygonUuids != null) await builder.filterPolygonUuids(polygonUuids);
+    const builder = await buildExportQuery(scope);
 
     const total = await builder.paginationTotal();
     await onProgress(0, total);

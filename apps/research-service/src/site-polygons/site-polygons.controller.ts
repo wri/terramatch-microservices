@@ -359,6 +359,8 @@ export class SitePolygonsController {
       searchFields,
       plantStartFrom,
       plantStartTo,
+      calcAreaMin,
+      calcAreaMax,
       practice,
       targetSys,
       distr,
@@ -432,6 +434,7 @@ export class SitePolygonsController {
 
     queryBuilder
       .filterPlantStartRange(plantStartFrom, plantStartTo)
+      .filterCalcAreaRange(calcAreaMin, calcAreaMax)
       .filterPractice(practice)
       .filterDistr(distr)
       .filterTargetSys(targetSys)

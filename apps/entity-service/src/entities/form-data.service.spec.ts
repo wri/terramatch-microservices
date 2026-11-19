@@ -256,6 +256,19 @@ describe("FormDataService", () => {
       expect(siteReport.status).toBe(DRAFT);
       expect(siteReport.nothingToReport).toBe(false);
     });
+
+    it("keeps an information-required report in that status when a non-admin saves answers", async () => {
+      mockUserContext({ userId: 123, permissions: ["manage-own"] });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
+      const siteReport = await SiteReportFactory.create({ status: "information-required" });
+      const form = await EntityFormFactory.siteReport(siteReport).create();
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create();
+
+      await service.storeEntityAnswers(siteReport, await form.reload(), { [question.uuid]: "foo" });
+
+      expect(siteReport.status).toBe("information-required");
+    });
   });
 
   describe("storeSubmissionAnswers", () => {

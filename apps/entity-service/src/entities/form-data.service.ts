@@ -28,7 +28,12 @@ import { FormModels, LinkedAnswerCollector } from "@terramatch-microservices/com
 import { FormDataDto } from "./dto/form-data.dto";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 import { PolicyService } from "@terramatch-microservices/common";
-import { DUE, DRAFT, entityAllowsChangeRequest } from "@terramatch-microservices/database/constants/status";
+import {
+  DUE,
+  DRAFT,
+  INFORMATION_REQUIRED,
+  entityAllowsChangeRequest
+} from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common/exceptions/bad-request.exception";
 import { SubmissionDto } from "./dto/submission.dto";
 import { DocumentBuilder } from "@terramatch-microservices/common/util";
@@ -280,7 +285,11 @@ export class FormDataService {
 
       // An admin should be able to directly update a report without a transition unless it's in `due`, in which case
       // we want the transition to go ahead and take place.
-      if (!opts.preserveReportStatus && (answersModel.status === DUE || !isAdmin)) {
+      // There is no transition from `information-required` back to `draft`; the user resubmits from there.
+      if (
+        !opts.preserveReportStatus &&
+        (answersModel.status === DUE || (!isAdmin && answersModel.status !== INFORMATION_REQUIRED))
+      ) {
         answersModel.status = DRAFT;
       }
 

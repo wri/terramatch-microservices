@@ -24,7 +24,8 @@ const COLUMNS: ColumnMapping<FinancialIndicator, FinancialIndicatorAssociations>
   "amount",
   "description",
   associatedValueColumn("organisationUuid", "organisationId"),
-  associatedValueColumn("financialReportUuid", "financialReportId")
+  associatedValueColumn("financialReportUuid", "financialReportId"),
+  "exchangeRate"
 ];
 
 export class FinancialIndicatorEntity extends AirtableEntity<FinancialIndicator, FinancialIndicatorAssociations> {

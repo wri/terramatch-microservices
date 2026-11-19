@@ -129,6 +129,29 @@ describe("SitePolygonCsvExportService", () => {
       expect(onProgress).toHaveBeenLastCalledWith(2, 2);
     });
 
+    it("writes the planting start date as YYYY-MM-DD", async () => {
+      const addRow = jest.fn();
+      mockCsvExportService.writeToStream.mockImplementation(
+        async (_destination: unknown, _columns: unknown, writeRows: (add: jest.Mock) => Promise<void>) =>
+          writeRows(addRow)
+      );
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([{ numTrees: 0, calcArea: 0 }] as never);
+      const datedPolygon = {
+        id: 3,
+        uuid: "sp-3",
+        polyName: "three",
+        plantStart: new Date("2026-03-01T00:00:00.000Z"),
+        site: { name: "Site C" }
+      } as unknown as SitePolygon;
+      jest.mocked(batchFindAll).mockImplementation(async function* () {
+        yield [datedPolygon];
+      } as never);
+
+      await service.writeCsv({ siteUuids: ["site-uuid"] }, new PassThrough(), jest.fn());
+
+      expect(addRow).toHaveBeenNthCalledWith(1, datedPolygon, { siteName: "Site C", plantStart: "2026-03-01" });
+    });
+
     it("writes a totals row for trees planted and calculated area after the polygon rows", async () => {
       const addRow = jest.fn();
       mockCsvExportService.writeToStream.mockImplementation(

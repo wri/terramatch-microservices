@@ -24,6 +24,8 @@ export type SitePolygonFilterQuery = Partial<
     | "source"
     | "plantStartFrom"
     | "plantStartTo"
+    | "calcAreaMin"
+    | "calcAreaMax"
     | "hasOverlap"
     | "hasDisturbance"
     | "deletedOnly"

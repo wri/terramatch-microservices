@@ -86,6 +86,23 @@ describe("SiteReportPolicy", () => {
     });
   });
 
+  it("does not allow own users to update answers on an information-required site report", async () => {
+    const org = await OrganisationFactory.create();
+    const user = await UserFactory.create({ organisationId: org.id });
+    mockContextForUser(user, "manage-own");
+
+    const project = await ProjectFactory.create({ organisationId: org.id });
+    const site = await SiteFactory.create({ projectId: project.id });
+    const draftReport = await SiteReportFactory.create({ siteId: site.id, status: "draft" });
+    const informationRequiredReport = await SiteReportFactory.create({
+      siteId: site.id,
+      status: "information-required"
+    });
+
+    await expectCan(service, "updateAnswers", draftReport);
+    await expectCannot(service, "updateAnswers", informationRequiredReport);
+  });
+
   it("allows managing site reports for managed projects", async () => {
     const user = await UserFactory.create();
     mockContextForUser(user, "projects-manage");

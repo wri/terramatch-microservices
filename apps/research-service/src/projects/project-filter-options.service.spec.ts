@@ -34,6 +34,18 @@ describe("ProjectFilterOptionsService", () => {
     expect(organisations.map(({ uuid }) => uuid)).not.toContain(empty.uuid);
   });
 
+  it("orders organisations alphabetically by name, regardless of project count", async () => {
+    const zulu = await OrganisationFactory.create({ name: "Fixture Order Zulu" });
+    const alpha = await OrganisationFactory.create({ name: "Fixture Order Alpha" });
+    await ProjectFactory.createMany(3, { organisationId: zulu.id, frameworkKey: "ppc", level0Project: ["XO"] });
+    await ProjectFactory.create({ organisationId: alpha.id, frameworkKey: "ppc", level0Project: ["XO"] });
+
+    const { organisations } = await getOptions({ country: ["XO"] });
+    const uuids = organisations.map(({ uuid }) => uuid);
+
+    expect(uuids.indexOf(alpha.uuid)).toBeLessThan(uuids.indexOf(zulu.uuid));
+  });
+
   it("excludes test projects from the options", async () => {
     const organisation = await OrganisationFactory.create({ name: "Fixture Org Test Only" });
     await ProjectFactory.create({ organisationId: organisation.id, isTest: true });

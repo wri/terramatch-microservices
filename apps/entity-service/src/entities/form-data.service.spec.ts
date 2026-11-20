@@ -29,7 +29,7 @@ import {
   Site,
   UpdateRequest
 } from "@terramatch-microservices/database/entities";
-import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
 import { BadRequestException } from "@nestjs/common";
 import { mockUserContext, serialize, mockContextForUser } from "@terramatch-microservices/common/util/testing";
 import {
@@ -142,14 +142,19 @@ describe("FormDataService", () => {
       expect(site.updateRequestStatus).toBeNull();
     });
 
-    it("does not create a change request when the entity is information-required", async () => {
-      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
+    it("creates an update request when the user cannot update answers on an information-required report", async () => {
+      const siteReport = await SiteReportFactory.create({ status: INFORMATION_REQUIRED });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
-      const form = await EntityFormFactory.site(site).create();
-      await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
-      expect(await UpdateRequest.for(site).findOne()).toBeNull();
-      await site.reload();
-      expect(site.updateRequestStatus).toBeNull();
+      mockUserContext({ userId: 123 });
+      const form = await EntityFormFactory.siteReport(siteReport).create();
+      await service.storeEntityAnswers(siteReport, form, { color: "red" });
+
+      const updateRequest = await UpdateRequest.for(siteReport).findOne();
+      expect(updateRequest?.content).toStrictEqual({ color: "red" });
+
+      await siteReport.reload();
+      expect(siteReport.status).toBe(INFORMATION_REQUIRED);
+      expect(siteReport.updateRequestStatus).toBe(DRAFT);
     });
 
     it("updates the entity content", async () => {

@@ -132,18 +132,21 @@ describe("FormDataService", () => {
       expect(site.updateRequestStatus).toBe(DRAFT);
     });
 
-    it("does not create a change request when the entity is pending-approval", async () => {
-      const site = await SiteFactory.create({ status: "pending-approval", updateRequestStatus: null });
+    it("creates a change request instead of editing an information-required entity directly", async () => {
+      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
+      mockUserContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
-      await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
-      expect(await UpdateRequest.for(site).findOne()).toBeNull();
+      await service.storeEntityAnswers(site, form, { color: "red" });
+
+      const updateRequest = await UpdateRequest.for(site).findOne();
+      expect(updateRequest?.content).toStrictEqual({ color: "red" });
       await site.reload();
-      expect(site.updateRequestStatus).toBeNull();
+      expect(site.updateRequestStatus).toBe(DRAFT);
     });
 
-    it("does not create a change request when the entity is information-required", async () => {
-      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
+    it("does not create a change request when the entity is pending-approval", async () => {
+      const site = await SiteFactory.create({ status: "pending-approval", updateRequestStatus: null });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
       const form = await EntityFormFactory.site(site).create();
       await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
@@ -255,6 +258,19 @@ describe("FormDataService", () => {
       expect(siteReport.createdBy).toBe(123);
       expect(siteReport.status).toBe(DRAFT);
       expect(siteReport.nothingToReport).toBe(false);
+    });
+
+    it("keeps an information-required report in that status when a non-admin saves answers", async () => {
+      mockUserContext({ userId: 123, permissions: ["manage-own"] });
+      jest.spyOn(policyService, "hasAccess").mockResolvedValue(true);
+      const siteReport = await SiteReportFactory.create({ status: "information-required" });
+      const form = await EntityFormFactory.siteReport(siteReport).create();
+      const section = await FormSectionFactory.form(form).create();
+      const question = await FormQuestionFactory.section(section).create();
+
+      await service.storeEntityAnswers(siteReport, await form.reload(), { [question.uuid]: "foo" });
+
+      expect(siteReport.status).toBe("information-required");
     });
   });
 

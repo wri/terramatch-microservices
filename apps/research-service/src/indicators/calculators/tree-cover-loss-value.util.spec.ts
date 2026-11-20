@@ -32,6 +32,16 @@ describe("tree-cover-loss-value.util", () => {
     it("should throw when plantStart is invalid", () => {
       expect(() => assertValidPlantStart(new Date("invalid"), "uuid")).toThrow(BadRequestException);
     });
+
+    it("should convert a date string to a Date", () => {
+      const result = assertValidPlantStart("2024-08-15", "uuid");
+      expect(result).toBeInstanceOf(Date);
+      expect(result).toEqual(plantStart);
+    });
+
+    it("should throw when a date string is invalid", () => {
+      expect(() => assertValidPlantStart("not-a-date", "uuid")).toThrow(BadRequestException);
+    });
   });
 
   describe("buildZeroTreeCoverLossValueForRange", () => {

@@ -1,11 +1,6 @@
 import { UserPermissionsPolicy } from "./user-permissions.policy";
 import { FinancialReport, User } from "@terramatch-microservices/database/entities";
-import {
-  PENDING_APPROVAL,
-  DUE,
-  DRAFT,
-  INFORMATION_REQUIRED
-} from "@terramatch-microservices/database/constants/status";
+import { PENDING_APPROVAL, DUE, DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export const monitoredOrganisationIds = (user: User | null | undefined) =>
   (user?.projects ?? []).flatMap(project =>
@@ -31,7 +26,7 @@ export class FinancialReportPolicy extends UserPermissionsPolicy {
       });
       this.builder.can("updateAnswers", FinancialReport, {
         organisationId: user.organisationId,
-        status: { $in: [DRAFT, DUE, INFORMATION_REQUIRED] }
+        status: { $in: [DRAFT, DUE] }
       });
       this.builder.can("updateAnswers", FinancialReport, {
         organisationId: user.organisationId,

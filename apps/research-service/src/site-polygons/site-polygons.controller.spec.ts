@@ -1798,10 +1798,32 @@ describe("SitePolygonsController", () => {
         userId: 1,
         source: "terramatch",
         userFullName: "Test User",
-        isAdminSession: false
+        isAdminSession: false,
+        canReviewPolygons: false
       });
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
+    });
+
+    it("should pass the reviewer flag to the versioning job", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      jest.spyOn(Site, "findOne").mockResolvedValue(await SiteFactory.build({ uuid: "site-uuid", name: "Test Site" }));
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User", roles: ["admin-super"] });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+      geometryFileProcessingService.parseGeometryFile.mockResolvedValue(createGeoJSON());
+      jest.spyOn(DelayedJob, "create").mockResolvedValue({ id: 1, uuid: "job-uuid" } as DelayedJob);
+      geometryUploadQueue.add.mockResolvedValue({} as Job);
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await controller.uploadGeometryFileWithVersions(file, payload as GeometryUploadRequestDto);
+
+      expect(geometryUploadQueue.add).toHaveBeenCalledWith(
+        "geometryUploadWithVersions",
+        expect.objectContaining({ canReviewPolygons: true })
+      );
     });
   });
 
@@ -1856,11 +1878,40 @@ describe("SitePolygonsController", () => {
         1,
         user.fullName,
         "terramatch",
+        false,
         false
       );
       expect(sitePolygonService.loadAssociationDtos).toHaveBeenCalledWith([newVersion], true);
       const serialized = serialize(result);
       expect(serialized.data).toBeDefined();
+    });
+
+    it("should pass the reviewer flag when creating a version from an uploaded file", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      const user = await UserFactory.build({ firstName: "Test", lastName: "User", roles: ["admin-super"] });
+      user.getSourceFromRoles = jest.fn().mockReturnValue("terramatch");
+      jest.spyOn(User, "findByPk").mockResolvedValue(user);
+
+      const newVersion = await SitePolygonFactory.build({ uuid: "new-version-uuid", id: 123 });
+      sitePolygonCreationService.uploadVersionFromFile.mockResolvedValue(newVersion);
+      sitePolygonService.loadAssociationDtos.mockResolvedValue({ [newVersion.id]: {} });
+      sitePolygonService.buildLightDto.mockResolvedValue(new SitePolygonLightDto(newVersion, []));
+
+      const file = { originalname: "test.geojson", buffer: Buffer.from("{}") } as Express.Multer.File;
+      const payload = { data: { type: "sitePolygons", attributes: { siteId: "site-uuid" } } };
+
+      await controller.uploadVersionForSitePolygon("base-uuid", file, payload as GeometryUploadRequestDto);
+
+      expect(sitePolygonCreationService.uploadVersionFromFile).toHaveBeenCalledWith(
+        file,
+        "base-uuid",
+        "site-uuid",
+        1,
+        user.fullName,
+        "terramatch",
+        true,
+        true
+      );
     });
   });
 

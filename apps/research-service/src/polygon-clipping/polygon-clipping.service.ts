@@ -592,6 +592,7 @@ export class PolygonClippingService {
     userFullName: string | null,
     source: string,
     isAdminSession = false,
+    canReviewPolygons = false,
     onProgress?: (progressMessage: string) => Promise<void>
   ): Promise<ClippedVersionResult[]> {
     if (polygonUuids.length === 0) {
@@ -672,7 +673,9 @@ export class PolygonClippingService {
               userFullName,
               source,
               transaction,
-              isAdminSession
+              isAdminSession,
+              true,
+              canReviewPolygons
             );
 
             results.push({

@@ -28,6 +28,7 @@ export interface GeometryUploadJobData {
   source: string;
   userFullName: string | null;
   isAdminSession?: boolean;
+  canReviewPolygons?: boolean;
 }
 
 @Processor("geometry-upload")
@@ -42,10 +43,27 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
   }
 
   async processDelayedJob(job: Job<GeometryUploadJobData>): Promise<DelayedJobResult> {
-    const { geojson, siteId, userId, source, userFullName, isAdminSession = false } = job.data;
+    const {
+      geojson,
+      siteId,
+      userId,
+      source,
+      userFullName,
+      isAdminSession = false,
+      canReviewPolygons = false
+    } = job.data;
 
     if (job.name === "geometryUploadWithVersions") {
-      return await this.processWithVersioning(job, geojson, siteId, userId, source, userFullName, isAdminSession);
+      return await this.processWithVersioning(
+        job,
+        geojson,
+        siteId,
+        userId,
+        source,
+        userFullName,
+        isAdminSession,
+        canReviewPolygons
+      );
     }
 
     return await this.processWithoutVersioning(job, geojson, siteId, userId, source, userFullName);
@@ -117,7 +135,8 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
     userId: number,
     source: string,
     userFullName: string | null,
-    isAdminSession: boolean
+    isAdminSession: boolean,
+    canReviewPolygons: boolean
   ): Promise<DelayedJobResult> {
     const totalFeatures = geojson.features.length;
 
@@ -308,7 +327,8 @@ export class GeometryUploadProcessor extends DelayedJobWorker<GeometryUploadJobD
             source,
             transaction,
             isAdminSession,
-            false
+            false,
+            canReviewPolygons
           );
 
           if (customAttributes != null) {

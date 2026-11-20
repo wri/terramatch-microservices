@@ -1045,7 +1045,8 @@ export class SitePolygonsController {
       userId,
       source,
       userFullName: user?.fullName ?? null,
-      isAdminSession
+      isAdminSession,
+      canReviewPolygons: user?.canReviewPolygons ?? false
     };
 
     await this.geometryUploadQueue.add("geometryUploadWithVersions", jobData);
@@ -1091,7 +1092,8 @@ export class SitePolygonsController {
       userId,
       user?.fullName ?? null,
       source,
-      isAdminSession
+      isAdminSession,
+      user?.canReviewPolygons ?? false
     );
 
     const document = buildJsonApi(SitePolygonLightDto);

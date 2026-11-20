@@ -148,6 +148,32 @@ describe("PolygonClippingController", () => {
       expect(result.id).toBe("job-uuid-123");
     });
 
+    it("should pass the reviewer flag to the clipping job for a site", async () => {
+      const polygonUuids = ["polygon-uuid-1", "polygon-uuid-2"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.getFixablePolygonsForSite.mockResolvedValue({
+        site: { id: 1, uuid: siteUuid, name: "Test Site" } as Site,
+        polygonIds: polygonUuids
+      });
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: "Test User",
+        roles: ["admin-super"],
+        canReviewPolygons: true,
+        getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+      } as unknown as User);
+      mockQueue.add.mockResolvedValue({ id: "job-1" } as Job);
+      mockUserContext({ userId: 1 });
+
+      await controller.createClippedVersions({ siteUuid });
+
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({ polygonUuids, canReviewPolygons: true })
+      );
+    });
+
     it("should throw NotFoundException when no fixable polygons are found for project", async () => {
       policyService.authorize.mockResolvedValue(undefined);
       clippingService.getFixablePolygonsForProject.mockResolvedValue({
@@ -781,6 +807,7 @@ describe("PolygonClippingController", () => {
         1,
         null,
         "terramatch",
+        false,
         false
       );
     });
@@ -812,7 +839,65 @@ describe("PolygonClippingController", () => {
         1,
         null,
         "terramatch",
+        false,
         false
+      );
+    });
+
+    it("should pass the reviewer flag to the clipping service for a single polygon", async () => {
+      const fixablePolygonUuids = ["polygon-uuid-1"];
+
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(fixablePolygonUuids);
+      clippingService.clipAndCreateVersions.mockResolvedValue([
+        {
+          uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
+          polyName: "Test Polygon 1",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        }
+      ]);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: "Test User",
+        roles: ["admin-super"],
+        canReviewPolygons: true,
+        getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+      } as unknown as User);
+      mockUserContext({ userId: 1 });
+
+      await controller.createPolygonListClippedVersions(payload);
+
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        fixablePolygonUuids,
+        1,
+        "Test User",
+        "terramatch",
+        true,
+        true
+      );
+    });
+
+    it("should pass the reviewer flag to the clipping job for multiple polygons", async () => {
+      policyService.authorize.mockResolvedValue(undefined);
+      clippingService.filterFixablePolygonsFromList.mockResolvedValue(polygonUuids);
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([]);
+      jest.spyOn(User, "findByPk").mockResolvedValue({
+        id: 1,
+        fullName: "Test User",
+        roles: ["admin-super"],
+        canReviewPolygons: true,
+        getSourceFromRoles: jest.fn().mockReturnValue("terramatch")
+      } as unknown as User);
+      mockUserContext({ userId: 1 });
+
+      await controller.createPolygonListClippedVersions(payload);
+
+      expect(mockQueue.add).toHaveBeenCalledWith(
+        "clipAndVersion",
+        expect.objectContaining({ polygonUuids, canReviewPolygons: true })
       );
     });
 
@@ -847,6 +932,7 @@ describe("PolygonClippingController", () => {
         1,
         "Test User",
         "terramatch",
+        false,
         false
       );
     });

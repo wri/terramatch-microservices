@@ -72,6 +72,7 @@ describe("ClippingProcessor", () => {
         "Test User",
         "terramatch",
         false,
+        false,
         expect.any(Function)
       );
     });
@@ -115,6 +116,7 @@ describe("ClippingProcessor", () => {
         1,
         "Test User",
         "terramatch",
+        false,
         false,
         expect.any(Function)
       );
@@ -183,9 +185,47 @@ describe("ClippingProcessor", () => {
         null,
         "terramatch",
         false,
+        false,
         expect.any(Function)
       );
       expect(result.processedContent).toBe(1);
+    });
+
+    it("should pass the reviewer flag from the job data to the clipping service", async () => {
+      const job = {
+        data: {
+          polygonUuids: ["polygon-uuid-1"],
+          userId: 1,
+          userFullName: "Test User",
+          source: "terramatch",
+          isAdminSession: true,
+          canReviewPolygons: true,
+          delayedJobId: 1
+        }
+      } as Partial<Job<ClippingJobData>> as Job<ClippingJobData>;
+
+      clippingService.clipAndCreateVersions.mockResolvedValue([
+        {
+          uuid: "version-uuid-1",
+          polygonUuid: "poly-uuid-1",
+          polyName: "Test Polygon",
+          originalArea: 10.5,
+          newArea: 10.2,
+          areaRemoved: 0.3
+        }
+      ]);
+
+      await processor.processDelayedJob(job);
+
+      expect(clippingService.clipAndCreateVersions).toHaveBeenCalledWith(
+        ["polygon-uuid-1"],
+        1,
+        "Test User",
+        "terramatch",
+        true,
+        true,
+        expect.any(Function)
+      );
     });
 
     it("should update job progress during processing", async () => {

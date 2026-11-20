@@ -132,18 +132,21 @@ describe("FormDataService", () => {
       expect(site.updateRequestStatus).toBe(DRAFT);
     });
 
-    it("does not create a change request when the entity is pending-approval", async () => {
-      const site = await SiteFactory.create({ status: "pending-approval", updateRequestStatus: null });
+    it("creates a change request instead of editing an information-required entity directly", async () => {
+      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
+      mockUserContext({ userId: 123 });
       const form = await EntityFormFactory.site(site).create();
-      await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);
-      expect(await UpdateRequest.for(site).findOne()).toBeNull();
+      await service.storeEntityAnswers(site, form, { color: "red" });
+
+      const updateRequest = await UpdateRequest.for(site).findOne();
+      expect(updateRequest?.content).toStrictEqual({ color: "red" });
       await site.reload();
-      expect(site.updateRequestStatus).toBeNull();
+      expect(site.updateRequestStatus).toBe(DRAFT);
     });
 
-    it("does not create a change request when the entity is information-required", async () => {
-      const site = await SiteFactory.create({ status: "information-required", updateRequestStatus: null });
+    it("does not create a change request when the entity is pending-approval", async () => {
+      const site = await SiteFactory.create({ status: "pending-approval", updateRequestStatus: null });
       jest.spyOn(policyService, "hasAccess").mockResolvedValue(false);
       const form = await EntityFormFactory.site(site).create();
       await expect(service.storeEntityAnswers(site, form, { color: "red" })).rejects.toThrow(BadRequestException);

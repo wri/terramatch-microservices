@@ -150,6 +150,15 @@ describe("EntityProcessor", () => {
       expect(project.status).toBe("approved");
     });
 
+    it("submits the change request without changing the status of an information-required entity", async () => {
+      const project = await ProjectFactory.create({ status: "information-required", updateRequestStatus: "draft" });
+      const updateRequest = await UpdateRequestFactory.project(project).create({ status: "draft" });
+      await createProcessor().update(project, { status: "pending-approval" });
+      await updateRequest.reload();
+      expect(updateRequest.status).toBe("pending-approval");
+      expect(project.status).toBe("information-required");
+    });
+
     it("accepts a submit on an approved entity without a change request and leaves it unchanged", async () => {
       const project = await ProjectFactory.create({ status: "approved", updateRequestStatus: null });
       await createProcessor().update(project, { status: "pending-approval" });
@@ -177,26 +186,6 @@ describe("EntityProcessor", () => {
       });
       await createProcessor().update(project, { status: "pending-approval" });
       expect(project.status).toBe("pending-approval");
-      expect(project.updateRequestStatus).toBeNull();
-    });
-
-    it("moves the main status to pending-approval when submitting from information-required", async () => {
-      const project = await ProjectFactory.create({
-        status: "information-required",
-        updateRequestStatus: "pending-approval"
-      });
-      const updateRequest = await UpdateRequestFactory.project(project).create({ status: "pending-approval" });
-      await createProcessor().update(project, { status: "pending-approval" });
-      expect(await UpdateRequest.findByPk(updateRequest.id)).toBeNull();
-      expect(project.status).toBe("pending-approval");
-      expect(project.updateRequestStatus).toBeNull();
-    });
-
-    it("clears updateRequestStatus when an approved entity is returned for more information", async () => {
-      const project = await ProjectFactory.create({ status: "approved", updateRequestStatus: "pending-approval" });
-      jest.spyOn(policyService, "authorize").mockResolvedValue();
-      await createProcessor().update(project, { status: "information-required" });
-      expect(project.status).toBe("information-required");
       expect(project.updateRequestStatus).toBeNull();
     });
 

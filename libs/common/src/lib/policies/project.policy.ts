@@ -1,6 +1,6 @@
 import { Project, User } from "@terramatch-microservices/database/entities";
 import { UserPermissionsPolicy } from "./user-permissions.policy";
-import { DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
+import { DRAFT } from "@terramatch-microservices/database/constants/status";
 
 export class ProjectPolicy extends UserPermissionsPolicy {
   async addRules() {
@@ -36,17 +36,14 @@ export class ProjectPolicy extends UserPermissionsPolicy {
         });
         this.builder.can(["delete", "updateAnswers"], Project, {
           organisationId: user.organisationId,
-          status: { $in: [DRAFT, INFORMATION_REQUIRED] }
+          status: DRAFT
         });
         const projectIds = (user.projects ?? []).map(({ id }) => id);
         if (projectIds.length > 0) {
           this.builder.can(["read", "update", "uploadFiles", "deleteFiles", "updateFiles"], Project, {
             id: { $in: projectIds }
           });
-          this.builder.can(["delete", "updateAnswers"], Project, {
-            id: { $in: projectIds },
-            status: { $in: [DRAFT, INFORMATION_REQUIRED] }
-          });
+          this.builder.can(["delete", "updateAnswers"], Project, { id: { $in: projectIds }, status: DRAFT });
         }
       }
     }

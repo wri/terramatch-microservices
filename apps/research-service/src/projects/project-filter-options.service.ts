@@ -100,7 +100,10 @@ const organisationOptions = async (base: ProjectFilterOptionsQueryDto, search: s
   })) as unknown as OrganisationRow[];
   return rows
     .map(({ uuid, name, count }) => ({ uuid, name, count: Number(count) }))
-    .sort((a, b) => (b.count !== a.count ? b.count - a.count : (a.name ?? "").localeCompare(b.name ?? "")));
+    .sort((a, b) => {
+      const byName = (a.name ?? "").localeCompare(b.name ?? "");
+      return byName !== 0 ? byName : a.uuid.localeCompare(b.uuid);
+    });
 };
 
 const projectOptions = async (base: ProjectFilterOptionsQueryDto, search: string | undefined) => {

@@ -139,14 +139,15 @@ describe("SitePolygonCreationService review state (DB)", () => {
     expect(await CriteriaSite.count({ where: { polygonId: polygon.polygonUuid } })).toBe(0);
   });
 
-  it("returns an approved polygon to draft when a reviewer changes a validated attribute", async () => {
+  it("returns an approved polygon to pending-approval when a reviewer changes a validated attribute", async () => {
     const { user, polygon } = await createApprovedPolygonWithPlotsAndCriteria();
 
     const newVersion = await createVersion(polygon, user.id, drawerPayload(polygon, { numTrees: 500 }), true);
 
     await newVersion.reload();
-    expect(newVersion.status).toBe("draft");
+    expect(newVersion.status).toBe("pending-approval");
     expect(newVersion.validationStatus).toBeNull();
+    expect(await CriteriaSite.count({ where: { polygonId: polygon.polygonUuid } })).toBe(0);
   });
 
   it.each<PolygonStatus>(["draft", "pending-approval", "information-required"])(
@@ -175,26 +176,29 @@ describe("SitePolygonCreationService review state (DB)", () => {
     expect(await CriteriaSite.count({ where: { polygonId: polygon.polygonUuid } })).toBe(1);
   });
 
-  it("keeps pending-approval status and resets validation when a reviewer changes the geometry", async () => {
-    const { user, polygon } = await createPolygonWithCriteria("pending-approval");
-    const newGeometry = await PolygonGeometryFactory.create({ createdBy: user.id });
-    await CriteriaSite.create({ criteriaId: 3, polygonId: newGeometry.uuid, valid: true } as CriteriaSite);
-    jest
-      .spyOn(polygonGeometryService, "createGeometriesFromFeatures")
-      .mockResolvedValue({ uuids: [newGeometry.uuid], areas: [12.5] });
-    const geometryRequest: CreateSitePolygonRequestDto = {
-      type: "FeatureCollection",
-      features: [{ type: "Feature", geometry: newGeometry.polygon, properties: { siteId: polygon.siteUuid } }]
-    };
+  it.each<PolygonStatus>(["pending-approval", "approved"])(
+    "moves a %s polygon to pending-approval and resets validation when a reviewer changes the geometry",
+    async status => {
+      const { user, polygon } = await createPolygonWithCriteria(status);
+      const newGeometry = await PolygonGeometryFactory.create({ createdBy: user.id });
+      await CriteriaSite.create({ criteriaId: 3, polygonId: newGeometry.uuid, valid: true } as CriteriaSite);
+      jest
+        .spyOn(polygonGeometryService, "createGeometriesFromFeatures")
+        .mockResolvedValue({ uuids: [newGeometry.uuid], areas: [12.5] });
+      const geometryRequest: CreateSitePolygonRequestDto = {
+        type: "FeatureCollection",
+        features: [{ type: "Feature", geometry: newGeometry.polygon, properties: { siteId: polygon.siteUuid } }]
+      };
 
-    const newVersion = await createVersion(polygon, user.id, {}, true, [geometryRequest]);
+      const newVersion = await createVersion(polygon, user.id, {}, true, [geometryRequest]);
 
-    await newVersion.reload();
-    expect(newVersion.polygonUuid).toBe(newGeometry.uuid);
-    expect(newVersion.status).toBe("pending-approval");
-    expect(newVersion.validationStatus).toBeNull();
-    expect(await CriteriaSite.count({ where: { polygonId: newGeometry.uuid } })).toBe(0);
-  });
+      await newVersion.reload();
+      expect(newVersion.polygonUuid).toBe(newGeometry.uuid);
+      expect(newVersion.status).toBe("pending-approval");
+      expect(newVersion.validationStatus).toBeNull();
+      expect(await CriteriaSite.count({ where: { polygonId: newGeometry.uuid } })).toBe(0);
+    }
+  );
 
   it("returns a pending-approval polygon to draft when a non-reviewer changes a validated attribute", async () => {
     const { user, polygon } = await createPolygonWithCriteria("pending-approval");
@@ -227,7 +231,7 @@ describe("SitePolygonCreationService review state (DB)", () => {
     await approvedVersion.reload();
     expect(pendingVersion.status).toBe("pending-approval");
     expect(pendingVersion.validationStatus).toBeNull();
-    expect(approvedVersion.status).toBe("draft");
+    expect(approvedVersion.status).toBe("pending-approval");
     expect(approvedVersion.validationStatus).toBeNull();
     expect(await CriteriaSite.count({ where: { polygonId: [pending.polygonUuid, approved.polygonUuid] } })).toBe(0);
   });

@@ -38,6 +38,7 @@ import {
   SITE_POLYGON_TARGET_SYSTEMS,
   VALIDATION_CRITERIA_IDS,
   CRITERIA_ID_TO_VALIDATION_TYPE,
+  POLYGON_APPROVED,
   POLYGON_DRAFT,
   POLYGON_INFORMATION_REQUIRED,
   POLYGON_PENDING_APPROVAL,
@@ -67,11 +68,12 @@ const DRAFT_REVIEW_STATE: ReviewState = {
   validationStatus: null
 };
 
-const REVIEWER_EDIT_KEPT_STATUSES: ReadonlySet<PolygonStatus> = new Set([
-  POLYGON_DRAFT,
-  POLYGON_INFORMATION_REQUIRED,
-  POLYGON_PENDING_APPROVAL
-]);
+const STATUS_AFTER_REVIEWER_EDIT: Record<PolygonStatus, PolygonStatus> = {
+  [POLYGON_DRAFT]: POLYGON_DRAFT,
+  [POLYGON_PENDING_APPROVAL]: POLYGON_PENDING_APPROVAL,
+  [POLYGON_INFORMATION_REQUIRED]: POLYGON_INFORMATION_REQUIRED,
+  [POLYGON_APPROVED]: POLYGON_PENDING_APPROVAL
+};
 
 const normalizeComparableValue = (key: string, value: unknown): unknown => {
   if (key === "numTrees") return value ?? 0;
@@ -101,9 +103,7 @@ const getReviewStateReset = (
   if (!geometryChanged && hasOnlyReviewNeutralChanges(basePolygon, changes)) return undefined;
 
   const { status } = basePolygon;
-  return status != null && REVIEWER_EDIT_KEPT_STATUSES.has(status)
-    ? { status, validationStatus: null }
-    : DRAFT_REVIEW_STATE;
+  return status != null ? { status: STATUS_AFTER_REVIEWER_EDIT[status], validationStatus: null } : DRAFT_REVIEW_STATE;
 };
 
 const validateAndSortStrictStringArray = (

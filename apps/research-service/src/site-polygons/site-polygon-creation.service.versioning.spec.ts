@@ -642,30 +642,30 @@ describe("SitePolygonCreationService - Versioning", () => {
         expect(CriteriaSite.destroy).not.toHaveBeenCalled();
       });
 
-      it("should reset to draft when the plant start date changes", async () => {
+      it("should move an approved polygon to pending approval when the plant start date changes", async () => {
         jest
           .spyOn(versioningService, "validateVersioningEligibility")
           .mockResolvedValue({ ...approvedBase, plantStart: "2024-01-15" } as unknown as SitePolygon);
 
         await createVersion({ ...unchangedForm, plantStart: "2024-01-16T00:00:00.000Z" }, true);
 
-        expect(appliedAttributes().status).toBe("draft");
+        expect(appliedAttributes().status).toBe("pending-approval");
       });
 
-      it("should reset to draft when an admin changes a validated attribute", async () => {
+      it("should move an approved polygon to pending approval when an admin changes a validated attribute", async () => {
         await createVersion({ ...unchangedForm, submissionCycle: "2", numTrees: 11 }, true);
 
-        expect(appliedAttributes()).toMatchObject({ status: "draft", validationStatus: null });
+        expect(appliedAttributes()).toMatchObject({ status: "pending-approval", validationStatus: null });
         expect(CriteriaSite.destroy).toHaveBeenCalledWith({
           where: { polygonId: { [Op.in]: ["geometry-uuid"] } },
           transaction: mockTransaction
         });
       });
 
-      it("should reset to draft when an admin changes the polygon name", async () => {
+      it("should move an approved polygon to pending approval when an admin changes the polygon name", async () => {
         await createVersion({ ...unchangedForm, polyName: "Renamed" }, true);
 
-        expect(appliedAttributes().status).toBe("draft");
+        expect(appliedAttributes().status).toBe("pending-approval");
       });
 
       it("should reset to draft when a non-reviewer only changes the submission cycle", async () => {
@@ -866,7 +866,7 @@ describe("SitePolygonCreationService - Versioning", () => {
       });
       const [unchangedEntry, changedEntry] = (versioningService.createVersions as jest.Mock).mock.calls[0][0];
       expect(unchangedEntry.attributeChanges).not.toHaveProperty("status");
-      expect(changedEntry.attributeChanges).toMatchObject({ status: "draft", validationStatus: null });
+      expect(changedEntry.attributeChanges).toMatchObject({ status: "pending-approval", validationStatus: null });
     });
   });
 

@@ -43,7 +43,6 @@ import { parseCsvStream } from "@terramatch-microservices/common/file/file.servi
 import { Readable } from "stream";
 import { TranslatableException } from "@terramatch-microservices/common/exceptions/translatable.exception";
 import { LinkedFieldsConfiguration } from "@terramatch-microservices/common/linkedFields";
-import { FuzzySearchQueryBuilder } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 
 export const ESTABLISHMENT_ENTITIES = ["sites", "nurseries", ...REPORT_TYPES] as const;
 export type EstablishmentEntity = (typeof ESTABLISHMENT_ENTITIES)[number];
@@ -176,11 +175,24 @@ export class TreeService {
   ) {}
 
   async searchScientificNames(search: string) {
-    const builder = new FuzzySearchQueryBuilder(TreeSpeciesResearch, "scientificName").attributes([
-      "taxonId",
-      "scientificName"
-    ]);
-    return (await builder.execute(search)).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
+    return (
+      await TreeSpeciesResearch.findAll({
+        where: {
+          [Op.or]: [
+            // By checking these two, we're limiting the search term to only occurrences at the
+            // beginning of a word in the scientific name, which tends to lead to better results.
+            { scientificName: { [Op.like]: `${search}%` } },
+            { scientificName: { [Op.like]: `% ${search}%` } }
+          ]
+        },
+        attributes: ["taxonId", "scientificName"],
+        order: [
+          [fn("length", col("scientificName")), "ASC"],
+          ["scientificName", "ASC"]
+        ],
+        limit: 10
+      })
+    ).map(({ taxonId, scientificName }) => ({ taxonId, scientificName }));
   }
 
   async getEstablishmentTrees(

@@ -180,11 +180,6 @@ export abstract class EntityProcessor<
   async addSitesMetaIndex(document: DocumentBuilder, query: SitesMetaQueryDto): Promise<void> {
     throw new BadRequestException("Sites meta is not supported for this entity type");
   }
-
-  /* istanbul ignore next */
-  async addFuzzySearchIndex(document: DocumentBuilder, search: string): Promise<void> {
-    throw new BadRequestException("Search is not supported for this entity type");
-  }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 
   async delete(model: ModelType) {

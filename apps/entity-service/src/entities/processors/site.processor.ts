@@ -30,9 +30,6 @@ import { PlantingStatus } from "@terramatch-microservices/database/constants/sta
 import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
-import { FuzzySearchQueryBuilder } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
-import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { EntitySearchResultDto } from "../dto/entity-search.dto";
 import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
@@ -138,8 +135,22 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
       }
     }
 
-    const accessWhere = this.accessWhere();
-    if (accessWhere != null) builder.where(accessWhere);
+    const permissions = this.entitiesService.permissions;
+    const frameworkPermissions =
+      permissions
+        ?.filter(name => name.startsWith("framework-"))
+        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
+    if (frameworkPermissions.length > 0) {
+      builder.where({ frameworkKey: { [Op.in]: frameworkPermissions } });
+    } else if (permissions?.includes("manage-own")) {
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) }
+      });
+    } else if (permissions?.includes("projects-manage")) {
+      builder.where({
+        projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) }
+      });
+    }
 
     for (const term of SIMPLE_FILTERS) {
       const field = ASSOCIATION_FIELD_MAP[term as keyof typeof ASSOCIATION_FIELD_MAP] ?? term;
@@ -189,45 +200,6 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     }
 
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
-  }
-
-  async addFuzzySearchIndex(document: DocumentBuilder, search: string) {
-    const builder = new FuzzySearchQueryBuilder(Site, "name").attributes([
-      "uuid",
-      "name",
-      // needed by the policy to authorize the results
-      "frameworkKey",
-      "projectId"
-    ]);
-    const accessWhere = this.accessWhere();
-    if (accessWhere != null) builder.where(accessWhere);
-
-    const sites = await builder.execute(search);
-    if (sites.length > 0) await this.entitiesService.authorize("read", sites);
-
-    for (const { uuid, name } of sites) {
-      document.addData(uuid, new EntitySearchResultDto({ uuid, name }));
-    }
-    document.addIndex({ requestPath: `/entities/v3/sites/fuzzySearch${getStableRequestQuery({ search })}` });
-  }
-
-  /**
-   * Limits a site query to the sites the current user has access to, based on their permissions.
-   * Returns undefined if the user's access is not limited by their permissions.
-   */
-  private accessWhere(): WhereOptions<Site> | undefined {
-    const permissions = this.entitiesService.permissions;
-    const frameworkPermissions =
-      permissions
-        ?.filter(name => name.startsWith("framework-"))
-        .map(name => name.substring("framework-".length) as FrameworkKey) ?? [];
-    if (frameworkPermissions.length > 0) {
-      return { frameworkKey: { [Op.in]: frameworkPermissions } };
-    } else if (permissions?.includes("manage-own")) {
-      return { projectId: { [Op.in]: ProjectUser.userProjectsSubquery(this.entitiesService.userId as number) } };
-    } else if (permissions?.includes("projects-manage")) {
-      return { projectId: { [Op.in]: ProjectUser.projectsManageSubquery(this.entitiesService.userId as number) } };
-    }
   }
 
   private async getHectaresRestoredSum(siteUuids: string[]): Promise<Record<string, number>> {

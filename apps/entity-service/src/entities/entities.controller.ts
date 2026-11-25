@@ -85,6 +85,7 @@ import {
 } from "./dto/nurseries-meta.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
 import { EntityCountsDto, EntityCountsQueryDto } from "./dto/entity-counts.dto";
+import { EntitySearchParamsDto, EntitySearchQueryDto, EntitySearchResultDto } from "./dto/entity-search.dto";
 
 const ASSET_EXPORT_ENTITIES: EntityType[] = [
   "projects",
@@ -229,6 +230,23 @@ export class EntitiesController {
     const processor = this.entitiesService.createEntityProcessor(entity);
     const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
     await processor.addSitesMetaIndex(document, query);
+    return document;
+  }
+
+  @Get(":entity/fuzzySearch")
+  @ApiOperation({
+    operationId: "entityFuzzySearch",
+    summary:
+      "Search entity names, matching the start of any word in the name. Returns up to 10 entities that " +
+      "the current user has access to, with the shortest matching names first."
+  })
+  @JsonApiResponse({ data: EntitySearchResultDto, hasMany: true })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityFuzzySearch(@Param() { entity }: EntitySearchParamsDto, @Query() { search }: EntitySearchQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(EntitySearchResultDto, { forceDataArray: true });
+    await processor.addFuzzySearchIndex(document, search);
     return document;
   }
 

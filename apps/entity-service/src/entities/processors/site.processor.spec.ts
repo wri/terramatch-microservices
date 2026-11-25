@@ -24,13 +24,20 @@ import { TrackingEntryFactory } from "@terramatch-microservices/database/factori
 import { TrackingFactory } from "@terramatch-microservices/database/factories/tracking.factory";
 import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories/tree-species.factory";
 import { SeedingFactory } from "@terramatch-microservices/database/factories/seeding.factory";
-import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
+import {
+  InternalServerErrorException,
+  NotAcceptableException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
-import { setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { serialize, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
+import { EntitySearchResultDto } from "../dto/entity-search.dto";
+import { JsonApiDocument, Resource } from "@terramatch-microservices/common/util";
 import { Op } from "sequelize";
 import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { TestingModule } from "@nestjs/testing";
@@ -259,6 +266,43 @@ describe("SiteProcessor", () => {
           processor.addIndex(buildJsonApi(SiteLightDto), { sideloads: [{ entity: "siteReports", pageSize: 1 }] })
         ).rejects.toThrow(BadRequestException);
       });
+    });
+  });
+
+  describe("addFuzzySearchIndex", () => {
+    const search = async (term: string) => {
+      const document = buildJsonApi(EntitySearchResultDto, { forceDataArray: true });
+      await processor.addFuzzySearchIndex(document, term);
+      return serialize(document);
+    };
+    const names = (result: JsonApiDocument) => (result.data as Resource[]).map(({ attributes }) => attributes.name);
+
+    it("returns sites in the user's frameworks matching the start of a word, shortest first", async () => {
+      setMockedPermissions("framework-hbf");
+      await SiteFactory.create({ frameworkKey: "hbf", name: "North Forest Restoration" });
+      await SiteFactory.create({ frameworkKey: "hbf", name: "Forest Edge" });
+      await SiteFactory.create({ frameworkKey: "hbf", name: "Rainforest" });
+      await SiteFactory.create({ frameworkKey: "ppc", name: "Forest Valley" });
+
+      const result = await search("fore");
+      expect(names(result)).toEqual(["Forest Edge", "North Forest Restoration"]);
+      expect(result.meta.indices?.[0].requestPath).toBe("/entities/v3/sites/fuzzySearch?search=fore");
+    });
+
+    it("returns only sites in the user's projects for manage-own", async () => {
+      setMockedPermissions("manage-own");
+      const project = await ProjectFactory.create();
+      await ProjectUserFactory.create({ userId: policyService().userId, projectId: project.id });
+      await SiteFactory.create({ projectId: project.id, name: "Forest Edge" });
+      await SiteFactory.create({ name: "Forest Valley" });
+
+      expect(names(await search("forest"))).toEqual(["Forest Edge"]);
+    });
+
+    it("throws if the user may not read the matching sites", async () => {
+      setMockedPermissions();
+      await SiteFactory.create({ name: "Forest Edge" });
+      await expect(search("forest")).rejects.toThrow(UnauthorizedException);
     });
   });
 

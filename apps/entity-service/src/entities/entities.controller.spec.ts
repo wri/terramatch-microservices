@@ -166,6 +166,15 @@ describe("EntitiesController", () => {
     });
   });
 
+  describe("entityFuzzySearch", () => {
+    it("should add the search results index to the document", async () => {
+      const addFuzzySearchIndex = jest.spyOn(processor, "addFuzzySearchIndex").mockResolvedValue();
+      const result = serialize(await controller.entityFuzzySearch({ entity: "sites" }, { search: "fore" }));
+      expect(addFuzzySearchIndex).toHaveBeenCalledWith(expect.anything(), "fore");
+      expect(result.meta.resourceType).toBe("entitySearchResults");
+    });
+  });
+
   describe("entityExportAll", () => {
     it("should throw an error if the policy does not authorize", async () => {
       jest.spyOn(policyService(), "authorize").mockRejectedValue(new UnauthorizedException());

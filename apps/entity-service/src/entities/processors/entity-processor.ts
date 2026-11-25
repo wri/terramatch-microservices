@@ -24,6 +24,7 @@ import { FrameworkKey } from "@terramatch-microservices/database/constants";
 import { Archiver } from "archiver";
 import { Literal } from "sequelize/types/utils";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import { ProjectsMetaQueryDto } from "../dto/project-meta.dto";
 import { NurseriesMetaQueryDto, SitesMetaQueryDto } from "../dto/nurseries-meta.dto";
 
 export type Aggregate<M extends Model> = {
@@ -179,6 +180,11 @@ export abstract class EntityProcessor<
   /* istanbul ignore next */
   async addSitesMetaIndex(document: DocumentBuilder, query: SitesMetaQueryDto): Promise<void> {
     throw new BadRequestException("Sites meta is not supported for this entity type");
+  }
+
+  /* istanbul ignore next */
+  async addProjectsMetaIndex(document: DocumentBuilder, query: ProjectsMetaQueryDto): Promise<void> {
+    throw new BadRequestException("Projects meta is not supported for this entity type");
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 

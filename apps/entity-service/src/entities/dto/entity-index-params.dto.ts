@@ -26,6 +26,15 @@ export class NurseriesMetaParamsDto {
   entity: NurseriesMetaEntity;
 }
 
+const PROJECTS_META_ENTITIES = ["projects"] as const;
+type ProjectsMetaEntity = (typeof PROJECTS_META_ENTITIES)[number];
+
+export class ProjectsMetaParamsDto {
+  @IsIn(PROJECTS_META_ENTITIES)
+  @ApiProperty({ enum: PROJECTS_META_ENTITIES, description: "Entity type to retrieve projects meta for" })
+  entity: ProjectsMetaEntity;
+}
+
 const SITES_META_ENTITIES = ["projects"] as const;
 type SitesMetaEntity = (typeof SITES_META_ENTITIES)[number];
 

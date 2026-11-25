@@ -48,12 +48,13 @@ import {
   NotFoundException,
   UnauthorizedException
 } from "@nestjs/common";
-import { FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
+import { DIRECT, FULL_TIME, PART_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import { PolicyService } from "@terramatch-microservices/common";
 import { ProjectLightDto } from "../dto/project.dto";
 import { buildJsonApi, Resource } from "@terramatch-microservices/common/util";
 import { ProjectReportMetaDto } from "../dto/project-report-meta.dto";
 import { ReportsMetaQueryDto } from "../dto/report-counts-query.dto";
+import { ProjectMetaDto, ProjectsMetaQueryDto } from "../dto/project-meta.dto";
 import {
   NurseriesMetaQueryDto,
   ProjectNurseriesMetaDto,
@@ -64,7 +65,7 @@ import { EntityProcessor } from "./entity-processor";
 import { expectExportAllFiltersManaged, expectExportAllFiltersOwn, mockEntityService } from "./entity.processor.spec";
 import { CsvExportService } from "@terramatch-microservices/common/export/csv-export.service";
 import { mockContextForUser, setMockedPermissions } from "@terramatch-microservices/common/util/testing";
-import { Op } from "sequelize";
+import { CreationAttributes, Op } from "sequelize";
 import { TestingModule } from "@nestjs/testing";
 import { Response } from "express";
 import archiver, { Archiver } from "archiver";
@@ -971,6 +972,205 @@ describe("ProjectProcessor", () => {
 
       const byProject = await getIndex({ search: "Alpha Sites" });
       expect(byProject.attributes[0]).toMatchObject({ sitesTotal: 2, sitesMatching: 2 });
+    });
+  });
+
+  describe("addProjectsMetaIndex", () => {
+    let user: User;
+
+    beforeEach(async () => {
+      user = await UserFactory.create();
+    });
+
+    const createProject = async (attributes: Partial<CreationAttributes<Project>>) => {
+      const project = await ProjectFactory.create(attributes);
+      await ProjectUserFactory.create({ userId: user.id, projectId: project.id, isManaging: true });
+      return project;
+    };
+
+    const getIndex = async (query: ProjectsMetaQueryDto = {}) => {
+      mockContextForUser(user, "projects-manage");
+      const document = buildJsonApi(ProjectMetaDto, { pagination: "number" });
+      await processor.addProjectsMetaIndex(document, query);
+      const result = document.serialize();
+      const data = (result.data ?? []) as Resource[];
+      return { index: result.meta.indices?.[0], data, ids: data.map(({ id }) => id) };
+    };
+
+    it("gives each project its card metrics, matching the full DTO", async () => {
+      const projects = [
+        await createProject({ frameworkKey: "ppc", jobsCreatedGoal: null }),
+        await createProject({ frameworkKey: "hbf", jobsCreatedGoal: 250 }),
+        await createProject({ frameworkKey: "terrafund-enterprises", jobsCreatedGoal: 80 })
+      ];
+      const empty = await createProject({ frameworkKey: "terrafund-enterprises" });
+      for (const project of projects) {
+        const { id: projectId } = project;
+        const site = await SiteFactory.create({ projectId, status: "approved" });
+        await SiteFactory.create({ projectId, status: "draft" });
+        await NurseryFactory.createMany(2, { projectId, status: "approved" });
+        await NurseryFactory.create({ projectId, status: "draft" });
+        const dueAt = new Date();
+        const siteReport = await SiteReportFactory.create({
+          siteId: site.id,
+          status: "approved",
+          dueAt,
+          numTreesRegenerating: 30
+        });
+        const draftReport = await SiteReportFactory.create({ siteId: site.id, status: "draft" });
+        const projectReport = await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt,
+          plantingStatus: "in-progress"
+        });
+        await ProjectReportFactory.create({ projectId, status: "due", plantingStatus: "completed" });
+        await ProjectReportFactory.create({
+          projectId,
+          status: "approved",
+          dueAt: new Date("2023-01-01"),
+          plantingStatus: "not-started",
+          workdaysPaid: 4,
+          workdaysVolunteer: 2
+        });
+
+        await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ amount: 100 });
+        await TreeSpeciesFactory.siteReportTreePlanted(siteReport).create({ amount: 999, hidden: true });
+        await TreeSpeciesFactory.siteReportTreePlanted(draftReport).create({ amount: 999 });
+        await SeedingFactory.siteReport(siteReport).create({ amount: 20 });
+        await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved", isActive: true, calcArea: 12.5 });
+
+        const siteWorkdays = await TrackingFactory.siteReportWorkday(siteReport).create();
+        await TrackingEntryFactory.gender(siteWorkdays).create({ amount: 7 });
+        const directWorkdays = await TrackingFactory.projectReportWorkday(projectReport).create({ collection: DIRECT });
+        await TrackingEntryFactory.gender(directWorkdays).create({ amount: 5 });
+        await TrackingEntryFactory.age(directWorkdays).create({ amount: 999 });
+        const hiddenWorkdays = await TrackingFactory.projectReportWorkday(projectReport).create({ hidden: true });
+        await TrackingEntryFactory.gender(hiddenWorkdays).create({ amount: 999 });
+        const jobs = await TrackingFactory.projectReportJobs(projectReport).create({ collection: FULL_TIME });
+        await TrackingEntryFactory.gender(jobs).create({ amount: 3 });
+
+        const hectaresGoal = await TrackingFactory.projectHectaresGoal(project).create();
+        await TrackingEntryFactory.years(hectaresGoal, "1-year").create({ amount: 50 });
+        const treesGoal = await TrackingFactory.projectTreesGoal(project).create();
+        await TrackingEntryFactory.years(treesGoal, "1-year").create({ amount: 400 });
+      }
+
+      const shared = {
+        plantingStatus: "in-progress",
+        totalSites: 1,
+        totalNurseries: 2,
+        totalProjectReports: 3,
+        treesPlantedCount: 100,
+        seedsPlantedCount: 20,
+        regeneratedTreesCount: 30,
+        totalHectaresRestoredSum: 12.5,
+        totalHectaresRestoredGoal: 50,
+        treesGrownGoal: 400
+      };
+      const { data, index } = await getIndex();
+      expect(index).toMatchObject({
+        resource: "projectMetas",
+        requestPath: "/entities/v3/projects/projectsMeta",
+        total: 4
+      });
+      expect(data.map(({ id }) => id)).toEqual([...projects, empty].map(({ uuid }) => uuid));
+      // Workdays are 7 on the site report, 5 on the project report and 6 self-reported before the cutoff.
+      expect(data[0].attributes).toMatchObject({ ...shared, combinedWorkdayCount: 18, totalJobsCreated: 3 });
+      // HBF counts the direct workdays as jobs.
+      expect(data[1].attributes).toMatchObject({ ...shared, totalJobsCreated: 5, jobsCreatedGoal: 250 });
+      expect(data[2].attributes).toMatchObject({ ...shared, totalJobsCreated: 3, jobsCreatedGoal: 80 });
+      expect(data[3].attributes).toMatchObject({
+        plantingStatus: null,
+        totalSites: 0,
+        totalNurseries: 0,
+        totalProjectReports: 0,
+        treesPlantedCount: 0,
+        totalHectaresRestoredSum: 0,
+        totalJobsCreated: 0,
+        treesGrownGoal: 0
+      });
+
+      for (const [i, { uuid }] of projects.entries()) {
+        const { dto } = await processor.getFullDto((await processor.findOne(uuid))!);
+        expect(dto).toMatchObject(shared);
+        expect(dto.combinedWorkdayCount).toBe(data[i].attributes.combinedWorkdayCount);
+        expect(dto.totalJobsCreated).toBe(data[i].attributes.totalJobsCreated);
+      }
+    });
+
+    it("runs the same number of queries for any number of projects", async () => {
+      const countQueries = async () => {
+        const querySpy = jest.spyOn(Project.sql, "query");
+        await getIndex();
+        const { length } = querySpy.mock.calls;
+        querySpy.mockRestore();
+        return length;
+      };
+      const addProject = async () => {
+        const project = await createProject({ frameworkKey: "ppc" });
+        const site = await SiteFactory.create({ projectId: project.id, status: "approved" });
+        await SiteReportFactory.create({ siteId: site.id, status: "approved", dueAt: new Date() });
+        const report = await ProjectReportFactory.create({
+          projectId: project.id,
+          status: "approved",
+          dueAt: new Date()
+        });
+        await TrackingFactory.projectReportWorkday(report).create();
+        await TrackingFactory.projectTreesGoal(project).create();
+      };
+
+      await addProject();
+      const single = await countQueries();
+      expect(single).toBeGreaterThan(0);
+      for (let i = 0; i < 4; i++) await addProject();
+      expect(await countQueries()).toBe(single);
+    });
+
+    it("filters, paginates and only lists the user's projects", async () => {
+      const kenya = await createProject({
+        name: "Alpha Forest",
+        frameworkKey: "ppc",
+        level0Project: ["KEN"],
+        status: "approved"
+      });
+      const ghana = await createProject({
+        name: "Beta Forest",
+        frameworkKey: "hbf",
+        level0Project: ["GHA"],
+        status: "draft"
+      });
+      const peru = await createProject({
+        name: "Gamma",
+        frameworkKey: "terrafund-enterprises",
+        level0Project: ["PER"],
+        status: "approved"
+      });
+      await ProjectFactory.create({ name: "Other Forest" });
+      await ProjectReportFactory.create({ projectId: kenya.id, status: "approved", plantingStatus: "completed" });
+      await ProjectReportFactory.create({ projectId: ghana.id, status: "approved", plantingStatus: "in-progress" });
+
+      expect((await getIndex()).ids).toEqual([kenya.uuid, ghana.uuid, peru.uuid]);
+      expect((await getIndex({ search: "Forest" })).ids).toEqual([kenya.uuid, ghana.uuid]);
+      expect((await getIndex({ status: ["approved"] })).ids).toEqual([kenya.uuid, peru.uuid]);
+      expect((await getIndex({ frameworkKey: ["ppc", "hbf"] })).ids).toEqual([kenya.uuid, ghana.uuid]);
+      expect((await getIndex({ country: ["KEN", "PER"] })).ids).toEqual([kenya.uuid, peru.uuid]);
+      expect((await getIndex({ plantingStatus: ["completed", "not-available"] })).ids).toEqual([kenya.uuid, peru.uuid]);
+
+      const page = await getIndex({ page: { size: 2, number: 2 } });
+      expect(page.ids).toEqual([peru.uuid]);
+      expect(page.index).toMatchObject({ total: 3, pageNumber: 2 });
+
+      const none = await getIndex({ search: "Nothing" });
+      expect(none.index).toMatchObject({ total: 0 });
+      expect(none.ids).toEqual([]);
+    });
+
+    it("rejects users that can't read projects", async () => {
+      await ProjectFactory.create();
+      mockContextForUser(user);
+      const document = buildJsonApi(ProjectMetaDto, { pagination: "number" });
+      await expect(processor.addProjectsMetaIndex(document, {})).rejects.toThrow(UnauthorizedException);
     });
   });
 

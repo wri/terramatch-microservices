@@ -1,8 +1,16 @@
 import { Injectable } from "@nestjs/common";
-import { col, fn, Op } from "sequelize";
-import { isEmpty } from "lodash";
+import { col, fn, literal, Op } from "sequelize";
+import { isEmpty, uniq } from "lodash";
 import { getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
+import {
+  POLYGON_STATUSES,
+  POLYGON_VALIDATION_NOT_CHECKED,
+  POLYGON_VALIDATION_STATUSES,
+  PolygonStatus,
+  SITE_POLYGON_PRACTICES,
+  SITE_POLYGON_SUBMISSION_CYCLES,
+  SITE_POLYGON_TARGET_SYSTEMS
+} from "@terramatch-microservices/database/constants";
 import { SitePolygon } from "@terramatch-microservices/database/entities";
 import {
   HectaresIndicatorSummaryDto,
@@ -12,6 +20,7 @@ import {
 } from "./dto/site-polygon-summary.dto";
 import {
   SUMMARY_INDICATOR_SLUGS,
+  SummaryFacet,
   SummaryIndicatorSlug,
   SitePolygonSummaryQueryDto
 } from "./dto/site-polygon-summary-query.dto";
@@ -34,6 +43,33 @@ type StatusCountRow = {
   count: string | number;
 };
 
+type FacetCounts = Partial<Record<SummaryFacet, Record<string, number>>>;
+
+type GroupedFacet = Exclude<SummaryFacet, "practice">;
+
+/** Single-valued columns counted with GROUP BY. Practice is a JSON array and is counted separately. */
+const GROUPED_FACET_COLUMNS: Record<GroupedFacet, string> = {
+  polygonStatus: "SitePolygon.status",
+  submissionCycle: "SitePolygon.submission_cycle",
+  targetSys: "SitePolygon.target_sys",
+  validationStatus: "SitePolygon.validation_status"
+};
+
+const FACET_OPTIONS: Record<SummaryFacet, readonly string[]> = {
+  polygonStatus: POLYGON_STATUSES,
+  practice: SITE_POLYGON_PRACTICES,
+  submissionCycle: SITE_POLYGON_SUBMISSION_CYCLES,
+  targetSys: SITE_POLYGON_TARGET_SYSTEMS,
+  validationStatus: [POLYGON_VALIDATION_NOT_CHECKED, ...POLYGON_VALIDATION_STATUSES]
+};
+
+type FacetCountRow = {
+  value: string | null;
+  count: string | number;
+};
+
+type PracticeCountRow = Partial<Record<string, string | number | null>>;
+
 type IndicatorValueRow = {
   sitePolygonId: number;
   yearOfAnalysis: number;
@@ -46,14 +82,16 @@ export class SitePolygonSummaryService {
     const builder = new SitePolygonMapIndexQueryBuilder();
     await applySitePolygonScopeFilters(builder, query, { requireSiteOrProject: !isEmpty(query.indicatorSlug) });
 
-    const [base, indicators] = await Promise.all([
+    const [base, indicators, facetCounts] = await Promise.all([
       this.buildBaseAggregates(builder),
-      this.buildIndicatorAggregates(builder, query.indicatorSlug)
+      this.buildIndicatorAggregates(builder, query.indicatorSlug),
+      this.buildFacetCounts(query)
     ]);
 
     return new SitePolygonSummaryDto({
       ...base,
-      ...(indicators != null ? { indicators } : {})
+      ...(indicators != null ? { indicators } : {}),
+      ...(facetCounts != null ? { facetCounts } : {})
     });
   }
 
@@ -99,6 +137,68 @@ export class SitePolygonSummaryService {
       totalPolygons: Number(totalsRow?.totalPolygons ?? 0),
       countByStatus
     };
+  }
+
+  private async buildFacetCounts(query: SitePolygonSummaryQueryDto): Promise<FacetCounts | undefined> {
+    if (query.facet == null || query.facet.length === 0) {
+      return undefined;
+    }
+
+    const counts = await Promise.all(
+      uniq(query.facet).map(async facet => [facet, await this.countFacet(query, facet)] as const)
+    );
+    return Object.fromEntries(counts);
+  }
+
+  /**
+   * Counts polygons per option of one facet. The facet's own filter is left out (every other filter in the
+   * request still applies) so that selecting one option doesn't zero out the others.
+   */
+  private async countFacet(query: SitePolygonSummaryQueryDto, facet: SummaryFacet): Promise<Record<string, number>> {
+    const builder = new SitePolygonMapIndexQueryBuilder();
+    await applySitePolygonScopeFilters(builder, { ...query, [facet]: undefined }, { requireSiteOrProject: false });
+
+    const counts = Object.fromEntries(FACET_OPTIONS[facet].map(option => [option, 0]));
+    if (facet === "practice") {
+      const [row] = (await SitePolygon.findAll({
+        ...builder.findOptionsForAggregation(
+          SITE_POLYGON_PRACTICES.map(practice => [
+            fn(
+              "COALESCE",
+              fn(
+                "SUM",
+                literal(`JSON_CONTAINS(SitePolygon.practice, ${SitePolygon.sql.escape(JSON.stringify(practice))}, '$')`)
+              ),
+              0
+            ),
+            practice
+          ])
+        ),
+        raw: true
+      })) as unknown as PracticeCountRow[];
+      for (const practice of SITE_POLYGON_PRACTICES) {
+        counts[practice] = Number(row?.[practice] ?? 0);
+      }
+      return counts;
+    }
+
+    const column = col(GROUPED_FACET_COLUMNS[facet]);
+    const rows = (await SitePolygon.findAll({
+      ...builder.findOptionsForAggregation([
+        [column, "value"],
+        [fn("COUNT", col("SitePolygon.id")), "count"]
+      ]),
+      group: [column],
+      raw: true
+    })) as unknown as FacetCountRow[];
+    for (const { value, count } of rows) {
+      // A null validation status is what the validationStatus[] filter calls "not_checked".
+      const option = value ?? (facet === "validationStatus" ? POLYGON_VALIDATION_NOT_CHECKED : undefined);
+      if (option != null && counts[option] != null) {
+        counts[option] = Number(count);
+      }
+    }
+    return counts;
   }
 
   private async buildIndicatorAggregates(

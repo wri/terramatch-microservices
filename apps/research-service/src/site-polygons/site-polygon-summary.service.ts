@@ -24,7 +24,7 @@ import {
   SummaryIndicatorSlug,
   SitePolygonSummaryQueryDto
 } from "./dto/site-polygon-summary-query.dto";
-import { INDICATOR_MODEL_CLASSES } from "./site-polygon-column-query.builder";
+import { INDICATOR_MODEL_CLASSES, jsonArrayContainsSql } from "./site-polygon-column-query.builder";
 import { SitePolygonMapIndexQueryBuilder } from "./site-polygon-map-index-query.builder";
 import { applySitePolygonScopeFilters } from "./site-polygon-scope-filters";
 
@@ -163,14 +163,7 @@ export class SitePolygonSummaryService {
       const [row] = (await SitePolygon.findAll({
         ...builder.findOptionsForAggregation(
           SITE_POLYGON_PRACTICES.map(practice => [
-            fn(
-              "COALESCE",
-              fn(
-                "SUM",
-                literal(`JSON_CONTAINS(SitePolygon.practice, ${SitePolygon.sql.escape(JSON.stringify(practice))}, '$')`)
-              ),
-              0
-            ),
+            fn("COALESCE", fn("SUM", literal(jsonArrayContainsSql("practice", practice))), 0),
             practice
           ])
         ),

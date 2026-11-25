@@ -49,6 +49,10 @@ export const INDICATOR_MODEL_CLASSES: { [Slug in IndicatorSlug]: IndicatorClass<
   msuCarbon: IndicatorOutputMsuCarbon
 };
 
+/** SQL that is 1 when the polygon's JSON array column contains the value (escaped), 0 otherwise. */
+export const jsonArrayContainsSql = (column: "practice" | "distr", value: string) =>
+  `JSON_CONTAINS(SitePolygon.${column}, ${SitePolygon.sql.escape(JSON.stringify(value))}, '$')`;
+
 export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePolygon> {
   constructor(pageSize?: number) {
     super(SitePolygon, pageSize);
@@ -248,17 +252,19 @@ export class SitePolygonColumnQueryBuilder extends PaginatedQueryBuilder<SitePol
     return this;
   }
 
+  /**
+   * Aggregates only read SitePolygon columns, and no filter references an included model, so the includes
+   * (all belongsTo, used for row display and sorting) are dropped rather than selected and discarded.
+   */
   findOptionsForAggregation(attributes: FindAttributeOptions): FindOptions {
     return {
-      ...omit(this.findOptions, ["limit", "offset", "order", "attributes"]),
+      ...omit(this.findOptions, ["limit", "offset", "order", "attributes", "include"]),
       attributes
     };
   }
 
   private buildJsonArrayOverlapWhere(column: "practice" | "distr", values: string[]): WhereOptions {
-    const orContains = values.map(slug =>
-      literal(`JSON_CONTAINS(SitePolygon.${column}, ${SitePolygon.sql.escape(JSON.stringify(slug))}, '$') = 1`)
-    );
+    const orContains = values.map(slug => literal(`${jsonArrayContainsSql(column, slug)} = 1`));
     return {
       [Op.and]: [
         { [column]: { [Op.ne]: null } } as WhereOptions,

@@ -20,14 +20,18 @@ import {
   TreeSpecies,
   User
 } from "@terramatch-microservices/database/entities";
-import { Dictionary, groupBy, sumBy } from "lodash";
+import { difference, Dictionary, groupBy, mapKeys, sumBy } from "lodash";
 import { Attributes, col, CreationAttributes, fn, Op, Sequelize, WhereOptions } from "sequelize";
 import { ANRDto, ProjectApplicationDto, ProjectFullDto, ProjectLightDto, ProjectMedia } from "../dto/project.dto";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { FrameworkKey, HBF } from "@terramatch-microservices/database/constants/framework";
 import { EntityType } from "@terramatch-microservices/database/constants/entities";
 import { APPROVED, DRAFT, INFORMATION_REQUIRED } from "@terramatch-microservices/database/constants/status";
-import { mapLandscapeCodesToNames, PlantingStatus } from "@terramatch-microservices/database/constants";
+import {
+  mapLandscapeCodesToNames,
+  PLANTING_STATUSES,
+  PlantingStatus
+} from "@terramatch-microservices/database/constants";
 import { DIRECT, FULL_TIME } from "@terramatch-microservices/database/constants/demographic-collections";
 import {
   BadRequestException,
@@ -62,7 +66,15 @@ import {
   ProjectSitesMetaDto,
   SitesMetaQueryDto
 } from "../dto/nurseries-meta.dto";
+import {
+  PLANTING_STATUS_NOT_AVAILABLE,
+  PlantingStatusFilter,
+  ProjectMetaDto,
+  ProjectsMetaQueryDto
+} from "../dto/project-meta.dto";
 import { SiteProcessor } from "./site.processor";
+import { TrackingType } from "@terramatch-microservices/database/types/tracking";
+import { ModelCtor } from "sequelize-typescript";
 import {
   filteredProjectsSubquery,
   filteredReportsSubquery,
@@ -186,6 +198,21 @@ export const CHILD_ENTITIES_FOR_EXPORT: EntityType[] = [
 ];
 
 const CSV_EXPORT_INCLUDES = [{ association: "organisation", attributes: ["name", "type"] }];
+
+const plantingStatusWhere = (status: PlantingStatusFilter): WhereOptions =>
+  status === PLANTING_STATUS_NOT_AVAILABLE
+    ? {
+        [Op.and]: PLANTING_STATUSES.map(available => ({
+          uuid: { [Op.notIn]: ProjectReport.projectUuidsForLatestApprovedPlantingStatus(available) }
+        }))
+      }
+    : { uuid: { [Op.in]: ProjectReport.projectUuidsForLatestApprovedPlantingStatus(status) } };
+
+const RESTORATION_GOAL_TYPES: TrackingType[] = [
+  Tracking.HECTARES_GOAL_TYPE,
+  Tracking.TREES_GOAL_TYPE,
+  Tracking.TREES_PLANTED_GOAL_TYPE
+];
 
 const REPORTS_META_TYPES = ["nurseryReports", "projectReports", "siteReports"] as const;
 
@@ -586,6 +613,234 @@ export class ProjectProcessor extends EntityProcessor<
   }
 
   /**
+   * Adds an index of the projects matching the query's filters, with only what the My Projects cards show. Kept apart
+   * from the entity index, whose light DTOs don't need these metrics.
+   */
+  async addProjectsMetaIndex(document: DocumentBuilder, query: ProjectsMetaQueryDto) {
+    const builder = PaginatedQueryBuilder.forNumberPage(Project, query.page, [
+      { association: "organisation", attributes: ["name"] }
+    ])
+      .attributes([
+        "id",
+        "uuid",
+        "name",
+        "frameworkKey",
+        "organisationId",
+        "status",
+        "level0Project",
+        "survivalRate",
+        "jobsCreatedGoal"
+      ])
+      .where(this.projectsMetaWhere(query));
+    const [projects, total] = await Promise.all([builder.execute(), builder.paginationTotal()]);
+    if (projects.length > 0) await this.entitiesService.authorize("read", projects);
+
+    const [siteProgress, reportProgress, goals, nurseryTotals] = await Promise.all([
+      this.siteProgressByProject(projects),
+      this.reportProgressByProject(projects),
+      this.restorationGoalsByProject(projects),
+      this.countByProject(Nursery.approved(), projects)
+    ]);
+
+    for (const project of projects) {
+      const { combinedWorkdayCount: siteWorkdays, ...siteMetrics } = siteProgress[project.id];
+      const { combinedWorkdayCount: projectWorkdays, ...reportMetrics } = reportProgress[project.id];
+      const { treesGrownGoal, totalHectaresRestoredGoal } = goals[project.id];
+      document.addData(
+        project.uuid,
+        new ProjectMetaDto({
+          uuid: project.uuid,
+          name: project.name,
+          organisationName: project.organisationName ?? null,
+          frameworkKey: project.frameworkKey ?? null,
+          status: project.status,
+          level0Project: project.level0Project,
+          jobsCreatedGoal: project.jobsCreatedGoal,
+          treesGrownGoal,
+          totalHectaresRestoredGoal,
+          totalNurseries: nurseryTotals.get(project.id) ?? 0,
+          combinedWorkdayCount: siteWorkdays + projectWorkdays,
+          ...siteMetrics,
+          ...reportMetrics
+        })
+      );
+    }
+
+    document.addIndex({
+      resource: getDtoType(ProjectMetaDto),
+      requestPath: `/entities/v3/${this.resource}/projectsMeta${getStableRequestQuery(query)}`,
+      pageNumber: query.page?.number ?? 1,
+      total,
+      ids: projects.map(({ uuid }) => uuid)
+    });
+  }
+
+  private projectsMetaWhere(query: ProjectsMetaQueryDto): WhereOptions {
+    // The meta scope is written for the models that belong to a project.
+    const clauses: WhereOptions[] = this.metaPermissionScope().map(scope =>
+      mapKeys(scope as Dictionary<unknown>, (_, key) => (key === "projectId" ? "id" : key))
+    );
+    if (query.search != null && query.search !== "") clauses.push({ name: { [Op.like]: `%${query.search}%` } });
+    if (query.status != null && query.status.length > 0) clauses.push({ status: { [Op.in]: query.status } });
+    if (query.frameworkKey != null && query.frameworkKey.length > 0) {
+      clauses.push({ frameworkKey: { [Op.in]: query.frameworkKey } });
+    }
+    if (query.country != null && query.country.length > 0) {
+      clauses.push({ [Op.or]: query.country.map(country => ({ id: { [Op.in]: Project.forCountry(country) } })) });
+    }
+    if (query.plantingStatus != null && query.plantingStatus.length > 0) {
+      clauses.push({ [Op.or]: query.plantingStatus.map(plantingStatusWhere) });
+    }
+    return clauses.length === 0 ? {} : { [Op.and]: clauses };
+  }
+
+  /** The metrics of the approved sites, totalled for each project id. */
+  private async siteProgressByProject(projects: Project[]) {
+    const sites = await Site.approved().findAll({
+      attributes: ["id", "uuid", "projectId"],
+      where: { projectId: { [Op.in]: projects.map(({ id }) => id) } }
+    });
+    const siteProcessor = this.entitiesService.createEntityProcessor("sites");
+    if (!(siteProcessor instanceof SiteProcessor)) {
+      throw new InternalServerErrorException("Site processor is not available");
+    }
+    const siteReports = await SiteReport.approved()
+      .sites(sites.map(({ id }) => id))
+      .findAll({ attributes: ["id", "siteId", "numTreesRegenerating"] });
+    const [metricsBySiteUuid, seedings] = await Promise.all([
+      siteProcessor.getProgressMetrics(sites),
+      Seeding.visible()
+        .siteReports(siteReports.map(({ id }) => id))
+        .findAll({ attributes: ["seedableId", "amount"] })
+    ]);
+
+    const sitesByProject = groupBy(sites, "projectId");
+    const siteReportsBySite = groupBy(siteReports, "siteId");
+    const seedingsBySiteReport = groupBy(seedings, "seedableId");
+    return Object.fromEntries(
+      projects.map(({ id }) => {
+        const projectSites = sitesByProject[id] ?? [];
+        const projectSiteReports = projectSites.flatMap(site => siteReportsBySite[site.id] ?? []);
+        const metrics = projectSites.map(({ uuid }) => metricsBySiteUuid.get(uuid));
+        return [
+          id,
+          {
+            totalSites: projectSites.length,
+            treesPlantedCount: sumBy(metrics, site => site?.treesPlantedCount ?? 0),
+            totalHectaresRestoredSum: sumBy(metrics, site => site?.totalHectaresRestoredSum ?? 0),
+            combinedWorkdayCount: sumBy(metrics, site => site?.combinedWorkdayCount ?? 0),
+            regeneratedTreesCount: sumBy(projectSiteReports, report => report.numTreesRegenerating ?? 0),
+            seedsPlantedCount: sumBy(projectSiteReports, report => sumBy(seedingsBySiteReport[report.id], "amount"))
+          }
+        ];
+      })
+    );
+  }
+
+  /** The planting status, jobs and workdays from the approved project reports, for each project id. */
+  private async reportProgressByProject(projects: Project[]) {
+    const projectIds = projects.map(({ id }) => id);
+    const hbfIds = projects.filter(({ frameworkKey }) => frameworkKey === HBF).map(({ id }) => id);
+
+    const [reportTotals, plantingReports, selfReported, workdays, hbfJobs, jobs] = await Promise.all([
+      this.countByProject(ProjectReport, projects),
+      ProjectReport.approved()
+        .projectsIds(projectIds)
+        .findAll({
+          attributes: ["projectId", "plantingStatus"],
+          where: { plantingStatus: { [Op.ne]: null } },
+          order: [["dueAt", "DESC"]]
+        }),
+      ProjectReport.approved()
+        .projectsIds(projectIds)
+        .dueBefore(Tracking.DEMOGRAPHIC_COUNT_CUTOFF)
+        .findAll({ attributes: ["projectId", "workdaysPaid", "workdaysVolunteer"] }),
+      this.demographicsByProject(
+        projectIds,
+        { type: Tracking.WORKDAYS_TYPE },
+        { dueAt: { [Op.gte]: Tracking.DEMOGRAPHIC_COUNT_CUTOFF } }
+      ),
+      this.demographicsByProject(hbfIds, { type: Tracking.WORKDAYS_TYPE, collection: DIRECT }),
+      this.demographicsByProject(difference(projectIds, hbfIds), { type: Tracking.JOBS_TYPE })
+    ]);
+
+    const plantingReportsByProject = groupBy(plantingReports, "projectId");
+    const selfReportedByProject = groupBy(selfReported, "projectId");
+    return Object.fromEntries(
+      projectIds.map(id => [
+        id,
+        {
+          plantingStatus: plantingReportsByProject[id]?.[0].plantingStatus ?? null,
+          totalProjectReports: reportTotals.get(id) ?? 0,
+          totalJobsCreated: hbfJobs.get(id) ?? jobs.get(id) ?? 0,
+          combinedWorkdayCount:
+            (workdays.get(id) ?? 0) +
+            sumBy(
+              selfReportedByProject[id],
+              ({ workdaysPaid, workdaysVolunteer }) => (workdaysPaid ?? 0) + (workdaysVolunteer ?? 0)
+            )
+        }
+      ])
+    );
+  }
+
+  /** The gender total of the visible demographics on the approved project reports, keyed by project id. */
+  private async demographicsByProject(
+    projectIds: number[],
+    tracking: { type: TrackingType; collection?: string },
+    reportWhere: WhereOptions<ProjectReport> = {}
+  ) {
+    const totals = new Map<number, number>();
+    const reports = await ProjectReport.approved()
+      .projectsIds(projectIds)
+      .findAll({ attributes: ["id", "projectId"], where: reportWhere });
+    if (reports.length === 0) return totals;
+
+    const trackings = await Tracking.forAll(reports)
+      .domain("demographics")
+      .findAll({ attributes: ["id", "trackableId"], where: { ...tracking, hidden: false } });
+    const entries = await TrackingEntry.gender().findAll({
+      attributes: ["trackingId", "amount"],
+      where: { trackingId: { [Op.in]: trackings.map(({ id }) => id) } }
+    });
+
+    const entriesByTracking = groupBy(entries, "trackingId");
+    const trackingsByReport = groupBy(trackings, "trackableId");
+    for (const { id, projectId } of reports) {
+      const amount = sumBy(trackingsByReport[id], tracking => sumBy(entriesByTracking[tracking.id], "amount"));
+      totals.set(projectId, (totals.get(projectId) ?? 0) + amount);
+    }
+    return totals;
+  }
+
+  private async restorationGoalsByProject(projects: Project[]) {
+    if (projects.length === 0) return {};
+
+    const trackings = await Tracking.forAll(projects)
+      .domain("restoration")
+      .type(RESTORATION_GOAL_TYPES)
+      .collection("all")
+      .findAll({ include: [{ association: "entries" }] });
+    const trackingsByProject = groupBy(trackings, "trackableId");
+    return Object.fromEntries(
+      projects.map(project => [
+        project.id,
+        this.calculateRestorationGoals(project, trackingsByProject[project.id] ?? [])
+      ])
+    );
+  }
+
+  private async countByProject(model: typeof Nursery | typeof ProjectReport, projects: Project[]) {
+    const rows = (await (model as ModelCtor).findAll({
+      attributes: ["projectId", [fn("COUNT", col("id")), "count"]],
+      where: { projectId: { [Op.in]: projects.map(({ id }) => id) } },
+      group: ["projectId"],
+      raw: true
+    })) as unknown as { projectId: number; count: number }[];
+    return new Map(rows.map(({ projectId, count }) => [projectId, Number(count)]));
+  }
+
+  /**
    * Adds an index of report meta for all projects with at least one project, site or nursery report
    * matching the query's filters. Only sites / nurseries with at least one matching report are
    * listed. If no statuses are requested, reports requiring attention (due, draft or
@@ -923,11 +1178,15 @@ export class ProjectProcessor extends EntityProcessor<
   protected async getRestorationGoals(project: Project) {
     const trackings = await Tracking.for(project)
       .domain("restoration")
-      .type(["hectares-goal", "trees-goal", Tracking.TREES_PLANTED_GOAL_TYPE])
+      .type(RESTORATION_GOAL_TYPES)
       .collection("all")
       .findAll({
         include: [{ association: "entries" }]
       });
+    return this.calculateRestorationGoals(project, trackings);
+  }
+
+  private calculateRestorationGoals(project: Project, trackings: Tracking[]) {
     const hectares = trackings.find(({ type }) => type === "hectares-goal");
     const totalHectaresRestoredGoal = sumBy(
       (hectares?.entries ?? []).filter(({ type }) => type === "years"),

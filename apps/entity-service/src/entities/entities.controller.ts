@@ -30,6 +30,7 @@ import { SiteFullDto, SiteLightDto } from "./dto/site.dto";
 import {
   EntityIndexParamsDto,
   NurseriesMetaParamsDto,
+  ProjectsMetaParamsDto,
   ReportsMetaParamsDto,
   SitesMetaParamsDto
 } from "./dto/entity-index-params.dto";
@@ -83,6 +84,7 @@ import {
   ProjectSitesMetaDto,
   SitesMetaQueryDto
 } from "./dto/nurseries-meta.dto";
+import { ProjectMetaDto, ProjectsMetaQueryDto } from "./dto/project-meta.dto";
 import { ReportCountsDto } from "./dto/report-counts.dto";
 import { EntityCountsDto, EntityCountsQueryDto } from "./dto/entity-counts.dto";
 import { EntitySearchParamsDto, EntitySearchQueryDto, EntitySearchResultDto } from "./dto/entity-search.dto";
@@ -231,6 +233,20 @@ export class EntitiesController {
     const document = buildJsonApi(ProjectSitesMetaDto, { pagination: "number" });
     await processor.addSitesMetaIndex(document, query);
     return document;
+  }
+
+  @Get(":entity/projectsMeta")
+  @ApiOperation({
+    operationId: "entityProjectsMetaIndex",
+    summary: "Get a paginated and filtered list of project meta for the My Projects index."
+  })
+  @JsonApiResponse({ data: ProjectMetaDto, pagination: "number" })
+  @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
+  @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
+  async entityProjectsMetaIndex(@Param() { entity }: ProjectsMetaParamsDto, @Query() query: ProjectsMetaQueryDto) {
+    const processor = this.entitiesService.createEntityProcessor(entity);
+    const document = buildJsonApi(ProjectMetaDto, { pagination: "number" });
+    await processor.addProjectsMetaIndex(document, query);
   }
 
   @Get(":entity/fuzzySearch")

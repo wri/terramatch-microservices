@@ -240,6 +240,92 @@ describe("SitePolygonSummaryService", () => {
     });
   });
 
+  describe("facet counts", () => {
+    it("omits facetCounts unless facet[] is requested", async () => {
+      const site = await SiteFactory.create();
+      await SitePolygonFactory.create({ siteUuid: site.uuid });
+
+      const result = await getSummary({ siteId: [site.uuid] });
+
+      expect(result.facetCounts).toBeUndefined();
+    });
+
+    it("counts every option of each requested facet, including zeros", async () => {
+      const site = await SiteFactory.create();
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        status: "approved",
+        validationStatus: "passed",
+        practice: ["tree-planting", "direct-seeding"],
+        targetSys: "agroforest",
+        submissionCycle: "1"
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        status: "draft",
+        validationStatus: null,
+        practice: ["tree-planting"],
+        targetSys: "agroforest",
+        submissionCycle: "2"
+      });
+      await SitePolygonFactory.create({
+        siteUuid: site.uuid,
+        status: "draft",
+        validationStatus: "failed",
+        practice: null,
+        targetSys: null,
+        submissionCycle: null
+      });
+
+      const { facetCounts } = await getSummary({
+        siteId: [site.uuid],
+        facet: ["polygonStatus", "practice", "submissionCycle", "targetSys", "validationStatus"]
+      });
+
+      expect(facetCounts?.polygonStatus).toEqual({
+        draft: 2,
+        "pending-approval": 0,
+        "information-required": 0,
+        approved: 1
+      });
+      expect(facetCounts?.validationStatus).toEqual({ not_checked: 1, passed: 1, partial: 0, failed: 1 });
+      expect(facetCounts?.practice).toEqual({
+        "tree-planting": 2,
+        "direct-seeding": 1,
+        "assisted-natural-regeneration": 0
+      });
+      expect(facetCounts?.targetSys?.agroforest).toBe(2);
+      expect(facetCounts?.targetSys?.grassland).toBe(0);
+      expect(facetCounts?.submissionCycle).toEqual({ "1": 1, "2": 1, "3": 0, "4": 0, "5": 0 });
+    });
+
+    it("ignores a facet's own filter but applies the others", async () => {
+      const site = await SiteFactory.create();
+      await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved", practice: ["tree-planting"] });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, status: "approved", practice: ["direct-seeding"] });
+      await SitePolygonFactory.create({ siteUuid: site.uuid, status: "draft", practice: ["direct-seeding"] });
+
+      const result = await getSummary({
+        siteId: [site.uuid],
+        polygonStatus: ["approved"],
+        practice: ["tree-planting"],
+        facet: ["polygonStatus", "practice"]
+      });
+
+      // Practice counts ignore practice[] but respect polygonStatus[], so direct seeding stays selectable.
+      expect(result.facetCounts?.practice).toEqual({
+        "tree-planting": 1,
+        "direct-seeding": 1,
+        "assisted-natural-regeneration": 0
+      });
+      // Status counts ignore polygonStatus[] but respect practice[].
+      expect(result.facetCounts?.polygonStatus?.approved).toBe(1);
+      expect(result.facetCounts?.polygonStatus?.draft).toBe(0);
+      // The base aggregates still apply every filter.
+      expect(result.totalPolygons).toBe(1);
+    });
+  });
+
   describe("indicator aggregates", () => {
     it("aggregates treeCoverLoss year sums and loss counts", async () => {
       const site = await SiteFactory.create();

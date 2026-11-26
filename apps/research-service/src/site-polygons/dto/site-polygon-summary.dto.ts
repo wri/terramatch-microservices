@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { POLYGON_STATUSES, PolygonStatus } from "@terramatch-microservices/database/constants";
-import { SummaryIndicatorSlug } from "./site-polygon-summary-query.dto";
+import { SummaryFacet, SummaryIndicatorSlug } from "./site-polygon-summary-query.dto";
 
 export class TreeCoverLossSummaryDto {
   @ApiProperty({
@@ -51,6 +51,7 @@ export class SitePolygonSummaryDto {
     totalPolygons: number;
     countByStatus: Partial<Record<PolygonStatus, number>>;
     indicators?: Partial<Record<SummaryIndicatorSlug, IndicatorSummaryDto>>;
+    facetCounts?: Partial<Record<SummaryFacet, Record<string, number>>>;
   }) {
     this.sumNumTrees = attrs.sumNumTrees;
     this.sumCalcArea = attrs.sumCalcArea;
@@ -59,6 +60,7 @@ export class SitePolygonSummaryDto {
     this.totalPolygons = attrs.totalPolygons;
     this.countByStatus = attrs.countByStatus;
     this.indicators = attrs.indicators;
+    this.facetCounts = attrs.facetCounts;
   }
 
   @ApiProperty({ description: "Sum of numTrees across polygons in scope." })
@@ -101,4 +103,15 @@ export class SitePolygonSummaryDto {
     description: "Optional indicator aggregates keyed by requested indicatorSlug."
   })
   indicators?: Partial<Record<SummaryIndicatorSlug, IndicatorSummaryDto>>;
+
+  @ApiProperty({
+    required: false,
+    type: Object,
+    additionalProperties: { type: "object", additionalProperties: { type: "number" } },
+    description:
+      "Per-option polygon counts keyed by requested facet[], then by option value. Every known option is " +
+      "present (0 when no polygons match). Each facet ignores its own filter but applies all others.",
+    example: { practice: { "tree-planting": 12, "direct-seeding": 3, "assisted-natural-regeneration": 0 } }
+  })
+  facetCounts?: Partial<Record<SummaryFacet, Record<string, number>>>;
 }

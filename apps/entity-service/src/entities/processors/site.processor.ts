@@ -1,4 +1,4 @@
-import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions } from "./entity-processor";
+import { Aggregate, aggregateColumns, EntityProcessor, ExportAllOptions, FuzzySearchMatch } from "./entity-processor";
 import {
   Framework,
   Media,
@@ -31,8 +31,6 @@ import { EntityCreateAttributes } from "../dto/entity-create.dto";
 import { DateTime } from "luxon";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { FuzzySearchQueryBuilder } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
-import { DocumentBuilder, getStableRequestQuery } from "@terramatch-microservices/common/util";
-import { EntitySearchResultDto } from "../dto/entity-search.dto";
 import { normalizedFileName } from "@terramatch-microservices/common/util/fileNames";
 import { Archiver } from "archiver";
 import { Response } from "express";
@@ -191,8 +189,8 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     return { models: await builder.execute(), paginationTotal: await builder.paginationTotal() };
   }
 
-  async addFuzzySearchIndex(document: DocumentBuilder, search: string) {
-    const builder = new FuzzySearchQueryBuilder(Site, "name").attributes([
+  async fuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    const builder = new FuzzySearchQueryBuilder(Site, "name").matchAnywhere().attributes([
       "uuid",
       "name",
       // needed by the policy to authorize the results
@@ -203,12 +201,7 @@ export class SiteProcessor extends EntityProcessor<Site, SiteLightDto, SiteFullD
     if (accessWhere != null) builder.where(accessWhere);
 
     const sites = await builder.execute(search);
-    if (sites.length > 0) await this.entitiesService.authorize("read", sites);
-
-    for (const { uuid, name } of sites) {
-      document.addData(uuid, new EntitySearchResultDto({ uuid, name }));
-    }
-    document.addIndex({ requestPath: `/entities/v3/sites/fuzzySearch${getStableRequestQuery({ search })}` });
+    return sites.map(site => ({ uuid: site.uuid, name: site.name, model: site }));
   }
 
   /**

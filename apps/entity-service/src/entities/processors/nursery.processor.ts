@@ -10,7 +10,7 @@ import {
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
 import { NurseryFullDto, NurseryLightDto, NurseryMedia } from "../dto/nursery.dto";
-import { EntityProcessor, ExportAllOptions } from "./entity-processor";
+import { EntityProcessor, ExportAllOptions, FuzzySearchMatch } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
 import { col, fn, Includeable, Op, WhereOptions } from "sequelize";
 import {
@@ -35,6 +35,7 @@ import { TaskDue } from "@terramatch-microservices/database/constants/scheduled-
 import { Literal } from "sequelize/types/utils";
 import { ProgressTick } from "../entities.service";
 import { DRAFT } from "@terramatch-microservices/database/constants/status";
+import { FuzzySearchQueryBuilder } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 
 const SIMPLE_FILTERS: (keyof EntityQueryDto)[] = [
   "status",
@@ -89,6 +90,11 @@ export class NurseryProcessor extends EntityProcessor<
   NurseryFullDto,
   EntityUpdateAttributes
 > {
+  async fuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    const records = await new FuzzySearchQueryBuilder(Nursery, "name").matchAnywhere().execute(search);
+    return records.map(record => ({ uuid: record.uuid, name: record.name, model: record }));
+  }
+
   readonly LIGHT_DTO = NurseryLightDto;
   readonly FULL_DTO = NurseryFullDto;
 

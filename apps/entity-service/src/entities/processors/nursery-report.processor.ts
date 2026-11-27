@@ -1,3 +1,4 @@
+import { escapeLikeTerm, FUZZY_SEARCH_LIMIT } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 import {
   Media,
   Nursery,
@@ -6,9 +7,9 @@ import {
   ProjectReport,
   ProjectUser
 } from "@terramatch-microservices/database/entities";
-import { ExportAllOptions, ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor, FuzzySearchMatch } from "./entity-processor";
 import { EntityQueryDto } from "../dto/entity-query.dto";
-import { Includeable, literal, Op, WhereOptions } from "sequelize";
+import { Includeable, literal, Op, WhereOptions, col, fn } from "sequelize";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { NurseryReportFullDto, NurseryReportLightDto, NurseryReportMedia } from "../dto/nursery-report.dto";
@@ -94,6 +95,26 @@ export class NurseryReportProcessor extends ReportProcessor<
   NurseryReportFullDto,
   ReportUpdateAttributes
 > {
+  async fuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    // The report is listed under the nursery's name, so the search matches that name.
+    const reports = await NurseryReport.findAll({
+      include: [
+        {
+          model: Nursery,
+          attributes: ["name"],
+          required: true,
+          where: { name: { [Op.like]: `%${escapeLikeTerm(search)}%` } }
+        }
+      ],
+      order: [
+        [fn("length", col("nursery.name")), "ASC"],
+        [col("nursery.name"), "ASC"]
+      ],
+      limit: FUZZY_SEARCH_LIMIT
+    });
+    return reports.map(report => ({ uuid: report.uuid, name: report.nursery?.name ?? null, model: report }));
+  }
+
   readonly LIGHT_DTO = NurseryReportLightDto;
   readonly FULL_DTO = NurseryReportFullDto;
 

@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { ProjectReport } from "@terramatch-microservices/database/entities/project-report.entity";
-import { ExportAllOptions, ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor, FuzzySearchMatch } from "./entity-processor";
 import { ProjectReportFullDto, ProjectReportLightDto, ProjectReportMedia } from "../dto/project-report.dto";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
 import { Includeable, Op, WhereOptions } from "sequelize";
@@ -33,6 +33,7 @@ import { Subquery } from "@terramatch-microservices/database/util/subquery.build
 import { Archiver } from "archiver";
 import { isoForFilename, normalizedFileName, timestampFileName } from "@terramatch-microservices/common/util/fileNames";
 import { ServerResponse } from "node:http";
+import { FuzzySearchQueryBuilder } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 
 const SUPPORTED_ASSOCIATIONS: ProcessableAssociation[] = ["trackings", "seedings", "treeSpecies"];
 
@@ -105,6 +106,11 @@ export class ProjectReportProcessor extends ReportProcessor<
   ProjectReportFullDto,
   ReportUpdateAttributes
 > {
+  async fuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    const records = await new FuzzySearchQueryBuilder(ProjectReport, "title").matchAnywhere().execute(search);
+    return records.map(record => ({ uuid: record.uuid, name: record.title, model: record }));
+  }
+
   readonly LIGHT_DTO = ProjectReportLightDto;
   readonly FULL_DTO = ProjectReportFullDto;
 

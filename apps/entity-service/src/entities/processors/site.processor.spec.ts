@@ -24,12 +24,7 @@ import { TrackingEntryFactory } from "@terramatch-microservices/database/factori
 import { TrackingFactory } from "@terramatch-microservices/database/factories/tracking.factory";
 import { TreeSpeciesFactory } from "@terramatch-microservices/database/factories/tree-species.factory";
 import { SeedingFactory } from "@terramatch-microservices/database/factories/seeding.factory";
-import {
-  InternalServerErrorException,
-  NotAcceptableException,
-  NotFoundException,
-  UnauthorizedException
-} from "@nestjs/common";
+import { InternalServerErrorException, NotAcceptableException, NotFoundException } from "@nestjs/common";
 import { DateTime } from "luxon";
 import { faker } from "@faker-js/faker";
 import { ScheduledJobFactory } from "@terramatch-microservices/database/factories/scheduled-job.factory";
@@ -269,15 +264,17 @@ describe("SiteProcessor", () => {
     });
   });
 
-  describe("addFuzzySearchIndex", () => {
+  describe("readableFuzzySearchMatches", () => {
     const search = async (term: string) => {
       const document = buildJsonApi(EntitySearchResultDto, { forceDataArray: true });
-      await processor.addFuzzySearchIndex(document, term);
+      for (const { uuid, name } of await processor.readableFuzzySearchMatches(term)) {
+        document.addData(uuid, new EntitySearchResultDto({ uuid, name }));
+      }
       return serialize(document);
     };
     const names = (result: JsonApiDocument) => (result.data as Resource[]).map(({ attributes }) => attributes.name);
 
-    it("returns sites in the user's frameworks matching the start of a word, shortest first", async () => {
+    it("returns sites in the user's frameworks containing the search anywhere in the name, shortest first", async () => {
       setMockedPermissions("framework-hbf");
       await SiteFactory.create({ frameworkKey: "hbf", name: "North Forest Restoration" });
       await SiteFactory.create({ frameworkKey: "hbf", name: "Forest Edge" });
@@ -285,8 +282,7 @@ describe("SiteProcessor", () => {
       await SiteFactory.create({ frameworkKey: "ppc", name: "Forest Valley" });
 
       const result = await search("fore");
-      expect(names(result)).toEqual(["Forest Edge", "North Forest Restoration"]);
-      expect(result.meta.indices?.[0].requestPath).toBe("/entities/v3/sites/fuzzySearch?search=fore");
+      expect(names(result)).toEqual(["Rainforest", "Forest Edge", "North Forest Restoration"]);
     });
 
     it("returns only sites in the user's projects for manage-own", async () => {
@@ -299,10 +295,10 @@ describe("SiteProcessor", () => {
       expect(names(await search("forest"))).toEqual(["Forest Edge"]);
     });
 
-    it("throws if the user may not read the matching sites", async () => {
+    it("leaves out the matching sites the user may not read", async () => {
       setMockedPermissions();
       await SiteFactory.create({ name: "Forest Edge" });
-      await expect(search("forest")).rejects.toThrow(UnauthorizedException);
+      expect(names(await search("forest"))).toEqual([]);
     });
   });
 

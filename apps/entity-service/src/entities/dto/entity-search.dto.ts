@@ -3,7 +3,7 @@ import { IsIn, IsNotEmpty, IsString } from "class-validator";
 import { JsonApiDto } from "@terramatch-microservices/common/decorators";
 import { populateDto } from "@terramatch-microservices/common/dto/json-api-attributes";
 
-export const FUZZY_SEARCH_ENTITIES = ["sites"] as const;
+export const FUZZY_SEARCH_ENTITIES = ["sites", "nurseries", "reports"] as const;
 export type FuzzySearchEntity = (typeof FUZZY_SEARCH_ENTITIES)[number];
 
 export class EntitySearchParamsDto {

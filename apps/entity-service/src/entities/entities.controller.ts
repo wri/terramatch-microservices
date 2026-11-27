@@ -253,16 +253,16 @@ export class EntitiesController {
   @ApiOperation({
     operationId: "entityFuzzySearch",
     summary:
-      "Search entity names, matching the start of any word in the name. Returns up to 10 entities that " +
+      "Search entity names, matching the search text anywhere in the name. Returns up to 10 entities that " +
       "the current user has access to, with the shortest matching names first."
   })
   @JsonApiResponse({ data: EntitySearchResultDto, hasMany: true })
   @ExceptionResponse(BadRequestException, { description: "Query params invalid" })
   @ExceptionResponse(UnauthorizedException, { description: "Authentication failed" })
   async entityFuzzySearch(@Param() { entity }: EntitySearchParamsDto, @Query() { search }: EntitySearchQueryDto) {
-    const processor = this.entitiesService.createEntityProcessor(entity);
     const document = buildJsonApi(EntitySearchResultDto, { forceDataArray: true });
-    await processor.addFuzzySearchIndex(document, search);
+    await this.entitiesService.addFuzzySearchResults(document, entity, search);
+    document.addIndex({ requestPath: `/entities/v3/${entity}/fuzzySearch${getStableRequestQuery({ search })}` });
     return document;
   }
 

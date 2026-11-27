@@ -3,6 +3,9 @@ import { ProjectProcessor, SiteProcessor } from "./processors";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { EntityProcessor, ExportAllOptions } from "./processors/entity-processor";
 import { EntityQueryDto } from "./dto/entity-query.dto";
+import { EntitySearchResultDto, FuzzySearchEntity } from "./dto/entity-search.dto";
+import { DocumentBuilder } from "@terramatch-microservices/common/util";
+import { FUZZY_SEARCH_LIMIT } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 import { PaginatedQueryBuilder } from "@terramatch-microservices/common/util/paginated-query.builder";
 import { MediaService } from "@terramatch-microservices/common/media/media.service";
 import {
@@ -95,6 +98,13 @@ export const ENTITY_PROCESSORS = {
 
 export type ProcessableEntity = keyof typeof ENTITY_PROCESSORS;
 export const PROCESSABLE_ENTITIES = Object.keys(ENTITY_PROCESSORS) as ProcessableEntity[];
+
+// Entity types each fuzzy search request covers. "reports" is answered by the three progress report types together.
+const FUZZY_SEARCH_TYPES: Record<FuzzySearchEntity, ProcessableEntity[]> = {
+  sites: ["sites"],
+  nurseries: ["nurseries"],
+  reports: ["projectReports", "siteReports", "nurseryReports"]
+};
 export const POLYGON_STATUSES_FILTERS = [
   "no-polygons",
   "pending-approval",
@@ -344,6 +354,25 @@ export class EntitiesService {
 
   async localizeText(text: string, params?: ITranslateParams) {
     return await this.localizationService.localizeText(text, this.userLocale, params);
+  }
+
+  /**
+   * Adds the names matching the search to the document. "reports" searches the project, site and nursery reports in
+   * one pass, so the closest names come first across all of them. The result is limited to FUZZY_SEARCH_LIMIT.
+   */
+  async addFuzzySearchResults(document: DocumentBuilder, entity: FuzzySearchEntity, search: string) {
+    const matches = (
+      await Promise.all(
+        FUZZY_SEARCH_TYPES[entity].map(type => this.createEntityProcessor(type).readableFuzzySearchMatches(search))
+      )
+    ).flat();
+    matches.sort((a, b) => {
+      const byLength = (a.name ?? "").length - (b.name ?? "").length;
+      return byLength !== 0 ? byLength : (a.name ?? "").localeCompare(b.name ?? "");
+    });
+    for (const { uuid, name } of matches.slice(0, FUZZY_SEARCH_LIMIT)) {
+      document.addData(uuid, new EntitySearchResultDto({ uuid, name }));
+    }
   }
 
   createEntityProcessor<T extends EntityModel>(entity: ProcessableEntity) {

@@ -4,7 +4,7 @@ import { Attributes, col, CreationAttributes, fn, Op, WhereOptions } from "seque
 import { DocumentBuilder, getStableRequestQuery, IndexData } from "@terramatch-microservices/common/util";
 import { EntitiesService, ProcessableEntity, ProgressTick } from "../entities.service";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { BadRequestException, InternalServerErrorException, Type } from "@nestjs/common";
+import { BadRequestException, HttpException, InternalServerErrorException, Type } from "@nestjs/common";
 import { EntityDto } from "../dto/entity.dto";
 import { EntityModel, isReport, ReportModel } from "@terramatch-microservices/database/constants/entities";
 import { Action } from "@terramatch-microservices/database/entities/action.entity";
@@ -83,6 +83,8 @@ export type ExportAllOptions = {
   // If undefined, the filename will be generated
   fileNamePrefix?: string;
 };
+
+export type FuzzySearchMatch = { uuid: string; name: string | null; model: Model };
 
 export abstract class EntityProcessor<
   ModelType extends EntityModel,
@@ -187,11 +189,33 @@ export abstract class EntityProcessor<
     throw new BadRequestException("Projects meta is not supported for this entity type");
   }
 
-  /* istanbul ignore next */
-  async addFuzzySearchIndex(document: DocumentBuilder, search: string): Promise<void> {
+  /**
+   * The entities matching a fuzzy search, each with the model used to authorize it. Processors that support
+   * fuzzy search override this; the rest reject the search.
+   */
+  async fuzzySearchMatches(_search: string): Promise<FuzzySearchMatch[]> {
     throw new BadRequestException("Search is not supported for this entity type");
   }
-  /* eslint-enable @typescript-eslint/no-unused-vars */
+
+  /** The matches the current user may read. Matches they may not read are left out. */
+  async readableFuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    const matches = await this.fuzzySearchMatches(search);
+    const readable: FuzzySearchMatch[] = [];
+    for (const match of matches) {
+      if (await this.canRead(match.model)) readable.push(match);
+    }
+    return readable;
+  }
+
+  private async canRead(model: Model): Promise<boolean> {
+    try {
+      await this.entitiesService.authorize("read", model);
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) return false;
+      throw error;
+    }
+  }
 
   async delete(model: ModelType) {
     await Action.for(model).destroy();

@@ -1,3 +1,4 @@
+import { escapeLikeTerm, FUZZY_SEARCH_LIMIT } from "@terramatch-microservices/common/util/fuzzy-search-query.builder";
 import { Response } from "express";
 import {
   Media,
@@ -10,9 +11,9 @@ import {
   Tracking,
   TreeSpecies
 } from "@terramatch-microservices/database/entities";
-import { ExportAllOptions, ReportProcessor } from "./entity-processor";
+import { ExportAllOptions, ReportProcessor, FuzzySearchMatch } from "./entity-processor";
 import { EntityQueryDto, SideloadType } from "../dto/entity-query.dto";
-import { Includeable, literal, Op, WhereOptions } from "sequelize";
+import { Includeable, literal, Op, WhereOptions, col, fn } from "sequelize";
 import { BadRequestException, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { FrameworkKey } from "@terramatch-microservices/database/constants/framework";
 import { SiteReportFullDto, SiteReportLightDto, SiteReportMedia } from "../dto/site-report.dto";
@@ -114,6 +115,26 @@ export class SiteReportProcessor extends ReportProcessor<
   SiteReportFullDto,
   ReportUpdateAttributes
 > {
+  async fuzzySearchMatches(search: string): Promise<FuzzySearchMatch[]> {
+    // The report is listed under the site's name, so the search matches that name.
+    const reports = await SiteReport.findAll({
+      include: [
+        {
+          model: Site,
+          attributes: ["name"],
+          required: true,
+          where: { name: { [Op.like]: `%${escapeLikeTerm(search)}%` } }
+        }
+      ],
+      order: [
+        [fn("length", col("site.name")), "ASC"],
+        [col("site.name"), "ASC"]
+      ],
+      limit: FUZZY_SEARCH_LIMIT
+    });
+    return reports.map(report => ({ uuid: report.uuid, name: report.site?.name ?? null, model: report }));
+  }
+
   readonly LIGHT_DTO = SiteReportLightDto;
   readonly FULL_DTO = SiteReportFullDto;
 

@@ -613,7 +613,7 @@ export class PolygonClippingService {
       return [];
     }
     const clippedPolygonUuids = clippedResults.map(r => r.polyUuid);
-    const relatedPolygonUuids = await this.getRelatedPolygonUuids(clippedPolygonUuids);
+    const relatedPolygonUuids = await this.getRelatedPolygonUuids(polygonUuids);
 
     const baseSitePolygons = await SitePolygon.findAll({
       where: {

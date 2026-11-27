@@ -1798,6 +1798,62 @@ describe("PolygonClippingService", () => {
       );
     });
 
+    it("should revalidate the smaller polygon when only its own criteria lists the clipped partner", async () => {
+      const smallerUuid = "smaller-polygon-uuid";
+      const largerUuid = "larger-polygon-uuid";
+
+      const criteriaByPolygon: Record<string, CriteriaSite[]> = {
+        [smallerUuid]: [
+          {
+            polygonId: smallerUuid,
+            extraInfo: [{ polyUuid: largerUuid, percentage: 0.3, intersectionArea: 0.01 }]
+          } as unknown as CriteriaSite
+        ]
+      };
+      jest.spyOn(CriteriaSite, "findAll").mockImplementation(async options => {
+        const polygonIds = options?.where?.["polygonId"] as string[];
+        return polygonIds.flatMap(polygonId => criteriaByPolygon[polygonId] ?? []);
+      });
+
+      (mockSequelize.query as jest.Mock)
+        .mockResolvedValueOnce([
+          { uuid: smallerUuid, name: "Smaller", area: 0.0005, geojson: JSON.stringify(samplePolygon2) },
+          { uuid: largerUuid, name: "Larger", area: 0.001, geojson: JSON.stringify(samplePolygon) }
+        ])
+        .mockResolvedValueOnce([{ clipped_geojson: JSON.stringify(sampleMultiPolygon) }]);
+
+      jest.spyOn(SitePolygon, "findAll").mockResolvedValue([
+        {
+          uuid: "larger-site-polygon-uuid",
+          polygonUuid: largerUuid,
+          siteUuid: "site-uuid-2",
+          isActive: true
+        } as SitePolygon
+      ]);
+
+      const mockSitePolygonCreationService = service[
+        "sitePolygonCreationService"
+      ] as jest.Mocked<SitePolygonCreationService>;
+      mockSitePolygonCreationService.createSitePolygonVersion = jest.fn().mockResolvedValueOnce({
+        uuid: "larger-version-uuid",
+        polygonUuid: "new-larger-polygon-uuid",
+        polyName: "Larger"
+      } as SitePolygon);
+
+      const destroySpy = jest.spyOn(CriteriaSite, "destroy").mockResolvedValue(0);
+      jest.spyOn(SitePolygon, "update").mockResolvedValue([1]);
+
+      await service.clipAndCreateVersions([smallerUuid, largerUuid], userId, userFullName, source);
+
+      expect(destroySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { polygonId: expect.arrayContaining([smallerUuid, largerUuid]) } })
+      );
+      expect(validationService.validatePolygonsBatch).toHaveBeenCalledWith(
+        expect.arrayContaining(["new-larger-polygon-uuid", smallerUuid]),
+        expect.any(Array)
+      );
+    });
+
     it("should handle case where base site polygon is not found", async () => {
       const polygonUuid1 = "polygon-uuid-1";
       const polygonUuid2 = "polygon-uuid-2";
